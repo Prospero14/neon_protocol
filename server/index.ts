@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -28,18 +29,19 @@ const prisma = new PrismaClient({ adapter });
 app.use(cors());
 app.use(express.json());
 
-// 3. Static Files
-const distPath = path.resolve(__dirname, '../dist');
-app.use(express.static(distPath));
+// --- 3. API ROUTES (Explicit First) ---
 
-// --- API ---
-
-// Health
+// Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'active', time: new Date().toISOString() });
+  res.json({ 
+    status: 'active', 
+    time: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'production',
+    cwd: process.cwd()
+  });
 });
 
-// Auth
+// Registration
 app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -55,6 +57,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   }
 });
 
+// Login
 app.post('/api/auth/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -67,7 +70,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// Game State
+// Sync
 app.post('/api/game/sync', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -85,15 +88,29 @@ app.post('/api/game/sync', async (req: Request, res: Response) => {
   }
 });
 
-// 4. SPA Fallback
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.path.startsWith('/api')) {
-    return res.status(404).send('API_NOT_FOUND');
+// --- 4. STATIC FILES AND SPA FALLBACK ---
+
+// Absolute path to dist folder
+const distPath = path.resolve(process.cwd(), 'dist');
+console.log(`[NEON_BOOT] Static folder path: ${distPath}`);
+
+// Primary static serving
+app.use(express.static(distPath));
+
+// Final SPA Fallback: Use a Regular Expression to avoid path-to-regexp v8 string issues
+// This matches everything EXCEPT paths starting with /api
+app.get(/^\/(?!api).*/, (req: Request, res: Response) => {
+  const indexPath = path.join(distPath, 'index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error(`[NEON_ERROR] index.html not found at: ${indexPath}`);
+    res.status(500).send('Production build (dist/index.html) missing. Run build first.');
   }
-  res.sendFile(path.join(distPath, 'index.html'));
 });
 
-// 5. Start
+// Start Server
 app.listen(PORT, () => {
   console.log(`[NEON_CORE] Fullstack active on port ${PORT}`);
 });

@@ -29,19 +29,28 @@ const prisma = new PrismaClient({ adapter });
 app.use(cors());
 app.use(express.json());
 
-// --- 3. API ROUTES (Explicit First) ---
+// --- 3. PATH PROBE ---
+const CWD = process.cwd();
+const DIST_V1 = path.resolve(CWD, 'dist');
+const DIST_V2 = path.resolve(__dirname, '../dist');
 
-// Health check
+console.log('[NEON_PROBE] CWD:', CWD);
+console.log('[NEON_PROBE] __dirname:', __dirname);
+console.log('[NEON_PROBE] DIST_V1 (CWD based):', DIST_V1, fs.existsSync(DIST_V1) ? '(FOUND)' : '(NOT FOUND)');
+console.log('[NEON_PROBE] DIST_V2 (DIR based):', DIST_V2, fs.existsSync(DIST_V2) ? '(FOUND)' : '(NOT FOUND)');
+
+const distPath = fs.existsSync(DIST_V1) ? DIST_V1 : DIST_V2;
+
+// --- 4. API ROUTES ---
+
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'active', 
-    time: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production',
-    cwd: process.cwd()
+    distFound: fs.existsSync(distPath),
+    distPath: distPath
   });
 });
 
-// Registration
 app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -57,7 +66,6 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   }
 });
 
-// Login
 app.post('/api/auth/login', async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -70,7 +78,6 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 });
 
-// Sync
 app.post('/api/game/sync', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
@@ -88,25 +95,28 @@ app.post('/api/game/sync', async (req: Request, res: Response) => {
   }
 });
 
-// --- 4. STATIC FILES AND SPA FALLBACK ---
+// --- 5. STATIC FILES AND SPA FALLBACK ---
 
-// Absolute path to dist folder
-const distPath = path.resolve(process.cwd(), 'dist');
-console.log(`[NEON_BOOT] Static folder path: ${distPath}`);
-
-// Primary static serving
+// Assets should be explicitly handled
+app.use('/assets', express.static(path.join(distPath, 'assets')));
 app.use(express.static(distPath));
 
-// Final SPA Fallback: Use a Regular Expression to avoid path-to-regexp v8 string issues
-// This matches everything EXCEPT paths starting with /api
+// Final SPA Fallback: RegExp for accuracy
 app.get(/^\/(?!api).*/, (req: Request, res: Response) => {
   const indexPath = path.join(distPath, 'index.html');
+  console.log(`[SPA] Solving path ${req.path} -> ${indexPath}`);
   
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    console.error(`[NEON_ERROR] index.html not found at: ${indexPath}`);
-    res.status(500).send('Production build (dist/index.html) missing. Run build first.');
+    // If dist/index.html is missing, check if it's in the root (but warn)
+    const rootIndex = path.join(process.cwd(), 'index.html');
+    if (fs.existsSync(rootIndex)) {
+      console.warn('[SPA] dist/index.html missing, falling back to root index.html (DEV VERSION!)');
+      res.sendFile(rootIndex);
+    } else {
+      res.status(500).send(`Production build missing at ${indexPath}`);
+    }
   }
 });
 

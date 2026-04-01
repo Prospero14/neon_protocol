@@ -29,63 +29,75 @@ const prisma = new PrismaClient({ adapter });
 app.use(cors());
 app.use(express.json());
 
-// --- 3. DEFINITIVE DIAGNOSTICS ---
-const CWD = process.cwd();
+// --- 3. EXPLICIT API ROUTES (MOST IMPORTANT) ---
 
+// Health check - Absolute first
 app.get('/api/health', (req, res) => {
+  const CWD = process.cwd();
   const rootFiles = fs.readdirSync(CWD);
-  const distExists = fs.existsSync(path.join(CWD, 'dist'));
+  const distPath = path.join(CWD, 'dist');
+  const distExists = fs.existsSync(distPath);
   let distFiles: string[] = [];
   if (distExists) {
-    distFiles = fs.readdirSync(path.join(CWD, 'dist'));
+    distFiles = fs.readdirSync(distPath);
   }
 
-  res.json({ 
-    status: 'active', 
+  res.json({
+    status: 'active',
     cwd: CWD,
-    rootFiles,
     distExists,
     distFiles,
-    env: process.env.NODE_ENV,
-    port: PORT
+    rootFiles
   });
 });
 
-// --- 4. API (Explicit) ---
-// (We keep the auth/sync routes here...)
-
-app.post('/api/auth/register', async (req, res) => { /* ... */ res.json({msg: 'ok'}); });
-app.post('/api/auth/login', async (req, res) => { /* ... */ res.json({msg: 'ok'}); });
-app.post('/api/game/sync', async (req, res) => { /* ... */ res.json({msg: 'ok'}); });
-
-// --- 5. STATIC SERVING ---
-// We use an ABSOLUTE path based on CWD
-const distPath = path.join(CWD, 'dist');
-
-// Middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`[REQ] ${req.method} ${req.path}`);
-  next();
+// Auth Routes
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.user.create({ data: { username, passwordHash: hashedPassword, gameState: { create: {} } } });
+    res.status(201).json({ message: 'User created' });
+  } catch (error) { res.status(400).json({ error: 'Fail' }); }
 });
 
-app.use(express.static(distPath));
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Fail' });
+    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, username: user.username, gameState: user.gameState } });
+  } catch (error) { res.status(500).json({ error: 'Fail' }); }
+});
 
-// --- 6. CATCH-ALL ---
-app.get('*', (req, res) => {
+// --- 4. STATIC FILES AND SPA ---
+
+const DIST = path.join(process.cwd(), 'dist');
+
+// Serve /assets first
+app.use('/assets', express.static(path.join(DIST, 'assets')));
+
+// Serve other static files
+app.use(express.static(DIST));
+
+// SPA Fallback - ONLY if it's not an API route
+app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
   }
 
-  const indexPath = path.join(distPath, 'index.html');
+  const indexPath = path.join(DIST, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // If dist/index.html is missing, we show the structure to the user
-    const structure = fs.readdirSync(CWD);
-    res.status(500).send(`ERROR: dist/index.html not found. Project root contains: ${structure.join(', ')}`);
+    // If dist/index.html is NOT found, we report the error clearly.
+    // DO NOT serve the root index.html (it's the dev one).
+    const structure = fs.readdirSync(process.cwd());
+    res.status(500).send(`CRITICAL ERROR: dist/index.html missing. Files in root: ${structure.join(', ')}`);
   }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[NEON_BOOT] Server on 0.0.0.0:${PORT}`);
+  console.log(`[NEON_CORE] Ready on 0.0.0.0:${PORT}`);
 });

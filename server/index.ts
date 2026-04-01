@@ -114,5 +114,9 @@ app.get('*', (req, res, next) => {
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`[NEON_CORE] Ready on 0.0.0.0:${PORT}`);
+  console.log('=========================================');
+  console.log(`[NEON_CORE] SERVER_STABILIZED_V8`);
+  console.log(`[NEON_CORE] PORT: ${PORT}`);
+  console.log(`[NEON_CORE] TIME: ${new Date().toISOString()}`);
+  console.log('=========================================');
 });

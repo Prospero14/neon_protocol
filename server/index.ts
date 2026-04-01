@@ -71,6 +71,21 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) { res.status(500).json({ error: 'Fail' }); }
 });
 
+app.post('/api/game/sync', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'No token' });
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
+    const updatedState = await prisma.gameState.update({
+      where: { userId: decoded.userId },
+      data: { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests }
+    });
+    res.json(updatedState);
+  } catch (error) { res.status(401).json({ error: 'Invalid' }); }
+});
+
 // --- 4. STATIC FILES AND SPA ---
 
 const DIST = path.join(process.cwd(), 'dist');
@@ -98,6 +113,6 @@ app.get('*', (req, res, next) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[NEON_CORE] Ready on 0.0.0.0:${PORT}`);
 });

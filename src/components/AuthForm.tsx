@@ -12,7 +12,7 @@ export const AuthForm: React.FC = () => {
         e.preventDefault();
         setError('');
         
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+        const endpoint = isLogin ? '/neon_v1/auth/login' : '/neon_v1/auth/register';
         
         try {
             const response = await fetch(endpoint, {

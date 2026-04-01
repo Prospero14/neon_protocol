@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const syncGameState = async (state: any) => {
     if (!token) return;
     try {
-      const response = await fetch('/api/game/sync', {
+      const response = await fetch('/neon_v1/game/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

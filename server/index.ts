@@ -32,7 +32,7 @@ app.use(express.json());
 // --- 3. EXPLICIT API ROUTES (MOST IMPORTANT) ---
 
 // Health check - Absolute first
-app.get('/api/health', (req, res) => {
+app.get('/neon_v1/health', (req, res) => {
   const CWD = process.cwd();
   const rootFiles = fs.readdirSync(CWD);
   const distPath = path.join(CWD, 'dist');
@@ -52,7 +52,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Auth Routes
-app.post('/api/auth/register', async (req, res) => {
+app.post('/neon_v1/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -61,7 +61,7 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (error) { res.status(400).json({ error: 'Fail' }); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/neon_v1/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
     const user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
@@ -71,7 +71,7 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (error) { res.status(500).json({ error: 'Fail' }); }
 });
 
-app.post('/api/game/sync', async (req, res) => {
+app.post('/neon_v1/game/sync', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'No token' });
@@ -98,7 +98,7 @@ app.use(express.static(DIST));
 
 // SPA Fallback - ONLY if it's not an API route
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/neon_v1')) {
     return res.status(404).json({ error: 'API route not found' });
   }
 

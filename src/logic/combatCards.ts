@@ -7,7 +7,7 @@ export type CardLanguage = 'java' | 'kotlin' | 'python' | 'js' | 'go' | 'none';
 export type CardLibTag = 'spring' | 'network' | 'collections' | 'streams' | 'concurrency' | 'scripting';
 export type CardType = 'SYNTAX' | 'FUNCTION' | 'NETWORK' | 'SOFT' | 'HARD' | 'DEFENSIVE' | 'REACTION' | 'BUG' | 'STATUS' | 'INFRASTRUCTURE' | 'SCRIPT';
 export type CardGrade = 'Junior' | 'Middle' | 'Senior' | 'Trainee';
-export type CardTag = 'base-java' | 'base-kotlin' | 'base-python' | 'base-go' | 'base-js' | 'script' | 'reaction' | 'utility';
+export type CardTag = 'base-java' | 'base-kotlin' | 'base-python' | 'base-go' | 'base-js' | 'script' | 'reaction' | 'utility' | 'spring' | 'scripting';
 
 export interface CombatCard {
   id: string;

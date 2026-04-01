@@ -7,6 +7,7 @@ import type { TechnicalTask } from './combatTasks';
 export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   {
     id: 'spring_rest_stub',
+    rank: 'junior',
     name: 'SPRING_DRILL: REST_CONTROLLER_STUB',
     description:
       'ИИ требует рабочую заглушку REST: поднимите Boot, повесьте @RestController и объявите @GetMapping-стаб.',
@@ -18,6 +19,7 @@ export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   },
   {
     id: 'spring_service_stub',
+    rank: 'junior',
     name: 'SPRING_DRILL: SERVICE_LAYER_STUB',
     description: 'Вынесите логику из контроллера: @Service и метод-заглушка до подключения БД или брокера.',
     steps: [
@@ -28,6 +30,7 @@ export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   },
   {
     id: 'spring_java_config_bean',
+    rank: 'junior',
     name: 'SPRING_DRILL: @Configuration + @Bean',
     description: 'Сборка зависимостью в коде: конфиг-класс и фабричный бин для инъекций.',
     steps: [
@@ -38,6 +41,7 @@ export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   },
   {
     id: 'spring_response_contract',
+    rank: 'junior',
     name: 'SPRING_DRILL: RESPONSE_ENTITY_CONTRACT',
     description: 'Оформите ответ через ResponseEntity.ok — ИИ проверяет явный HTTP-слой.',
     steps: [
@@ -49,6 +53,7 @@ export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   },
   {
     id: 'spring_constructor_inject',
+    rank: 'junior',
     name: 'SPRING_DRILL: CTOR_INJECTION_STUB',
     description: 'Контроллер с конструкторной инъекцией зависимостей (паттерн для тестов и ясности).',
     steps: [
@@ -59,6 +64,7 @@ export const SPRING_TZ_LIBRARY: TechnicalTask[] = [
   },
   {
     id: 'spring_web_layer_test',
+    rank: 'junior',
     name: 'SPRING_DRILL: WebMvcTest + MockMvc',
     description: 'Напишите минимальный тест среза: @WebMvcTest и dispatch через MockMvc.',
     steps: [

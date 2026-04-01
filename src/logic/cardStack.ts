@@ -65,4 +65,5 @@ export const LIB_TAG_LABELS: Record<CardLibTag, string> = {
   collections: 'java.util collections',
   streams: 'Java Streams API',
   concurrency: 'Java Concurrency API',
+  scripting: 'Shell / Scripting'
 };

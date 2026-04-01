@@ -123,10 +123,12 @@ function App() {
     return [...map.values()];
   }, [inventory]);
 
-  const [skillMode, setSkillMode] = useState<SkillMode>(() => {
+  const [skillMode] = useState<SkillMode>(() => {
     if (typeof window === 'undefined') return DEFAULT_SKILL_MODE;
     return parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY));
   });
+
+  console.log('SkillMode active:', skillMode);
 
   useEffect(() => {
     localStorage.setItem(SKILL_MODE_STORAGE_KEY, skillMode);

@@ -7,27 +7,27 @@ The project now includes a **Node.js/Express** backend and **Prisma/PostgreSQL**
 - **Authentication**: JWT-based secure session management.
 - **Persistence**: Player HP, Bits, XP, Deck, and Artifacts are synced to the database.
 
-## 🛠️ Deployment (Timeweb Cloud App Platform)
-To deploy this project to the RU segment using Timeweb Cloud:
+## 🚀 Zero-Cost Deployment (Timeweb Cloud App Platform)
+The project now uses **SQLite**, so you don't need to pay for a separate database cluster. 
 
 1. **GitHub Connection**:
    - In Timeweb Cloud, go to **[ App Platform ]**.
-   - Create a new service from **[ GitHub ]**.
-   - Select the repository: `Prospero14/neon_protocol`.
+   - Create a service from your repository: `Prospero14/neon_protocol`.
 
-2. **Framework Selection**:
-   - Select **[ Другой ]** (Other) framework.
+2. **Framework & Environment**:
+   - Select **[ Другой ]** (Other).
    - Ensure the runtime is **Node.js 24**.
 
 3. **Build & Start Settings**:
    - **Build Command**: `npm run build:full`
    - **Start Command**: `npm start`
-   - **Output Directory**: Leave empty or root (since the server handle static files).
 
 4. **Environment Variables**:
-   - Create a **PostgreSQL** instance in Timeweb "Базы данных".
-   - In the App Platform settings, add `DATABASE_URL` (format: `postgresql://USER:PASSWORD@HOST:PORT/DATABASE_NAME?schema=public`).
-   - Add `JWT_SECRET` (a random string for token security).
+   - **DATABASE_URL**: Leave blank (it will use the local `file:./dev.db`).
+   - **JWT_SECRET**: Add any random string (e.g., `my_secret_123`).
+
+> [!CAUTION]
+> **Data Persistence**: Since SQLite is a local file, players and their progress will be **reset whenever you push a new update** to GitHub. This is perfect for testing without costs!
 
 ## 💻 Local Development
 1. Clone the repo.

@@ -1,0 +1,331 @@
+.deck-v4-view {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  grid-template-rows: auto auto 1fr;
+  background: #000;
+  padding: 1rem;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+.deck-header {
+  grid-column: 1;
+  grid-row: 1;
+  padding: 1rem 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.deck-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.deck-brand h3 {
+  margin: 0 0 4px 0;
+}
+.deck-subtitle {
+  font-size: 0.65rem;
+  color: #888;
+  max-width: 420px;
+  line-height: 1.4;
+  margin: 0;
+}
+.deck-stack-filters {
+  grid-column: 1;
+  grid-row: 2;
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stack-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.filter-label {
+  font-size: 0.65rem;
+  color: var(--neon-amber);
+  min-width: 90px;
+}
+.filter-chip {
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 255, 255, 0.08);
+  color: var(--neon-cyan);
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  border-radius: 4px;
+  cursor: default;
+}
+.filter-chip.active {
+  border-color: var(--neon-cyan);
+}
+.filter-hint {
+  font-size: 0.6rem;
+}
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: #ccc;
+}
+.filter-check input {
+  accent-color: var(--neon-cyan);
+}
+.lib-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lib-chip {
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: #888;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.lib-chip.on {
+  border-color: var(--neon-cyan);
+  color: #000;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--neon-cyan-glow);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.lib-chip.on.core {
+  border-color: #00ff88;
+  background: #00ff88;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+}
+.lib-chip.on.infra {
+  border-color: #a8e063; color: #a8e063;
+  background: rgba(168, 224, 99, 0.08);
+  box-shadow: 0 0 10px rgba(168, 224, 99, 0.15);
+}
+.lib-chip.on.soft {
+  border-color: var(--neon-cyan); color: var(--neon-cyan);
+  background: rgba(0, 255, 255, 0.08);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+}
+.lib-chip.on.tests {
+  border-color: var(--neon-amber); color: var(--neon-amber);
+  background: rgba(255, 176, 0, 0.08);
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.15);
+}
+.filter-warning {
+  font-size: 0.7rem;
+  color: var(--neon-pink);
+  margin: 0;
+}
+.opacity-50 {
+  opacity: 0.5;
+}
+
+.inventory-pane {
+  grid-column: 1;
+  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 0.75rem;
+}
+.pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--neon-cyan);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+.pane-hint {
+  font-size: 0.6rem;
+  opacity: 0.4;
+}
+
+.inventory-grid-v4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 160px);
+  gap: 1.25rem;
+  padding: 1rem;
+  justify-content: center;
+  overflow-y: auto;
+  height: 100%;
+}
+/* Styled scrollbars are now global in App.css */
+/* Note: Removing overflow: hidden from cards to allow tooltips to pop out */
+.card-slot-v4 {
+  position: relative;
+  transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  width: 160px;
+  height: 240px;
+  flex-shrink: 0;
+}
+.card-slot-v4:hover {
+  transform: translateY(-8px) scale(1.02);
+  z-index: 20;
+}
+
+.card-slot-v4:hover {
+  transform: translateY(-8px) scale(1.02);
+  z-index: 20;
+}
+
+.add-btn {
+  background: var(--neon-cyan);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  font-weight: bold;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.inspect-icon {
+  color: #fff;
+  opacity: 0.6;
+}
+
+.active-deck-pane {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  gap: 1rem;
+  overflow: hidden;
+  border-left: 1px solid var(--glass-border);
+}
+.active-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.active-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(0, 255, 255, 0.03);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  border-radius: 4px;
+  min-height: 52px;
+  transition: 0.2s;
+  flex-shrink: 0;
+}
+.active-row.interactive {
+  cursor: pointer;
+}
+.active-row.interactive:hover {
+  background: rgba(0, 255, 255, 0.08);
+  border-color: var(--neon-cyan);
+}
+.active-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.active-card-name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--neon-cyan);
+}
+.active-card-type {
+  font-size: 0.6rem;
+  opacity: 0.5;
+  font-family: var(--font-mono);
+}
+
+.remove-pill {
+  background: rgba(255, 0, 100, 0.1);
+  border: 1px solid var(--neon-pink-glow);
+  color: var(--neon-pink);
+  padding: 4px 8px;
+  font-size: 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.remove-pill:hover {
+  background: var(--neon-pink);
+  color: #fff;
+}
+
+.empty-deck-hint {
+  font-size: 0.7rem;
+  color: #555;
+  text-align: center;
+  margin-top: 2rem;
+}
+
+/* --- DECK BUILDER 3X CONTROLS --- */
+.card-v4-deck-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-v4-action-btn {
+  background: var(--neon-cyan) !important;
+  color: #000 !important;
+  border: 1px solid var(--neon-cyan) !important;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 900;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+  text-transform: uppercase;
+}
+
+.card-v4-action-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px var(--neon-cyan-glow);
+  background: #fff !important;
+}
+
+.card-v4-action-btn.remove {
+  background: rgba(255, 0, 100, 0.1) !important;
+  border-color: var(--neon-pink) !important;
+  color: var(--neon-pink) !important;
+  box-shadow: none !important;
+}
+
+.card-v4-action-btn.remove:hover {
+  background: var(--neon-pink) !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px var(--neon-pink-glow) !important;
+}
+
+.card-v4-action-btn.add.maxed {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(1);
+  box-shadow: none !important;
+}
+
+.deck-count-badge {
+  background: var(--neon-amber);
+  color: #000;
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: 900;
+  box-shadow: 0 0 8px var(--neon-amber-glow);
+}

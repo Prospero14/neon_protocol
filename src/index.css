@@ -1,0 +1,82 @@
+/* 
+  Определяем глобальные переменные дизайна. 
+  Это удобно: если мы захотим сменить "ядовито-зеленый" на "синий", 
+  мы сделаем это в одной строчке.
+*/
+:root {
+  --neon-green: #00ff41;
+  --neon-green-glow: rgba(0, 255, 65, 0.5);
+  --neon-purple: #bc13fe;
+  --neon-purple-glow: rgba(188, 19, 254, 0.5);
+  --bg-black: #0d0208;
+  --crt-scanline: rgba(18, 16, 16, 0.1);
+  --font-main: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Сброс базовых стилей браузера */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-black);
+  color: var(--neon-green);
+  font-family: var(--font-main);
+  overflow: hidden; /* Мы управляем прокруткой через внутренние элементы */
+  height: 100vh;
+  width: 100vw;
+}
+
+/* 
+  CRT ЭФФЕКТ: Специфические слои для атмосферы ретро-футуризма.
+*/
+
+/* 1. Глобальный оверлей со сканлайнами (горизонтальные полосы) */
+#root::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(
+    var(--crt-scanline) 50%, 
+    rgba(0, 0, 0, 0.1) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 9999;
+  pointer-events: none; /* Пропускаем клики сквось слой */
+  animation: scanline 10s linear infinite;
+}
+
+/* 2. Виньетка (затемнение по углам для эффекта выпуклого экрана) */
+#root::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: radial-gradient(
+    circle, 
+    transparent 60%, 
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  z-index: 9998;
+  pointer-events: none;
+}
+
+/* Анимация медленно плывущих полос */
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* Стили для текста с неоновым свечением */
+.neon-text {
+  text-shadow: 0 0 5px var(--neon-green-glow), 0 0 10px var(--neon-green-glow);
+}
+
+.neon-border {
+  border: 1px solid var(--neon-green);
+  box-shadow: 0 0 10px var(--neon-green-glow);
+}

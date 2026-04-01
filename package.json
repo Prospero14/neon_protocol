@@ -6,9 +6,9 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "ts-node server/index.ts",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && mv index.html index.html.bak",
     "build:full": "npm run build && npx prisma generate",
-    "start": "ts-node server/index.ts",
+    "start": "mv index.html.bak index.html || true; ts-node server/index.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

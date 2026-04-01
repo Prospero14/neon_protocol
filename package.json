@@ -6,9 +6,9 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "ts-node server/index.ts",
-    "build": "tsc -b && vite build && mv index.html index.html.bak",
+    "build": "tsc -b && vite build && tsc server/index.ts --esModuleInterop --module esnext --target esnext --moduleResolution node --outDir dist_server",
     "build:full": "npm run build && npx prisma generate",
-    "start": "mv index.html.bak index.html || true; ts-node server/index.ts",
+    "start": "node dist_server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

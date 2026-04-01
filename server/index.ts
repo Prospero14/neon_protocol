@@ -29,25 +29,31 @@ const prisma = new PrismaClient({ adapter });
 app.use(cors());
 app.use(express.json());
 
-// --- 3. PATH PROBE ---
+// --- 3. PATH & DIAGNOSTICS ---
 const CWD = process.cwd();
-const DIST_V1 = path.resolve(CWD, 'dist');
-const DIST_V2 = path.resolve(__dirname, '../dist');
+const distPath = path.resolve(CWD, 'dist');
 
-console.log('[NEON_PROBE] CWD:', CWD);
-console.log('[NEON_PROBE] __dirname:', __dirname);
-console.log('[NEON_PROBE] DIST_V1 (CWD based):', DIST_V1, fs.existsSync(DIST_V1) ? '(FOUND)' : '(NOT FOUND)');
-console.log('[NEON_PROBE] DIST_V2 (DIR based):', DIST_V2, fs.existsSync(DIST_V2) ? '(FOUND)' : '(NOT FOUND)');
+console.log('[NEON_BOOT] CWD:', CWD);
+console.log('[NEON_BOOT] Target Dist Path:', distPath);
 
-const distPath = fs.existsSync(DIST_V1) ? DIST_V1 : DIST_V2;
-
-// --- 4. API ROUTES ---
+// --- 4. API ROUTES (Explicit Matching) ---
 
 app.get('/api/health', (req, res) => {
+  let distFiles: string[] = [];
+  try {
+    if (fs.existsSync(distPath)) {
+      distFiles = fs.readdirSync(distPath);
+    }
+  } catch (e) {
+    console.error('[NEON_ERROR] Failed to read dist:', e);
+  }
+
   res.json({ 
     status: 'active', 
-    distFound: fs.existsSync(distPath),
-    distPath: distPath
+    cwd: CWD,
+    distPath: distPath,
+    distExists: fs.existsSync(distPath),
+    distFiles
   });
 });
 
@@ -61,7 +67,6 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     });
     res.status(201).json({ message: 'User created' });
   } catch (error: any) {
-    if (error.code === 'P2002') return res.status(400).json({ error: 'Username already exists' });
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -85,42 +90,49 @@ app.post('/api/game/sync', async (req: Request, res: Response) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     const { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
-    const updatedState = await prisma.gameState.update({
+    await prisma.gameState.update({
       where: { userId: decoded.userId },
       data: { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests }
     });
-    res.json(updatedState);
+    res.json({ success: true });
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
 
-// --- 5. STATIC FILES AND SPA FALLBACK ---
+// --- 5. STATIC FILES (Priority) ---
 
-// Assets should be explicitly handled
-app.use('/assets', express.static(path.join(distPath, 'assets')));
+// Serve /assets explicitly
+app.use('/assets', express.static(path.join(distPath, 'assets'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+    if (path.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+  }
+}));
+
+// Serve root level static files (favicon, etc)
 app.use(express.static(distPath));
 
-// Final SPA Fallback: RegExp for accuracy
-app.get(/^\/(?!api).*/, (req: Request, res: Response) => {
+// --- 6. SPA FALLBACK (Final Catch-all) ---
+
+app.get('*', (req: Request, res: Response, next: NextFunction) => {
+  // Never catch API routes
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+
   const indexPath = path.join(distPath, 'index.html');
-  console.log(`[SPA] Solving path ${req.path} -> ${indexPath}`);
   
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // If dist/index.html is missing, check if it's in the root (but warn)
-    const rootIndex = path.join(process.cwd(), 'index.html');
-    if (fs.existsSync(rootIndex)) {
-      console.warn('[SPA] dist/index.html missing, falling back to root index.html (DEV VERSION!)');
-      res.sendFile(rootIndex);
-    } else {
-      res.status(500).send(`Production build missing at ${indexPath}`);
-    }
+    // If dist/index.html is missing, we are in trouble
+    console.error(`[NEON_CRITICAL] Missing index.html at ${indexPath}`);
+    res.status(500).send('Application build folder (dist/) not found. Check Timeweb Build settings.');
   }
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`[NEON_CORE] Fullstack active on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[NEON_CORE] Fullstack active on 0.0.0.0:${PORT}`);
 });

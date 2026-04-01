@@ -1,0 +1,85 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+interface User {
+  id: string;
+  username: string;
+  gameState?: any;
+}
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  login: (token: string, user: User) => void;
+  logout: () => void;
+  syncGameState: (state: any) => Promise<void>;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const savedToken = localStorage.getItem('neon_token');
+    const savedUser = localStorage.getItem('neon_user');
+    
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = (newToken: string, newUser: User) => {
+    setToken(newToken);
+    setUser(newUser);
+    localStorage.setItem('neon_token', newToken);
+    localStorage.setItem('neon_user', JSON.stringify(newUser));
+  };
+
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('neon_token');
+    localStorage.removeItem('neon_user');
+    window.location.reload(); // Reset game state
+  };
+
+  const syncGameState = async (state: any) => {
+    if (!token) return;
+    try {
+      const response = await fetch('/api/game/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(state)
+      });
+      if (response.ok) {
+        const updatedUser = { ...user!, gameState: state };
+        setUser(updatedUser);
+        localStorage.setItem('neon_user', JSON.stringify(updatedUser));
+      }
+    } catch (error) {
+      console.error('Failed to sync game state:', error);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, syncGameState, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

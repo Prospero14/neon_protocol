@@ -19,6 +19,10 @@ import ResponsiveNav from './components/ResponsiveNav';
 import Documentation from './components/Documentation';
 import CharacterCreation from './components/CharacterCreation';
 import FixerBarScene from './components/FixerBarScene';
+import { AuthForm } from './components/AuthForm';
+
+// Auth & Persistence
+import { useAuth } from './logic/AuthContext';
 
 // CCG Ресурсы
 import type { CombatCard } from './logic/combatCards';
@@ -150,6 +154,50 @@ function App() {
     if (!discoveredCardIds.has(id)) {
       setDiscoveredCardIds((prev) => new Set(prev).add(id));
     }
+  };
+
+  const { user, token, logout, syncGameState, isLoading: isAuthLoading } = useAuth();
+
+  // Load state from User on Login
+  useEffect(() => {
+    if (user?.gameState) {
+      const s = user.gameState;
+      if (s.hp !== undefined) setHp(s.hp);
+      if (s.bits !== undefined) setBits(s.bits);
+      if (s.xp !== undefined) setXp(s.xp);
+      if (s.activeDeck) {
+        try {
+          const deckIds = typeof s.activeDeck === 'string' ? JSON.parse(s.activeDeck) : s.activeDeck;
+          const cards = deckIds.map((id: string) => getCardById(id)).filter(Boolean);
+          setActiveDeck(cards);
+        } catch (e) { console.error("Failed to load deck", e); }
+      }
+      if (s.inventory) {
+        try {
+          const invIds = typeof s.inventory === 'string' ? JSON.parse(s.inventory) : s.inventory;
+          const cards = invIds.map((id: string) => getCardById(id)).filter(Boolean);
+          if (cards.length > 0) setInventory(cards);
+        } catch (e) { }
+      }
+      if (s.artifacts) {
+        try {
+          setArtifacts(typeof s.artifacts === 'string' ? JSON.parse(s.artifacts) : s.artifacts);
+        } catch (e) { }
+      }
+    }
+  }, [user]);
+
+  // Sync state helper
+  const triggerSync = (overrides = {}) => {
+    if (!token) return;
+    const currentState = {
+      hp, bits, xp, level,
+      activeDeck: activeDeck.map(c => c.id),
+      inventory: inventory.map(c => c.id),
+      artifacts,
+      ...overrides
+    };
+    syncGameState(currentState);
   };
 
   const [bootHistory, setBootHistory] = useState<string[]>([]);
@@ -382,7 +430,8 @@ function App() {
                  };
                  if (!artifacts.some(a => a.id === 'artifact_necron')) {
                     setArtifacts(prev => [...prev, necron]);
-                 }
+                 triggerSync({ artifacts: [...artifacts, necron] });
+               }
               }
 
               // QUEST REWARD: Nixanna Ritual
@@ -392,12 +441,14 @@ function App() {
                  if (card) {
                     setInventory(inv => [...inv, card]);
                     discoverCard('reward_divine_debug');
+                    triggerSync({ inventory: [...inventory.map(c => c.id), 'reward_divine_debug'] });
                  }
               }
 
               // Back to the district
               setCurrentView('MAP');
               setViewMode('DISTRICT');
+              triggerSync(); 
             }}
           />
         );
@@ -563,6 +614,13 @@ function App() {
               <button className="neon-border-btn" onClick={() => setCurrentView('MAP')}>
                 [ INITIALIZE_MAP_RADAR ]
               </button>
+              <button 
+                className="neon-border-btn" 
+                onClick={logout} 
+                style={{ marginLeft: '1rem', borderColor: 'var(--neon-pink)', color: 'var(--neon-pink)' }}
+              >
+                [ TERMINATE_SESSION ]
+              </button>
             </div>
           </div>
         );
@@ -596,6 +654,16 @@ function App() {
       setViewMode('CITY');
     }
   };
+
+  if (isAuthLoading) {
+    return <div className="boot-view app-root main-crt" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="neon-text animate-pulse">CONNECTING_TO_IDENTITY_SERVER...</div>
+    </div>;
+  }
+
+  if (!token) {
+    return <AuthForm />;
+  }
 
   if (!isBooted) {
     return (

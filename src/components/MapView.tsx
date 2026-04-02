@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
 import { X, Search, MousePointer2 } from 'lucide-react';
+import type { QuestDefinition } from '../logic/questData';
+import type { QuestState } from '../logic/questEngine';
 
 interface MapViewProps {
   viewMode: 'CITY' | 'DISTRICT';
@@ -10,6 +12,12 @@ interface MapViewProps {
   onNodeSelect: (nodeId: string, type: string, cost?: number) => void;
   onToggleView: () => void;
   onBack: () => void;
+  getNpcQuests?: (npcId: string) => QuestDefinition[];
+  questStates?: QuestState[];
+  onAcceptQuest?: (questId: string) => void;
+  onTrackQuest?: (questId: string) => void;
+  onCompleteTalkQuest?: (questId: string) => void;
+  trackedQuestId?: string | null;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -26,7 +34,13 @@ const MapView: React.FC<MapViewProps> = ({
   isCityMapUnlocked,
   onNodeSelect, 
   onBack,
-  onToggleView
+  onToggleView,
+  getNpcQuests,
+  questStates = [],
+  onAcceptQuest,
+  onTrackQuest,
+  onCompleteTalkQuest,
+  trackedQuestId = null,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
@@ -70,6 +84,10 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const activeDistrict = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
+  const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
+  const selectedNpcQuests =
+    selectedSubNode?.type === 'npc' && getNpcQuests ? getNpcQuests(selectedSubNode.id) : [];
+  const getQuestState = (questId: string) => questStates.find((s) => s.questId === questId);
 
   const getTravelCost = (targetNode: MapNodeData) => {
     if (targetNode.id === activeDistrictId) return 0;
@@ -241,6 +259,37 @@ const MapView: React.FC<MapViewProps> = ({
                   >
                     [ ENGAGE_SUB_NODE ]
                   </div>
+
+                  {sn.type === 'npc' && selectedNpcQuests.length > 0 && (
+                    <div className="map-quest-panel">
+                      <div className="map-quest-title">NPC_CONTRACTS</div>
+                      {selectedNpcQuests.slice(0, 4).map((q) => {
+                        const state = getQuestState(q.id);
+                        const status = state?.status ?? 'available';
+                        return (
+                          <div key={q.id} className="map-quest-item">
+                            <div className="map-quest-row">
+                              <span>{q.title}</span>
+                              <span className={`map-quest-status ${status}`}>{status.toUpperCase()}</span>
+                            </div>
+                            <div className="map-quest-actions">
+                              {status !== 'active' && status !== 'completed' && onAcceptQuest && (
+                                <button className="map-mini-btn" onClick={() => onAcceptQuest(q.id)}>ACCEPT</button>
+                              )}
+                              {status === 'active' && onTrackQuest && (
+                                <button className="map-mini-btn" onClick={() => onTrackQuest(q.id)}>
+                                  {trackedQuestId === q.id ? 'TRACKED' : 'TRACK'}
+                                </button>
+                              )}
+                              {status === 'active' && q.type === 'talk' && onCompleteTalkQuest && (
+                                <button className="map-mini-btn" onClick={() => onCompleteTalkQuest(q.id)}>COMPLETE</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </>
               );
             })()

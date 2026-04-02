@@ -15,6 +15,8 @@ interface CharacterScreenProps {
     xp: number;
     level: number;
     traits: Trait[];
+    classUnlocked?: boolean;
+    completedQuestCount?: number;
   };
   onBack: () => void;
 }
@@ -107,6 +109,9 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, onBack }) => 
                 <div className="grade-badge-v4">{player.profession.grade.toUpperCase()}</div>
               </div>
               <p className="prof-desc mono-text">{player.profession.description}</p>
+              <div className="prof-desc mono-text" style={{ marginTop: '8px' }}>
+                CLASS_STATUS: {player.classUnlocked ? 'ASSIGNED' : 'UNASSIGNED'} · QUESTS_DONE: {player.completedQuestCount ?? 0}
+              </div>
             </div>
           </div>
 

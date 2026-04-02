@@ -46,7 +46,14 @@ export const AuthForm: React.FC = () => {
                 background: '#111', border: '1px solid #0ff', padding: '2.5rem',
                 width: '100%', maxWidth: '400px', boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)'
             }}>
-                <h2 style={{ color: '#0ff', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '4px' }}>
+                <h2 style={{ 
+                    color: '#0ff', 
+                    textAlign: 'center', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '4px',
+                    whiteSpace: 'nowrap',
+                    fontSize: '1.2rem'
+                }}>
                     {isLogin ? '[ INITIALIZE_SESSION ]' : '[ CREATE_IDENTITY ]'}
                 </h2>
                 

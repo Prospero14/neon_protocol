@@ -55,8 +55,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const [playerProgress, setPlayerProgress] = useState(0);
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
-  const [playerHp, setPlayerHp] = useState(100);
-  const [playerMaxHp, setPlayerMaxHp] = useState(100);
+  const [stress, setStress] = useState(0); 
+  const [maxStress] = useState(100);
   const [activeProblem] = useState<BugProblemType | null>(null);
   const [aiDeadline, setAiDeadline] = useState(Math.max(3, 10 - tier));
 
@@ -255,8 +255,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             setRamMaxMb(prev => prev + 1536); 
             break;
         case 'infra_raid_array': 
-            setPlayerMaxHp(prev => prev + 50); 
-            setPlayerHp(prev => prev + 50); 
+            setStress(prev => Math.max(0, prev - 20)); // RAIDs now lower stress
             break;
         case 'infra_postgres': 
             setCpuMax(prev => prev + 2); 
@@ -325,7 +324,11 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             drawCards(1);
             if (enemy) setNextBugAction(getRandomBugAction(enemy));
             
-            // Логика автоматического перехода фазы ARCHITECTURE
+            // Auto-Stress Accumulation (Pressure)
+            setStress(prev => Math.min(100, prev + 5)); 
+            addLog(`[WARNING] SYSTEM_STRESS: +5% (PASSIVE_LOAD)`);
+            
+            // ARCHITECTURE phase turn logic
             if (currentPhase === 'ARCHITECTURE') {
                const nextTurn = planningTurn + 1;
                if (nextTurn >= 2) {
@@ -361,7 +364,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     if (nextBugAction.damage > 0) {
         const difficultyMult = 1 + (tier - 1) * 0.25;
         const finalDamage = Math.floor(nextBugAction.damage * difficultyMult);
-        setPlayerHp(prev => Math.max(0, prev - finalDamage));
+        setStress(prev => Math.min(100, prev + finalDamage));
     }
     addLog(`[AI] ${nextBugAction.name}`);
   };
@@ -418,10 +421,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     const bugsOnRail = runtimeRail.filter(s => s.type === 'BUG_ERROR').length;
     const stabilityDamage = bugsOnRail * 15;
     
-    const finalHp = Math.max(0, playerHp - stabilityDamage);
-    setPlayerHp(finalHp);
+    const currentStress = stress + stabilityDamage;
+    setStress(Math.min(100, currentStress));
 
-    const isSuccess = missingSteps.length === 0 && cpuOk && ramOk && slotsOk && finalHp > 0;
+    const isSuccess = missingSteps.length === 0 && cpuOk && ramOk && slotsOk && currentStress < 100;
 
     setDeploymentReport({
         missingSteps,
@@ -491,10 +494,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
           <div className="sb-section">
             <div className="sb-title">DIAGNOSTICS</div>
             <div className="sb-stat">
-              <Heart size={20} color="var(--neon-pink)" />
+              <AlertTriangle size={20} color="var(--neon-pink)" />
               <div className="sb-stat-info">
-                <span className="sb-stat-name">INTEGRITY</span>
-                <span className="sb-stat-val">{playerHp}/{playerMaxHp}</span>
+                <span className="sb-stat-name">STRESS_LEVEL</span>
+                <span className="sb-stat-val">{stress}% / 100%</span>
               </div>
             </div>
             <div className="sb-stat">
@@ -535,11 +538,11 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             
             <button 
               className="sb-btn" 
-              onClick={() => onWin(0)} 
-              style={{ marginTop: '10px', borderColor: 'var(--neon-pink)', color: 'var(--neon-pink)', opacity: 0.7 }}
+              onClick={() => setShowDefeat(true)} 
+              style={{ marginTop: '10px', borderColor: 'var(--neon-pink)', color: 'var(--neon-pink)', opacity: 0.9 }}
               title="Экстренное прерывание. Штраф: Прогресс миссии будет потерян."
             >
-              [ EMERGENCY_ABORT ]
+              [ TERMINATE_SESSION ]
             </button>
           </div>
         </aside>
@@ -785,10 +788,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
                       <span>REQUIREMENTS_NOT_MET ({deploymentReport.missingSteps.length})</span>
                     </div>
                   )}
-                  {playerHp <= 0 && (
+                  {stress >= 100 && (
                     <div className="stat-row red">
                       <span>ERROR:</span>
-                      <span>STABILITY_LOSS_BUG_OVERLOAD</span>
+                      <span>NEURAL_STRESS_OVERLOAD (BRAIN_MELT)</span>
                     </div>
                   )}
                 </>

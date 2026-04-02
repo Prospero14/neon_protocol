@@ -101,7 +101,7 @@ app.use('/assets', express.static(path.join(DIST, 'assets')));
 app.use(express.static(DIST));
 
 // SPA Fallback - ONLY if it's not an API route
-app.get('*', (req, res, next) => {
+app.get('*splat', (req, res, next) => {
   if (req.path.startsWith('/neon_v1')) {
     return res.status(404).json({ error: 'API route not found' });
   }

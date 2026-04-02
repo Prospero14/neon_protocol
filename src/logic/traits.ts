@@ -56,6 +56,22 @@ export const TRAITS: Trait[] = [
     id: 'hobby_blogging', name: 'NIGHT_INFLUENCER', type: 'HOBBY', category: 'SOCIAL',
     description: '+25% XP gain. Твои подписчики следят за каждым твоим шагом.' 
   },
+  { 
+    id: 'hobby_pentesting', name: 'PENTESTER_ADDICTOR', type: 'HOBBY', category: 'TECH',
+    description: 'Шанс 20% взломать узел моментально. Код для тебя — открытая книга.' 
+  },
+  { 
+    id: 'hobby_coffee', name: 'CAFFEINE_OVERLOAD', type: 'HOBBY', category: 'SRE',
+    description: '+1 Draw в начале каждого хода. Ты никогда не спишь.' 
+  },
+  { 
+    id: 'hobby_crypto', name: 'CRYPTO_MINER', type: 'HOBBY', category: 'TECH',
+    description: 'Каждый бой приносит +20 Bits пассивно. Твоя дека майнит в фоне.' 
+  },
+  { 
+    id: 'hobby_yoga', name: 'ZEN_CODER', type: 'HOBBY', category: 'SOFT',
+    description: 'Максимальный Integrity +50. Ты спокоен даже под DDoS-атакой.' 
+  },
 
   // БОЕВЫЕ ТРЕЙТЫ (Старые)
   { 

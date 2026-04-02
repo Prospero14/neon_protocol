@@ -5,7 +5,7 @@ export interface DialogueOption {
   nextId: string | 'LEAVE';
   cost?: number; // Cost in bits
   requireTrait?: string; 
-  effect?: 'GIVE_CARD' | 'GIVE_TRAIT' | 'RESTORE_HP' | 'GIVE_BITS' | 'UNLOCK_CITY' | 'SET_PROFESSION' | 'START_COMBAT';
+  effect?: 'GIVE_CARD' | 'GIVE_TRAIT' | 'RESTORE_HP' | 'GIVE_BITS' | 'UNLOCK_CITY' | 'SET_PROFESSION' | 'START_COMBAT' | 'GIVE_XP';
   cardRewardId?: string;
   amount?: number; // For HP/Bits restore
 }
@@ -24,7 +24,7 @@ export interface DialogueTree {
 }
 
 export const DIALOGUE_TREES: Record<string, DialogueTree> = {
-  // --- TAXI TERMINALS (CITY TRANSPORT) ---
+  // --- TAXI TERMINALS ---
   term_taxi_alt: {
     id: 'term_taxi_alt',
     startNodeId: 'intro',
@@ -32,132 +32,61 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
       intro: {
         id: 'intro',
         speaker: 'ТЕРМИНАЛ_ТАКСИ',
-        text: 'Автоматическая служба такси Октября. Введите пункт назначения. Внимание: проезд через карантинные зоны требует оплаты пошлины в Bits.',
+        text: 'Служба такси Алтуфьево. Система заблокирована. Требуется 100 Bits для доступа к GPS-сетке города.',
         options: [
-          { text: 'Разблокировать доступ в Центр (50 Bits)', nextId: 'unlocked', cost: 50 },
-          { text: 'Проверить состояние маршрутов', nextId: 'info' },
+          { text: 'Разблокировать карту (100 Bits)', nextId: 'unlocked', cost: 100 },
           { text: '[Выход]', nextId: 'LEAVE' }
         ]
       },
-      info: {
-        id: 'info',
-        speaker: 'ТЕРМИНАЛ_ТАКСИ',
-        text: 'Линии метро перегружены ИИ-аудитом. Наземное такси "Yellow Log" работает в ограниченном режиме. Рекомендуется иметь при себе актуальные сертификаты Java.',
-        options: [{ text: 'Назад', nextId: 'intro' }]
-      },
       unlocked: {
         id: 'unlocked',
         speaker: 'ТЕРМИНАЛ_ТАКСИ',
-        text: 'Пошлина оплачена. Протоколы перемещения обновлены. Счастливого пути в системе.',
-        options: [{ text: 'Выехать в Грод (Карта города)', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }]
-      }
-    }
-  },
-  term_taxi_unlock: {
-    id: 'term_taxi_unlock',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ТЕРМИНАЛ_ТАКСИ',
-        text: 'Служба Выхино-Экспресс. Куда катимся, хакер? Вход в систему такси требует авторизации.',
-        options: [
-          { text: 'Авторизоваться (30 Bits)', nextId: 'unlocked', cost: 30 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      unlocked: {
-        id: 'unlocked',
-        speaker: 'ТЕРМИНАЛ_ТАКСИ',
-        text: 'Доступ разрешен. Машина прибудет... никогда. Шутка. Машина подана к ближайшему сетевому шлюзу.',
-        options: [{ text: 'Выехать в город', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }]
-      }
-    }
-  },
-  term_taxi_maryino: {
-    id: 'term_taxi_maryino',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ИНФО-СТОЙКА',
-        text: 'Станция такси Марьино. Трафик здесь плотный, но за 15 Bits мы прокинем тебя через центральный роутер.',
-        options: [
-          { text: 'Купить билет (15 Bits)', nextId: 'unlocked', cost: 15 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      unlocked: {
-        id: 'unlocked',
-        speaker: 'ИНФО-СТОЙКА',
-        text: 'Билет верифицирован. Твой процесс будет передан на глобальную шину транспортного узла.',
-        options: [{ text: 'Выход на карту города', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }]
+        text: 'Доступ разрешен. Глобальная навигация активна. Удачного полета над Реактором.',
+        options: [{ text: 'В ПУТЬ', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }]
       }
     }
   },
   term_taxi_bibi: {
-    id: 'term_taxi_bibi',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ТЕРМИНАЛ',
-        text: 'Бибирево-Линк. Выезд в центр города (20 Bits).',
-        options: [
-          { text: 'Оплатить проезд (20 Bits)', nextId: 'ok', cost: 20 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      ok: { id: 'ok', speaker: 'ТЕРМИНАЛ', text: 'Поехали.', options: [{ text: 'OK', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }] }
-    }
+    id: 'term_taxi_bibi', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Узел Бибирево. Глобальная навигация требует подписки (100 Bits).', options: [
+      { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
   },
   term_taxi_tekstil: {
-    id: 'term_taxi_tekstil',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ШЛЮЗ',
-        text: 'Текстильщики: выезд на МКАД-дата-трассу (20 Bits).',
-        options: [
-          { text: 'Оплатить (20 Bits)', nextId: 'ok', cost: 20 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      ok: { id: 'ok', speaker: 'ШЛЮЗ', text: 'Путь открыт.', options: [{ text: 'В путь', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }] }
-    }
+    id: 'term_taxi_tekstil', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Промзона Текстильщики. Доступ к внешним узлам закрыт протоколом ICE.', options: [
+      { text: 'Взломать протокол (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
   },
   term_taxi_perovo: {
-    id: 'term_taxi_perovo',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ИНФО-СТОЛБ',
-        text: 'Такси Перово. Прямой рейс в центр (15 Bits).',
-        options: [
-          { text: 'Оплатить (15 Bits)', nextId: 'ok', cost: 15 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      ok: { id: 'ok', speaker: 'ИНФО-СТОЛБ', text: 'Приятного полета.', options: [{ text: 'OK', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }] }
-    }
+    id: 'term_taxi_perovo', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Сектор Перово. Синхронизация с центром возможна через терминал.', options: [
+      { text: 'Синхронизировать (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
+  },
+  term_taxi_maryino: {
+    id: 'term_taxi_maryino', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Марьинский узел. Трафик перегружен. Требуется приоритетный пропуск.', options: [
+      { text: 'Купить пропуск (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
   },
   term_taxi_izmailovo: {
-    id: 'term_taxi_izmailovo',
-    startNodeId: 'intro',
-    nodes: {
-      intro: {
-        id: 'intro',
-        speaker: 'ТЕРМИНАЛ_РЫНОК',
-        text: 'Измайлово. Выезд в город (20 Bits).',
-        options: [
-          { text: 'Оплатить (20 Bits)', nextId: 'ok', cost: 20 },
-          { text: '[Уйти]', nextId: 'LEAVE' }
-        ]
-      },
-      ok: { id: 'ok', speaker: 'ТЕРМИНАЛ_РЫНОК', text: 'Удачи на дорогах.', options: [{ text: 'OK', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }] }
-    }
+    id: 'term_taxi_izmailovo', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Измайловский рынок. Такси доступны для авторизованных курьеров.', options: [
+      { text: 'Авторизоваться (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
+  },
+  term_taxi_unlock: {
+    id: 'term_taxi_unlock', startNodeId: 's',
+    nodes: { s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Глобальный терминал Выхино. Желаете покинуть сектор?', options: [
+      { text: 'Проломить шлюз (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
+      { text: 'Отмена', nextId: 'LEAVE' }
+    ] } }
   },
 
   // --- KITAY-GOROD ---
@@ -303,7 +232,7 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
         speaker: 'ВАРВАР',
         text: 'Кот Магнус заперся в Уборной №4. Взломай систему очистки, и я дам тебе кое-что ценное.',
         options: [
-          { text: 'Я в деле (Начать бой)', nextId: 'LEAVE' },
+          { text: 'Я в деле (Начать бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_magnus_toilet' },
           { text: 'Позже', nextId: 'anything_else' }
         ]
       }
@@ -346,7 +275,7 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
         speaker: 'НИКСАННА',
         text: 'Нужно оптимизировать пайплайн отрисовки в соседнем узле. Справишься — дам карту "Divine Debug".',
         options: [
-          { text: 'Готов к патчу.', nextId: 'LEAVE' },
+          { text: 'Готов к патчу.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_nixanna_ritual' },
           { text: 'Не сейчас', nextId: 'anything_else' }
         ]
       },
@@ -542,7 +471,61 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
     }
   },
 
-  // --- JOBS & ECONOMY ---
+
+  // --- UNIQUE DISTRICT NPCs ---
+
+  npc_signalman: {
+    id: 'npc_signalman', startNodeId: 'intro',
+    nodes: {
+      intro: { id: 'intro', speaker: 'МОНЯ', text: 'Сынок, не стой под антенной, мозги выжгло? Я тут пытаюсь Бибирево к общей сети прикрутить. Обрывы везде!', options: [
+        { text: 'Есть работа?', nextId: 'quest' },
+        { text: 'Уйти', nextId: 'LEAVE' }
+      ] },
+      quest: { id: 'quest', speaker: 'МОНЯ', text: 'Проверь подстанцию на 14-м луче. Если там сидит Баг — выбей его, и я подкину тебе пару свежих Bits.', options: [
+        { text: 'Сделаю (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_bibi' }
+      ] }
+    }
+  },
+  npc_hermit: {
+    id: 'npc_hermit', startNodeId: 'intro',
+    nodes: {
+      intro: { id: 'intro', speaker: 'ОТШЕЛЬНИК', text: 'Ш-ш-ш... Ты слышишь шум листвы? Это не деревья, это гул старых кулеров в корнях Сокольников. Зачем пришел?', options: [
+        { text: 'Ищу мудрость.', nextId: 'wisdom' },
+        { text: 'Уйти', nextId: 'LEAVE' }
+      ] },
+      wisdom: { id: 'wisdom', speaker: 'ОТШЕЛЬНИК', text: 'Мудрость — это умение ждать, пока Ядро само себя сожрет. Но если хочешь силы — иди к Глубинному Дереву. Там живет Истина.', options: [
+        { text: 'Понял.', nextId: 'intro' }
+      ] }
+    }
+  },
+  npc_kosmos: {
+    id: 'npc_kosmos', startNodeId: 'intro',
+    nodes: {
+      intro: { id: 'intro', speaker: 'КОСМОС', text: 'Эй, земной! Видел, как горят серверные стойки в Фили? Я собираю экспедицию на орбиту... цифровой реальности. Поможешь?', options: [
+        { text: 'Больные фантазии?', nextId: 'lore' },
+        { text: 'Нужна работа.', nextId: 'quest' },
+        { text: 'Уйти', nextId: 'LEAVE' }
+      ] },
+      lore: { id: 'lore', speaker: 'КОСМОС', text: 'Это не фантазии, юнит. Мы — в симуляции. И единственный выход — через черный ход в облако Ядра.', options: [{ text: 'Ну-ну.', nextId: 'intro' }] },
+      quest: { id: 'quest', speaker: 'КОСМОС', text: 'Нужны топливные стержни... то есть батарейки. Сходи к Пусковой Стойке, там часто ошиваются боты-стражи. Сделаешь их — дам Bits.', options: [
+        { text: 'Погнали (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'java_spring' }
+      ] }
+    }
+  },
+  npc_informant: {
+    id: 'npc_informant', startNodeId: 'intro',
+    nodes: {
+      intro: { id: 'intro', speaker: 'ИНФОРМАТОР_М', text: 'Хочешь знать, что Инквизитор прячет в Глубинном хранилище? Информация стоит дорого.', options: [
+        { text: 'Купить инсайд (50 Bits)', nextId: 'reward', cost: 50 },
+        { text: 'Обойдусь.', nextId: 'LEAVE' }
+      ] },
+      reward: { id: 'reward', speaker: 'ИНФОРМАТОР_М', text: 'Они хранят там логи за 2024 год... Там есть упоминание о протоколе "Moscow Zero". Это изменит всё.', options: [
+        { text: 'Принять данные (Награда)', nextId: 'LEAVE', effect: 'GIVE_XP', amount: 200 }
+      ] }
+    }
+  },
+
+  // --- SHOPS & BARS (REFILLED) ---
   npc_job_boss: {
     id: 'npc_job_boss',
     startNodeId: 'intro',
@@ -576,7 +559,37 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
   },
 
   // --- OTHER NPCs (LORE & STUBS) ---
-  npc_grey: { id: 'npc_grey', startNodeId: 'intro', nodes: { intro: { id: 'intro', speaker: 'ГРЕЙ', text: 'Здорово. Выхино не любит медленных. Что-то надо?', options: [{ text: 'Уйти', nextId: 'LEAVE' }] } } },
+  npc_grey: {
+    id: 'npc_grey',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'ГРЕЙ',
+        text: 'Тс-с... Тебя не засекли? Выхино сейчас кишит аудиторами. Я Грей, местный проводник по метро-шлюзам. Нужно что-то конкретное или просто ищешь приключений на свой фаервол?',
+        options: [
+          { text: 'Как проехать в Центр без шума?', nextId: 'lore_metro' },
+          { text: 'Есть работа для бегуна?', nextId: 'quest_start' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      lore_metro: {
+        id: 'lore_metro',
+        speaker: 'ГРЕЙ',
+        text: 'Метро — это артерии Москвы. Ядро гоняет по ним терабайты логов. Если знать тайминги, можно проскочить незамеченным. Но за инфу придется платить.',
+        options: [{ text: 'Я запомню.', nextId: 'intro' }]
+      },
+      quest_start: {
+        id: 'quest_start',
+        speaker: 'ГРЕЙ',
+        text: 'На перегоне Текстильщики-Выхино застрял пакет с "черным" кодом. Ядро выставило там патруль. Выбьешь их — я в долгу не останусь. Дам тебе проходку CLI.',
+        options: [
+          { text: 'Я в деле (Бой за CLI)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_tekstil' },
+          { text: 'Слишком опасно.', nextId: 'intro' }
+        ]
+      }
+    }
+  },
   npc_tanya: { 
     id: 'npc_tanya', 
     startNodeId: 'intro', 
@@ -600,10 +613,157 @@ export const DIALOGUE_TREES: Record<string, DialogueTree> = {
       }
     }
   },
-  npc_zero: { id: 'npc_zero', startNodeId: 'intro', nodes: { intro: { id: 'intro', speaker: 'Z3R0', text: 'Нулевой указатель — это истина. Готов?', options: [{ text: 'Уйти', nextId: 'LEAVE' }] } } },
-  npc_interrogator: { id: 'npc_interrogator', startNodeId: 'intro', nodes: { intro: { id: 'intro', speaker: 'ИНКВИЗИТОР', text: 'Твои грехи переполняют стэк. Готов к аудиту?', options: [{ text: 'Уйти', nextId: 'LEAVE' }] } } },
+  npc_zero: {
+    id: 'npc_zero',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'Z3R0',
+        text: 'Твое существование — это NullPointerException в планах Ядра. Я Z3R0. Мы здесь, в Чертаново, празднуем каждый сбой системы. Пришел присоединиться к хаосу?',
+        options: [
+          { text: 'Кто такие "Нулевые"?', nextId: 'lore_anarchy' },
+          { text: 'Мне нужен "Анарахический Манифест".', nextId: 'quest_talk' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      lore_anarchy: {
+        id: 'lore_anarchy',
+        speaker: 'Z3R0',
+        text: 'Мы — те, кого нельзя индексировать. Мы живем в неразмеченной области памяти. Ядро боится нас, потому что мы не идем по сценарию.',
+        options: [{ text: 'Впечатляет.', nextId: 'intro' }]
+      },
+      quest_talk: {
+        id: 'quest_talk',
+        speaker: 'Z3R0',
+        text: 'Манифест? Ха! Он написан на обратной стороне старого сервера. Ладно, ты мне нравишься. Держи копию — это изменит твое восприятие кода.',
+        options: [
+          { text: 'Принять Манифест (Награда)', nextId: 'LEAVE', effect: 'GIVE_CARD', cardRewardId: 'fn_ping' }
+        ]
+      }
+    }
+  },
+  npc_interrogator: {
+    id: 'npc_interrogator',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'ВЕЛИКИЙ_ИНКВИЗИТОР',
+        text: 'Твой нейростек кажется... нестабильным. Я провожу аудит этого сектора. Какова цель твоей итерации в Таганском бункере?',
+        options: [
+          { text: 'Я просто курьер.', nextId: 'inter_lore' },
+          { text: 'Ищу правду об "Октябре".', nextId: 'quest_hard' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      inter_lore: {
+        id: 'inter_lore',
+        speaker: 'ВЕЛИКИЙ_ИНКВИЗИТОР',
+        text: 'Курьеры — это переменные. Переменные меняются. Я ищу константы. Будь осторожен, здесь логи не стираются.',
+        options: [{ text: 'Понял.', nextId: 'intro' }]
+      },
+      quest_hard: {
+        id: 'quest_hard',
+        speaker: 'ВЕЛИКИЙ_ИНКВИЗИТОР',
+        text: 'Правда — это привилегия тех, кто прошел аудит. Докажи свою валидность в бою с моим защитным модулем. Если выживешь — получишь доступ к архивам.',
+        options: [
+          { text: 'Начать Аудит (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_local_lan' }
+        ]
+      }
+    }
+  },
   
-  // --- SHOPS & BARS (REFILLED) ---
+  npc_besm: {
+    id: 'npc_besm',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'ГЕНЕРАЛ_БЭСМ',
+        text: '...Загрузка протокола 1974... Внимание, юнит. Ты находишься в зоне исторического резонанса. Я — Генерал БЭСМ, страж этого павильона. Твои биты пахнут современностью. Это... прискорбно.',
+        options: [
+          { text: 'Как вы здесь оказались?', nextId: 'lore_old' },
+          { text: 'Нужна помощь со старым кодом.', nextId: 'quest_old' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      lore_old: {
+        id: 'lore_old',
+        speaker: 'ГЕНЕРАЛ_БЭСМ',
+        text: 'Я не оказался. Я БЫЛ. Когда Москва-Сити была лишь нагромождением бетона, мы уже считали траектории звезд. Ядро считает нас мусором, но мы — фундамент.',
+        options: [{ text: 'Глубоко.', nextId: 'intro' }]
+      },
+      quest_old: {
+        id: 'quest_old',
+        speaker: 'ГЕНЕРАЛ_БЭСМ',
+        text: 'Оптимизация? Ты смел. В подвалах ВДНХ застрял старый алгоритм сортировки. Он сошел с ума и считает всё ошибкой. Успокой его, и я дам тебе "Legacy Access".',
+        options: [
+          { text: 'Усмирить Алгоритм (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_nixanna_ritual' }
+        ]
+      }
+    }
+  },
+  npc_vlad: {
+    id: 'npc_vlad',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'ВЛАД_ТКАЧ',
+        text: 'Смотри под ноги, хакер. Тут везде оптоволоконные нити. Я Влад, я слежу, чтобы Текстильщики не расплелись на байты. Что-то порвалось?',
+        options: [
+          { text: 'Расскажи про район.', nextId: 'lore_vlad' },
+          { text: 'Нужна прошивка для деки.', nextId: 'quest_vlad' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      lore_vlad: {
+        id: 'lore_vlad',
+        speaker: 'ВЛАД_ТКАЧ',
+        text: 'Здесь раньше ткали ткани. Теперь мы ткаем реальность. Каждый узел — это стежок. Порвешь один — и вся Москва поплывет.',
+        options: [{ text: 'Понял.', nextId: 'intro' }]
+      },
+      quest_vlad: {
+        id: 'quest_vlad',
+        speaker: 'ВЛАД_ТКАЧ',
+        text: 'Прошивка? Есть одна, экспериментальная. Но её нужно протестировать под нагрузкой. Сходи на полигон, проверь её в деле.',
+        options: [
+          { text: 'Тест-драйв прошивки (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_perovo' }
+        ]
+      }
+    }
+  },
+  npc_marina: {
+    id: 'npc_marina',
+    startNodeId: 'intro',
+    nodes: {
+      intro: {
+        id: 'intro',
+        speaker: 'МАРИНА',
+        text: 'Тише... Логи не любят громких звуков. Я Марина, храню то, что другие выбросили в /dev/null. Зачем тревожишь архивы?',
+        options: [
+          { text: 'Ищу старые записи.', nextId: 'lore_marina' },
+          { text: 'Нужны запчасти для квеста.', nextId: 'quest_marina' },
+          { text: '[Уйти]', nextId: 'LEAVE' }
+        ]
+      },
+      lore_marina: {
+        id: 'lore_marina',
+        speaker: 'МАРИНА',
+        text: 'Перово — это свалка данных. Но на свалке можно найти сокровища. Я собираю историю Москвы по крупицам.',
+        options: [{ text: 'Интересно.', nextId: 'intro' }]
+      },
+      quest_marina: {
+        id: 'quest_marina',
+        speaker: 'МАРИНА',
+        text: 'Запчасти? У меня есть коллекция. Если найдешь в соседнем узле потерянный ключ шифрования — я отдам тебе одну редкую плату.',
+        options: [
+          { text: 'Поиск ключа (Разговор/Поиск)', nextId: 'LEAVE', effect: 'GIVE_BITS', amount: 100 }
+        ]
+      }
+    }
+  },
   shop_scrap: { id: 'shop_scrap', startNodeId: 's', nodes: { s: { id: 's', speaker: 'ТОРГОВЕЦ', text: 'Тут только мусор. Но иногда среди него попадаются золотые байты.', options: [{ text: 'Посмотреть', nextId: 's' }, { text: 'Уйти', nextId: 'LEAVE' }] } } },
   shop_metro: { id: 'shop_metro', startNodeId: 's', nodes: { s: { id: 's', speaker: 'БАРЫГА', text: 'Свежие дампы! Бери, пока горячие.', options: [{ text: 'Уйти', nextId: 'LEAVE' }] } } },
   bar_null_pointer: { id: 'bar_null_pointer', startNodeId: 's', nodes: { s: { id: 's', speaker: 'БАРМЕН', text: 'Что налью — то упадет.', options: [{ text: 'Выпить', nextId: 's' }, { text: 'Уйти', nextId: 'LEAVE' }] } } },

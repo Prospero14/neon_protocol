@@ -16,6 +16,7 @@ interface FixerBarSceneProps {
   onSetProfession: (profId: string) => void;
   onStartCombat: (combatId: string) => void;
   onUnlockCity?: () => void;
+  onRewardXp?: (amount: number) => void;
   onLeave: () => void;
 }
 
@@ -31,6 +32,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onSetProfession,
   onStartCombat,
   onUnlockCity,
+  onRewardXp,
   onLeave
 }) => {
   const tree = DIALOGUE_TREES[locationId];
@@ -96,6 +98,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       onStartCombat(option.cardRewardId);
     } else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) {
       onUnlockCity();
+    } else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) {
+      onRewardXp(option.amount);
     }
 
     if (option.nextId === 'LEAVE') {

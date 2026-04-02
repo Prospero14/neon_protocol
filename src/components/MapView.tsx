@@ -132,19 +132,44 @@ const MapView: React.FC<MapViewProps> = ({
             >
               {viewMode === 'CITY' ? (
                 <>
+                  {/* District Contours (Visual Clusters) */}
+                  <g className="map-contours">
+                    {/* NORTH SECTOR */}
+                    <path d="M 15 5 L 60 5 L 65 35 L 45 40 Z" className="map-district-outline" />
+                    {/* EAST SECTOR */}
+                    <path d="M 65 15 L 95 20 L 95 55 L 75 60 Z" className="map-district-outline" />
+                    {/* SOUTH-EAST */}
+                    <path d="M 70 55 L 95 65 L 95 95 L 65 95 Z" className="map-district-outline" />
+                    {/* SOUTH */}
+                    <path d="M 40 70 L 65 70 L 70 95 L 35 95 Z" className="map-district-outline" />
+                    {/* SOUTH-WEST / WEST */}
+                    <path d="M 5 40 L 40 40 L 35 95 L 5 95 Z" className="map-district-outline" />
+                  </g>
+
                   {/* Global Map Layers */}
-                  <circle cx="50" cy="50" r="10" fill="none" stroke="rgba(0,255,255,0.06)" strokeWidth="0.2" />
-                  <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(0,255,255,0.10)" strokeWidth="0.4" />
+                  <circle cx="50" cy="50" r="10" fill="none" stroke="rgba(0,255,255,0.04)" strokeWidth="0.1" />
+                  <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(0,255,255,0.06)" strokeWidth="0.2" />
                   
                   {MAP_NODES.map(node => {
                     const color = NODE_COLORS[node.type] || '#aaa';
                     const isCurrent = activeDistrictId === node.id;
+                    const isSelected = selectedNode?.id === node.id;
                     
                     return (
                       <g key={node.id} onClick={() => setSelectedNode(node)} style={{ cursor: 'pointer' }}>
-                         <circle cx={node.x} cy={node.y} r={isCurrent ? 3 : 1.8} fill={isCurrent ? 'var(--neon-cyan)' : color} opacity={0.3} />
-                         <circle cx={node.x} cy={node.y} r={1.2} fill={color} />
-                         <text x={node.x} y={node.y+4} fontSize="1.5" fill="#fff" textAnchor="middle">{node.name.split(':')[0]}</text>
+                         <circle 
+                           cx={node.x} cy={node.y} 
+                           r={isSelected ? 2.5 : isCurrent ? 1.5 : 1.2} 
+                           fill={isSelected ? '#fff' : isCurrent ? 'var(--neon-cyan)' : color} 
+                           className="map-node-dot"
+                           style={{ color }}
+                         />
+                         {isSelected && (
+                           <circle cx={node.x} cy={node.y} r="4" fill="none" stroke="#fff" strokeWidth="0.2" opacity="0.5" className="animate-ping" />
+                         )}
+                         <text x={node.x} y={node.y+4} fontSize="1.2" fill={isSelected ? "#fff" : "rgba(255,255,255,0.5)"} textAnchor="middle" style={{ pointerEvents: 'none', border: '1px solid black' }}>
+                           {node.name.split(':')[0]}
+                         </text>
                       </g>
                     );
                   })}
@@ -191,13 +216,12 @@ const MapView: React.FC<MapViewProps> = ({
                  <span className="val gold">{getTravelCost(selectedNode)} BITS</span>
               </div>
 
-              <button 
-                className="map-enter-confirm" 
+              <div 
+                className="vertical-confirm-bar"
                 onClick={() => onNodeSelect(selectedNode.id, 'district', getTravelCost(selectedNode))}
-                style={{ borderColor: NODE_COLORS[selectedNode.type], color: NODE_COLORS[selectedNode.type] }}
               >
-                INITIATE_FAST_TRAVEL
-              </button>
+                [ INITIATE_FAST_TRAVEL ]
+              </div>
             </>
           ) : viewMode === 'DISTRICT' && selectedSubNodeId ? (
             (() => {
@@ -211,13 +235,12 @@ const MapView: React.FC<MapViewProps> = ({
                   <h2 className="map-node-name">{sn.name}</h2>
                   <p className="map-node-desc">{sn.description}</p>
 
-                  <button 
-                    className="map-enter-confirm vibrancy" 
+                  <div 
+                    className="vertical-confirm-bar vibrancy" 
                     onClick={() => onNodeSelect(sn.id, sn.type)}
-                    style={{ borderColor: NODE_COLORS[sn.type] }}
                   >
-                    ENGAGE_SUB_NODE
-                  </button>
+                    [ ENGAGE_SUB_NODE ]
+                  </div>
                 </>
               );
             })()

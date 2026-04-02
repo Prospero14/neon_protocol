@@ -94,8 +94,9 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Окраина Москвы, где город встречается с одичавшим лесом. Идеальное место для скрытых баз.', 
     x: 20, y: 90, stability: 88, type: 'combat', tier: 1,
     subNodes: [
-        { id: 'npc_ranger', name: 'Егерь (SRE-патруль)', type: 'npc', description: 'Следит за стабильностью региона.', x: 50, y: 50 },
-        { id: 'shop_forest', name: 'Лесная лавка', type: 'shop', description: 'Уникальные модули.', x: 20, y: 80 }
+        { id: 'npc_ranger', name: 'Егерь (SRE-патруль)', type: 'npc', description: 'Следит за стабильностью региона.', x: 50, y: 30 },
+        { id: 'shop_forest', name: 'Лесная лавка', type: 'shop', description: 'Уникальные модули.', x: 20, y: 60 },
+        { id: 'combat_forest_hunt', name: 'Охота на Баг-Тварей', type: 'combat', description: 'Очистка леса за награду.', x: 80, y: 40 }
     ]
   },
   { 
@@ -116,8 +117,10 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Северный жилой массив. Сплетение старых линий связи и новых оптоволоконных жил.',
     x: 45, y: 5, stability: 90, type: 'hub', tier: 1,
     subNodes: [
-      { id: 'job_board_bibi', name: 'Инфо-панель: Бибирево', type: 'npc', description: 'Мелкие подработки.', x: 30, y: 40 },
-      { id: 'term_taxi_bibi', name: 'Такси: Бибирево', type: 'terminal', description: 'Вылет в центр.', x: 70, y: 80 }
+      { id: 'npc_signalman', name: 'Связист Моня', type: 'npc', description: 'Ремонтирует обрывы нейросети.', x: 20, y: 30 },
+      { id: 'shop_north_link', name: 'Узел: Северный Поток', type: 'shop', description: 'Компоненты связи.', x: 50, y: 50 },
+      { id: 'job_board_bibi', name: 'Инфо-панель: Бибирево', type: 'npc', description: 'Мелкие подработки.', x: 40, y: 70 },
+      { id: 'term_taxi_bibi', name: 'Такси: Бибирево', type: 'terminal', description: 'Вылет в центр.', x: 80, y: 85 }
     ]
   },
   {
@@ -126,8 +129,10 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Старая промзона. Здесь "ткали" первые нейросети для госструктур.',
     x: 75, y: 60, stability: 85, type: 'combat', tier: 1,
     subNodes: [
-      { id: 'job_board_tekstil', name: 'Узел: Текстильщики', type: 'npc', description: 'Контракты на чистку.', x: 50, y: 30 },
-      { id: 'term_taxi_tekstil', name: 'Такси: Текстильщики', type: 'terminal', description: 'Выход на МКАД.', x: 20, y: 90 }
+      { id: 'npc_vlad', name: 'Влад-Ткач', type: 'npc', description: 'Мастер защитных плетений.', x: 30, y: 20 },
+      { id: 'combat_textile_raid', name: 'Рейд на Промзону', type: 'combat', description: 'Зачистка от ботов-ревизоров.', x: 70, y: 50 },
+      { id: 'job_board_tekstil', name: 'Узел: Текстильщики', type: 'npc', description: 'Контракты на чистку.', x: 50, y: 70 },
+      { id: 'term_taxi_tekstil', name: 'Такси: Текстильщики', type: 'terminal', description: 'Выход на МКАД.', x: 80, y: 30 }
     ]
   },
   {
@@ -136,8 +141,10 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Тихий район, оккупированный нелегальными дата-центрами в подвалах панелек.',
     x: 85, y: 45, stability: 92, type: 'trade', tier: 1,
     subNodes: [
-      { id: 'job_board_perovo', name: 'Столб объявлений: Перово', type: 'npc', description: 'Поиск серверов.', x: 40, y: 50 },
-      { id: 'term_taxi_perovo', name: 'Такси: Перово', type: 'terminal', description: 'Связь с центром.', x: 60, y: 20 }
+      { id: 'npc_marina', name: 'Марина (Архивариус)', type: 'npc', description: 'Хранительница забытых логов.', x: 25, y: 40 },
+      { id: 'combat_data_mining', name: 'Дата-майнинг подвала', type: 'combat', description: 'Добыча зашифрованных Bits.', x: 65, y: 60 },
+      { id: 'job_board_perovo', name: 'Столб объявлений: Перово', type: 'npc', description: 'Поиск серверов.', x: 50, y: 20 },
+      { id: 'term_taxi_perovo', name: 'Такси: Перово', type: 'terminal', description: 'Связь с центром.', x: 85, y: 85 }
     ]
   },
   { 
@@ -157,8 +164,10 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Синтетические нейро-напитки и сборище легендарных хакеров в тени заброшенных павильонов.', 
     x: 52, y: 30, stability: 80, type: 'bar', tier: 3,
     subNodes: [
-      { id: 'npc_besm', name: 'Генерал БЭСМ', type: 'npc', description: 'Цифровой призрак прошлого.', x: 50, y: 30 },
-      { id: 'shop_vintage', name: 'Старьевщик', type: 'shop', description: 'Редкое Legacy.', x: 75, y: 65 }
+      { id: 'npc_besm', name: 'Генерал БЭСМ', type: 'npc', description: 'Цифровой призрак прошлого.', x: 10, y: 30 },
+      { id: 'shop_vintage', name: 'Лавка "Ретро-Тех"', type: 'shop', description: 'Редкое Legacy.', x: 40, y: 60 },
+      { id: 'bar_vostok', name: 'Бар "Восток-1"', type: 'bar', description: 'Напитки для космонавтов данных.', x: 80, y: 20 },
+      { id: 'combat_pavilions', name: 'Зачистка Павильонов', type: 'combat', description: 'Бой с системными багами.', x: 60, y: 40 }
     ]
   },
   { 
@@ -167,8 +176,9 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Бывший парк, превращенный в серверный лабиринт. Пристанище старых кодеров.', 
     x: 70, y: 20, stability: 65, type: 'bar', tier: 4,
     subNodes: [
-      { id: 'npc_hermit', name: 'Отшельник', type: 'npc', description: 'Живет в глубине темного оптоволокна.', x: 20, y: 80 },
-      { id: 'combat_deep_tree', name: 'Глубинное Дерево', type: 'combat', description: 'Скрытый узел.', x: 80, y: 20 }
+      { id: 'npc_hermit', name: 'Отшельник Сокольников', type: 'npc', description: 'Живет в глубине темного оптоволокна.', x: 20, y: 50 },
+      { id: 'combat_deep_tree', name: 'Глубинное Дерево', type: 'combat', description: 'Скрытый узел с опасным кодом.', x: 80, y: 40 },
+      { id: 'bar_deep_root', name: 'Бар "Корень"', type: 'bar', description: 'Глубокое погружение.', x: 50, y: 80 }
     ]
   },
   { 
@@ -177,8 +187,9 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Заброшенные заводы космической промышленности, превращенные в нелегальные серверные фермы.', 
     x: 20, y: 45, stability: 75, type: 'combat', tier: 4, combatPack: 'java_spring',
     subNodes: [
-      { id: 'npc_kosmos', name: 'Космос (SRE Nomad)', type: 'npc', description: 'Ищет ракетное топливо для серверов.', x: 45, y: 55 },
-      { id: 'term_launch_pad', name: 'Пусковая стойка', type: 'terminal', description: 'Древние протоколы запуска.', x: 10, y: 10 }
+      { id: 'npc_kosmos', name: 'Космос (SRE Nomad)', type: 'npc', description: 'Ищет запчасти для ракет.', x: 30, y: 40 },
+      { id: 'shop_spacer', name: 'Запчасти "Буран"', type: 'shop', description: 'Высокотехнологичный лом.', x: 60, y: 70 },
+      { id: 'term_launch_pad', name: 'Пусковая стойка', type: 'terminal', description: 'Древние протоколы запуска.', x: 80, y: 20 }
     ]
   },
   { 
@@ -187,8 +198,9 @@ export const MAP_NODES: MapNodeData[] = [
     description: 'Древний узел связи, уходящий глубоко под землю. Идеальное место для скрытных операций.', 
     x: 60, y: 65, stability: 95, type: 'hub', tier: 5,
     subNodes: [
-      { id: 'npc_interrogator', name: 'Инквизитор (Дознаватель)', type: 'npc', description: 'Аудитор Ядра.', x: 60, y: 60 },
-      { id: 'term_deep_vault', name: 'Глубинное хранилище', type: 'terminal', description: 'Зашифрованные логи Октября.', x: 20, y: 85 }
+      { id: 'npc_auditor', name: 'Инквизитор (Дознаватель)', type: 'npc', description: 'Аудитор Ядра.', x: 30, y: 30 },
+      { id: 'npc_informant', name: 'Информатор М.', type: 'npc', description: 'Продает тайны бункера.', x: 70, y: 50 },
+      { id: 'term_deep_vault', name: 'Глубинное хранилище', type: 'terminal', description: 'Зашифрованные логи Октября.', x: 50, y: 85 }
     ]
   },
   { 

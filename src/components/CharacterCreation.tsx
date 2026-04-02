@@ -14,26 +14,23 @@ interface CharacterCreationProps {
 
 const getDistrictBuffDescription = (id: string): string => {
   switch(id) {
-    case 'mitino': return 'Радиорынок: +100 Битов. Любой протокол.';
-    case 'sokol': return 'Тех-Хаб: +150 HP. Элита авиации.';
-    case 'maryino': return 'Сетка: +30 Битов, +75 HP. Жилой массив.';
-    case 'babushkinskaya': return 'Индустрия: +50 XP. Старое ядро.';
-    case 'fili': return 'Завод: +1 Ядро. Серверные фермы.';
-    case 'taganka': return 'Бункер: Скидка 20% в магазинах. Центр.';
-    case 'kitay_gorod': return 'Сеть Фиксеров: +75 Битов. Ликвидность в центре.';
-    case 'vdnkh': return 'Санаторий: +150 HP. Продвинутый био-уход.';
-    case 'komsomolskaya': return 'Транспортный Хаб: +Циклы (While Loop).';
-    case 'oktyabrskoe_pole':
-    case 'oktiabrskoe_pole': return 'Милитех Сектор: +1 Ядро (Energy).';
-    case 'preobrazhenka':
-    case 'preobrazhenskaya_ploshchad': return 'Архивы: +50 XP. Фундаментальные знания.';
-    case 'tushino': return 'Полигон: +50 HP, Защитные протоколы.';
-    case 'vykhino': return 'Торговая Ветка: +100 Битов. Стартовый капитал.';
-    case 'chertanovo': return 'Гетто: Хакинг (+1 Тест) ценой здоровья (-20 HP).';
-    case 'south_west': return 'Академия: +50 XP. Доступ к редким Java-библиотекам.';
-    case 'teply_stan': return 'Лес: +10 к базовой скрытности. Меньше внимания ИИ.';
-    case 'izmailovo': return 'Рынок: +20% к стоимости продаваемого хлама.';
-    default: return 'Спальный Сектор: +30 Битов, +20 HP. База.';
+    case 'altufyevo': return 'NORTH_SILOS: +10% Damage (Buffer Underflow).';
+    case 'vykhino': return 'TRADE_BRANCH: +150 Битов. Торговый десант.';
+    case 'maryino': return 'GRID_EXHAUST: +80 HP, +1 Энергия. Жилой хаб.';
+    case 'chertanovo': return 'GLITCH_GHETTO: +2 Энергии, -20 HP Max. Хаос.';
+    case 'south_west': return 'ACADEMIC_UPLINK: +200 XP. Фундаментальный старт.';
+    case 'teply_stan': return 'FOREST_EDGE: +20% Dodge. Тень роутера.';
+    case 'izmailovo': return 'CRAFT_MARKET: -25% Цена покупки софта.';
+    case 'bibirevo': return 'NORTH_LINK: +100 HP. Стабильный коннект.';
+    case 'tekstilschiki': return 'TEXTILE_GRID: +1 Карта в руке каждый ход.';
+    case 'perovo': return 'DATA_SLUMS: +30% Шанс найти редкую карту.';
+    case 'sokol': return 'TECH_HUB: +150 HP, +100 XP. Элита Сокола.';
+    case 'vdnkh': return 'PAVILION_ZERO: +1 Энергия, +50 Битов.';
+    case 'sokolniki': return 'SERVER_FOREST: +3 Энергии, -30% Integrity.';
+    case 'fili': return 'SPACE_RUINS: +150 XP. Орбитальный софт.';
+    case 'taganka': return 'THE_BUNKER: -20% Цена всех услуг (Скидки).';
+    case 'mitino': return 'RADIO_HEAVEN: +300 Битов. Нелегальный импорт.';
+    default: return 'СПАЛЬНЫЙ СЕКТОР: +50 Битов, +50 HP. База.';
   }
 };
 
@@ -91,13 +88,27 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
           <div className="cc-term-title">NEURAL_INITIALIZATION_V0.07</div>
         </div>
 
-        {/* Neural Progress Rail */}
         <div className="cc-progress-rail">
-          <div className={`cc-step ${step >= 1 ? 'active' : ''}`}>IDENTITY</div>
+          <div 
+            className={`cc-step ${step === 1 ? 'active' : ''} clickable`} 
+            onClick={() => setStep(1)}
+          >
+            IDENTITY
+          </div>
           <div className="cc-rail-line"></div>
-          <div className={`cc-step ${step >= 2 ? 'active' : ''}`}>DEPLOYMENT</div>
+          <div 
+            className={`cc-step ${step === 2 ? 'active' : ''} clickable`} 
+            onClick={() => setStep(2)}
+          >
+            DEPLOYMENT
+          </div>
           <div className="cc-rail-line"></div>
-          <div className={`cc-step ${step >= 3 ? 'active' : ''}`}>TRAITS</div>
+          <div 
+            className={`cc-step ${step === 3 ? 'active' : ''} clickable`} 
+            onClick={() => setStep(3)}
+          >
+            TRAITS
+          </div>
         </div>
 
         <div className="cc-main-panel">
@@ -116,100 +127,104 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
 
           <div className="cc-content-wrap">
             {step === 1 && (
-              <div className="cc-step-content animate-in">
-                <h2 className="cc-headline">INSERT_NEURAL_ID</h2>
-                <div className="cc-input-wrap">
-                  <span className="cc-prompt">{">"}</span>
-                  <input 
-                    className="cc-input-field" 
-                    type="text" 
-                    placeholder="ENTER_NAME_HERE..." 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleNext()}
-                    autoFocus
-                  />
-                  {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO CONFIRM</div>}
+              <div className="cc-step-content animate-in cc-layout-split">
+                <div className="cc-step-main">
+                  <h2 className="cc-headline">INSERT_NEURAL_ID</h2>
+                  <div className="cc-input-wrap">
+                    <span className="cc-prompt">{">"}</span>
+                    <input 
+                      className="cc-input-field" 
+                      type="text" 
+                      placeholder="ENTER_NAME_HERE..." 
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleNext()}
+                      autoFocus
+                    />
+                    {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO CONFIRM</div>}
+                  </div>
+                  <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
                 </div>
-                <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
+                <div className="cc-side-action no-border">
+                   <div 
+                     className={`vertical-confirm-bar ${!name.trim() ? 'disabled' : ''}`} 
+                     onClick={() => name.trim() && handleNext()} 
+                   >
+                     [ CONFIRM_IDENTITY ]
+                   </div>
+                </div>
               </div>
             )}
 
             {step === 2 && (
-              <div className="cc-step-content animate-in">
-                <div className="cc-header-row">
-                  <h2 className="cc-headline">SELECT_DEPLOYMENT_ZONE</h2>
-                  <span className="cc-sub">GEOGRAPHICAL_ORIGIN</span>
+              <div className="cc-step-content animate-in cc-layout-split">
+                <div className="cc-step-main">
+                  <div className="cc-header-row">
+                    <h2 className="cc-headline">SELECT_DEPLOYMENT_ZONE</h2>
+                    <span className="cc-sub">GEOGRAPHICAL_ORIGIN</span>
+                  </div>
+                  <div className="cc-grid districts compact">
+                    {districts.map(d => (
+                      <div 
+                        key={d.id} 
+                        className={`cc-card district compact ${district?.id === d.id ? 'selected' : ''}`}
+                        onClick={() => setDistrict(d)}
+                        onKeyDown={(e) => e.key === 'Enter' && (setDistrict(d), handleNext())}
+                        tabIndex={0}
+                      >
+                        <div className="cc-card-scan"></div>
+                        <div className="cc-card-id">ZONE_{d.id.toUpperCase()}</div>
+                        <div className="cc-card-name small">{d.name.split(':')[0]}</div>
+                        <div className="cc-card-effect cyan smallest">{getDistrictBuffDescription(d.id)}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="cc-grid districts">
-                  {districts.map(d => (
-                    <div 
-                      key={d.id} 
-                      className={`cc-card district ${district?.id === d.id ? 'selected' : ''}`}
-                      onClick={() => setDistrict(d)}
-                      onKeyDown={(e) => e.key === 'Enter' && (setDistrict(d), handleNext())}
-                      tabIndex={0}
-                    >
-                      <div className="cc-card-scan"></div>
-                      <div className="cc-card-id">ZONE_DB_{districts.indexOf(d) + 1}</div>
-                      <div className="cc-card-name">{d.name}</div>
-                      <div className="cc-card-effect cyan">{getDistrictBuffDescription(d.id)}</div>
-                    </div>
-                  ))}
+                <div className="cc-side-action no-border">
+                   <div 
+                     className={`vertical-confirm-bar ${!district ? 'disabled' : ''}`} 
+                     onClick={() => district && handleNext()} 
+                   >
+                     [ CONFIRM_DEPLOYMENT ]
+                   </div>
                 </div>
               </div>
             )}
 
             {step === 3 && (
               <div className="cc-step-content animate-in cc-layout-split">
-                <div className="cc-grid hobbies">
-                  {TRAITS.filter(t => t.type === 'HOBBY').map(h => (
-                    <div 
-                      key={h.id} 
-                      className={`cc-card hobby cat-${h.category.toLowerCase()} ${hobby?.id === h.id ? 'selected' : ''}`}
-                      onClick={() => setHobby(h)}
-                      onKeyDown={(e) => e.key === 'Enter' && (setHobby(h), handleNext())}
-                      tabIndex={0}
-                    >
-                      <div className="cc-card-scan"></div>
-                      <div className="cc-cat-tag">{h.category}</div>
-                      <div className="cc-card-name">{h.name}</div>
-                      <div className="cc-card-desc">{h.description}</div>
-                      <div className="cc-card-effect glow">ACTIVE_BUFF_LOADED</div>
-                    </div>
-                  ))}
+                <div className="cc-step-main">
+                  <div className="cc-grid hobbies compact">
+                    {TRAITS.filter(t => t.type === 'HOBBY').map(h => (
+                      <div 
+                        key={h.id} 
+                        className={`cc-card hobby compact cat-${h.category.toLowerCase()} ${hobby?.id === h.id ? 'selected' : ''}`}
+                        onClick={() => setHobby(h)}
+                        onKeyDown={(e) => e.key === 'Enter' && (setHobby(h), handleNext())}
+                        tabIndex={0}
+                      >
+                        <div className="cc-card-scan"></div>
+                        <div className="cc-cat-tag">{h.category}</div>
+                        <div className="cc-card-name small">{h.name}</div>
+                        <div className="cc-card-desc smallest">{h.description}</div>
+                        <div className="cc-card-effect glow">ACTIVE_BUFF_LOADED</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="cc-side-action">
-                   <button 
-                     className="cc-action-btn primary vibrant large-vertical" 
-                     onClick={handleNext} 
-                     disabled={!hobby}
+                <div className="cc-side-action no-border">
+                   <div 
+                     className={`vertical-confirm-bar ${!hobby ? 'disabled' : ''}`} 
+                     onClick={() => hobby && handleNext()} 
                    >
                      [ FINALIZE_NEURAL_BOOT ]
-                   </button>
-                   <p className="cc-side-hint">Все параметры будут зашиты в вашу новую кибердеку.</p>
+                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* --- FIXED NAVIGATION BUTTON (STEPS 1-2) --- */}
-        {step < 3 && (
-          <div className="cc-footer-action">
-            <button 
-              className="cc-action-btn primary vibrant" 
-              onClick={handleNext} 
-              disabled={
-                (step === 1 && !name.trim()) ||
-                (step === 2 && !district)
-              }
-            >
-              {step === 1 && '[ CONFIRM_IDENTITY_STREAM ]'}
-              {step === 2 && '[ INITIATE_GEOGRAPHIC_HANDSHAKE ]'}
-            </button>
-          </div>
-        )}
       </div>
 
       <style>{`
@@ -290,18 +305,20 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
           display: flex;
           gap: 40px;
           align-items: flex-start;
+          height: 100%;
         }
-        .cc-layout-split .hobbies { flex: 1; }
+        .cc-step-main { flex: 1; display: flex; flex-direction: column; gap: 20px; }
         .cc-side-action {
-          width: 300px;
+          width: 260px;
           display: flex;
           flex-direction: column;
           gap: 20px;
           background: rgba(0,255,255,0.02);
           border: 1px dashed rgba(0,255,255,0.2);
-          padding: 30px;
+          padding: 20px;
           position: sticky;
           top: 0;
+          height: auto;
         }
         .cc-side-hint { font-size: 0.7rem; color: #567; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; }
 
@@ -374,78 +391,47 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
           font-size: 1.8rem; font-family: var(--font-mono); width: 100%; letter-spacing: 5px; font-weight: 900;
         }
 
-        .cc-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
-        
-        .cc-card {
-          padding: 25px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.05);
-          cursor: pointer;
-          transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
+        .cc-side-action.no-border {
+          background: transparent;
+          border: none;
+          padding: 0;
+          width: 80px;
           position: relative;
-          overflow: hidden;
+          height: 100%;
         }
-        .cc-card-scan {
-          position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-          background: rgba(0,255,255,0.2); opacity: 0;
-          animation: cc-scan-anim 3s infinite linear;
-          pointer-events: none;
+
+        .cc-grid.compact { 
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+          gap: 10px;
         }
-        @keyframes cc-scan-anim { 0% { top: -10px; } 100% { top: 100%; } }
-        .cc-card.selected .cc-card-scan { opacity: 1; }
-
-        .cc-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.2); }
-        .cc-card.selected { border-color: var(--neon-cyan); background: rgba(0, 255, 255, 0.05); transform: translateY(-5px); }
-
-        /* TRAIT CATEGORY COLORS */
-        .cat-tech.selected { border-color: #00e5ff; box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.1); }
-        .cat-soft.selected { border-color: #00ff88; box-shadow: inset 0 0 20px rgba(0, 255, 136, 0.1); }
-        .cat-social.selected { border-color: #bd00ff; box-shadow: inset 0 0 20px rgba(189, 0, 255, 0.1); }
-        .cat-combat.selected { border-color: #ff5e00; box-shadow: inset 0 0 20px rgba(255, 94, 0, 0.1); }
-        .cat-sre.selected { border-color: #0088ff; box-shadow: inset 0 0 20px rgba(0, 136, 255, 0.1); }
-
-        .cc-cat-tag {
-          font-size: 0.6rem; font-weight: 900; letter-spacing: 2px; padding: 4px 8px;
-          background: rgba(255,255,255,0.05); align-self: flex-start;
-          border-radius: 2px; color: #667;
+        
+        .cc-card.compact { 
+          padding: 10px; 
+          min-height: 80px; 
+          border: 1px solid rgba(0, 255, 65, 0.2);
         }
-        .cc-card.selected.cat-tech .cc-cat-tag { background: #00e5ff; color: #000; }
-        .cc-card.selected.cat-soft .cc-cat-tag { background: #00ff88; color: #000; }
-        .cc-card.selected.cat-social .cc-cat-tag { background: #bd00ff; color: #000; }
-        .cc-card.selected.cat-combat .cc-cat-tag { background: #ff5e00; color: #000; }
-        .cc-card.selected.cat-sre .cc-cat-tag { background: #0088ff; color: #000; }
-
-        .cc-card-name { font-size: 1.3rem; font-weight: 900; color: #fff; letter-spacing: 2px; }
-        .cc-card-effect.cyan { color: var(--neon-cyan); font-weight: 900; font-size: 0.7rem; letter-spacing: 1px; }
-        .cc-card-effect.glow { font-size: 0.6rem; font-weight: 900; opacity: 0; transition: 0.3s; }
-        .cc-card.selected .cc-card-effect.glow { opacity: 0.8; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan-glow); }
-
-        .cc-action-btn.vibrant {
-           background: #00ffff;
-           color: #000;
-           border: none;
-           text-shadow: none;
-           font-weight: 1000;
-           padding: 22px;
-           font-size: 1rem;
-           box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
-           letter-spacing: 2px;
-           cursor: pointer;
-           transition: 0.2s;
+        .cc-card.compact.selected {
+          border-color: var(--neon-green);
+          background: rgba(0, 255, 65, 0.05);
         }
-        .cc-action-btn.vibrant:hover:not(:disabled) {
-           background: #fff;
-           box-shadow: 0 0 40px rgba(255, 255, 255, 0.6);
-           transform: scale(1.02);
-        }
-        .cc-action-btn.vibrant:disabled {
-           background: #1a1a1a;
-           color: #444;
-           box-shadow: none;
-           cursor: not-allowed;
+        .cc-card-name.small { font-size: 0.85rem; margin-bottom: 5px; color: #fff; }
+        .cc-card-effect.smallest, .cc-card-desc.smallest { font-size: 0.65rem; line-height: 1.1; opacity: 0.8; }
+        .cc-card-id { font-size: 0.5rem; color: rgba(255,255,255,0.3); margin-bottom: 2px; }
+
+        .cc-step.clickable { cursor: pointer; }
+        .cc-step.clickable:hover { color: var(--neon-cyan); opacity: 0.8; }
+        .cc-step.locked { opacity: 0.2; cursor: not-allowed; }
+
+        .cc-action-btn.large-vertical {
+          padding: 20px 10px;
+          min-height: 400px;
+          writing-mode: vertical-rl;
+          text-orientation: mixed;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.1rem;
+          transform: rotate(180deg);
         }
       `}</style>
     </div>

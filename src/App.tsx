@@ -226,6 +226,12 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    setIsBooted(false);
+    setCurrentView('HUB');
+  };
+
   const handleBoot = () => {
     setIsBooted(true);
     setCurrentView('CREATION');
@@ -502,6 +508,9 @@ function App() {
                setActiveBarNode(combatId);
                setCurrentView('COMBAT');
             }}
+            onRewardXp={(amount) => {
+               setXp(prev => prev + amount);
+            }}
             onLeave={() => setCurrentView('MAP')} 
           />
         );
@@ -717,6 +726,7 @@ function App() {
           onViewChange={(v) => setCurrentView(v)}
           hp={hp}
           level={level}
+          onLogout={handleLogout}
         />
       )}
       <main className={`view-container ${hideNav ? 'fullscreen' : ''}`}>{renderAppView()}</main>

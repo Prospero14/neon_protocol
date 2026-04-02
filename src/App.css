@@ -1947,3 +1947,93 @@ body, html, #root {
   position: relative;
   z-index: 2;
 }
+
+/* --- VERTICAL CONFIRM BAR --- */
+.vertical-confirm-bar {
+  position: absolute;
+  top: 10%;
+  right: 0;
+  height: 80%;
+  width: 60px;
+  background: linear-gradient(to bottom, rgba(0, 255, 65, 0.1), rgba(0, 255, 65, 0.3));
+  border-left: 2px solid var(--neon-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--neon-green);
+  font-weight: 1000;
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px var(--neon-green-glow);
+  z-index: 2000;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+  backdrop-filter: blur(10px);
+}
+
+.vertical-confirm-bar:hover {
+  background: var(--neon-green);
+  color: var(--bg-black);
+  box-shadow: -10px 0 30px var(--neon-green-glow);
+}
+
+.vertical-confirm-bar.disabled {
+  opacity: 0.1;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+/* --- MAP REFINEMENTS --- */
+.map-district-outline {
+  fill: rgba(0, 255, 200, 0.03);
+  stroke: rgba(0, 255, 200, 0.2);
+  stroke-width: 0.3px;
+  transition: all 0.4s ease;
+  pointer-events: auto;
+}
+
+.map-district-outline:hover {
+  fill: rgba(0, 255, 200, 0.08);
+  stroke: rgba(0, 255, 200, 0.5);
+}
+
+.map-district-outline.active {
+  fill: rgba(0, 255, 255, 0.1);
+  stroke: var(--neon-cyan);
+  stroke-width: 0.6px;
+}
+
+.map-node-dot {
+  filter: drop-shadow(0 0 3px currentColor);
+  transition: r 0.3s ease;
+}
+
+.activity-list-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--neon-cyan) transparent;
+}
+
+.nav-logout-btn {
+  background: rgba(255, 45, 109, 0.1);
+  border: 1px solid rgba(255, 45, 109, 0.5);
+  color: #ff2d6d;
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: 0.3s;
+  margin-left: 10px;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-logout-btn:hover {
+  background: #ff2d6d;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 45, 109, 0.6);
+}

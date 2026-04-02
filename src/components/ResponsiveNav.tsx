@@ -6,9 +6,10 @@ interface ResponsiveNavProps {
   onViewChange: (view: any) => void;
   hp: number;
   level: number;
+  onLogout?: () => void;
 }
 
-const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange, hp, level }) => {
+const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange, hp, level, onLogout }) => {
   const navItems = [
     { id: 'HUB', label: 'БАЗА', icon: Home },
     { id: 'CHARACTER', label: 'ПРОФИЛЬ', icon: User },
@@ -39,6 +40,11 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
       <div className="nav-stats mono-text">
         <span className="nav-hp">❤ {hp}%</span>
         <span className="nav-lvl">LVL {level}</span>
+        {onLogout && (
+          <button className="nav-logout-btn" onClick={onLogout} title="DISCONNECT">
+            ✖
+          </button>
+        )}
       </div>
     </nav>
   );

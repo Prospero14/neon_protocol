@@ -96,9 +96,20 @@ const DIST = path.join(process.cwd(), 'dist');
 app.use('/assets', express.static(path.join(DIST, 'assets')));
 app.use(express.static(DIST));
 
-app.get('/*any', (req, res) => {
+const indexPath = path.join(DIST, 'src/index.html');
+
+// Explicit root handler
+app.get('/', (req, res) => {
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/src/');
+  }
+});
+
+// Standard wildcard handler for SPA sub-pages (Express 5 compatible)
+app.get('/*', (req, res) => {
   if (req.path.startsWith('/neon_v1')) return res.status(404).json({ error: 'Not found' });
-  const indexPath = path.join(DIST, 'src/index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {

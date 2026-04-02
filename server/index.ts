@@ -1,3 +1,4 @@
+console.log('[NEON_BOOT] Server process starting...');
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -16,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 8080; // Hardcoded for Amvera stability
+const PORT = Number(process.env.PORT) || 8080; // dynamic port for Amvera, default to 8080
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 
 // 1. Database Initialization Logic

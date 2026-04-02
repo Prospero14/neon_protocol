@@ -6,7 +6,7 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "ts-node server/index.ts",
-    "build": "npx tsc -b && npx vite build && npx tsc server/index.ts --esModuleInterop --module esnext --target esnext --moduleResolution node --outDir dist_server --rootDir server --skipLibCheck",
+    "build": "npx vite build && npx tsc --project tsconfig.server.json",
     "build:full": "npx prisma generate && npm run build",
     "start": "node dist_server/index.js",
     "lint": "eslint .",

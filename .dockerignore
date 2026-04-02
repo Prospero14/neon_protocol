@@ -1,8 +1,0 @@
-node_modules
-dist
-neon_static
-dist_server
-.git
-.env
-dev.db
-*.log

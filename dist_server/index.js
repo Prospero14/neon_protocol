@@ -13,7 +13,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const PORT = Number(process.env.PORT) || 8080; // dynamic port for Amvera, default to 8080
+const PORT = Number(process.env.PORT) || 3000; // dynamic port for Amvera, default to 3000
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 // 1. Database Initialization Logic
 const isAmvera = fs.existsSync('/data');
@@ -92,7 +92,9 @@ app.post('/neon_v1/game/sync', async (req, res) => {
 const DIST = path.join(process.cwd(), 'dist');
 app.use('/assets', express.static(path.join(DIST, 'assets')));
 app.use(express.static(DIST));
-const indexPath = path.join(DIST, 'index.html');
+const indexPath = fs.existsSync(path.join(DIST, 'index.html'))
+    ? path.join(DIST, 'index.html')
+    : path.join(DIST, 'src/index.html');
 // Explicit root handler
 app.get('/', (req, res) => {
     if (fs.existsSync(indexPath)) {

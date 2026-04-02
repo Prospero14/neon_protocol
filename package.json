@@ -8,7 +8,7 @@
     "dev:server": "ts-node server/index.ts",
     "build": "npx tsc -b && npx vite build && npx tsc server/index.ts --esModuleInterop --module esnext --target esnext --moduleResolution node --outDir dist_server --rootDir server --skipLibCheck",
     "build:full": "npx prisma generate && npm run build",
-    "start": "DATABASE_URL=\"file:/data/dev.db\" ./node_modules/.bin/prisma db push --accept-data-loss && node dist_server/index.js",
+    "start": "DATABASE_URL=\"file:/data/dev.db\" npx prisma db push --accept-data-loss && node dist_server/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -25,7 +25,8 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "ts-node": "^10.9.2",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "prisma": "^7.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -42,7 +43,6 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
-    "prisma": "^7.6.0",
     "typescript-eslint": "^8.57.0",
     "vite": "^8.0.1"
   }

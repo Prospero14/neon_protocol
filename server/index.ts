@@ -88,7 +88,7 @@ app.post('/neon_v1/game/sync', async (req, res) => {
 
 // --- 4. STATIC FILES AND SPA ---
 
-const DIST = path.join(process.cwd(), 'dist');
+const DIST = path.join(process.cwd(), 'neon_static');
 
 // Serve /assets first
 app.use('/assets', express.static(path.join(DIST, 'assets')));
@@ -106,10 +106,10 @@ app.get('*', (req, res, next) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // If dist/index.html is NOT found, we report the error clearly.
+    // If neon_static/index.html is NOT found, we report the error clearly.
     // DO NOT serve the root index.html (it's the dev one).
     const structure = fs.readdirSync(process.cwd());
-    res.status(500).send(`CRITICAL ERROR: dist/index.html missing. Files in root: ${structure.join(', ')}`);
+    res.status(500).send(`CRITICAL ERROR: neon_static/index.html missing. Files in root: ${structure.join(', ')}`);
   }
 });
 

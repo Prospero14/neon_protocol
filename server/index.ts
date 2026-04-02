@@ -20,8 +20,12 @@ const PORT = process.env.PORT || 8080; // Switched to 8080 as primary cloud defa
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 
 // 1. Database
+// Amvera stores persistent data in /data. We check if it exists, otherwise use local.
+const isAmvera = fs.existsSync('/data');
+const dbPath = isAmvera ? '/data/dev.db' : './dev.db';
+
 const adapter = new PrismaBetterSqlite3({
-  url: 'file:./dev.db'
+  url: `file:${dbPath}`
 });
 const prisma = new PrismaClient({ adapter });
 

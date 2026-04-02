@@ -16,11 +16,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 8080; // Switched to 8080 as primary cloud default
+const PORT = 8080; // Hardcoded for Amvera stability
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 
-// 1. Database
-// Amvera stores persistent data in /data. We check if it exists, otherwise use local.
+// 1. Database Initialization Logic
 const isAmvera = fs.existsSync('/data');
 const dbPath = isAmvera ? '/data/dev.db' : './dev.db';
 
@@ -29,29 +28,29 @@ const adapter = new PrismaBetterSqlite3({
 });
 const prisma = new PrismaClient({ adapter });
 
+async function initDB() {
+  console.log('[NEON_CORE] Background DB Init Started...');
+  try {
+    await prisma.$connect();
+    console.log('[NEON_CORE] Database connected successfully.');
+  } catch (e) {
+    console.error('[NEON_CORE] DB Connection Warning (This is expected in first seconds):', e);
+  }
+}
+
 // 2. Middleware
 app.use(cors());
 app.use(express.json());
 
-// --- 3. EXPLICIT API ROUTES (MOST IMPORTANT) ---
+// --- 3. EXPLICIT API ROUTES ---
 
-// Health check - Absolute first
+// Health check
 app.get('/neon_v1/health', (req, res) => {
-  const CWD = process.cwd();
-  const rootFiles = fs.readdirSync(CWD);
-  const distPath = path.join(CWD, 'dist');
-  const distExists = fs.existsSync(distPath);
-  let distFiles: string[] = [];
-  if (distExists) {
-    distFiles = fs.readdirSync(distPath);
-  }
-
   res.json({
     status: 'active',
-    cwd: CWD,
-    distExists,
-    distFiles,
-    rootFiles
+    port: PORT,
+    dbPath,
+    isAmvera
   });
 });
 
@@ -94,33 +93,23 @@ app.post('/neon_v1/game/sync', async (req, res) => {
 
 const DIST = path.join(process.cwd(), 'dist');
 
-// Serve /assets first
 app.use('/assets', express.static(path.join(DIST, 'assets')));
-
-// Serve other static files
 app.use(express.static(DIST));
 
-// SPA Fallback - ONLY if it's not an API route
-app.get('/*any', (req, res, next) => {
-  if (req.path.startsWith('/neon_v1')) {
-    return res.status(404).json({ error: 'API route not found' });
-  }
-
+app.get('/*any', (req, res) => {
+  if (req.path.startsWith('/neon_v1')) return res.status(404).json({ error: 'Not found' });
   const indexPath = path.join(DIST, 'src/index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // If dist/src/index.html is NOT found, we report the error clearly.
-    // DO NOT serve the root index.html (it's the dev one).
-    const structure = fs.readdirSync(process.cwd());
-    res.status(500).send(`CRITICAL ERROR: dist/src/index.html missing. Files in root: ${structure.join(', ')}`);
+    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/src/');
   }
 });
 
-app.listen(Number(PORT), '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log('=========================================');
-  console.log(`[NEON_CORE] SERVER_STABILIZED_V8`);
+  console.log(`[NEON_CORE] SERVER_STABILIZED_V32_2`);
   console.log(`[NEON_CORE] PORT: ${PORT}`);
-  console.log(`[NEON_CORE] TIME: ${new Date().toISOString()}`);
   console.log('=========================================');
+  initDB();
 });

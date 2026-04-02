@@ -96,14 +96,14 @@ const DIST = path.join(process.cwd(), 'dist');
 app.use('/assets', express.static(path.join(DIST, 'assets')));
 app.use(express.static(DIST));
 
-const indexPath = path.join(DIST, 'src/index.html');
+const indexPath = path.join(DIST, 'index.html');
 
 // Explicit root handler
 app.get('/', (req, res) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/src/');
+    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/');
   }
 });
 
@@ -113,7 +113,7 @@ app.get('/*', (req, res) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/src/');
+    res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/');
   }
 });
 

@@ -102,14 +102,14 @@ app.get('*', (req, res, next) => {
     return res.status(404).json({ error: 'API route not found' });
   }
 
-  const indexPath = path.join(DIST, 'index.html');
+  const indexPath = path.join(DIST, 'src/index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    // If dist/index.html is NOT found, we report the error clearly.
+    // If dist/src/index.html is NOT found, we report the error clearly.
     // DO NOT serve the root index.html (it's the dev one).
     const structure = fs.readdirSync(process.cwd());
-    res.status(500).send(`CRITICAL ERROR: dist/index.html missing. Files in root: ${structure.join(', ')}`);
+    res.status(500).send(`CRITICAL ERROR: dist/src/index.html missing. Files in root: ${structure.join(', ')}`);
   }
 });
 

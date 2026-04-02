@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000; // dynamic port for Amvera, default to 3000
+const PORT = Number(process.env.PORT) || 8080; // Total sync with Amvera Ingress
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 
 // 1. Database Initialization Logic

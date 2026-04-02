@@ -5,7 +5,7 @@ meta:
     version: 20
 
 build:
-  additionalCommands: "npm run build:full"
+  additionalCommands: "export DATABASE_URL=file:./dev.db && npm run build:full"
 
 run:
   command: "npm start"

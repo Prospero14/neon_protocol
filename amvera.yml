@@ -9,4 +9,4 @@ build:
 
 run:
   command: "npm start"
-  containerPort: 8080
+  containerPort: 3000

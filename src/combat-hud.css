@@ -205,9 +205,6 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  background-image: url('../brain/6a95d500-aa1d-457b-b45f-8ff566bcf5e9/neon_protocol_digital_bg_1774963203721.png');
-  background-size: cover;
-  background-position: center;
   z-index: 1;
 }
 

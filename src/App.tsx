@@ -40,6 +40,8 @@ import {
   MapPin, User, Shield, Zap, Layout, ChevronRight, Award, Database 
 } from 'lucide-react';
 import GoalHUD from './components/GoalHUD';
+import { useAuth } from './logic/AuthContext';
+import { AuthForm } from './components/AuthForm';
 
 type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG';
 
@@ -59,6 +61,7 @@ const buildTraineeDeck = (): CombatCard[] => {
 };
 
 function App() {
+  const { user, isLoading } = useAuth();
   const [skillMode, setSkillMode] = useState<SkillMode>(() => parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY)));
   const [userIp, setUserIp] = useState<string>('LOCATING...');
 
@@ -632,6 +635,9 @@ function App() {
   };
 
   const hideNav = ['CREATION', 'FIXER_BAR', 'COMBAT'].includes(currentView);
+
+  if (isLoading) return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
+  if (!user) return <AuthForm />;
 
   return (
     <div className="app-root main-crt">

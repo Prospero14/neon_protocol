@@ -60,9 +60,35 @@ app.post('/neon_v1/auth/register', async (req, res) => {
   try {
     const { username, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
-    await prisma.user.create({ data: { username, passwordHash: hashedPassword, gameState: { create: {} } } });
+    
+    // Default starter cards for Script-Kiddie
+    const starterDeck = [
+      { id: 'script_ping', count: 1 },
+      { id: 'script_grep', count: 1 },
+      { id: 'script_wash_logs', count: 1 },
+      { id: 'soft_coffee', count: 1 }
+    ];
+
+    await prisma.user.create({ 
+      data: { 
+        username, 
+        passwordHash: hashedPassword, 
+        gameState: { 
+          create: {
+            bits: 150,
+            hp: 100,
+            maxHp: 100,
+            activeDeck: starterDeck,
+            inventory: starterDeck
+          } 
+        } 
+      } 
+    });
     res.status(201).json({ message: 'User created' });
-  } catch (error) { res.status(400).json({ error: 'Fail' }); }
+  } catch (error) { 
+    console.error('Registration Error:', error);
+    res.status(400).json({ error: 'Identity creation failed. Username may already be taken.' }); 
+  }
 });
 
 app.post('/neon_v1/auth/login', async (req, res) => {

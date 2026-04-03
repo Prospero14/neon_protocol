@@ -132,7 +132,7 @@ function App() {
   const [completedQuestCount, setCompletedQuestCount] = useState(0);
   const [bitsFromQuests, setBitsFromQuests] = useState(0);
 
-  const { syncGameState } = useAuth();
+  const { syncGameState, logout } = useAuth();
   
   // Sync Game State Helper
   const syncGame = async () => {
@@ -310,11 +310,6 @@ function App() {
     setCurrentView('HUB');
   };
 
-  const handleAwardQuest = (questId: string) => {
-    if (!questStates.some((qs) => qs.questId === questId)) {
-      setQuestStates((prev) => acceptQuest(prev, questId));
-    }
-  };
 
   const handleTravel = (nodeId: string, type: string, cost?: number) => {
     if (cost && bits < cost) return;
@@ -511,6 +506,7 @@ function App() {
           questStates={questStates}
           allQuests={QUEST_LIBRARY}
           onBack={() => setCurrentView('HUB')}
+          onLogout={logout}
         />
       );
     }
@@ -712,7 +708,16 @@ function App() {
 
   return (
     <div className="app-root main-crt">
-      {!hideNav && <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={stress} level={level} maxStress={maxStress} />}
+      {!hideNav && (
+        <ResponsiveNav 
+          currentView={currentView} 
+          onViewChange={(v) => setCurrentView(v)} 
+          hp={stress} 
+          level={level} 
+          maxStress={maxStress} 
+          onLogout={logout}
+        />
+      )}
       
       {/* Goal HUD Overlay - Hidden in focused scenes */}
       {trackedQuest && !hideNav && (

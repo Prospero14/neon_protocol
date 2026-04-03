@@ -23,9 +23,10 @@ interface CharacterScreenProps {
   questStates: any[];
   allQuests: any[];
   onBack: () => void;
+  onLogout: () => void;
 }
 
-const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, allQuests, onBack }) => {
+const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, allQuests, onBack, onLogout }) => {
   const [activeTab, setActiveTab] = useState<'IDENTITY' | 'REPUTATION' | 'CONTRACTS'>('IDENTITY');
   const [showAcademy, setShowAcademy] = useState(false);
   const xpToNext = player.level * 100;
@@ -41,7 +42,10 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
           <User size={20} color="var(--neon-cyan)" />
           <h3>NEURAL_IDENTITY [SYS_OVERVIEW]</h3>
         </div>
-        <button className="back-btn" onClick={onBack}>[ DISCONNECT ]</button>
+        <div className="header-actions">
+           <button className="back-btn-v4" onClick={onBack}>[ RETURN ]</button>
+           <button className="logout-btn-v4" onClick={onLogout}>[ DISCONNECT ]</button>
+        </div>
       </header>
 
       <div className="char-layout">

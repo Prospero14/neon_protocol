@@ -12,6 +12,35 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+.header-actions {
+  display: flex;
+  gap: 15px;
+}
+.back-btn-v4, .logout-btn-v4 {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #888;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.3s;
+  border-radius: 4px;
+}
+.back-btn-v4:hover {
+  background: rgba(0, 255, 255, 0.1);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 15px var(--neon-cyan-glow);
+}
+.logout-btn-v4:hover {
+  background: rgba(255, 0, 100, 0.1);
+  border-color: var(--neon-pink);
+  color: var(--neon-pink);
+  box-shadow: 0 0 15px var(--neon-pink-glow);
 }
 .char-layout {
   flex: 1;

@@ -4,7 +4,7 @@ export const bibirevo: WorldDistrict = {
   id: 'bibirevo',
   node: {
     id: 'bibirevo',
-    name: 'БИБИРЕВО: NORTH_LINK',
+    name: 'BIBIREVO: NORTH_LINK',
     description: 'Северный жилой массив. Сплетение старых линий связи и новых оптоволоконных жил.',
     x: 45, y: 5, stability: 90, type: 'hub', tier: 1,
     subNodes: [
@@ -48,7 +48,7 @@ export const bibirevo: WorldDistrict = {
         },
         quest: {
           id: 'quest', speaker: 'МОНЯ', text: 'Проверь подстанцию на 14-м луче. Если там сидит Баг — выбей его, и я подкину тебе пару свежих Bits.', options: [
-            { text: 'Сделаю (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_link_break' }
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_link_break_bug_sweep' }
           ]
         }
       }
@@ -101,7 +101,7 @@ export const bibirevo: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'КРОУЛЕР', text: 'Ищу заброшенные подсети в Северном Потоке. Говорят, там лежат забытые бит-кредиты.',
                 options: [
-                    { text: 'Помочь с поиском (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_static_noise' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_static_noise_bug_sweep' },
                     { text: '[Уйти]', nextId: 'LEAVE' }
                 ]
             }
@@ -133,7 +133,7 @@ export const bibirevo: WorldDistrict = {
           ]
         },
         accept: {
-          id: 'accept', speaker: 'ИНФО-ПАНЕЛЬ', text: 'Контракт активирован.', options: [{ text: 'Вход в поток (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_static_noise' }]
+          id: 'accept', speaker: 'ИНФО-ПАНЕЛЬ', text: 'Контракт активирован.', options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_static_noise_bug_sweep' }]
         }
       }
     },

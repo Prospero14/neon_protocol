@@ -4,7 +4,7 @@ export const teply_stan: WorldDistrict = {
   id: 'teply_stan',
   node: {
     id: 'teply_stan', 
-    name: 'ТЕПЛЫЙ СТАН: FOREST_EDGE', 
+    name: 'TEPLY_STAN: FOREST_EDGE', 
     description: 'Окраина Москвы, где город встречается с одичавшим лесом. Идеальное место для скрытых баз.', 
     x: 20, y: 90, stability: 88, type: 'combat', tier: 1,
     subNodes: [
@@ -35,7 +35,7 @@ export const teply_stan: WorldDistrict = {
         },
         quest: {
           id: 'quest', speaker: 'ЕГЕРЬ', text: 'В чаще завелся бесконечный цикл. Сходи и прерви его, пока он не сожрал всю память района.', options: [
-            { text: 'Сделаю.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_forest_hunt' }
+            { text: '[ ПРИНЯТЬ КОНТРАКТ: ОХОТА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_teply_stan_combat_forest_hunt_bug_sweep' }
           ]
         }
       }
@@ -56,7 +56,7 @@ export const teply_stan: WorldDistrict = {
                 id: 'intro', speaker: 'ДИКИЙ_РЫНОК', text: 'Контрабанда из-за МКАДа. Здесь софт не имеет подписи, но работает безотказно.',
                 options: [
                     { text: 'Garbage Collector V2 (60 Bits)', nextId: 'intro', cost: 60, effect: 'GIVE_CARD', cardRewardId: 'fn_wash_logs', subtext: 'Чистит стек быстрее.' },
-                    { text: 'Deep Forest Path (100 Bits)', nextId: 'intro', cost: 100, effect: 'GIVE_TRAIT', cardRewardId: 'script_ghost', subtext: 'Черта: Снижение стресса в бою.' },
+                    { text: 'ПАКЕТНАЯ_СКРЫТНОСТЬ (100 Bits)', nextId: 'intro', cost: 100, effect: 'GIVE_TRAIT', cardRewardId: 'script_ghost', subtext: 'Трейт: -20% Накопления Стресса.' },
                     { text: '[Уйти]', nextId: 'LEAVE' }
                 ]
             }
@@ -97,7 +97,7 @@ export const teply_stan: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'РЕКРУТ_ПАТРУЛЯ', text: 'Егерь сказал, что я еще не готов к выходам за периметр. А я хочу в настоящий бой!',
                 options: [
-                    { text: 'Могу тебя потренировать.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_wild_node' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ: ТРЕНИРОВКА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_teply_stan_combat_wild_node_bug_sweep' },
                     { text: 'Слушай Егеря.', nextId: 'LEAVE' }
                 ]
             }
@@ -109,7 +109,7 @@ export const teply_stan: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'МОНИТОР_ЭКОСИСТЕМЫ', text: '[DATA_STREAM] Степень заражения леса диким кодом: 45%. Рекомендуется зачистка.',
                 options: [
-                    { text: 'Запустить диагностику (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_router_clash' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ: ДИАГНОСТИКА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_teply_stan_combat_router_clash_bug_sweep' },
                     { text: '[Выход]', nextId: 'LEAVE' }
                 ]
             }

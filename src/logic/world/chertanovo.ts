@@ -4,7 +4,7 @@ export const chertanovo: WorldDistrict = {
   id: 'chertanovo',
   node: {
     id: 'chertanovo', 
-    name: 'ЧЕРТАНОВО: GLITCH_GHETTO', 
+    name: 'CHERTANOVO: GLITCH_GHETTO', 
     description: 'Мрачная жилая зона. Дом для многих радикальных фрилансеров (Null Pointers).', 
     x: 52, y: 80, stability: 40, type: 'bar', tier: 2,
     subNodes: [
@@ -35,7 +35,16 @@ export const chertanovo: WorldDistrict = {
           options: [
             { text: 'Кто такие "Нулевые"?', nextId: 'lore_anarchy' },
             { text: 'Мне нужен "Анарахический Манифест".', nextId: 'quest_talk' },
+            { text: 'Хочу проверить свои силы в бою.', nextId: 'combat_choice' },
             { text: '[Уйти]', nextId: 'LEAVE' }
+          ]
+        },
+        combat_choice: {
+          id: 'combat_choice', speaker: 'Z3R0', text: 'Силу? Против Ядра или против нас? У нас есть "Ячейка" для спарринга и "Ночные Сканы" для тех, кто хочет поймать перехватчиков.',
+          options: [
+            { text: '[ ТРЕНИРОВКА С ЯЧЕЙКОЙ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_chertanovo_combat_anarcho_cell_bug_sweep' },
+            { text: '[ СТАРТ НОЧНОГО СКАНА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_chertanovo_combat_night_scan_bug_sweep' },
+            { text: 'Назад', nextId: 'intro' }
           ]
         },
         lore_anarchy: {
@@ -172,7 +181,7 @@ export const chertanovo: WorldDistrict = {
             },
             hack: {
                 id: 'hack', speaker: 'ЛИНК_В_ПУСТОТУ', text: '[OK] СИСТЕМА_ОБМАНУТА. ДОБРО_ПОЖАЛОВАТЬ_В_DARKNET.',
-                options: [{ text: 'Войти', nextId: 'LEAVE', effect: 'GIVE_XP', amount: 100 }]
+                options: [{ text: 'Войти', nextId: 'LEAVE', effect: 'GIVE_BITS', amount: 50 }]
             },
             access: {
                 id: 'access', speaker: 'ЛИНК_В_ПУСТОТУ', text: 'ПРИВЕТСТВУЕМ, NULL_POINTER. ВЫБЕРИТЕ УСЛУГУ: [FREE_REPOS] [SIGNAL_WASH]',

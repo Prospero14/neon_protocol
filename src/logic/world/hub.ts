@@ -4,7 +4,7 @@ export const hub: WorldDistrict = {
   id: 'kitay_gorod',
   node: {
     id: 'kitay_gorod', 
-    name: 'КИТАЙ-ГОРОД: THE_SOCKET', 
+    name: 'KITAY_GOROD: THE_SOCKET', 
     description: 'Бар "The Socket" — перекресток нулей и единиц. Здесь пахнет дешевым синтехолом и перегретым кремнием.', 
     x: 52, y: 55, stability: 100, type: 'hub', tier: 2,
     subNodes: [
@@ -57,7 +57,7 @@ export const hub: WorldDistrict = {
           id: 'mira_intro', speaker: 'MIRA (NK)', text: 'Точность. Честь. Кремний. NeoKyoto не интересует политика ГБ или хаос VOID. Нас интересует эффективность. У тебя в логах — сплошной мусор. Хочешь апгрейд или так и будешь лагать?',
           options: [
             { text: 'Узнать про технологии NK.', nextId: 'mira_lore' },
-            { text: 'Купить чип NK (100 Bits)', nextId: 'intro', cost: 100, effect: 'GIVE_XP', amount: 150 },
+            { text: 'Купить чип NK (100 Bits)', nextId: 'intro', cost: 100, effect: 'GIVE_BITS', amount: 128 },
             { text: '[ Назад ]', nextId: 'intro' }
           ]
         },
@@ -76,8 +76,8 @@ export const hub: WorldDistrict = {
       id: 'npc_deck_ai', startNodeId: 'boot_0',
       nodes: {
         boot_0: {
-          id: 'boot_0', speaker: 'CYBERDECK_OS (AIDA-01)', text: '>>> Инициализация нейроинтерфейса... [OK]\n>>> Проверка биометрии... [OK]\n>>> Добро пожаловать, оператор. Я — твой персональный ассистент AIDA-01. Твоё сознание успешно синхронизировано с московской сетью Октября.',
-          options: [ { text: 'Где я?', nextId: 'lore_1' }, { text: 'Кто я по профессии?', nextId: 'career_intro' } ]
+          id: 'boot_0', speaker: 'CYBERDECK_OS (AIDA-01)', text: '>>> Инициализация нейроинтерфейса... [OK]\n>>> Проверка биометрии... [OK]\n>>> РЕГИСТРАЦИЯ: ОПЕРАТОР_0. Добро пожаловать. Я — твой персональный ассистент AIDA-01. Твоё сознание успешно синхронизировано с московской сетью Октября.',
+          options: [ { text: 'Где я? [ LOCALHOST? ]', nextId: 'lore_1' }, { text: 'Кто я по профессии? [ PROFILE ]', nextId: 'career_intro' } ]
         },
         lore_1: {
           id: 'lore_1', speaker: 'AIDA-01', text: 'Ты в Москве. Но не в той, что в учебниках. Здесь мир разрезан надвое. Внизу — технические трущобы, где стажеры вроде тебя грызутся за каждый байт. Наверху, в небесных кабинетах Москва-Сити, сидят Архитекторы и Лиды, управляющие реальностью через золотые терминалы. У тебя нет класса. Ты — чистый лист. Пока что.',
@@ -97,12 +97,9 @@ export const hub: WorldDistrict = {
         },
         desc_java: { id: 'desc_java', speaker: 'AIDA-01', text: 'Java Junior: Фундамент старого мира. Твой код — это крепость. Медленно, но надежно. Используется в глубоких слоях банковских систем и государственных базах.', options: [{ text: 'Понятно.', nextId: 'langs_menu' }] },
         desc_python: { id: 'desc_python', speaker: 'AIDA-01', text: 'Python Developer: Скорость мысли превыше всего. Идеально для взлома нейросетей и быстрой автоматизации турелей. Минус в оптимизации, но кого это волнует, когда код уже работает?', options: [{ text: 'Понятно.', nextId: 'langs_menu' }] },
-        desc_kotlin: { id: 'desc_kotlin', speaker: 'AIDA-01', text: 'Kotlin Developer: Мастер лаконичности. Твой код чист и современен. Идален для управления мобильными терминалами и носимыми девайсами.', options: [{ text: 'Понятно.', nextId: 'langs_menu' }] },
-        desc_go: { id: 'desc_go', speaker: 'AIDA-01', text: 'Go Developer: Король параллелизма. Ты запускаешь сотни потоков одновременно. Твои атаки быстрее, чем реакция защитного ИИ.', options: [{ text: 'Понятно.', nextId: 'langs_menu' }] },
-        desc_js: { id: 'desc_js', speaker: 'AIDA-01', text: 'JavaScript Developer: Ты управляешь тем, что видят другие. Визуальный взлом интерфейсов, создание иллюзий и манипуляция реальностью через React-проколы.', options: [{ text: 'Понятно.', nextId: 'langs_menu' }] },
-        desc_devops: { id: 'desc_devops', speaker: 'AIDA-01', text: 'DevOps Engineer: Ты не просто пишешь код, ты строишь конвейеры. Автоматизация развертывания вирусов и управление инфраструктурой целых районов.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
-        desc_admin: { id: 'desc_admin', speaker: 'AIDA-01', text: 'System Administrator: Ты знаешь все бэкдоры. Прямой доступ к железу, управление питанием и физическая блокировка узлов.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
-        desc_arch: { id: 'desc_arch', speaker: 'AIDA-01', text: 'System Architect: Высшая каста. Ты не фиксишь баги, ты создаешь законы, по которым баги невозможны. Самый сложный и дорогой путь к вершине.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
+        desc_devops: { id: 'desc_devops', speaker: 'AIDA-01', text: 'DevOps Engineer: Ты не просто пишешь код, ты строишь конвейеры. Автоматизация развертывания вирусов и управление инфраструктурой целых районов через CI/CD протоколы.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
+        desc_admin: { id: 'desc_admin', speaker: 'AIDA-01', text: 'System Administrator: Ты знаешь все бэкдоры. Прямой доступ к железу, управление питанием и физическая блокировка узлов через sudo-команды.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
+        desc_arch: { id: 'desc_arch', speaker: 'AIDA-01', text: 'System Architect: Высшая каста. Ты не фиксишь баги, ты создаешь законы, по которым баги невозможны. Самый сложный и дорогой путь к вершине иерархии.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
         desc_pm: { id: 'desc_pm', speaker: 'AIDA-01', text: 'Project Manager: Управление ресурсами и чужими жизнями. Твои карты заставляют других работать на тебя. Лидерство — твоё главное оружие.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] },
         desc_qa: { id: 'desc_qa', speaker: 'AIDA-01', text: 'QA Tester: Ты видишь изъяны в совершенстве. Твои атаки находят слабые места в любой защите, превращая чужую уверенность в NullPointerException.', options: [{ text: 'Понятно.', nextId: 'roles_menu' }] }
       }

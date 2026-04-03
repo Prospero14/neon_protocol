@@ -4,7 +4,7 @@ export const sokol: WorldDistrict = {
   id: 'sokol',
   node: {
     id: 'sokol', 
-    name: 'СОКОЛ: TECH_HUB', 
+    name: 'SOKOL: TECH_HUB', 
     description: 'Центр авиационных и космических исследований. Место сосредоточения старой технической элиты.', 
     x: 30, y: 15, stability: 90, type: 'combat', tier: 3, combatPack: 'java_core',
     subNodes: [
@@ -39,6 +39,23 @@ export const sokol: WorldDistrict = {
         ok: {
           id: 'ok', speaker: 'ДЕКАН_КОЛЛЕДЖА', text: 'Корочка готова. Теперь ты в системе не просто так. Работай честно.', options: [{ text: 'Принято.', nextId: 'LEAVE' }]
         }
+      }
+    },
+    npc_retired_tester: {
+      id: 'npc_retired_tester', startNodeId: 'intro',
+      nodes: {
+        intro: {
+          id: 'intro', speaker: 'СЕМЕНЫЧ', text: 'Баги в авионике — это не шутки, сынок. Одна ошибка в плавучке — и дрон летит не в ту сторону. Хочешь почувствовать, как это было в сороковых?',
+          options: [
+            { text: 'Я готов к испытанию роем.', nextId: 'quest_drone' },
+            { text: 'Что за перегрев в северной?', nextId: 'quest_heat' },
+            { text: '[Уйти]', nextId: 'LEAVE' }
+          ]
+        },
+        quest_drone: {
+          id: 'quest_drone', speaker: 'СЕМЕНЫЧ', text: 'Старые дроны "Сокол-1" сошли с ума от циклической зависимости. Иди и покажи им, что такое правильная инъекция кода. (Принять квест)',
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ: РОЙ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_sokol_combat_drone_swarm_bug_sweep' }]
+        },
       }
     }
   }

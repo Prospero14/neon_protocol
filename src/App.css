@@ -28,19 +28,21 @@
 /* --- HUB V4 GRID POLISH --- */
 .hub-grid-v4 {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr;
-  gap: 24px;
-  padding: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  height: calc(100% - 100px);
+  grid-template-columns: 350px 1fr 350px;
+  gap: 2rem;
+  padding: 0 1rem;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 1600px;
+  align-items: start;
 }
 
 .hub-col {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  height: 100%;
+  gap: 1.5rem;
+  min-height: 0;
 }
 
 .col-header {
@@ -244,18 +246,29 @@ body, html, #root {
 
 .hub-top-stats {
   display: flex;
-  gap: 10px;
+  gap: 1rem;
+  align-items: center;
 }
 
 .top-stat {
-  padding: 10px 20px;
+  padding: 8px 16px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-direction: row;
+  align-items: center;
+  gap: 20px;
+  background: rgba(0, 20, 20, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
-.top-stat .label { font-size: 0.6rem; opacity: 0.5; }
-.top-stat .val { font-size: 1.2rem; font-weight: 800; font-family: var(--font-mono); }
+.top-stat .val { 
+  font-size: 1.4rem; 
+  font-weight: 900; 
+  font-family: var(--font-mono); 
+  color: var(--neon-amber);
+  text-shadow: 0 0 10px var(--neon-amber-glow);
+  margin-left: 20px;
+}
 
 .hub-grid-v4 {
   display: grid;
@@ -2099,13 +2112,15 @@ body, html, #root {
 .activity-list-item:hover {
   background: rgba(0, 255, 255, 0.05);
   border-color: rgba(0, 255, 255, 0.2);
-  transform: translateX(5px);
+  transform: translateX(10px);
+  padding-left: 20px;
 }
 
 .activity-list-item.active {
   background: rgba(255, 184, 0, 0.1);
   border-color: var(--neon-amethyst);
-  box-shadow: inset 5px 0 0 var(--neon-amethyst);
+  box-shadow: inset 8px 0 0 var(--neon-amethyst);
+  padding-left: 25px;
 }
 
 .activity-list-icon {

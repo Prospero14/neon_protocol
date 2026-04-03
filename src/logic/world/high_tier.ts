@@ -5,7 +5,7 @@ export const high_tier: WorldDistrict[] = [
     id: 'sokolniki',
     node: {
       id: 'sokolniki', 
-      name: 'СОКОЛЬНИКИ: SERVER_FOREST', 
+      name: 'SOKOLNIKI: SERVER_FOREST', 
       description: 'Бывший парк, превращенный в серверный лабиринт. Пристанище старых кодеров.', 
       x: 70, y: 20, stability: 65, type: 'bar', tier: 4,
       subNodes: [
@@ -45,7 +45,7 @@ export const high_tier: WorldDistrict[] = [
     id: 'fili',
     node: {
       id: 'fili', 
-      name: 'ФИЛИ: ORBIT_LINK', 
+      name: 'FILI: ORBIT_LINK', 
       description: 'Район космических заводов и спутниковых линков. Высокая плотность SRE.', 
       x: 10, y: 40, stability: 70, type: 'trade', tier: 4,
       subNodes: [
@@ -80,7 +80,7 @@ export const high_tier: WorldDistrict[] = [
           lore: { id: 'lore', speaker: 'КОСМОС', text: 'Это не фантазии, юнит. Мы — в симуляции. И единственный выход — через черный ход в облако Ядра.', options: [{ text: 'Ну-ну.', nextId: 'intro' }] },
           quest: {
             id: 'quest', speaker: 'КОСМОС', text: 'Нужны топливные стержни... то есть батарейки. Сходи к Пусковой Стойке, там часто ошиваются боты-стражи. Сделаешь их — дам Bits.', options: [
-              { text: 'Погнали (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'java_spring' }
+              { text: '[ ПРИНЯТЬ КОНТРАКТ: АПЛИНК ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_fili_combat_launch_guard_bug_sweep' }
             ]
           }
         }
@@ -91,7 +91,7 @@ export const high_tier: WorldDistrict[] = [
     id: 'taganka',
     node: {
       id: 'taganka', 
-      name: 'ТАГАНКА: BUNKER_CORE', 
+      name: 'TAGANKA: BUNKER_CORE', 
       description: 'Глубокие правительственные бункеры. Резиденция Инквизиции и Аудиторов Ядра.', 
       x: 65, y: 55, stability: 50, type: 'combat', tier: 5, combatPack: 'java_advanced',
       subNodes: [
@@ -126,7 +126,7 @@ export const high_tier: WorldDistrict[] = [
           inter_lore: { id: 'inter_lore', speaker: 'ВЕЛИКИЙ_ИНКВИЗИТОР', text: 'Курьеры — это переменные. Переменные меняются. Я ищу константы. Будь осторожен, здесь логи не стираются.', options: [{ text: 'Понял.', nextId: 'intro' }] },
           quest_hard: {
             id: 'quest_hard', speaker: 'ВЕЛИКИЙ_ИНКВИЗИТОР', text: 'Правда — это привилегия тех, кто прошел аудит. Докажи свою валидность в бою с моим защитным модулем. Если выживешь — получишь доступ к архивам.', options: [
-              { text: 'Начать Аудит (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_local_lan' }
+              { text: '[ ПРИНЯТЬ КОНТРАКТ: ГЛУБОКИЙ АУДИТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_taganka_combat_deep_audit_bug_sweep' }
             ]
           }
         }
@@ -137,7 +137,7 @@ export const high_tier: WorldDistrict[] = [
     id: 'mitino',
     node: {
       id: 'mitino', 
-      name: 'МИТИНО: RADIO_STORM', 
+      name: 'MITINO: RADIO_STORM', 
       description: 'Радио-рынок планетарного масштаба. Центр разгона железа и нелегальных антенн.', 
       x: 10, y: 15, stability: 85, type: 'trade', tier: 5,
       subNodes: [

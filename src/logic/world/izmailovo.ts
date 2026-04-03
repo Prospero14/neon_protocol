@@ -4,7 +4,7 @@ export const izmailovo: WorldDistrict = {
   id: 'izmailovo',
   node: {
     id: 'izmailovo', 
-    name: 'ИЗМАЙЛОВО: CRAFT_MARKET', 
+    name: 'IZMAILOVO: CRAFT_MARKET', 
     description: 'Культурный и торговый центр. Здесь делают лучшие кастомные импланты и деки.', 
     x: 90, y: 30, stability: 92, type: 'trade', tier: 1,
     subNodes: [
@@ -32,7 +32,7 @@ export const izmailovo: WorldDistrict = {
       nodes: {
         intro: { id: 'intro', speaker: 'ВЕРСТАК', text: 'Собрать деку из хлама — это искусство. Хочешь научиться или просто пришел за деталями?', options: [
             { text: 'Мне нужен хладагент для разгона...', nextId: 'quest_cooling_start' },
-            { text: 'Нужны детали (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_craft_scrap', subtext: 'Добыча редкого лома.' }, 
+            { text: '[ ПРИНЯТЬ КОНТРАКТ: СБОР ДЕТАЛЕЙ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_izmailovo_combat_job_craft_scrap_bug_sweep' }, 
             { text: '[Уйти]', nextId: 'LEAVE' }
         ] },
         quest_cooling_start: {

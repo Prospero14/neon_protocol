@@ -14,7 +14,7 @@ export interface TechnicalTask {
   name: string;
   description: string;
   steps: TZStep[];
-  rank: 'junior' | 'mid' | 'senior';
+  rank: 'script-kiddie' | 'junior' | 'mid' | 'senior';
 }
 
 export const TZ_LIBRARY: TechnicalTask[] = [

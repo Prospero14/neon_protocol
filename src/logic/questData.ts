@@ -15,6 +15,12 @@ export interface QuestDefinition {
   tier: number;
   preClassOnly?: boolean;
 }
+const TYPE_PREFIX: Record<string, string> = {
+  combat: 'БОЙ',
+  talk: 'СВЯЗЬ',
+  delivery: 'ДОСТ',
+  diagnostics: 'ДИАГ'
+};
 
 const NPC_QUEST_BLUEPRINTS = [
   {
@@ -58,7 +64,7 @@ function buildNpcQuests() {
       NPC_QUEST_BLUEPRINTS.forEach((b, idx) => {
         quests.push({
           id: `q_${district.id}_${npc.id}_${b.suffix}`,
-          title: `[${b.type.toUpperCase().slice(0, 4)}] ${b.title}: ${npc.name}`,
+          title: `[${TYPE_PREFIX[b.type] || '????'}] ${b.title}: ${npc.name}`,
           districtId: district.id,
           giverNpcId: npc.id,
           description: b.text,
@@ -81,7 +87,7 @@ function buildCombatDistrictQuests() {
       COMBAT_QUEST_BLUEPRINTS.forEach((b, idx) => {
         quests.push({
           id: `q_${district.id}_${node.id}_${b.suffix}`,
-          title: `[${b.type.toUpperCase().slice(0, 4)}] ${b.title}: ${node.name}`,
+          title: `[${TYPE_PREFIX[b.type] || '????'}] ${b.title}: ${node.name}`,
           districtId: district.id,
           giverNpcId: (district.subNodes?.find((s) => s.type === 'npc')?.id ?? node.id),
           objectiveNodeId: node.id,

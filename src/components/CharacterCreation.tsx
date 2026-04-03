@@ -4,6 +4,7 @@ import { MAP_NODES } from '../logic/mapData';
 import type { Trait } from '../logic/traits';
 import { TRAITS } from '../logic/traits';
 import type { Profession } from '../logic/professions';
+import {} from 'lucide-react'; // Placeholder if needed, or just remove line
 
 interface CharacterCreationProps {
   onComplete: (data: {
@@ -20,23 +21,19 @@ interface CharacterCreationProps {
 
 const getDistrictBuffDescription = (id: string): string => {
   switch(id) {
-    case 'altufyevo': return 'СЕВЕРНЫЕ_ХРАНИЛИЩА: +10% урона. Переполнение буфера (Buffer Underflow) в старых узлах Алтуфьево разгоняет ваши атакующие скрипты.';
-    case 'vykhino': return 'ТОРГОВАЯ_ВЕТВЬ: +150 Битов. Выхино — крупнейший финансовый перекресток, где репутация GIGA_BANK (+20) открывает любые порты.';
-    case 'maryino': return 'ВЫХЛОП_СЕТИ: +80 ед. целостности и +128 МБ ОЗУ. Плотный трафик Марьино защищает ваши данные и расширяет кэш. Репутация VOSKHOD (+20).';
-    case 'chertanovo': return 'ГЛИТЧ_ГЕТТО: +256 МБ ОЗУ, но -20 ед. целостности. Анархисты Чертаново (+25) научили вас выжимать максимум из железа ценой стабильности.';
-    case 'south_west': return 'АКАДЕМИЧЕСКИЙ_КАНАЛ: +200 опыта. Узлы Юго-Запада связаны с EU_SYNTAX (+25), что дает доступ к продвинутым обучающим протоколам.';
-    case 'teply_stan': return 'ОПУШКА_ЛЕСА: +20% к уклонению. Рекурсивные тропы Теплого Стана позволяют вашему коду «растворяться» в Сети. Репутация ANARCHO_VOID (+10).';
-    case 'izmailovo': return 'РЫНОК_МАСТЕРОВ: -25% к стоимости ПО. Измайловские хакеры NEO_KYOTO (+20) всегда имеют скидки на модули расширения.';
-    case 'bibirevo': return 'СЕВЕРНЫЙ_КАНАЛ: +100 ед. целостности. Стабильный линк и репутация VOSKHOD (+10) делают соединение в Бибирево эталоном надежности.';
-    case 'tekstilschiki': return 'ТЕКСТИЛЬНАЯ_СЕТЬ: +1 карта в ход. Оптимизированные каналы VOSKHOD (+25) повышают пропускную способность вашей деки.';
-    case 'perovo': return 'ТРУЩОБЫ_ДАННЫХ: +30% шанс на редкие карты. Здесь, под патронажем NEO_KYOTO (+10), можно найти самый редкий софт.';
-    case 'sokol': return 'ТЕХНО_ХАБ: +150 ед. целостности и +100 опыта. Элитный район под контролем EU_SYNTAX и VOSKHOD (+15) гарантирует рост и безопасность.';
-    case 'vdnkh': return 'ПАВИЛЬОН_НОЛЬ: +128 МБ ОЗУ и +50 Битов. Наследие старой системы ВДНХ предоставляет редкие архитектурные ресурсы.';
-    case 'sokolniki': return 'СЕРВЕРНЫЙ_ЛЕС: +384 МБ ОЗУ, но -30% целостности. Глубокое погружение в дебри Сокольников расширяет мозг, но опасно для системы.';
-    case 'fili': return 'КОСМИЧЕСКИЕ_РУИНЫ: +150 опыта. Прямая синхронизация с орбитальными остатками в Филях ускоряет вашу эволюцию.';
-    case 'taganka': return 'БУНКЕР: -20% к стоимости услуг. Подземные каналы Таганки защищены от налогов и комиссий корпораций.';
-    case 'mitino': return 'РАДИОРЫНОК: +300 Битов. Нелегальный импорт Митино — лучший способ быстро наполнить кошелек скрипт-кидди.';
-    default: return 'ОБЫЧНЫЙ_СЕКТОР: +50 Битов и +50 ед. целостности. Стандартная база для тех, кто не ищет приключений.';
+    case 'altufyevo': return 'SIGNAL_INTEGRITY: +10 Max Stress. Старые серверные стойки Алтуфьево обеспечивают стабильность, проверенную временем.';
+    case 'vykhino': return 'MARKET_CHANNEL: +30 Bits. Крупнейший транспортный узел. Умение быстро проводить транзакции дает начальный капитал.';
+    case 'maryino': return 'NEURAL_INTEGRITY: +20 Max Stress & +256 MiB RAM. Плотный трафик жилых массивов требует расширенного кэша и выносливости.';
+    case 'chertanovo': return 'GLITCH_OVERCLOCK: +512 MiB RAM & -15 Max Stress. Хаки чертановских анархистов разгоняют память ценой стабильности системы.';
+    case 'south_west': return 'NEURAL_CACHE: +512 MiB RAM. Прямое подключение к нейро-сетям Университета оптимизирует использование адресного пространства.';
+    case 'teply_stan': return 'RECURSIVE_TRAILS: Trait [script_ghost] (20% Stress reduction). Архитектура «Леса» позволяет вашим пакетам мимикрировать под шум Сетки.';
+    case 'izmailovo': return 'MOD_MARKET: +20 Bits & +10 NEO_KYOTO Rep. Рынок мастеров открывает доступ к редким прошивкам и корпоративным скидкам.';
+    case 'bibirevo': return 'SYSTEM_STABILITY: +40 Max Stress. Северный узел связи — эталон надежности и целостности передаваемых данных.';
+    case 'tekstilschiki': return 'PATTERN_FLOW: +1 Card per Turn. Оптимизированные каналы связи повышают пропускную способность вашей деки.';
+    case 'sokol': return 'TECH_HUB: +50 Max Stress & +20 Bits. Элитный район под защитой корпоративных прокси гарантирует безопасность.';
+    case 'vdnkh': return 'LEGACY_ARCHIVE: +256 MiB RAM & +40 Bits. Наследие старой системы ВДНХ предоставляет редкие архитектурные ресурсы.';
+    case 'mitino': return 'RADIO_MARKET: +60 Bits. Нелегальный импорт Митино — лучший способ быстро наполнить кошелек для старта.';
+    default: return 'GENERAL_SECTOR: +20 Bits & +10 Max Stress. Стандартная база для тех, кто не ищет лишних рисков.';
   }
 };
 
@@ -51,7 +48,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
 
   useEffect(() => {
     const logs = [
-      "SYSTEM_BOOT_SEQUENCE: NEURAL_PROTO_0.07",
+      "SYSTEM_BOOT_SEQUENCE: NEURAL_PROTO_0.09",
       "CHECKING_MOSCOW_SERVER_STATUS... [ONLINE]",
       "DECRYPTING_USER_IDENTITY_STREAMS...",
       "AWAITING_INPUT: NEURAL_ID_REQUIRED"
@@ -84,11 +81,11 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
     <div className="v007-creation-context cc-view main-crt">
       <div className="cc-container">
         
-        {/* Navigation Tabs (v0.07 Style) */}
+        {/* Navigation Tabs (v0.09 Style) */}
         <div className="cc-nav-tabs">
-          <div className={`cc-nav-tab ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>ЛИЧНОСТЬ</div>
-          <div className={`cc-nav-tab ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>РАЗВЕРТЫВАНИЕ</div>
-          <div className={`cc-nav-tab ${step === 3 ? 'active' : ''}`} onClick={() => setStep(3)}>ОСОБЕННОСТИ</div>
+          <div className={`cc-nav-tab ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>IDENTITY</div>
+          <div className={`cc-nav-tab ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>DEPLOYMENT</div>
+          <div className={`cc-nav-tab ${step === 3 ? 'active' : ''}`} onClick={() => setStep(3)}>TRAITS</div>
         </div>
 
         <div className="cc-main-panel">
@@ -103,12 +100,12 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
             </div>
 
               <div className="cc-user-summary">
-                <div className="summary-item">ТОЧКА_ПОДКЛЮЧЕНИЯ: <span className="copper">{userIp}</span></div>
-                <div className="summary-item">ID_ПОЛЬЗОВАТЕЛЯ: <span className="copper">{name || '---'}</span></div>
-                <div className="summary-item">ПРОТОКОЛ_ФРАКЦИИ: <span className="copper">{faction}</span></div>
-                <div className="summary-item">ЗОНА_ВЫСАДКИ: <span className="copper">{district?.name || '---'}</span></div>
-                <div className="summary-item">УРОВЕНЬ_ДОСТУПА: <span className="copper">{skillMode.toLocaleUpperCase()}</span></div>
-                <div className="summary-item">ОСОБЕННОСТЬ: <span className="copper">{hobby?.name || '---'}</span></div>
+                <div className="summary-item">CONNECTION_POINT: <span className="copper">{userIp}</span></div>
+                <div className="summary-item">USER_IDENTITY: <span className="copper">{name || '---'}</span></div>
+                <div className="summary-item">FACTION_PROTOCOL: <span className="copper">{faction}</span></div>
+                <div className="summary-item">DEPLOY_ZONE: <span className="copper">{district?.name?.split(':')[0] || '---'}</span></div>
+                <div className="summary-item">ACCESS_LEVEL: <span className="copper">{skillMode.toLocaleUpperCase()}</span></div>
+                <div className="summary-item">ACTIVE_TRAIT: <span className="copper">{hobby?.name || '---'}</span></div>
               </div>
 
             <div className="cc-cursor-row">
@@ -122,57 +119,57 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
             <div className="cc-step-content">
               {step === 1 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">ВВОД_НЕЙРО-ID_ЛИЧНОСТИ</h2>
+                  <h2 className="cc-headline">INITIALIZE_NEURAL_IDENTITY</h2>
                   <div className="cc-identity-form">
                     <div className="cc-form-group">
-                      <label>ВВОД_НЕЙРО_ID</label>
+                      <label>ENTER_NEURAL_ID</label>
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="ENTER_ID..."
+                        placeholder="0x00_UNDEFINED"
                         className="cc-input"
                         autoFocus
                       />
                     </div>
 
                     <div className="cc-form-group">
-                      <label>ИНИЦИАЛИЗАЦИЯ_СЛОЖНОСТИ</label>
+                      <label>DIFFICULTY_INITIALIZATION</label>
                       <div className="cc-skill-selector">
                         <button 
                           className={`cc-skill-btn ${skillMode === 'junior' ? 'active' : ''}`}
                           onClick={() => setSkillMode('junior')}
                         >
-                          НОВИЧОК
+                          TRAINEE
                         </button>
                         <button 
                           className={`cc-skill-btn ${skillMode === 'mid' ? 'active' : ''}`}
                           onClick={() => setSkillMode('mid')}
                         >
-                          МИДЛ
+                          SPECIALIST
                         </button>
                         <button 
                           className={`cc-skill-btn ${skillMode === 'senior' ? 'active' : ''}`}
                           onClick={() => setSkillMode('senior')}
                         >
-                          СЕНЬОР
+                          GHOST_OPS
                         </button>
                       </div>
                       <div className="cc-skill-description">
-                        {skillMode === 'junior' && "Системные подсказки, детальный лог и подсказки AI включены."}
-                        {skillMode === 'mid' && "Средний уровень. Лог активен, но детальных инструкций в библиотеке меньше."}
-                        {skillMode === 'senior' && "Максимальная сложность. Вы работаете только с сырым кодом и логом."}
+                        {skillMode === 'junior' && "System assistance, detailed logs, and AI hints enabled."}
+                        {skillMode === 'mid' && "Standard level. Logs active, instructions reduced."}
+                        {skillMode === 'senior' && "Ghost Ops. Raw code and logs only. No safety net."}
                       </div>
                     </div>
                   </div>
-                  {name.trim() && <div className="cc-enter-hint">НАЖМИТЕ [ENTER] ДЛЯ ПОДТВЕРЖДЕНИЯ</div>}
+                  {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO AUTHORIZE</div>}
                   <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
                 </div>
               )}
 
               {step === 2 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">ВЫБОР_ЗОНЫ_РАЗВЕРТЫВАНИЯ</h2>
+                  <h2 className="cc-headline">SELECT_DEPLOYMENT_ZONE</h2>
                   <div className="cc-grid-wrapper">
                     <div className="cc-grid districts">
                       {districts.map(d => (
@@ -184,7 +181,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                           tabIndex={0}
                         >
                           <div className="cc-card-scan"></div>
-                          <div className="cc-card-id">ЗОНА_{d.id.toUpperCase()}</div>
+                          <div className="cc-card-id">ZONE_{d.id.toUpperCase()}</div>
                           <div className="cc-card-name">{d.name.split(':')[0]}</div>
                           <div className="cc-card-effect copper">{getDistrictBuffDescription(d.id)}</div>
                         </div>
@@ -196,7 +193,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
 
               {step === 3 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">ЗАГРУЗКА_НЕЙРО-ОСОБЕННОСТЕЙ</h2>
+                  <h2 className="cc-headline">LOAD_NEURAL_TRAITS</h2>
                   <div className="cc-grid-wrapper">
                     <div className="cc-grid hobbies">
                       {TRAITS.filter(t => t.type === 'HOBBY').map(h => (
@@ -222,7 +219,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
             {/* ACTION AREA (FOOTER) */}
             <div className="cc-footer-area">
               <div className="cc-side-hint">
-                Биометрический поток будет синхронизирован с протоколом v0.07.
+                Biometric stream will be synchronized with Protocol 0.09.
               </div>
               <div 
                 className={`vertical-confirm-bar ${
@@ -232,7 +229,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                 }`} 
                 onClick={() => handleNext()} 
               >
-                {step === 1 ? "[ ПОДТВЕРДИТЬ_ЛИЧНОСТЬ ]" : step === 2 ? "[ ПОДТВЕРДИТЬ_ЗОНУ ]" : "[ ЗАВЕРШИТЬ_ЗАГРУЗКУ ]"}
+                {step === 1 ? "[ AUTHORIZE_IDENTITY ]" : step === 2 ? "[ CONFIRM_ZONE ]" : "[ COMMIT_DATA_TRAJECTORY ]"}
               </div>
             </div>
           </div>

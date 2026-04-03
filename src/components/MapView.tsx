@@ -2,9 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
 import { X, Search, MousePointer2 } from 'lucide-react';
-import type { QuestDefinition } from '../logic/questData';
-import type { QuestState } from '../logic/questEngine';
-import { baseQuestBits } from '../logic/economy';
+import { type QuestState } from '../logic/questEngine';
 
 interface MapViewProps {
   viewMode: 'CITY' | 'DISTRICT';
@@ -13,12 +11,7 @@ interface MapViewProps {
   onNodeSelect: (nodeId: string, type: string, cost?: number) => void;
   onToggleView: () => void;
   onBack: () => void;
-  getNpcQuests?: (npcId: string) => QuestDefinition[];
   questStates?: QuestState[];
-  onAcceptQuest?: (npcId: string, questId?: string) => void;
-  onTrackQuest?: (questId: string) => void;
-  onCompleteTalkQuest?: (questId: string) => void;
-  trackedQuestId?: string | null;
   objectiveNodeId?: string | null;
   playerBits?: number;
 }
@@ -41,24 +34,19 @@ const MapView: React.FC<MapViewProps> = ({
   onNodeSelect, 
   onBack,
   onToggleView,
-  getNpcQuests,
-  questStates = [],
-  onAcceptQuest,
-  onTrackQuest,
-  onCompleteTalkQuest,
-  trackedQuestId = null,
   objectiveNodeId = null,
   playerBits = 0,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
-  // showLanding removed for instant activity access
 
   // Zoom & Pan State
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Fix: The local scope state needs to be handled inside the functions below.
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -66,10 +54,7 @@ const MapView: React.FC<MapViewProps> = ({
     e.preventDefault();
     const zoomSpeed = 0.1;
     const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    setZoom(prev => {
-      const next = prev + delta;
-      return Math.min(Math.max(next, 0.8), 3.0);
-    });
+    setZoom(prev => Math.min(Math.max(prev + delta, 0.8), 3.0));
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -86,9 +71,7 @@ const MapView: React.FC<MapViewProps> = ({
     });
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+  const handleMouseUp = () => setIsDragging(false);
 
   const resetView = () => {
     setZoom(1);
@@ -97,47 +80,38 @@ const MapView: React.FC<MapViewProps> = ({
 
   const activeDistrict = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
   const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
-  const selectedNpcQuests =
-    selectedSubNode?.type === 'npc' && getNpcQuests ? getNpcQuests(selectedSubNode.id) : [];
-  const getQuestState = (questId: string) => questStates.find((s) => s.questId === questId);
 
   const getTravelCost = (targetNode: MapNodeData) => {
     if (targetNode.id === activeDistrictId) return 0;
     const dist = Math.sqrt(Math.pow(targetNode.x - activeDistrict.x, 2) + Math.pow(targetNode.y - activeDistrict.y, 2));
-    return Math.floor(dist * 2); // 2 bits per unit distance
+    return Math.floor(dist * 2);
   };
 
   return (
     <div className="map-view-v4">
-      {/* Header */}
-      <div className="map-hdr">
+      <header className="map-hdr">
         <div className="map-hdr-left">
           <span className="map-hdr-icon">◎</span>
-          <span className="map-hdr-title">МОСКВА: СЕТЕВОЙ РАДАР</span>
-          <span className="map-hdr-sub">// СКАНИРОВАНИЕ АКТИВНО [ZOOM: {Math.round(zoom * 100)}%]</span>
+          <span className="map-hdr-title">МОСКВА_СЕТЕВОЙ_РАДАР</span>
+          <span className="map-hdr-sub">// СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%]</span>
         </div>
         <div className="map-hdr-right">
           {viewMode === 'DISTRICT' && isCityMapUnlocked && (
              <button className="map-hdr-btn" onClick={onToggleView}>
-               <Search size={14} /> GLOBAL_MAP
+               <Search size={14} /> ОБЩАЯ_КАРТА
              </button>
           )}
           {viewMode === 'CITY' && (
              <button className="map-hdr-btn" onClick={onToggleView}>
-               <MousePointer2 size={14} /> DISTRICT_VIEW
+               <MousePointer2 size={14} /> КАРТА_РАЙОНА
              </button>
           )}
-          <button className="map-hdr-btn" onClick={resetView}>
-            <Search size={14} /> RECENTER
-          </button>
-          <button className="map-hdr-btn" onClick={onBack}>
-            <X size={14} /> BACK_TO_HUB
-          </button>
+          <button className="map-hdr-btn" onClick={resetView}>[ СБРОС_ОКНА ]</button>
+          <button className="map-hdr-btn exit" onClick={onBack}><X size={14} /> [ ВЫХОД_В_ХАБ ]</button>
         </div>
-      </div>
+      </header>
 
-      <div className="map-body">
-        {/* SVG MAP with Zoom/Pan */}
+      <main className="map-body">
         <div 
           className="map-canvas-wrap"
           onWheel={handleWheel}
@@ -147,277 +121,157 @@ const MapView: React.FC<MapViewProps> = ({
           onMouseLeave={handleMouseUp}
           ref={containerRef}
         >
-          <svg
-            viewBox="0 0 100 100"
-            className="map-svg"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <g
-              className="map-transform-layer"
-              style={{ 
-                transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                transformOrigin: '0 0',
-                transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
+          <svg viewBox="0 0 100 100" className="map-svg" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(0, 255, 255, 0.05)" />
+                <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
+              </radialGradient>
+            </defs>
+            <circle cx="50" cy="50" r="50" fill="url(#radarGlow)" />
+            
+            <g className="radar-grid" opacity="0.1">
+              {[...Array(11)].map((_, i) => (
+                <line key={`v-${i}`} x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="var(--neon-cyan)" strokeWidth="0.05" />
+              ))}
+              {[...Array(11)].map((_, i) => (
+                <line key={`h-${i}`} x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="var(--neon-cyan)" strokeWidth="0.05" />
+              ))}
+            </g>
+
+            <line x1="50" y1="50" x2="50" y2="0" stroke="var(--neon-cyan)" strokeWidth="0.1" opacity="0.3" className="radar-sweep" />
+
+            <g style={{ 
+              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
+              transformOrigin: '0 0',
+              transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}>
               {viewMode === 'CITY' ? (
-                <>
-                  {/* District Contours (Visual Clusters) */}
-                  <g className="map-contours">
-                    {/* NORTH SECTOR */}
-                    <path d="M 15 5 L 60 5 L 65 35 L 45 40 Z" className="map-district-outline" />
-                    {/* EAST SECTOR */}
-                    <path d="M 65 15 L 95 20 L 95 55 L 75 60 Z" className="map-district-outline" />
-                    {/* SOUTH-EAST */}
-                    <path d="M 70 55 L 95 65 L 95 95 L 65 95 Z" className="map-district-outline" />
-                    {/* SOUTH */}
-                    <path d="M 40 70 L 65 70 L 70 95 L 35 95 Z" className="map-district-outline" />
-                    {/* SOUTH-WEST / WEST */}
-                    <path d="M 5 40 L 40 40 L 35 95 L 5 95 Z" className="map-district-outline" />
-                  </g>
-
-                  {/* Global Map Layers */}
-                  <circle cx="50" cy="50" r="10" fill="none" stroke="rgba(0,255,255,0.04)" strokeWidth="0.1" />
-                  <circle cx="50" cy="50" r="30" fill="none" stroke="rgba(0,255,255,0.06)" strokeWidth="0.2" />
+                MAP_NODES.map(node => {
+                  const color = NODE_COLORS[node.type] || '#aaa';
+                  const isCurrent = activeDistrictId === node.id;
+                  const isSelected = selectedNode?.id === node.id;
+                  const isObjective = objectiveNodeId === node.id;
                   
-                  {MAP_NODES.map(node => {
-                    const color = NODE_COLORS[node.type] || '#aaa';
-                    const isCurrent = activeDistrictId === node.id;
-                    const isSelected = selectedNode?.id === node.id;
-                    const isObjective = objectiveNodeId === node.id;
-                    
-                    return (
-                      <g 
-                        key={node.id} 
-                        onClick={() => setSelectedNode(node)} 
-                        onDoubleClick={() => onNodeSelect(node.id, 'district', getTravelCost(node))}
-                        style={{ cursor: 'pointer' }}
-                      >
-                         {isCurrent && (
-                           <g className="player-loc-marker">
-                             <circle cx={node.x} cy={node.y} r="4" fill="none" stroke="var(--neon-cyan)" strokeWidth="0.3" className="animate-pulse" style={{ animation: 'mission-pulse 2s infinite' }} />
-                             <circle cx={node.x} cy={node.y} r="6" fill="none" stroke="var(--neon-cyan)" strokeWidth="0.1" opacity="0.3" className="animate-ping" />
-                           </g>
-                         )}
-                         <circle 
-                           cx={node.x} cy={node.y} 
-                           r={isSelected ? 2.5 : isCurrent ? 1.5 : 1.2} 
-                           fill={isSelected ? '#fff' : isCurrent ? 'var(--neon-cyan)' : color} 
-                           className={`map-node-dot ${isObjective ? 'mission-target' : ''}`}
-                           style={{ color }}
-                         />
-                         {isObjective && (
-                           <circle cx={node.x} cy={node.y} r="5" fill="none" stroke="var(--neon-amethyst)" strokeWidth="0.5" className="animate-pulse" style={{ animation: 'mission-pulse 1.5s infinite' }} />
-                         )}
-                         {(isSelected || isObjective) && (
-                           <circle cx={node.x} cy={node.y} r="4" fill="none" stroke={isObjective ? "var(--neon-amethyst)" : "#fff"} strokeWidth="0.2" opacity="0.5" className="animate-ping" />
-                         )}
-                         <text x={node.x} y={node.y+5} fontSize="1.4" fill={isObjective ? "var(--neon-amethyst)" : isSelected ? "#fff" : "rgba(255,255,255,0.5)"} textAnchor="middle" style={{ pointerEvents: 'none', fontWeight: isObjective ? 900 : 400 }}>
-                           {isObjective ? `[ MISSION ] ${node.name.split(':')[0]}` : node.name.split(':')[0]}
-                         </text>
-                         {isCurrent && (
-                           <text x={node.x} y={node.y-4} fontSize="1.0" fill="var(--neon-cyan)" textAnchor="middle" style={{ fontWeight: 800 }}>YOU_ARE_HERE</text>
-                         )}
-                      </g>
-                    );
-                  })}
-                </>
-              ) : (
-                <>
-                  {/* District Grid */}
-                  <rect x="0" y="0" width="100" height="100" fill="rgba(0,0,0,0.4)" stroke="rgba(0,255,255,0.1)" strokeWidth="0.5" />
-                  {Array(10).fill(0).map((_, i) => (
-                    <line key={i} x1={i*10} y1="0" x2={i*10} y2="100" stroke="rgba(0,255,255,0.05)" strokeWidth="0.1" />
-                  ))}
-                  {Array(10).fill(0).map((_, i) => (
-                    <line key={i} x1="0" y1={i*10} x2="100" y2={i*10} stroke="rgba(0,255,255,0.05)" strokeWidth="0.1" />
-                  ))}
-
-                  {/* District SubNodes */}
-                  {activeDistrict.subNodes?.map(sn => (
-                    <g key={sn.id} onClick={() => setSelectedSubNodeId(sn.id)} style={{ cursor: 'pointer' }}>
-                      <circle cx={sn.x} cy={sn.y} r="1.5" fill={NODE_COLORS[sn.type] || '#fff'} opacity="0.4" className="animate-pulse" />
-                      <circle cx={sn.x} cy={sn.y} r="0.7" fill={NODE_COLORS[sn.type] || '#fff'} />
-                      <text x={sn.x} y={sn.y-2.5} fontSize="1.7" fill="#fff" textAnchor="middle" style={{fontWeight: 900}}>{sn.name}</text>
+                  return (
+                    <g key={node.id} onClick={() => setSelectedNode(node)} onDoubleClick={() => onNodeSelect(node.id, 'district', getTravelCost(node))} style={{ cursor: 'pointer' }}>
+                       <rect x={node.x - 1.5} y={node.y - 1.5} width="3" height="3" fill="none" stroke={color} strokeWidth="0.1" opacity="0.2" />
+                       <circle cx={node.x} cy={node.y} r={isSelected ? 1.8 : 1.2} fill={isSelected ? '#fff' : color} />
+                       {isCurrent && (
+                         <text x={node.x} y={node.y-4} fontSize="0.9" fill="var(--neon-cyan)" textAnchor="middle" style={{ fontWeight: 800, fontFamily: 'monospace' }}>ВЫ_ЗДЕСЬ</text>
+                       )}
+                       {isObjective && (
+                         <g>
+                           <circle cx={node.x} cy={node.y} r="3" fill="none" stroke="var(--neon-amethyst)" strokeWidth="0.2" className="animate-ping" />
+                           <text x={node.x} y={node.y+5} fontSize="1.4" fill="var(--neon-amethyst)" textAnchor="middle" style={{ fontWeight: 900, fontFamily: 'monospace' }}>[ЦЕЛЬ]</text>
+                         </g>
+                       )}
+                       <text x={node.x} y={node.y+3} fontSize="1.2" fill={isSelected ? "#fff" : "rgba(255,255,255,0.4)"} textAnchor="middle" style={{ pointerEvents: 'none', fontFamily: 'monospace' }}>
+                         {node.name.split(':')[0]}
+                       </text>
                     </g>
-                  ))}
-                </>
+                  );
+                })
+              ) : (
+                activeDistrict.subNodes?.map(sn => (
+                  <g key={sn.id} onClick={() => setSelectedSubNodeId(sn.id)} style={{ cursor: 'pointer' }}>
+                    <rect x={sn.x - 2} y={sn.y - 2} width="4" height="4" fill="none" stroke={NODE_COLORS[sn.type]} strokeWidth="0.1" opacity="0.1" />
+                    <circle cx={sn.x} cy={sn.y} r={selectedSubNodeId === sn.id ? 1.5 : 1.0} fill={NODE_COLORS[sn.type] || '#fff'} />
+                    <text x={sn.x} y={sn.y+3.5} fontSize="1.5" fill="#fff" textAnchor="middle" style={{fontFamily: 'monospace', fontWeight: 600}}>{sn.name.toUpperCase()}</text>
+                  </g>
+                ))
               )}
             </g>
           </svg>
-
-          {/* Landing Overlay Removed */}
         </div>
 
-        {/* Info Side Panel */}
-        <div className="map-info-panel">
+        <aside className="map-info-panel arctic-monolith">
           {viewMode === 'CITY' && selectedNode ? (
-            <>
-              <div className="map-node-type" style={{ color: NODE_COLORS[selectedNode.type] }}>
-                {selectedNode.type.toUpperCase()} | TIER {selectedNode.tier}
+            <div className="panel-content animate-slide-in">
+              <div className="node-tag" style={{ color: NODE_COLORS[selectedNode.type] }}> {selectedNode.type.toUpperCase()} / TIER_{selectedNode.tier} </div>
+              <h1 className="node-title">{selectedNode.name}</h1>
+              <p className="node-desc mono-text">{selectedNode.description}</p>
+              <div className="travel-stats">
+                 <span>СТОИМОСТЬ:</span> <span className="val-bits">ƀ{getTravelCost(selectedNode)}</span>
               </div>
-              <h2 className="map-node-name">{selectedNode.name}</h2>
-              <p className="map-node-desc">{selectedNode.description}</p>
-              
-              <div className="travel-cost-box">
-                 <span className="lbl">TRAVEL_COST:</span>
-                 <span className="val gold">{getTravelCost(selectedNode)} BITS</span>
-              </div>
-
-              <div 
-                className={`btn-premium-engage ${playerBits < getTravelCost(selectedNode) ? 'locked' : ''}`}
+              <button 
+                className={`btn-engage ${playerBits < getTravelCost(selectedNode) ? 'locked' : ''}`}
                 onClick={() => playerBits >= getTravelCost(selectedNode) && onNodeSelect(selectedNode.id, 'district', getTravelCost(selectedNode))}
               >
-                {selectedNode.id === activeDistrictId ? 'RETURN_TO_DISTRICT' : playerBits < getTravelCost(selectedNode) ? 'INSUFFICIENT_CREDITS' : 'INITIATE_FAST_TRAVEL'}
+                {selectedNode.id === activeDistrictId ? 'ПЕРЕЙТИ_К_РАЙОНУ' : 'ИНИЦИИРОВАТЬ_ПЕРЕМЕЩЕНИЕ'}
+              </button>
+            </div>
+          ) : selectedSubNode ? (
+            <div className="panel-content animate-slide-in">
+              <div className="node-tag" style={{ color: NODE_COLORS[selectedSubNode.type] }}> {selectedSubNode.type.toUpperCase()} </div>
+              <h1 className="node-title">{selectedSubNode.name}</h1>
+              <div className="tech-briefing">
+                 <div className="brief-label">DATA_STREAM:</div>
+                 <p className="node-desc mono-text">{selectedSubNode.description}</p>
+                 <div className="brief-stats">
+                    <span>SECURITY: {activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span>
+                    <span>PING: STABLE</span>
+                 </div>
               </div>
-            </>
-          ) : viewMode === 'DISTRICT' && selectedSubNodeId ? (
-            (() => {
-              const sn = activeDistrict.subNodes?.find(s => s.id === selectedSubNodeId);
-              if (!sn) return null;
-              return (
-                <>
-                  <div className="map-node-type" style={{ color: NODE_COLORS[sn.type] }}>
-                    {sn.type.toUpperCase()}
-                  </div>
-                  <h2 className="map-node-name">{sn.name}</h2>
-                  <div className="map-node-briefing neon-panel">
-                     <div className="briefing-label mono-text">TACTICAL_SCAN_RESULTS:</div>
-                     <p className="map-node-desc">{sn.description}</p>
-                     <div className="briefing-stats">
-                        <div className="stat">SECURITY: <span className="val">{activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span></div>
-                        <div className="stat">SIGNAL: <span className="val">STABLE</span></div>
-                     </div>
-                  </div>
-
-                  <div className="map-action-zone">
-                    {sn.type === 'combat' && (
-                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'combat')}>
-                         [ INITIATE_COMBAT_SEQUENCE ]
-                      </button>
-                    )}
-                    {sn.type === 'shop' && (
-                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'shop')}>
-                         [ ACCESS_VENDOR_PROTOCOL ]
-                      </button>
-                    )}
-                    {sn.type === 'bar' && (
-                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'bar')}>
-                         [ ENTER_ESTABLISHMENT ]
-                      </button>
-                    )}
-                    {sn.type === 'terminal' && (
-                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'terminal')}>
-                         [ CONNECT_TO_NODE ]
-                      </button>
-                    )}
-                    {sn.type === 'npc' && (
-                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'npc')}>
-                         [ ESTABLISH_COMM ]
-                      </button>
-                    )}
-                  </div>
-                </>
-              );
-            })()
-          ) : viewMode === 'DISTRICT' && !isCityMapUnlocked ? (
-            <div className="map-no-selection">
-              <h3 className="neon-text">LOCAL_LOCKDOWN</h3>
-              <p>Вы заперты в {activeDistrict.name.split(':')[0]}. Чтобы разблокировать карту города, найдите Терминал такси.</p>
-              <div className="activity-item compact" onClick={() => onNodeSelect('UNLOCK_CITY', 'terminal')}>
-                <div className="activity-icon-mini"><Search size={14} /></div>
-                <div className="activity-info">
-                   <span className="activity-name">ВЗЛОМАТЬ КАРТУ (DEV_HACK)</span>
-                   <span className="activity-sub">Принудительная разблокировка</span>
-                </div>
-              </div>
+              <button className="btn-engage" onClick={() => onNodeSelect(selectedSubNode.id, selectedSubNode.type)}>
+                 ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
+              </button>
             </div>
           ) : (
-            <div className="map-no-selection">
-              <MousePointer2 size={40} className="map-no-sel-icon" />
-              <div className="map-no-sel-text" style={{ marginBottom: '20px' }}>
-                {viewMode === 'CITY' ? 'ВЫБЕРИТЕ РАЙОН' : 'ВЫБЕРИТЕ ТОЧКУ В РАЙОНЕ'}
-              </div>
-              
-              {viewMode === 'DISTRICT' && (
-                <div className="activity-list-container">
-                  <div className="activity-list-title">АКТИВНОСТИ_РАЙОНА:</div>
-                  <div className="activity-list-scroll">
-                    {activeDistrict.subNodes?.map(sn => (
-                      <div 
-                        key={sn.id} 
-                        className={`activity-list-item ${selectedSubNodeId === sn.id ? 'active' : ''}`}
-                        onClick={() => setSelectedSubNodeId(sn.id)}
-                      >
-                         <div className="activity-list-icon" style={{ backgroundColor: NODE_COLORS[sn.type] }}></div>
-                         <div className="activity-list-info">
-                            <div className="activity-list-name">{sn.name}</div>
-                            <div className="activity-list-type">{sn.type.toUpperCase()}</div>
-                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="no-selection mono-text">
+               <MousePointer2 size={32} opacity="0.3" />
+               <p>ВЫБЕРИТЕ_ЦЕЛЬ_НА_РАДАРЕ</p>
             </div>
           )}
-        </div>
-      </div>
+        </aside>
+      </main>
 
       <style>{`
-        .btn-briefing {
-          flex: 1;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 6px;
-          background: rgba(0,0,0,0.6);
-          border: 1px solid rgba(0,255,255,0.2);
-          color: var(--neon-cyan);
-          padding: 10px 18px;
-          font-family: var(--font-mono);
-          font-size: 0.8rem;
-          cursor: pointer;
-          transition: 0.2s;
-          border-radius: 4px;
-          position: relative;
+        .map-view-v4 { height: 100%; display: flex; flex-direction: column; background: #000; overflow: hidden; }
+        .map-hdr {
+          height: 60px; display: flex; justify-content: space-between; align-items: center;
+          padding: 0 20px; background: rgba(0,20,20,0.8); border-bottom: 1px solid rgba(0,255,255,0.1);
         }
-        .btn-briefing:hover {
-          background: rgba(0,255,255,0.1);
-          border-color: var(--neon-cyan);
-          box-shadow: 0 0 15px rgba(0,255,255,0.2);
-          transform: translateY(-2px);
+        .map-hdr-left { display: flex; align-items: center; gap: 15px; }
+        .map-hdr-title { font-weight: 900; letter-spacing: 2px; color: var(--neon-cyan); }
+        .map-hdr-sub { font-family: var(--font-mono); font-size: 0.65rem; opacity: 0.5; }
+        .map-hdr-btn { 
+          background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2); 
+          color: #fff; padding: 6px 12px; font-family: var(--font-mono); font-size: 0.7rem;
+          cursor: pointer; transition: 0.2s; margin-left: 8px;
         }
-        .btn-briefing.abort {
-          border-color: rgba(255,255,255,0.1);
-          color: #777;
-        }
-        .btn-briefing.abort:hover {
-          border-color: #999;
-          color: #fff;
-          background: rgba(255,255,255,0.05);
-        }
-        .b-bracket { font-weight: 100; color: var(--neon-cyan); opacity: 0.5; font-size: 1.1rem; }
-        .btn-briefing.abort .b-bracket { color: #555; }
-        .b-text { letter-spacing: 2px; font-weight: 700; }
-        .map-mini-btn.talk { border-color: var(--neon-amber); color: var(--neon-amber); }
-        .map-mini-btn.diag { border-color: var(--neon-green); color: var(--neon-green); }
+        .map-hdr-btn:hover { background: var(--neon-cyan); color: #000; }
         
-        .map-node-briefing {
-          background: rgba(0,255,255,0.02);
-          padding: 15px;
-          margin: 15px 0;
-          border-left: 2px solid var(--neon-cyan);
+        .map-body { flex: 1; display: grid; grid-template-columns: 1fr 350px; overflow: hidden; }
+        .map-canvas-wrap { position: relative; background: radial-gradient(circle at 50% 50%, #001a1a 0%, #000 100%); cursor: crosshair; overflow: hidden; }
+        .map-svg { width: 100%; height: 100%; }
+        
+        .radar-sweep { transform-origin: 50px 50px; animation: radar-rotate 5s linear infinite; }
+        @keyframes radar-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .map-info-panel {
+          background: rgba(0,10,10,0.9); border-left: 1px solid rgba(0,255,255,0.1);
+          padding: 30px; display: flex; flex-direction: column;
         }
-        .briefing-label { font-size: 0.6rem; opacity: 0.5; margin-bottom: 8px; letter-spacing: 1px; }
-        .briefing-stats { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
-        .briefing-stats .stat { font-size: 0.65rem; color: #888; font-family: var(--font-mono); }
-        .briefing-stats .val { color: var(--neon-cyan); font-weight: bold; }
+        .node-tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 900; margin-bottom: 8px; }
+        .node-title { font-size: 1.8rem; margin-bottom: 15px; color: #fff; line-height: 1.1; }
+        .node-desc { font-size: 0.9rem; color: #888; line-height: 1.6; margin-bottom: 2rem; }
         
-        .map-action-zone { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .tech-briefing { background: rgba(0,255,255,0.03); padding: 15px; border-left: 3px solid var(--neon-cyan); margin-bottom: 2rem; }
+        .brief-label { font-size: 0.6rem; opacity: 0.5; margin-bottom: 10px; }
+        .brief-stats { display: flex; flex-direction: column; gap: 5px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--neon-cyan); margin-top: 10px; }
         
-        .animate-scale-up { animation: scaleUp 0.2s ease-out; }
-        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .btn-engage {
+          background: var(--neon-cyan); color: #000; font-family: var(--font-mono);
+          font-weight: 900; padding: 15px; border: none; cursor: pointer; transition: 0.2s;
+          letter-spacing: 1px;
+        }
+        .btn-engage:hover:not(.locked) { box-shadow: 0 0 20px var(--neon-cyan-glow); transform: translateY(-3px); }
+        .btn-engage.locked { background: #333; color: #666; cursor: not-allowed; }
+        
+        .no-selection { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; color: #333; }
+        .animate-slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
       `}</style>
     </div>
   );

@@ -4,7 +4,7 @@ export const vykhino: WorldDistrict = {
   id: 'vykhino',
   node: {
     id: 'vykhino', 
-    name: 'ВЫХИНО: TRADE_BRANCH', 
+    name: 'VYKHINO: TRADE_BRANCH', 
     description: 'Торговый хаб с бешеным трафиком. Центр незаконного обмена данными.', 
     x: 75, y: 70, stability: 85, type: 'trade', tier: 1,
     subNodes: [
@@ -45,7 +45,7 @@ export const vykhino: WorldDistrict = {
         quest_start: {
           id: 'quest_start', speaker: 'ГРЕЙ', text: 'На перегоне Текстильщики-Выхино застрял пакет с "черным" кодом. Ядро выставило там патруль. Выбьешь их — я в долгу не останусь. Дам тебе проходку CLI.',
           options: [
-            { text: 'Я в деле (Бой за CLI)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_tekstil' },
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_vykhino_combat_cargo_bug_sweep' },
             { text: 'Слишком опасно.', nextId: 'intro' }
           ]
         }
@@ -83,10 +83,10 @@ export const vykhino: WorldDistrict = {
           options: [{ text: 'ОК, шеф.', nextId: 'LEAVE' }]
         },
         job_start: {
-          id: 'job_start', speaker: 'ФИКСЕР_БАТЯ', text: 'Сбегай в Марьино, там "Местная локалка" барахлит. Помоги Тете Тане с тестами — она заплатит. Скажи, что от меня.',
+          id: 'job_start', speaker: 'ФИКСЕР_БАТЯ', text: 'Сбегай в Марьино, там "Местная локалка" барахлит. Помоги Трассировке (Trace) с тестами — она заплатит. Скажи, что от меня.',
           options: [
-            { text: 'Я в деле.', nextId: 'LEAVE' },
-            { text: 'Слишком мелко.', nextId: 'LEAVE' }
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_maryino_npc_tanya_signal_sweep' },
+            { text: 'Позже.', nextId: 'LEAVE' }
           ]
         }
       }

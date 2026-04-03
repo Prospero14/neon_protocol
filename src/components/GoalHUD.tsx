@@ -77,11 +77,12 @@ const GoalHUD: React.FC<GoalHUDProps> = ({ questName, objectiveText, hint, progr
       </div>
       
       <div className="goal-content">
+        <div className="goal-header">ТЕКУЩАЯ_ДИРЕКТИВА</div>
         <div className="goal-title">{questName}: {objectiveText}</div>
         {hint && (
           <div className="goal-hint">
             <Info size={12} />
-            {hint}
+            <span className="hint-label">ИНФО:</span> {hint}
           </div>
         )}
         {progress !== undefined && (

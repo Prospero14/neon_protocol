@@ -4,7 +4,7 @@ export const south_west: WorldDistrict = {
   id: 'south_west', 
   node: {
     id: 'south_west', 
-    name: 'ЮГО-ЗАПАДНАЯ: ACADEMIC_UPLINK', 
+    name: 'SOUTH_WEST: ACADEMIC_UPLINK', 
     description: 'Район институтов и наукоградов. Здесь витает дух старой академии и нелегальных серверов.', 
     x: 15, y: 65, stability: 95, type: 'hub', tier: 1,
     subNodes: [
@@ -164,7 +164,7 @@ export const south_west: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'УЗЕЛ_МЕЙНФРЕЙМ', text: '[AUTO_DEFENSE_ACTIVE] ТРЕБУЕТСЯ КАРТА ДОСТУПА "ACADEMIC".',
                 options: [
-                    { text: 'Попробовать обойти защиту', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_academic_guard' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ: ВЗЛОМ МЕЙНФРЕЙМА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_south_west_combat_academic_guard_bug_sweep' },
                     { text: '[Выход]', nextId: 'LEAVE' }
                 ]
             }

@@ -52,7 +52,7 @@ export const TRAITS: Trait[] = [
   },
   { 
     id: 'script_ghost', name: 'ПРИЗРАК_СКРИПТА', type: 'HOBBY', category: 'SOFT',
-    description: 'Ты не оставляешь следов. Пассивное накопление Stress от Deadline снижено на 50%.' 
+    description: 'Ты не оставляешь следов. Пассивное накопление Stress от Deadline снижено на 20%.' 
   },
   { 
     id: 'legacy_diggr', name: 'ДИГГЕР_НАСЛЕДИЯ', type: 'HOBBY', category: 'TECH',

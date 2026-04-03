@@ -4,7 +4,7 @@ export const perovo: WorldDistrict = {
   id: 'perovo',
   node: {
     id: 'perovo',
-    name: 'ПЕРОВО: DATA_SLUMS',
+    name: 'PEROVO: DATA_SLUMS',
     description: 'Тихий район, оккупированный нелегальными дата-центрами в подвалах панелек.',
     x: 85, y: 45, stability: 92, type: 'trade', tier: 1,
     subNodes: [
@@ -38,7 +38,7 @@ export const perovo: WorldDistrict = {
         quest: {
             id: 'quest', speaker: 'МАРИНА', text: 'В подвале соседнего дома завелся процесс-майнер. Он перегревает старые записи. Сходи и прерви его, пока данные не расплавились.',
             options: [
-                { text: 'Прервать процесс (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_data_mining' }
+                { text: '[ ПРИНЯТЬ КОНТРАКТ: ПРЕРВАТЬ ПРОЦЕСС ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_perovo_combat_data_mining_bug_sweep' }
             ]
         },
         lore_marina: {
@@ -94,7 +94,7 @@ export const perovo: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'МЕСТНЫЙ_ЖИТЕЛЬ', text: 'Опять эти сервера гудят всю ночь... Спать невозможно. Скорее бы SRE-патруль пришел и всё тут выключил.',
                 options: [
-                    { text: 'Могу помочь с шумом (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_rat_invasion' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ: УБОРКА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_perovo_combat_rat_invasion_bug_sweep' },
                     { text: '[Игнорировать]', nextId: 'LEAVE' }
                 ]
             }
@@ -106,7 +106,7 @@ export const perovo: WorldDistrict = {
             intro: {
                 id: 'intro', speaker: 'СУБ-НЕТ_ПЕРОВО', text: '[DATA] ЛОКАЛЬНАЯ_СЕТЬ_ЗАГРЯЗНЕНА. ВЫБЕРИТЕ_ДИРЕКТИВУ:',
                 options: [
-                    { text: 'Очистить кэш (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_perovo' },
+                    { text: '[ ПРИНЯТЬ КОНТРАКТ: ОЧИСТКА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_perovo_combat_sub_net_bug_sweep' },
                     { text: '[Выход]', nextId: 'LEAVE' }
                 ]
             }
@@ -133,7 +133,7 @@ export const perovo: WorldDistrict = {
           ]
         },
         accept: {
-          id: 'accept', speaker: 'СТОЛБ_ПЕРОВО', text: 'Аномалия локализована.', options: [{ text: 'Искать (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_perovo' }]
+          id: 'accept', speaker: 'СТОЛБ_ПЕРОВО', text: 'Аномалия локализована.', options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ: ДОБЫЧА ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_perovo_combat_sub_net_bug_sweep' }]
         }
       }
     }

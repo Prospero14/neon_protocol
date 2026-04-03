@@ -4,7 +4,7 @@ export const maryino: WorldDistrict = {
   id: 'maryino', 
   node: {
     id: 'maryino', 
-    name: 'МАРЬИНО: GRID_EXHAUST', 
+    name: 'MARYINO: GRID_EXHAUST', 
     description: 'Гигантский жилой массив на юго-востоке. Перенаселенный, но богатый на дешевое железо.', 
     x: 80, y: 85, stability: 100, type: 'trade', tier: 1,
     subNodes: [
@@ -45,7 +45,7 @@ export const maryino: WorldDistrict = {
         job: {
           id: 'job', speaker: 'ТАНЯ (QA)', text: 'Хорошо. Узел выделен. Если прозвон пройдет успешно — Bits будут на твоем счету моментально. Приступай.',
           options: [
-            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_alt' }
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_maryino_npc_tanya_signal_sweep' }
           ]
         }
       }
@@ -158,7 +158,7 @@ export const maryino: WorldDistrict = {
         quest_start: {
             id: 'quest_start', speaker: 'СЕРЖАНТ', text: 'Помощь? Ладно. На 15-й магистрали дроны-отступники блокируют курьерский шлюз. Разберись с ними, и я выдам тебе транзитный код. Бесплатно.',
             options: [
-                { text: 'Приступить (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_grid_patrol' }
+                { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_maryino_combat_grid_patrol_bug_sweep' }
             ]
         },
         negotiate: {

@@ -4,7 +4,7 @@ export const vdnkh: WorldDistrict = {
   id: 'vdnkh', 
   node: {
     id: 'vdnkh', 
-    name: 'ВДНХ: PAVILION_ZERO', 
+    name: 'VDNKH: PAVILION_ZERO', 
     description: 'Синтетические нейро-напитки и сборище легендарных хакеров в тени заброшенных павильонов.', 
     x: 52, y: 30, stability: 80, type: 'bar', tier: 3,
     subNodes: [
@@ -48,7 +48,7 @@ export const vdnkh: WorldDistrict = {
         exam_start: {
             id: 'exam_start', speaker: 'ГЕНЕРАЛ_БЭСМ', text: 'Экзамен... Да. Архипов присылает их пачками. Но ты выглядишь... иначе. Докажи, что твой стек выдержит нагрузку древнего Legacy. Порази Тренировочного Бота в главном павильоне.',
             options: [
-                { text: 'Я готов. В бой!', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_pavilions', subtext: 'Финальный этап получения Красного Диплома.' },
+                { text: '[ ПРИНЯТЬ КОНТРАКТ: ЭКЗАМЕН ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_trainee_exam_practice', subtext: 'Финальный этап получения Красного Диплома.' },
                 { text: 'Мне нужно подготовиться.', nextId: 'intro' }
             ]
         },

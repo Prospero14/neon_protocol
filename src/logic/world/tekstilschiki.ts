@@ -4,7 +4,7 @@ export const tekstilschiki: WorldDistrict = {
   id: 'tekstilschiki',
   node: {
     id: 'tekstilschiki',
-    name: 'ТЕКСТИЛЬЩИКИ: TEXTILE_GRID',
+    name: 'TEKSTILSCHIKI: TEXTILE_GRID',
     description: 'Старая промзона. Здесь "ткали" первые нейросети для госструктур.',
     x: 75, y: 60, stability: 85, type: 'combat', tier: 1,
     subNodes: [
@@ -39,7 +39,7 @@ export const tekstilschiki: WorldDistrict = {
         quest: {
             id: 'quest', speaker: 'ВЛАД_ТКАЧ', text: 'На 7-й линии боты-ткачи забили фильтры. Сходи и прочисти их, пока они не начали "ткать" системную ошибку.',
             options: [
-                { text: 'Сделаю (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_textile_raid' }
+                { text: '[ ПРИНЯТЬ КОНТРАКТ: ПРОЧЕС СЕТИ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_tekstilschiki_combat_textile_raid_bug_sweep' }
             ]
         },
         lore_vlad: {
@@ -152,7 +152,7 @@ export const tekstilschiki: WorldDistrict = {
           ]
         },
         accept: {
-          id: 'accept', speaker: 'УЗЕЛ_ТЕКСТИЛЬ', text: 'Система готова к очистке.', options: [{ text: 'Запустить (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_factory_bot' }]
+          id: 'accept', speaker: 'УЗЕЛ_ТЕКСТИЛЬ', text: 'Система готова к очистке.', options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ: ОЧИСТКА SUDO ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_tekstilschiki_combat_factory_bot_bug_sweep' }]
         }
       }
     }

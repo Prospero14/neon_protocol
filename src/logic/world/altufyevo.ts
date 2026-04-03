@@ -4,7 +4,7 @@ export const altufyevo: WorldDistrict = {
   id: 'altufyevo',
   node: {
     id: 'altufyevo', 
-    name: 'АЛТУФЬЕВО: NORTH_SILOS', 
+    name: 'ALTUFYEVO: NORTH_SILOS', 
     description: 'Северные промышленные силосы. Место сбора старого железа и остатков серверов.', 
     x: 52, y: 10, stability: 100, type: 'hub', tier: 1,
     subNodes: [
@@ -45,7 +45,7 @@ export const altufyevo: WorldDistrict = {
         },
         quest_accept: {
           id: 'quest_accept', speaker: 'ПЕТРОВИЧ', text: 'Вот и ладно. Узел забит под завязку, так что готовь дебаггер. Как закончишь — с меня 50 Bits на охлад.',
-          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_petrovich_legacy' }]
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_kiddo_start' }]
         },
         trade: {
           id: 'trade', speaker: 'ПЕТРОВИЧ', text: 'Смотри, что откопал сегодня. Почти не пользованные библиотеки. "System.out.print" — старая классика для дебага реальности.',
@@ -82,7 +82,7 @@ export const altufyevo: WorldDistrict = {
         quest_start: {
           id: 'quest_start', speaker: 'ВАРВАР', text: 'Уборная №4 — там сейчас жарко. Взломай систему очистки, и я дам тебе одну из своих старых наработок.',
           options: [
-            { text: 'Я в деле (Начать бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_magnus_toilet' },
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
             { text: 'Позже', nextId: 'intro' }
           ]
         }
@@ -116,7 +116,7 @@ export const altufyevo: WorldDistrict = {
         quest_start: {
           id: 'quest_start', speaker: 'НИКСАННА', text: 'Нужно зайти в узел "Ритуал" и сбросить кэш отрисовки. Справишься — дам карту "Divine Debug".',
           options: [
-            { text: 'Готов к патчу.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_nixanna_ritual' },
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
             { text: 'Не сейчас', nextId: 'intro' }
           ]
         },
@@ -138,7 +138,7 @@ export const altufyevo: WorldDistrict = {
         },
         job_accepted: {
           id: 'job_accepted', speaker: 'ДОСКА_ОБЪЯВЛЕНИЙ', text: 'Контракт принят. Целевой узел выделен. Приступайте к выполнению ТЗ.',
-          options: [{ text: 'Начать дебаг (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_alt' }]
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_kiddo_first_bits' }]
         }
       }
     },

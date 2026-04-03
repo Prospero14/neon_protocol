@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Zap, 
-  Terminal, 
   ShieldAlert, 
-  Database,
+  Zap, 
+  Database, 
+  Terminal, 
   RefreshCw,
-  Heart,
-  AlertTriangle,
+  AlertTriangle
 } from 'lucide-react';
 import type { CombatPhase } from '../../logic/combatPhases';
 import { SDLC_PHASES } from '../../logic/combatPhases';
@@ -19,7 +18,7 @@ import type { BugEnemy, BugAction, BugProblemType } from '../../logic/combatEnem
 import CyberCard from '../CyberCard';
 
 interface CombatBridgeProps {
-  skillMode: 'junior' | 'mid' | 'senior';
+  skillMode: 'script-kiddie' | 'junior' | 'mid' | 'senior';
   playerTraits: Trait[];
   activeDeck: CombatCard[];
   taskLibrary: TechnicalTask[];
@@ -56,7 +55,6 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
   const [stress, setStress] = useState(0); 
-  const [maxStress] = useState(100);
   const [activeProblem] = useState<BugProblemType | null>(null);
   const [aiDeadline, setAiDeadline] = useState(Math.max(3, 10 - tier));
 
@@ -128,6 +126,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     if (playerTraits.some(t => t.id === 'hobby_comp_coding')) {
       setRamMaxMb(prev => prev + 512); 
     }
+    if (playerTraits.some(t => t.id === 'hardware_reclaimer')) {
+      setRamMaxMb(prev => prev + 512); // Reclaimer gets extra slot early
+    }
+    if (playerTraits.some(t => t.id === 'overclocked')) {
+      setCpuMax(prev => prev + 1);
+      setCpu(prev => prev + 1);
+    }
   }, []);
 
   const handleMulligan = () => {
@@ -170,6 +175,12 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const getEffectiveCost = (card: CombatCard) => {
     let cost = card.cost ?? 0;
     if (activeProblem === 'TECH_DEBT') cost += 1;
+    
+    // Trait: Legacy Diggr makes SCRIPT cards cheaper in ARCHITECTURE
+    if (currentPhase === 'ARCHITECTURE' && card.type === 'SCRIPT' && playerTraits.some(t => t.id === 'legacy_diggr')) {
+      cost = Math.max(0, cost - 1);
+    }
+    
     return cost;
   };
 
@@ -300,8 +311,14 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     setPlayerProgress(prev => Math.min(100, prev + progGain));
 
     if (selectedCard.source === 'hand') {
-        setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
-        setDiscard(prev => [...prev, card]);
+        const canReturnToHand = (card.type === 'SCRIPT' && playerTraits.some(t => t.id === 'stack_archaeologist') && Math.random() < 0.25);
+        
+        if (!canReturnToHand) {
+            setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
+            setDiscard(prev => [...prev, card]);
+        } else {
+            addLog(`[RECOVERY] ${card.name} RETURNED_TO_STACK.`);
+        }
     }
     setSelectedCard(null);
     addLog(`[EXEC] ${card.name}`);
@@ -491,19 +508,26 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
 
       <div className="combat-hud">
         <aside className="combat-sidebar">
-          <div className="sb-section">
-            <div className="sb-title">DIAGNOSTICS</div>
-            <div className="sb-stat">
-              <AlertTriangle size={20} color="var(--neon-pink)" />
+          <div className="sb-section stress-priority">
+            <div className="sb-title">SYSTEM_STRESS_DIAG</div>
+            <div className="sb-stat stress-container large">
+              <ShieldAlert size={28} color="var(--neon-pink)" />
               <div className="sb-stat-info">
-                <span className="sb-stat-name">STRESS_LEVEL</span>
-                <span className="sb-stat-val">{stress}% / 100%</span>
+                <span className="sb-stat-name highlight">STRESS_LEVEL:</span>
+                <div className="stress-meter-wrap large">
+                  <div className="stress-meter-fill" style={{ 
+                    width: `${stress}%`,
+                    boxShadow: stress > 70 ? '0 0 15px var(--neon-pink)' : 'none'
+                  }}></div>
+                </div>
+                <span className="sb-stat-val big">{stress}%</span>
               </div>
             </div>
+
             <div className="sb-stat">
               <Zap size={20} color="var(--neon-cyan)" />
               <div className="sb-stat-info">
-                <span className="sb-stat-name">CPU_COMPUTE:</span>
+                <span className="sb-stat-name">CPU_COMPUTE: </span>
                 <span className="sb-stat-val">
                   {(cpu * 1000) % 1000 === 0 ? (cpu * 1000) / 1000 : `${Math.floor(cpu * 1000)}mc`}
                 </span>
@@ -512,7 +536,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             <div className="sb-stat">
               <Database size={20} color="var(--neon-amber)" />
               <div className="sb-stat-info">
-                <span className="sb-stat-name">BUFFER_RAM:</span>
+                <span className="sb-stat-name">BUFFER_RAM: </span>
                 <span className="sb-stat-val">{ramMaxMb}MB</span>
               </div>
             </div>

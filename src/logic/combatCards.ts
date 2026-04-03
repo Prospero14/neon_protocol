@@ -6,7 +6,7 @@
 export type CardLanguage = 'java' | 'kotlin' | 'python' | 'js' | 'go' | 'none';
 export type CardLibTag = 'spring' | 'network' | 'collections' | 'streams' | 'concurrency' | 'scripting';
 export type CardType = 'SYNTAX' | 'FUNCTION' | 'NETWORK' | 'SOFT' | 'HARD' | 'DEFENSIVE' | 'REACTION' | 'BUG' | 'STATUS' | 'INFRASTRUCTURE' | 'SCRIPT';
-export type CardGrade = 'Junior' | 'Middle' | 'Senior' | 'Trainee';
+export type CardGrade = 'Junior' | 'Middle' | 'Senior' | 'Script-Kiddo';
 export type CardTag = 'base-java' | 'base-kotlin' | 'base-python' | 'base-go' | 'base-js' | 'script' | 'reaction' | 'utility' | 'spring' | 'scripting';
 
 export interface CombatCard {
@@ -27,30 +27,48 @@ export interface CombatCard {
 }
 
 export const CARD_LIBRARY: CombatCard[] = [
-  // --- TRAINEE SCRIPTS (NO CLASS REQUIRED) ---
+  // --- SCRIPT-KIDDO BASICS (NO CLASS REQUIRED) ---
   {
-    id: 'script_ping', name: 'PING_REQUEST', type: 'SCRIPT', grade: 'Trainee',
+    id: 'script_ping', name: 'PING_REQUEST', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 0, power: 5, integrity: 5,
     description: 'ping -c 1. Базовая проверка сетевого узла. Наносит минимальный урон.',
     language: 'none', tags: ['script'], phaseConstraint: 'CODING'
   },
   {
-    id: 'script_grep', name: 'GREP_SEARCH', type: 'SCRIPT', grade: 'Trainee',
+    id: 'script_grep', name: 'GREP_SEARCH', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 1, power: 8, integrity: 6,
     description: 'grep pattern logic. Поиск уязвимостей в потоке данных.',
     language: 'none', tags: ['script'], phaseConstraint: 'CODING'
   },
   {
-    id: 'script_wash_logs', name: 'WASH_LOGS', type: 'SCRIPT', grade: 'Trainee',
+    id: 'script_wash_logs', name: 'WASH_LOGS', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 1, power: 0, integrity: 12,
     description: 'rm -rf /var/log/syslog. Скрывает следы вашего ботнета.',
     language: 'none', tags: ['script'], phaseConstraint: 'TESTING'
   },
   {
-    id: 'script_sudo_fix', name: 'SUDO_FORCE_FIX', type: 'SCRIPT', grade: 'Trainee',
+    id: 'script_sudo_fix', name: 'SUDO_FORCE_FIX', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 2, power: 15, integrity: 4,
     description: 'sudo apt-get fix-broken. Грубое исправление системы.',
     language: 'none', tags: ['script'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'soft_coffee', name: 'ВЫПИТЬ КОФЕ', type: 'SOFT', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 10,
+    description: 'Восстановление концентрации. Дает +1 Энергию (RAM) на текущий ход.',
+    language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'soft_ai_ask', name: 'СПРОСИТЬ НЕЙРОСЕТКУ', type: 'SOFT', grade: 'Script-Kiddo',
+    cost: 1, power: 15, integrity: 5,
+    description: 'Генерация кода через нейро-подсказку. Наносит урон и раскрывает 1 карту ИИ.',
+    language: 'none', tags: ['utility'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'infra_old_hw', name: 'СТАРОЕ ЖЕЛЕЗО', type: 'INFRASTRUCTURE', grade: 'Script-Kiddo',
+    cost: 0, power: 5, integrity: 5,
+    description: 'Проверенный временем хлам. Дает +512MB RAM (1 слот) до конца боя.',
+    language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
   },
 
   // --- DESIGN PHASE (BASE JAVA) ---

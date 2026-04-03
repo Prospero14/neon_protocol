@@ -8,7 +8,7 @@ export interface QuestState {
   tracked: boolean;
 }
 
-export function isQuestAvailableForNpc(
+export function isQuestRelevantForNpc(
   quest: QuestDefinition,
   npcId: string,
   preClass: boolean,
@@ -17,7 +17,8 @@ export function isQuestAvailableForNpc(
   if (quest.giverNpcId !== npcId) return false;
   if (quest.preClassOnly && !preClass) return false;
   const existing = states.find((s) => s.questId === quest.id);
-  return !existing || existing.status === 'available';
+  // We show it if it's new OR if it's already active.
+  return !existing || existing.status === 'available' || existing.status === 'active';
 }
 
 export function acceptQuest(states: QuestState[], questId: string): QuestState[] {
@@ -37,4 +38,11 @@ export function completeQuest(states: QuestState[], questId: string): QuestState
 
 export function getTrackedQuest(states: QuestState[]): QuestState | undefined {
   return states.find((s) => s.tracked && s.status === 'active');
+}
+
+export function trackQuest(states: QuestState[], questId: string): QuestState[] {
+  return states.map((s) => ({
+    ...s,
+    tracked: s.questId === questId && s.status === 'active'
+  }));
 }

@@ -135,13 +135,13 @@ const Documentation: React.FC<DocumentationProps> = ({ skillMode, discoveredCard
             <section className="mechanic-section">
               <div className="mech-header">
                 <Zap size={20} color="var(--neon-cyan)" />
-                <h4 className="section-label">1. РЕСУРСЫ: CPU И RAM</h4>
+                <h4 className="section-label">1. РЕСУРСЫ: INTEGRITY И RAM</h4>
               </div>
-              <p>Ваша эффективность зависит от двух ключевых метрик:</p>
+              <p>Ваша выживаемость и мощь зависят от двух базовых метрик:</p>
               <ul className="mech-list">
-                <li><strong>CPU (Compute):</strong> Тратится на запуск карт. Восстанавливается каждый ход. База: 1 Core.</li>
-                <li><strong>RAM (Memory):</strong> Определяет количество слотов на Neural Bus (Шине исполнения).</li>
-                <li><strong>Neural Bus:</strong> Каждые <strong>512MB RAM</strong> открывают 1 рабочий слот (макс. 8).</li>
+                <li><strong>INTEGRITY [HP]:</strong> Целостность нейро-оболочки. Если падает до 0 — происходит Fatal Error (смерть).</li>
+                <li><strong>RAM [ENERGY]:</strong> Оперативная память. Тратится на выполнение карт. Восстанавливается в начале цикла.</li>
+                <li><strong>CPU CORES:</strong> Количество потоков, определяющее, сколько карт можно запустить за ход.</li>
               </ul>
             </section>
       

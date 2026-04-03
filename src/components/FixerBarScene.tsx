@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { DIALOGUE_TREES } from '../logic/dialogues';
 import type { DialogueNode } from '../logic/dialogues';
 import type { Trait } from '../logic/traits';
-import { Terminal, LogOut, Cpu, Fingerprint, Users, Wine, Coffee, Skull, Package } from 'lucide-react';
+import { Terminal, LogOut, Cpu, Fingerprint, Users, Wine, Coffee, Skull, Package, Shield } from 'lucide-react';
 
 interface FixerBarSceneProps {
-  locationId: string; // 'kitay_gorod', 'vdnkh', 'komsomolskaya', 'chertanovo'
+  locationId: string;
   playerBits: number;
   playerTraits: Trait[];
+  playerReputation: Record<string, number>;
+  canUnlockNow: boolean;
+  onRewardReputation: (factionId: string, amount: number) => void;
   onPay: (amount: number) => void;
   onRewardCard: (cardId: string) => void;
   onRewardTrait: (traitId: string) => void;
@@ -17,6 +20,9 @@ interface FixerBarSceneProps {
   onStartCombat: (combatId: string) => void;
   onUnlockCity?: () => void;
   onRewardXp?: (amount: number) => void;
+  onAwardQuest?: (questId: string) => void;
+  activeQuestIds?: string[];
+  onCompleteQuest?: (questId: string) => void;
   onLeave: () => void;
 }
 
@@ -24,6 +30,9 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   locationId,
   playerBits,
   playerTraits,
+  playerReputation,
+  canUnlockNow,
+  onRewardReputation,
   onPay,
   onRewardCard,
   onRewardTrait,
@@ -33,12 +42,15 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onStartCombat,
   onUnlockCity,
   onRewardXp,
+  onAwardQuest,
+  activeQuestIds = [],
+  onCompleteQuest,
   onLeave
 }) => {
-  const tree = DIALOGUE_TREES[locationId];
-  
+  let tree = DIALOGUE_TREES[locationId];
   if (!tree) {
-    return <div style={{color:'red'}}>ERROR: NO DIALOGUE TREE FOUND FOR {locationId}</div>;
+    console.warn(`[DIALOGUE] No tree for ${locationId}. Falling back to GENERIC_STUB.`);
+    tree = DIALOGUE_TREES['GENERIC_STUB'];
   }
 
   const [currentNodeId, setCurrentNodeId] = useState<string>(tree.startNodeId);
@@ -50,8 +62,14 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
 
   const visibleOptions = node.options.filter(opt => {
     if (opt.requireTrait) {
-      return playerTraits.some(t => t.id === opt.requireTrait);
+      if (!playerTraits.some((t: Trait) => t.id === opt.requireTrait)) return false;
     }
+    if (opt.requireReputation) {
+      const currentRep = playerReputation[opt.requireReputation.factionId] || 0;
+      if (currentRep < opt.requireReputation.minPoints) return false;
+    }
+    if (opt.requireUnlock && !canUnlockNow) return false;
+    if (opt.requireQuestId && !activeQuestIds.includes(opt.requireQuestId)) return false;
     return true;
   });
 
@@ -94,12 +112,21 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       onRestoreHp(option.amount);
     } else if (option.effect === 'SET_PROFESSION' && option.cardRewardId) {
       onSetProfession(option.cardRewardId); // Reusing cardRewardId as profId
+    } else if (option.effect === 'SET_PROFESSION_WITH_ACADEMY' && option.cardRewardId) {
+      onSetProfession(option.cardRewardId);
+      if (onAwardQuest) onAwardQuest('q_neon_academy_bootcamp');
     } else if (option.effect === 'START_COMBAT' && option.cardRewardId) {
       onStartCombat(option.cardRewardId);
     } else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) {
       onUnlockCity();
     } else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) {
       onRewardXp(option.amount);
+    } else if (option.reputationReward) {
+      onRewardReputation(option.reputationReward.factionId, option.reputationReward.amount);
+    }
+
+    if (option.completeQuestId && onCompleteQuest) {
+      onCompleteQuest(option.completeQuestId);
     }
 
     if (option.nextId === 'LEAVE') {
@@ -140,8 +167,14 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
             >
               <Icon size={48} color={color} className="npc-icon" />
               <div className="npc-details">
-                <div className="npc-action">{opt.text.split('-')[0]?.trim() || opt.text}</div>
-                {opt.text.split('-')[1] && <div className="npc-subtext mono-text">{opt.text.split('-')[1].trim()}</div>}
+                <div className="npc-action">
+                  {opt.nextId.includes('npc') && <Users size={16} className="inline mr-2" />}
+                  {opt.nextId.includes('bar') && <Wine size={16} className="inline mr-2" />}
+                  {opt.nextId.includes('shop') && <Package size={16} className="inline mr-2" />}
+                  {opt.nextId.includes('term') && <Terminal size={16} className="inline mr-2" />}
+                  {opt.text.split('-')[0]?.trim() || opt.text}
+                </div>
+                <div className="npc-subtext">{opt.subtext || 'ВЗАИМОДЕЙСТВИЕ AVAILABLE'}</div>
               </div>
               {opt.cost ? <div className="npc-cost">[{opt.cost} BITS]</div> : null}
             </div>
@@ -160,7 +193,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
         </div>
       </div>
 
-      <div className={`dialogue-container neon-panel ${isMenuMode ? 'menu-mode' : ''}`}>
+      <div className={`dialogue-container ${isMenuMode ? 'menu-mode' : ''}`}>
         
         {!isMenuMode && (() => {
            let SpeakerIcon = Cpu;
@@ -171,36 +204,43 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
            else if (node.speaker === 'ORACLE') { SpeakerIcon = Fingerprint; speakerColor = '#a8e063'; }
            else if (node.speaker === 'ZERO') { SpeakerIcon = Skull; speakerColor = 'var(--neon-pink)'; }
            else if (node.speaker === 'JUNKIE') { SpeakerIcon = Package; speakerColor = '#888'; }
+           else if (node.speaker === 'СЕРЖАНТ') { SpeakerIcon = Shield; speakerColor = 'var(--neon-cyan)'; }
 
            return (
-             <div className="speaker-avatar">
-               <div className="avatar-noise" style={{ borderColor: speakerColor }}>
-                  <SpeakerIcon size={70} color={speakerColor} />
-               </div>
-               <div className="speaker-name neon-text">{node.speaker}</div>
+             <div className="speaker-avatar-v4">
+                <div className="avatar-frame" style={{ borderColor: speakerColor }}>
+                   <div className="avatar-scanline"></div>
+                   <SpeakerIcon size={60} color={speakerColor} className="avatar-icon" />
+                </div>
+                <div className="speaker-name-v4 neon-text" style={{ color: speakerColor, textShadow: `0 0 10px ${speakerColor}` }}>
+                  {node.speaker}
+                </div>
+                <div className="speaker-id mono-text">[ID_{locationId.toUpperCase().slice(0,8)}]</div>
              </div>
            );
         })()}
 
-        <div className="dialogue-box">
-          <div className="dialogue-text mono-text" style={{ color: isMenuMode ? 'var(--neon-amber)' : '#fff', fontSize: isMenuMode ? '1.1rem' : '1.25rem' }}>
-            {typedText}
-            {isTyping && <span className="cursor">_</span>}
+        <div className="dialogue-box-v4">
+          <div className="text-wrap-v4">
+            <div className="dialogue-text-v4 mono-text">
+              <span className="text-content">{typedText}</span>
+              {isTyping && <span className="terminal-cursor">█</span>}
+            </div>
           </div>
           
           {isMenuMode && !isTyping ? renderHubMenu() : (
-            <div className="dialogue-options">
+            <div className="dialogue-options-v4">
               {!isTyping && visibleOptions.map((opt, idx) => {
                 const cantAfford = opt.cost && playerBits < opt.cost;
                 return (
                   <button
                     key={idx}
-                    className={`dialogue-btn ${cantAfford ? 'locked' : ''}`}
+                    className={`dialogue-btn-v4 ${cantAfford ? 'locked' : ''}`}
                     onClick={() => handleOptionClick(opt)}
                   >
-                    <Terminal size={14} />
+                    <span className="opt-marker">{cantAfford ? '!!' : '>_'}</span>
                     <span className="opt-text">{opt.text}</span>
-                    {opt.cost ? <span className="opt-cost">[-{opt.cost} BITS]</span> : null}
+                    {opt.cost ? <span className="opt-cost">ƀ{opt.cost}</span> : null}
                   </button>
                 );
               })}
@@ -210,8 +250,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       </div>
       
       {!isMenuMode && (
-        <button className="back-btn logout-bar" onClick={onLeave}>
-          <LogOut size={16} /> [ EXIT_CONNECTION ]
+        <button className="exit-bar-btn mono-text" onClick={onLeave}>
+          [ ABORT_CONNECTION ]
         </button>
       )}
 
@@ -220,209 +260,122 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           height: 100%;
           display: flex;
           flex-direction: column;
-          padding: 2rem;
-          background: radial-gradient(circle at center, #111 0%, #000 100%);
-          color: var(--neon-cyan);
+          padding: 3rem 10%;
+          background: #000;
+          position: relative;
+          overflow: hidden;
         }
+        .fixer-bar-view::before {
+          content: '';
+          position: absolute; top:0; left:0; right:0; bottom:0;
+          background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0) 2px);
+          pointer-events: none;
+          z-index: 10;
+        }
+
         .scene-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 2rem;
-          border-bottom: 1px solid var(--glass-border);
-          padding-bottom: 1rem;
+          border-left: 4px solid var(--neon-cyan);
+          padding-left: 20px;
         }
-        .location-glitch { font-size: 2rem; text-shadow: 0 0 10px var(--neon-cyan), 2px 0 var(--neon-pink), -2px 0 var(--neon-amber); }
-        .header-stats { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-weight: bold; background: rgba(0,0,0,0.5); padding: 8px 16px; border-radius: 4px; border: 1px solid var(--neon-cyan); }
         
         .dialogue-container {
           flex: 1;
           display: flex;
-          gap: 2rem;
-          background: rgba(0, 20, 20, 0.4);
-          padding: 2rem;
-          box-shadow: inset 0 0 50px rgba(0, 255, 255, 0.05);
-          transition: all 0.5s ease;
+          gap: 4rem;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
         }
-        .dialogue-container.menu-mode {
-          background: rgba(20, 10, 0, 0.4);
-          box-shadow: inset 0 0 50px rgba(255, 191, 0, 0.1);
-          flex-direction: column;
-        }
-        
-        .speaker-avatar {
-          width: 250px;
+
+        .speaker-avatar-v4 {
+          width: 240px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 1rem;
-          border-right: 1px solid var(--glass-border);
-          padding-right: 2rem;
+          gap: 1.5rem;
         }
-
-        .avatar-noise {
-          width: 180px;
-          height: 180px;
-          border: 2px dashed;
-          border-color: var(--neon-green);
+        .avatar-frame {
+          width: 200px;
+          height: 200px;
+          border: 1px solid;
+          background: rgba(0,0,0,0.8);
           display: flex;
           align-items: center;
           justify-content: center;
           position: relative;
-          overflow: hidden;
-          background: repeating-linear-gradient(0deg, rgba(0,255,0,0.1), rgba(0,255,0,0.1) 1px, transparent 1px, transparent 2px);
-          animation: glitch-anim 2s infinite alternate;
+          box-shadow: 0 0 30px rgba(0,0,0,1);
         }
-        @keyframes glitch-anim {
-          0% { filter: hue-rotate(0deg) contrast(1); }
-          100% { filter: hue-rotate(45deg) contrast(1.5); }
+        .avatar-scanline {
+          position: absolute; top:0; left:0; width: 100%; height: 2px;
+          background: rgba(255,255,255,0.1);
+          animation: scanline 4s linear infinite;
         }
-        .speaker-name {
-          font-size: 2rem;
-          letter-spacing: 0.2rem;
-          text-align: center;
-        }
+        @keyframes scanline { from { top: 0; } to { top: 100%; } }
+        
+        .speaker-name-v4 { font-size: 1.8rem; letter-spacing: 4px; font-weight: 900; }
+        .speaker-id { font-size: 0.7rem; opacity: 0.4; }
 
-        .dialogue-box {
+        .dialogue-box-v4 {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 2rem;
+          gap: 3rem;
+          padding-top: 2rem;
         }
-        .dialogue-text {
-          font-size: 1.25rem;
+        .dialogue-text-v4 {
+          font-size: 1.5rem;
           line-height: 1.6;
-          min-height: 80px;
-          text-shadow: 0 0 2px rgba(0,0,0,0.8);
-          background: rgba(0,0,0,0.5);
-          padding: 1rem;
-          border-radius: 4px;
-          border-left: 3px solid currentColor;
+          color: #fff;
+          text-shadow: 0 0 5px rgba(255,255,255,0.2);
+          min-height: 150px;
         }
-        .cursor {
-          animation: blink 1s step-end infinite;
+        .terminal-cursor { animation: blink 1s infinite; margin-left: 8px; color: var(--neon-cyan); }
+        
+        .dialogue-options-v4 {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 1rem;
         }
-        @keyframes blink { 50% { opacity: 0; } }
-
-        /* Dialog UI */
-        .dialogue-options {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-top: auto;
-        }
-        .dialogue-btn {
-          background: rgba(0, 255, 255, 0.05);
-          border: 1px solid var(--glass-border);
-          color: var(--neon-cyan);
-          padding: 1rem 1.5rem;
+        .dialogue-btn-v4 {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.05);
+          color: #aaa;
+          padding: 1.5rem 2rem;
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 20px;
           font-family: var(--font-mono);
-          font-size: 1.1rem;
           cursor: pointer;
           transition: 0.2s;
           text-align: left;
-          border-radius: 4px;
         }
-        .dialogue-btn:hover:not(.locked) {
-          background: var(--neon-cyan);
-          color: #000;
-          box-shadow: 0 0 15px var(--neon-cyan-glow);
+        .dialogue-btn-v4:hover:not(.locked) {
+          background: rgba(255,255,255,0.08);
+          color: var(--neon-cyan);
+          border-color: var(--neon-cyan);
+          box-shadow: 0 0 20px rgba(0,255,255,0.1);
           transform: translateX(10px);
         }
-        .dialogue-btn.locked {
-          opacity: 0.5;
-          cursor: not-allowed;
-          border-color: var(--neon-pink);
-          color: var(--neon-pink);
-        }
-        .opt-text { flex: 1; }
-        .opt-cost { font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px; border: 1px solid currentColor; }
-        
-        /* Hub Menu Grid UI */
-        .hub-locations-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-          margin-top: 1rem;
-        }
-        .npc-card {
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          padding: 1.5rem;
-          background: rgba(0,0,0,0.6);
-          border: 1px solid rgba(255,191,0,0.3);
-          border-radius: 8px;
-          cursor: pointer;
-          transition: 0.3s;
-          position: relative;
-          overflow: hidden;
-        }
-        .npc-card::before {
-          content: '';
-          position: absolute; top:0; left:0; right:0; bottom:0;
-          background: linear-gradient(45deg, transparent, rgba(255,191,0,0.05), transparent);
-          transform: translateX(-100%);
-          transition: transform 0.6s;
-        }
-        .npc-card:hover:not(.locked)::before {
-          transform: translateX(100%);
-        }
-        .npc-card:hover:not(.locked) {
-          border-color: var(--neon-amber);
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(255,191,0,0.1);
-        }
-        .leave-card {
-          border-color: #333;
-          opacity: 0.8;
-        }
-        .leave-card:hover:not(.locked) {
-          border-color: #777;
-          box-shadow: none;
-        }
-        .npc-card.locked {
-           opacity: 0.5;
-           cursor: not-allowed;
-           border-color: var(--neon-pink);
-        }
-        .npc-details {
-          flex: 1;
-        }
-        .npc-action {
-          font-size: 1.2rem;
-          font-weight: bold;
-          color: #fff;
-          margin-bottom: 4px;
-        }
-        .npc-subtext {
-          font-size: 0.85rem;
-          color: #888;
-        }
-        .npc-cost {
-          font-weight: bold;
-          color: var(--neon-amber);
-          background: rgba(0,0,0,0.5);
-          padding: 4px 8px;
-          border-radius: 4px;
-        }
-        .npc-icon {
-          flex-shrink: 0;
-          filter: drop-shadow(0 0 5px currentColor);
-        }
+        .opt-marker { color: var(--neon-cyan); font-weight: bold; width: 30px; }
+        .opt-text { flex: 1; font-size: 1.1rem; }
+        .opt-cost { color: var(--neon-amber); font-weight: bold; }
 
-        .logout-bar {
-          margin-top: 1rem;
-          align-self: flex-start;
-          border-color: var(--neon-amber);
-          color: var(--neon-amber);
+        .exit-bar-btn {
+          margin-top: 3rem;
+          align-self: center;
+          background: none;
+          border: 1px solid #333;
+          color: #555;
+          padding: 10px 30px;
+          cursor: pointer;
+          font-size: 0.8rem;
+          transition: 0.2s;
         }
-        .logout-bar:hover {
-          background: rgba(255,191,0,0.1);
-        }
+        .exit-bar-btn:hover { border-color: #666; color: #fff; }
       `}</style>
     </div>
   );

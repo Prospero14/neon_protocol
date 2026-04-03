@@ -3,38 +3,44 @@ import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
 import type { Trait } from '../logic/traits';
 import { TRAITS } from '../logic/traits';
+import type { Profession } from '../logic/professions';
 
 interface CharacterCreationProps {
   onComplete: (data: {
     name: string;
     district: MapNodeData;
     hobby: Trait;
+    ambition?: Profession;
   }) => void;
+  skillMode: string;
+  setSkillMode: (mode: 'junior' | 'mid' | 'senior') => void;
+  userIp: string;
+  faction: string;
 }
 
 const getDistrictBuffDescription = (id: string): string => {
   switch(id) {
-    case 'altufyevo': return 'NORTH_SILOS: +10% Damage (Buffer Underflow).';
-    case 'vykhino': return 'TRADE_BRANCH: +150 Битов. Торговый десант.';
-    case 'maryino': return 'GRID_EXHAUST: +80 HP, +1 Энергия. Жилой хаб.';
-    case 'chertanovo': return 'GLITCH_GHETTO: +2 Энергии, -20 HP Max. Хаос.';
-    case 'south_west': return 'ACADEMIC_UPLINK: +200 XP. Фундаментальный старт.';
-    case 'teply_stan': return 'FOREST_EDGE: +20% Dodge. Тень роутера.';
-    case 'izmailovo': return 'CRAFT_MARKET: -25% Цена покупки софта.';
-    case 'bibirevo': return 'NORTH_LINK: +100 HP. Стабильный коннект.';
-    case 'tekstilschiki': return 'TEXTILE_GRID: +1 Карта в руке каждый ход.';
-    case 'perovo': return 'DATA_SLUMS: +30% Шанс найти редкую карту.';
-    case 'sokol': return 'TECH_HUB: +150 HP, +100 XP. Элита Сокола.';
-    case 'vdnkh': return 'PAVILION_ZERO: +1 Энергия, +50 Битов.';
-    case 'sokolniki': return 'SERVER_FOREST: +3 Энергии, -30% Integrity.';
-    case 'fili': return 'SPACE_RUINS: +150 XP. Орбитальный софт.';
-    case 'taganka': return 'THE_BUNKER: -20% Цена всех услуг (Скидки).';
-    case 'mitino': return 'RADIO_HEAVEN: +300 Битов. Нелегальный импорт.';
-    default: return 'СПАЛЬНЫЙ СЕКТОР: +50 Битов, +50 HP. База.';
+    case 'altufyevo': return 'NORTH_SILOS: +10% Damage (Buffer Underflow). [Starter Sector]';
+    case 'vykhino': return 'TRADE_BRANCH: +150 Bi, +20 GIGA_BANK Rep. [Mercantile Landing]';
+    case 'maryino': return 'GRID_EXHAUST: +80 Integrity, +128 RAM. +20 VOSKHOD Rep.';
+    case 'chertanovo': return 'GLITCH_GHETTO: +256 RAM, -20 Max Integrity. +25 ANARCHO_VOID Rep.';
+    case 'south_west': return 'ACADEMIC_UPLINK: +200 XP. +25 EU_SYNTAX Rep. [Scholar Start]';
+    case 'teply_stan': return 'FOREST_EDGE: +20% Dodge. +10 ANARCHO_VOID Rep.';
+    case 'izmailovo': return 'CRAFT_MARKET: -25% Software Cost. +20 NEO_KYOTO Rep.';
+    case 'bibirevo': return 'NORTH_LINK: +100 Integrity. +10 VOSKHOD Rep. [Stable Connect]';
+    case 'tekstilschiki': return 'TEXTILE_GRID: +1 Card Draw/Turn. +25 VOSKHOD Rep.';
+    case 'perovo': return 'DATA_SLUMS: +30% Rare Card Find. +10 NEO_KYOTO Rep.';
+    case 'sokol': return 'TECH_HUB: +150 Integrity, +100 XP. +15 EU_SYNTAX & VOSKHOD Rep.';
+    case 'vdnkh': return 'PAVILION_ZERO: +128 RAM, +50 Bi. [System Heritage]';
+    case 'sokolniki': return 'SERVER_FOREST: +384 RAM, -30% Integrity. [Deep Dive]';
+    case 'fili': return 'SPACE_RUINS: +150 XP. Orbital Software [Sync].';
+    case 'taganka': return 'THE_BUNKER: -20% Service Costs (Local Discounts).';
+    case 'mitino': return 'RADIO_HEAVEN: +300 Bi. Illegal Import Protocol.';
+    default: return 'SLEEP_SECTOR: +50 Bi, +50 Integrity. [Generic Base]';
   }
 };
 
-const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => {
+const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skillMode, setSkillMode, userIp, faction }) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [district, setDistrict] = useState<MapNodeData | null>(null);
@@ -96,11 +102,14 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
               ))}
             </div>
 
-            <div className="cc-user-summary">
-              {name && <div className="summary-item">USER_ID: <span className="amber">{name}</span></div>}
-              {district && <div className="summary-item">DEPLOY_ZONE: <span className="amber">{district.name.split(':')[0]}</span></div>}
-              {hobby && <div className="summary-item">NEURAL_TRAIT: <span className="amber">{hobby.name}</span></div>}
-            </div>
+              <div className="cc-user-summary">
+                <div className="summary-item">CONNECTION_ORIGIN: <span className="copper">{userIp}</span></div>
+                <div className="summary-item">USER_ID: <span className="copper">{name || '---'}</span></div>
+                <div className="summary-item">FACTION_PROTOCOL: <span className="copper">{faction}</span></div>
+                <div className="summary-item">DEPLOY_ZONE: <span className="copper">{district?.name || '---'}</span></div>
+                <div className="summary-item">SKILL_MODE: <span className="copper">{skillMode.toLocaleUpperCase()}</span></div>
+                <div className="summary-item">TRAIT: <span className="copper">{hobby?.name || '---'}</span></div>
+              </div>
 
             <div className="cc-cursor-row">
               <span className="cc-status-msg">{step === 3 ? "AWAITING_NEURAL_STAMP" : "READY_FOR_DATA"}</span>
@@ -114,19 +123,49 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
               {step === 1 && (
                 <div className="animate-in">
                   <h2 className="cc-headline">INSERT_NEURAL_ID</h2>
-                  <div className="cc-input-wrap">
-                    <span className="cc-prompt">{">"}</span>
-                    <input 
-                      className="cc-input-field" 
-                      type="text" 
-                      placeholder="ENTER_NAME_HERE..." 
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleNext()}
-                      autoFocus
-                    />
-                    {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO CONFIRM</div>}
+                  <div className="cc-identity-form">
+                    <div className="cc-form-group">
+                      <label>NEURAL_ID_INPUT</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="ENTER_ID..."
+                        className="cc-input"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="cc-form-group">
+                      <label>SKILL_LEVEL_INITIALIZATION</label>
+                      <div className="cc-skill-selector">
+                        <button 
+                          className={`cc-skill-btn ${skillMode === 'junior' ? 'active' : ''}`}
+                          onClick={() => setSkillMode('junior')}
+                        >
+                          NOVICE
+                        </button>
+                        <button 
+                          className={`cc-skill-btn ${skillMode === 'mid' ? 'active' : ''}`}
+                          onClick={() => setSkillMode('mid')}
+                        >
+                          MID
+                        </button>
+                        <button 
+                          className={`cc-skill-btn ${skillMode === 'senior' ? 'active' : ''}`}
+                          onClick={() => setSkillMode('senior')}
+                        >
+                          SENIOR
+                        </button>
+                      </div>
+                      <div className="cc-skill-description">
+                        {skillMode === 'junior' && "Системные подсказки, детальный лог и подсказки AI включены."}
+                        {skillMode === 'mid' && "Средний уровень. Лог активен, но детальных инструкций в библиотеке меньше."}
+                        {skillMode === 'senior' && "Максимальная сложность. Вы работаете только с сырым кодом и логом."}
+                      </div>
+                    </div>
                   </div>
+                  {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO CONFIRM</div>}
                   <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
                 </div>
               )}
@@ -147,7 +186,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
                           <div className="cc-card-scan"></div>
                           <div className="cc-card-id">ZONE_{d.id.toUpperCase()}</div>
                           <div className="cc-card-name">{d.name.split(':')[0]}</div>
-                          <div className="cc-card-effect cyan">{getDistrictBuffDescription(d.id)}</div>
+                          <div className="cc-card-effect copper">{getDistrictBuffDescription(d.id)}</div>
                         </div>
                       ))}
                     </div>
@@ -169,7 +208,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete }) => 
                           tabIndex={0}
                         >
                           <div className="cc-card-scan"></div>
-                          <div className="cc-cat-tag">{h.category}</div>
+                          <div className="cc-cat-tag copper">{h.category}</div>
                           <div className="cc-card-name">{h.name}</div>
                           <div className="cc-card-desc">{h.description}</div>
                         </div>

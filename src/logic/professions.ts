@@ -9,7 +9,7 @@ export interface Profession {
   id: string;
   name: string;
   category: ProfessionCategory;
-  path: 'Management' | 'Analysis' | 'DevOps' | 'QA' | 'Development' | 'Infrastructure' | 'Architecture';
+  path: 'Management' | 'Analysis' | 'DevOps' | 'QA' | 'Development' | 'Infrastructure' | 'Architecture' | 'None';
   specialization: string;
   description: string;
   grade: ProfessionGrade;
@@ -20,11 +20,11 @@ export const PROFESSIONS: Profession[] = [
   // --- STARTING CLASS ---
   {
     id: 'trainee',
-    name: 'Unemployed Trainee / Безработный Стажёр',
+    name: 'Скрипт-Киддо',
     category: 'SOFT',
-    path: 'Analysis',
-    specialization: 'Survival 101',
-    description: 'У тебя нет класса. Ты всего лишь шум в системе. Твоя цель — выжить и заработать на первую лицензию.',
+    path: 'None',
+    specialization: 'Terminal Basics',
+    description: 'У тебя нет класса. Ты всего лишь шум в системе, "скрипт-кидди", пытающийся выжить. Отрасти зубы или стань кормом для ботов.',
     grade: 'Junior',
     isUnlocked: true
   },

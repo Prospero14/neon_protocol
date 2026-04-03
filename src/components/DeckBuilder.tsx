@@ -16,6 +16,7 @@ interface DeckBuilderProps {
   onUpdateDeck: (newDeck: CombatCard[]) => void;
   onViewChange: (v: any, id?: string) => void;
   onBack?: () => void;
+  classUnlocked?: boolean;
 }
 
 const DeckBuilder: React.FC<DeckBuilderProps> = ({
@@ -24,6 +25,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
   activeDeck,
   onUpdateDeck,
   onViewChange,
+  classUnlocked = false,
 }) => {
   const beginner = skillMode === 'junior';
   const [includeVanilla, setIncludeVanilla] = useState(true);
@@ -51,13 +53,20 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const filteredInventory = useMemo(() => {
     const opts = { includeVanilla, enabledLibs, enabledCats };
-    const filtered = inventoryUnique.filter((c) => cardMatchesJavaStack(c, opts));
+    let filtered = inventoryUnique;
+    
+    // Script-Kiddo Gating: Only show entry-level modules until profession is unlocked
+    if (!classUnlocked) {
+      filtered = filtered.filter(c => c.grade === 'Script-Kiddo');
+    } else {
+      filtered = filtered.filter((c) => cardMatchesJavaStack(c, opts));
+    }
     
     return [...filtered].sort((a, b) => {
       if (sortBy === 'cost') return a.cost - b.cost;
       return a.name.localeCompare(b.name);
     });
-  }, [inventoryUnique, includeVanilla, enabledLibs, enabledCats, sortBy]);
+  }, [inventoryUnique, includeVanilla, enabledLibs, enabledCats, sortBy, classUnlocked]);
 
   const addCard = (card: CombatCard, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -108,71 +117,75 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </button>
           <span className="filter-hint mono-text opacity-50">другие языки — позже</span>
         </div>
-        <div className="stack-filter-row libs-row">
-          <span className="filter-label mono-text">ENGINE_BASE</span>
-          <div className="lib-chips">
-            <button 
-              key="core"
-              type="button" 
-              className={`lib-chip ${includeVanilla ? 'on' : ''}`} 
-              onClick={() => setIncludeVanilla(!includeVanilla)}
-            >
-              JAVA_CORE
-            </button>
-          </div>
-        </div>
-        <div className="stack-filter-row libs-row">
-          <span className="filter-label mono-text">+ БИБЛИОТЕКИ</span>
-          <div className="lib-chips">
-            {LIB_KEYS.map((lib) => (
-              <button
-                key={lib}
-                type="button"
-                className={`lib-chip ${enabledLibs.has(lib) ? 'on' : ''}`}
-                onClick={() => toggleLib(lib)}
-              >
-                {LIB_TAG_LABELS[lib]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="stack-filter-row libs-row">
-          <span className="filter-label mono-text">+ КАТЕГОРИИ</span>
-          <div className="lib-chips">
-            <button 
-              key="syntax" 
-              type="button" 
-              className={`lib-chip core ${enabledCats.has('syntax') ? 'on' : ''}`} 
-              onClick={() => toggleCat('syntax')}
-            >
-              CODE & LOGIC
-            </button>
-            <button 
-              key="soft" 
-              type="button" 
-              className={`lib-chip soft ${enabledCats.has('soft') ? 'on' : ''}`} 
-              onClick={() => toggleCat('soft')}
-            >
-              Soft Skills
-            </button>
-            <button 
-              key="tests" 
-              type="button" 
-              className={`lib-chip tests ${enabledCats.has('tests') ? 'on' : ''}`} 
-              onClick={() => toggleCat('tests')}
-            >
-              Tests & Reactions
-            </button>
-            <button 
-              key="infra" 
-              type="button" 
-              className={`lib-chip infra ${enabledCats.has('infra') ? 'on' : ''}`} 
-              onClick={() => toggleCat('infra')}
-            >
-              Infrastructure
-            </button>
-          </div>
-        </div>
+        {classUnlocked && (
+          <>
+            <div className="stack-filter-row libs-row">
+              <span className="filter-label mono-text">ENGINE_BASE</span>
+              <div className="lib-chips">
+                <button 
+                  key="core"
+                  type="button" 
+                  className={`lib-chip ${includeVanilla ? 'on' : ''}`} 
+                  onClick={() => setIncludeVanilla(!includeVanilla)}
+                >
+                  JAVA_CORE
+                </button>
+              </div>
+            </div>
+            <div className="stack-filter-row libs-row">
+              <span className="filter-label mono-text">+ БИБЛИОТЕКИ</span>
+              <div className="lib-chips">
+                {LIB_KEYS.map((lib) => (
+                  <button
+                    key={lib}
+                    type="button"
+                    className={`lib-chip ${enabledLibs.has(lib) ? 'on' : ''}`}
+                    onClick={() => toggleLib(lib)}
+                  >
+                    {LIB_TAG_LABELS[lib]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="stack-filter-row libs-row">
+              <span className="filter-label mono-text">+ КАТЕГОРИИ</span>
+              <div className="lib-chips">
+                <button 
+                  key="syntax" 
+                  type="button" 
+                  className={`lib-chip core ${enabledCats.has('syntax') ? 'on' : ''}`} 
+                  onClick={() => toggleCat('syntax')}
+                >
+                  CODE & LOGIC
+                </button>
+                <button 
+                  key="soft" 
+                  type="button" 
+                  className={`lib-chip soft ${enabledCats.has('soft') ? 'on' : ''}`} 
+                  onClick={() => toggleCat('soft')}
+                >
+                  Soft Skills
+                </button>
+                <button 
+                  key="tests" 
+                  type="button" 
+                  className={`lib-chip tests ${enabledCats.has('tests') ? 'on' : ''}`} 
+                  onClick={() => toggleCat('tests')}
+                >
+                  Tests & Reactions
+                </button>
+                <button 
+                  key="infra" 
+                  type="button" 
+                  className={`lib-chip infra ${enabledCats.has('infra') ? 'on' : ''}`} 
+                  onClick={() => toggleCat('infra')}
+                >
+                  Infrastructure
+                </button>
+              </div>
+            </div>
+          </>
+        )}
         <div className="stack-filter-row libs-row">
           <span className="filter-label mono-text">SORT_BY</span>
           <div className="lib-chips">

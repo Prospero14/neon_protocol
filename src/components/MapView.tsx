@@ -4,6 +4,7 @@ import { MAP_NODES } from '../logic/mapData';
 import { X, Search, MousePointer2 } from 'lucide-react';
 import type { QuestDefinition } from '../logic/questData';
 import type { QuestState } from '../logic/questEngine';
+import { baseQuestBits } from '../logic/economy';
 
 interface MapViewProps {
   viewMode: 'CITY' | 'DISTRICT';
@@ -14,18 +15,23 @@ interface MapViewProps {
   onBack: () => void;
   getNpcQuests?: (npcId: string) => QuestDefinition[];
   questStates?: QuestState[];
-  onAcceptQuest?: (questId: string) => void;
+  onAcceptQuest?: (npcId: string, questId?: string) => void;
   onTrackQuest?: (questId: string) => void;
   onCompleteTalkQuest?: (questId: string) => void;
   trackedQuestId?: string | null;
+  objectiveNodeId?: string | null;
+  playerBits?: number;
 }
 
 const NODE_COLORS: Record<string, string> = {
-  combat: '#ff2d6d',
-  bar:    '#00ffc8',
-  trade:  '#ffaa00',
-  story:  '#a78bfa',
-  hub:    '#00c8ff',
+  combat:   '#ff2d6d',
+  bar:      'var(--neon-amethyst)',
+  trade:    'var(--neon-amber)',
+  story:    '#a78bfa',
+  hub:      'var(--neon-cyan)',
+  npc:      'var(--neon-amethyst)',
+  shop:     'var(--neon-magenta)',
+  terminal: '#00ffff',
 };
 
 const MapView: React.FC<MapViewProps> = ({ 
@@ -41,9 +47,12 @@ const MapView: React.FC<MapViewProps> = ({
   onTrackQuest,
   onCompleteTalkQuest,
   trackedQuestId = null,
+  objectiveNodeId = null,
+  playerBits = 0,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
+  const [briefingQuest, setBriefingQuest] = useState<{ snId: string, q: QuestDefinition } | null>(null);
   // showLanding removed for instant activity access
 
   // Zoom & Pan State
@@ -56,8 +65,12 @@ const MapView: React.FC<MapViewProps> = ({
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    // Snap zoom: Toggle between 1x and 1.5x for clarity and reliability
-    setZoom(prev => prev === 1 ? 1.5 : 1);
+    const zoomSpeed = 0.1;
+    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+    setZoom(prev => {
+      const next = prev + delta;
+      return Math.min(Math.max(next, 0.8), 3.0);
+    });
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -106,20 +119,20 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
         <div className="map-hdr-right">
           {viewMode === 'DISTRICT' && isCityMapUnlocked && (
-             <button className="map-btn-util vibrancy" onClick={onToggleView}>
+             <button className="map-hdr-btn" onClick={onToggleView}>
                <Search size={14} /> GLOBAL_MAP
              </button>
           )}
           {viewMode === 'CITY' && (
-             <button className="map-btn-util vibrancy" onClick={onToggleView}>
+             <button className="map-hdr-btn" onClick={onToggleView}>
                <MousePointer2 size={14} /> DISTRICT_VIEW
              </button>
           )}
-          <button className="map-btn-util" onClick={resetView} title="RECENTER_SCANNER">
+          <button className="map-hdr-btn" onClick={resetView}>
             <Search size={14} /> RECENTER
           </button>
-          <button className="map-close-btn" onClick={onBack}>
-            <X size={18} /> BACK_TO_HUB
+          <button className="map-hdr-btn" onClick={onBack}>
+            <X size={14} /> BACK_TO_HUB
           </button>
         </div>
       </div>
@@ -172,22 +185,40 @@ const MapView: React.FC<MapViewProps> = ({
                     const color = NODE_COLORS[node.type] || '#aaa';
                     const isCurrent = activeDistrictId === node.id;
                     const isSelected = selectedNode?.id === node.id;
+                    const isObjective = objectiveNodeId === node.id;
                     
                     return (
-                      <g key={node.id} onClick={() => setSelectedNode(node)} style={{ cursor: 'pointer' }}>
+                      <g 
+                        key={node.id} 
+                        onClick={() => setSelectedNode(node)} 
+                        onDoubleClick={() => onNodeSelect(node.id, 'district', getTravelCost(node))}
+                        style={{ cursor: 'pointer' }}
+                      >
+                         {isCurrent && (
+                           <g className="player-loc-marker">
+                             <circle cx={node.x} cy={node.y} r="4" fill="none" stroke="var(--neon-cyan)" strokeWidth="0.3" className="animate-pulse" style={{ animation: 'mission-pulse 2s infinite' }} />
+                             <circle cx={node.x} cy={node.y} r="6" fill="none" stroke="var(--neon-cyan)" strokeWidth="0.1" opacity="0.3" className="animate-ping" />
+                           </g>
+                         )}
                          <circle 
                            cx={node.x} cy={node.y} 
                            r={isSelected ? 2.5 : isCurrent ? 1.5 : 1.2} 
                            fill={isSelected ? '#fff' : isCurrent ? 'var(--neon-cyan)' : color} 
-                           className="map-node-dot"
+                           className={`map-node-dot ${isObjective ? 'mission-target' : ''}`}
                            style={{ color }}
                          />
-                         {isSelected && (
-                           <circle cx={node.x} cy={node.y} r="4" fill="none" stroke="#fff" strokeWidth="0.2" opacity="0.5" className="animate-ping" />
+                         {isObjective && (
+                           <circle cx={node.x} cy={node.y} r="5" fill="none" stroke="var(--neon-amethyst)" strokeWidth="0.5" className="animate-pulse" style={{ animation: 'mission-pulse 1.5s infinite' }} />
                          )}
-                         <text x={node.x} y={node.y+4} fontSize="1.2" fill={isSelected ? "#fff" : "rgba(255,255,255,0.5)"} textAnchor="middle" style={{ pointerEvents: 'none', border: '1px solid black' }}>
-                           {node.name.split(':')[0]}
+                         {(isSelected || isObjective) && (
+                           <circle cx={node.x} cy={node.y} r="4" fill="none" stroke={isObjective ? "var(--neon-amethyst)" : "#fff"} strokeWidth="0.2" opacity="0.5" className="animate-ping" />
+                         )}
+                         <text x={node.x} y={node.y+5} fontSize="1.4" fill={isObjective ? "var(--neon-amethyst)" : isSelected ? "#fff" : "rgba(255,255,255,0.5)"} textAnchor="middle" style={{ pointerEvents: 'none', fontWeight: isObjective ? 900 : 400 }}>
+                           {isObjective ? `[ MISSION ] ${node.name.split(':')[0]}` : node.name.split(':')[0]}
                          </text>
+                         {isCurrent && (
+                           <text x={node.x} y={node.y-4} fontSize="1.0" fill="var(--neon-cyan)" textAnchor="middle" style={{ fontWeight: 800 }}>YOU_ARE_HERE</text>
+                         )}
                       </g>
                     );
                   })}
@@ -206,9 +237,9 @@ const MapView: React.FC<MapViewProps> = ({
                   {/* District SubNodes */}
                   {activeDistrict.subNodes?.map(sn => (
                     <g key={sn.id} onClick={() => setSelectedSubNodeId(sn.id)} style={{ cursor: 'pointer' }}>
-                      <circle cx={sn.x} cy={sn.y} r="2.5" fill={NODE_COLORS[sn.type] || '#fff'} opacity="0.4" className="animate-pulse" />
-                      <circle cx={sn.x} cy={sn.y} r="1.2" fill={NODE_COLORS[sn.type] || '#fff'} />
-                      <text x={sn.x} y={sn.y-3} fontSize="2.5" fill="#fff" textAnchor="middle" style={{fontWeight: 900}}>{sn.name}</text>
+                      <circle cx={sn.x} cy={sn.y} r="1.5" fill={NODE_COLORS[sn.type] || '#fff'} opacity="0.4" className="animate-pulse" />
+                      <circle cx={sn.x} cy={sn.y} r="0.7" fill={NODE_COLORS[sn.type] || '#fff'} />
+                      <text x={sn.x} y={sn.y-2.5} fontSize="1.7" fill="#fff" textAnchor="middle" style={{fontWeight: 900}}>{sn.name}</text>
                     </g>
                   ))}
                 </>
@@ -235,10 +266,10 @@ const MapView: React.FC<MapViewProps> = ({
               </div>
 
               <div 
-                className="vertical-confirm-bar"
-                onClick={() => onNodeSelect(selectedNode.id, 'district', getTravelCost(selectedNode))}
+                className={`btn-premium-engage ${playerBits < getTravelCost(selectedNode) ? 'locked' : ''}`}
+                onClick={() => playerBits >= getTravelCost(selectedNode) && onNodeSelect(selectedNode.id, 'district', getTravelCost(selectedNode))}
               >
-                [ INITIATE_FAST_TRAVEL ]
+                {selectedNode.id === activeDistrictId ? 'RETURN_TO_DISTRICT' : playerBits < getTravelCost(selectedNode) ? 'INSUFFICIENT_CREDITS' : 'INITIATE_FAST_TRAVEL'}
               </div>
             </>
           ) : viewMode === 'DISTRICT' && selectedSubNodeId ? (
@@ -251,18 +282,50 @@ const MapView: React.FC<MapViewProps> = ({
                     {sn.type.toUpperCase()}
                   </div>
                   <h2 className="map-node-name">{sn.name}</h2>
-                  <p className="map-node-desc">{sn.description}</p>
-
-                  <div 
-                    className="vertical-confirm-bar vibrancy" 
-                    onClick={() => onNodeSelect(sn.id, sn.type)}
-                  >
-                    [ ENGAGE_SUB_NODE ]
+                  <div className="map-node-briefing neon-panel">
+                     <div className="briefing-label mono-text">TACTICAL_SCAN_RESULTS:</div>
+                     <p className="map-node-desc">{sn.description}</p>
+                     <div className="briefing-stats">
+                        <div className="stat">SECURITY: <span className="val">{activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span></div>
+                        <div className="stat">SIGNAL: <span className="val">STABLE</span></div>
+                     </div>
                   </div>
 
-                  {sn.type === 'npc' && selectedNpcQuests.length > 0 && (
+                  <div className="map-action-zone">
+                    {sn.type === 'combat' && (
+                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'combat')}>
+                         [ INITIATE_COMBAT_SEQUENCE ]
+                      </button>
+                    )}
+                    {sn.type === 'shop' && (
+                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'shop')}>
+                         [ ACCESS_VENDOR_PROTOCOL ]
+                      </button>
+                    )}
+                    {sn.type === 'bar' && (
+                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'bar')}>
+                         [ ENTER_ESTABLISHMENT ]
+                      </button>
+                    )}
+                    {sn.type === 'terminal' && (
+                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'terminal')}>
+                         [ CONNECT_TO_NODE ]
+                      </button>
+                    )}
+                  </div>
+
+                  {sn.type === 'npc' && (
                     <div className="map-quest-panel">
                       <div className="map-quest-title">NPC_CONTRACTS</div>
+                      <div className="map-quest-item talk-option">
+                        <div className="map-quest-row">
+                           <span className="gold">[ TALK / INQUIRY ]</span>
+                           <span className="map-quest-status available">ACTIVE_LINK</span>
+                        </div>
+                        <div className="map-quest-actions">
+                           <button className="map-mini-btn talk" onClick={() => onAcceptQuest?.(sn.id)}>ESTABLISH_COMM</button>
+                        </div>
+                      </div>
                       {selectedNpcQuests.slice(0, 4).map((q) => {
                         const state = getQuestState(q.id);
                         const status = state?.status ?? 'available';
@@ -274,15 +337,18 @@ const MapView: React.FC<MapViewProps> = ({
                             </div>
                             <div className="map-quest-actions">
                               {status !== 'active' && status !== 'completed' && onAcceptQuest && (
-                                <button className="map-mini-btn" onClick={() => onAcceptQuest(q.id)}>ACCEPT</button>
+                                <button className="map-mini-btn" onClick={() => setBriefingQuest({ snId: sn.id, q: q })}>ACCEPT</button>
                               )}
                               {status === 'active' && onTrackQuest && (
                                 <button className="map-mini-btn" onClick={() => onTrackQuest(q.id)}>
                                   {trackedQuestId === q.id ? 'TRACKED' : 'TRACK'}
                                 </button>
                               )}
-                              {status === 'active' && q.type === 'talk' && onCompleteTalkQuest && (
-                                <button className="map-mini-btn" onClick={() => onCompleteTalkQuest(q.id)}>COMPLETE</button>
+                              {status === 'active' && q.type === 'talk' && (
+                                <button className="map-mini-btn talk" onClick={() => onNodeSelect(sn.id, 'npc')}>ESTABLISH_COMM</button>
+                              )}
+                              {status === 'active' && q.type === 'diagnostics' && (
+                                <button className="map-mini-btn diag" onClick={() => onNodeSelect(sn.id, sn.type)}>RUN_DIAGNOSTICS</button>
                               )}
                             </div>
                           </div>
@@ -336,6 +402,109 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
       </div>
+      {/* QUEST_BRIEFING_OVERLAY */}
+      {briefingQuest && (
+        <div className="briefing-overlay" onClick={() => setBriefingQuest(null)}>
+           <div className="briefing-modal neon-panel arctic-monolith animate-scale-up" onClick={e => e.stopPropagation()}>
+              <div className="briefing-header">
+                 <div className="briefing-tag mono-text">INCOMING_CONTRACT_BRIEFING</div>
+                 <h2 className="neon-text glow-cyan">{briefingQuest.q.title}</h2>
+              </div>
+              <div className="briefing-body">
+                 <p className="briefing-story mono-text">{briefingQuest.q.description}</p>
+                 <div className="briefing-meta">
+                    <div className="meta-item">
+                       <span className="label">REWARD:</span>
+                       <span className="val glow-amber">ƀ{baseQuestBits(briefingQuest.q.tier, briefingQuest.q.difficulty)}</span>
+                    </div>
+                    <div className="meta-item">
+                       <span className="label">TYPE:</span>
+                       <span className="val">{briefingQuest.q.type.toUpperCase()}</span>
+                    </div>
+                 </div>
+              </div>
+              <div className="briefing-actions">
+                 <button className="btn-briefing accept" onClick={() => {
+                   onAcceptQuest?.(briefingQuest.snId, briefingQuest.q.id);
+                   setBriefingQuest(null);
+                 }}>
+                   <span className="b-bracket">[</span>
+                   <span className="b-text">ESTABLISH_CONTRACT</span>
+                   <span className="b-bracket">]</span>
+                 </button>
+                 <button className="btn-briefing abort" onClick={() => setBriefingQuest(null)}>
+                   <span className="b-bracket">[</span>
+                   <span className="b-text">ABORT_COMM</span>
+                   <span className="b-bracket">]</span>
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      <style>{`
+        .briefing-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .briefing-modal { width: 100%; max-width: 500px; padding: 2rem; border-left: 4px solid var(--neon-cyan); }
+        .briefing-tag { font-size: 0.6rem; opacity: 0.5; margin-bottom: 10px; letter-spacing: 0.2em; }
+        .briefing-story { font-size: 0.85rem; line-height: 1.6; color: #ccc; margin: 1.5rem 0; background: rgba(0,255,255,0.03); padding: 15px; border-radius: 4px; }
+        .briefing-meta { display: flex; gap: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-bottom: 2rem; }
+        .meta-item .label { font-size: 0.6rem; display: block; opacity: 0.5; }
+        .meta-item .val { font-size: 0.9rem; font-weight: bold; font-family: var(--font-mono); }
+        .briefing-actions { display: flex; gap: 15px; margin-top: 10px; }
+        .btn-briefing {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 6px;
+          background: rgba(0,0,0,0.6);
+          border: 1px solid rgba(0,255,255,0.2);
+          color: var(--neon-cyan);
+          padding: 10px 18px;
+          font-family: var(--font-mono);
+          font-size: 0.8rem;
+          cursor: pointer;
+          transition: 0.2s;
+          border-radius: 4px;
+          position: relative;
+        }
+        .btn-briefing:hover {
+          background: rgba(0,255,255,0.1);
+          border-color: var(--neon-cyan);
+          box-shadow: 0 0 15px rgba(0,255,255,0.2);
+          transform: translateY(-2px);
+        }
+        .btn-briefing.abort {
+          border-color: rgba(255,255,255,0.1);
+          color: #777;
+        }
+        .btn-briefing.abort:hover {
+          border-color: #999;
+          color: #fff;
+          background: rgba(255,255,255,0.05);
+        }
+        .b-bracket { font-weight: 100; color: var(--neon-cyan); opacity: 0.5; font-size: 1.1rem; }
+        .btn-briefing.abort .b-bracket { color: #555; }
+        .b-text { letter-spacing: 2px; font-weight: 700; }
+        .map-mini-btn.talk { border-color: var(--neon-amber); color: var(--neon-amber); }
+        .map-mini-btn.diag { border-color: var(--neon-green); color: var(--neon-green); }
+        
+        .map-node-briefing {
+          background: rgba(0,255,255,0.02);
+          padding: 15px;
+          margin: 15px 0;
+          border-left: 2px solid var(--neon-cyan);
+        }
+        .briefing-label { font-size: 0.6rem; opacity: 0.5; margin-bottom: 8px; letter-spacing: 1px; }
+        .briefing-stats { display: flex; gap: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
+        .briefing-stats .stat { font-size: 0.65rem; color: #888; font-family: var(--font-mono); }
+        .briefing-stats .val { color: var(--neon-cyan); font-weight: bold; }
+        
+        .map-action-zone { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        
+        .animate-scale-up { animation: scaleUp 0.2s ease-out; }
+        @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      `}</style>
     </div>
   );
 };

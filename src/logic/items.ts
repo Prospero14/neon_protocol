@@ -41,6 +41,38 @@ export const ITEM_LIBRARY: GameItem[] = [
   ...makeItems('token', 'itm_token'),
   ...makeItems('booster', 'itm_boost'),
   ...makeItems('key', 'itm_key'),
+  {
+    id: 'art_necron_miniature',
+    name: 'Necron Miniature [ARTIFACT]',
+    kind: 'token',
+    rarity: 'epic',
+    description: 'A physical miniature from the "Pre-Core" era. Highly valued by collectors in VOID.',
+    valueBits: 500
+  },
+  {
+    id: 'art_archive_core',
+    name: 'Encrypted Archive Core',
+    kind: 'token',
+    rarity: 'rare',
+    description: 'A data packet recovered from Moscow Zero. Contains fragments of history.',
+    valueBits: 200
+  },
+  {
+    id: 'art_void_shard',
+    name: 'Void Shard',
+    kind: 'token',
+    rarity: 'epic',
+    description: 'A crystalline fragment that hums with static. It feels like it is watching you.',
+    valueBits: 750
+  },
+  {
+    id: 'art_old_world_badge',
+    name: 'Pre-Collapse Badge',
+    kind: 'token',
+    rarity: 'uncommon',
+    description: 'A rusted metal badge from a defunct government agency.',
+    valueBits: 80
+  }
 ];
 
 export const getItemById = (id: string) => ITEM_LIBRARY.find((i) => i.id === id);

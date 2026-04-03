@@ -41,11 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    setToken(null);
-    setUser(null);
     localStorage.removeItem('neon_token');
     localStorage.removeItem('neon_user');
-    window.location.reload(); // Reset game state
+    setToken(null);
+    setUser(null);
+    window.location.href = '/'; // Force redirect to root and reload
   };
 
   const syncGameState = async (state: any) => {

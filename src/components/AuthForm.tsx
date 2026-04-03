@@ -29,7 +29,7 @@ export const AuthForm: React.FC = () => {
                 login(data.token, data.user);
             } else {
                 setIsLogin(true);
-                alert('Registration successful! Please login.');
+                alert('Регистрация успешна! Теперь войдите.');
             }
         } catch (err: any) {
             setError(err.message);
@@ -54,12 +54,12 @@ export const AuthForm: React.FC = () => {
                     whiteSpace: 'nowrap',
                     fontSize: '1.2rem'
                 }}>
-                    {isLogin ? '[ INITIALIZE_SESSION ]' : '[ CREATE_IDENTITY ]'}
+                    {isLogin ? '[ ИНИЦИАЛИЗАЦИЯ_СЕССИИ ]' : '[ СОЗДАНИЕ_ЛИЧНОСТИ ]'}
                 </h2>
                 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
                     <div className="form-group">
-                        <label style={{ color: '#0ff', display: 'block', marginBottom: '0.5rem' }}>USERNAME:</label>
+                        <label style={{ color: '#0ff', display: 'block', marginBottom: '0.5rem' }}>ИМЯ_ПОЛЬЗОВАТЕЛЯ:</label>
                         <input 
                             type="text" 
                             value={username} 
@@ -70,7 +70,7 @@ export const AuthForm: React.FC = () => {
                     </div>
                     
                     <div className="form-group">
-                        <label style={{ color: '#0ff', display: 'block', marginBottom: '0.5rem' }}>PASSWORD:</label>
+                        <label style={{ color: '#0ff', display: 'block', marginBottom: '0.5rem' }}>ПАРОЛЬ:</label>
                         <input 
                             type="password" 
                             value={password} 
@@ -86,17 +86,17 @@ export const AuthForm: React.FC = () => {
                         background: '#0ff', color: '#000', border: 'none', padding: '1rem', 
                         fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase'
                     }}>
-                        {isLogin ? 'Login' : 'Register'}
+                        {isLogin ? 'Вход' : 'Регистрация'}
                     </button>
                 </form>
                 
                 <p style={{ color: '#666', textAlign: 'center', marginTop: '2rem', fontSize: '0.8rem' }}>
-                    {isLogin ? "Don't have an identity?" : "Already have an identity?"} {' '}
+                    {isLogin ? "Нет личности?" : "Уже есть личность?"} {' '}
                     <span 
                         onClick={() => setIsLogin(!isLogin)}
                         style={{ color: '#0ff', cursor: 'pointer', textDecoration: 'underline' }}
                     >
-                        {isLogin ? 'Register' : 'Login'}
+                        {isLogin ? 'Регистрация' : 'Вход'}
                     </span>
                 </p>
             </div>

@@ -24,8 +24,8 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
     <nav className="game-nav">
       <div className="nav-brand mono-text">
         <span className="brand-icon">◆</span>
-        NEON_PROTOCOL
-        <span className="brand-ver">v0.07</span>
+        НЕОН_ПРОТОКОЛ
+        <span className="brand-ver">v0.09</span>
       </div>
       <div className="nav-links">
         {navItems.map((item) => (
@@ -40,10 +40,10 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
         ))}
       </div>
       <div className="nav-stats mono-text">
-        <span className="nav-hp">STRESS: {Math.round((hp/maxStress)*100)}%</span>
-        <span className="nav-lvl">LVL {level}</span>
+        <span className="nav-hp">СТРЕСС: {Math.round((hp/maxStress)*100)}%</span>
+        <span className="nav-lvl">УРОВЕНЬ {level}</span>
         {onLogout && (
-          <button className="nav-logout-btn" onClick={onLogout} title="DISCONNECT">
+          <button className="nav-logout-btn" onClick={onLogout} title="ВЫХОД">
             ✖
           </button>
         )}

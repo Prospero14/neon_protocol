@@ -20,23 +20,23 @@ interface CharacterCreationProps {
 
 const getDistrictBuffDescription = (id: string): string => {
   switch(id) {
-    case 'altufyevo': return 'NORTH_SILOS: +10% Damage (Buffer Underflow). [Starter Sector]';
-    case 'vykhino': return 'TRADE_BRANCH: +150 Bi, +20 GIGA_BANK Rep. [Mercantile Landing]';
-    case 'maryino': return 'GRID_EXHAUST: +80 Integrity, +128 RAM. +20 VOSKHOD Rep.';
-    case 'chertanovo': return 'GLITCH_GHETTO: +256 RAM, -20 Max Integrity. +25 ANARCHO_VOID Rep.';
-    case 'south_west': return 'ACADEMIC_UPLINK: +200 XP. +25 EU_SYNTAX Rep. [Scholar Start]';
-    case 'teply_stan': return 'FOREST_EDGE: +20% Dodge. +10 ANARCHO_VOID Rep.';
-    case 'izmailovo': return 'CRAFT_MARKET: -25% Software Cost. +20 NEO_KYOTO Rep.';
-    case 'bibirevo': return 'NORTH_LINK: +100 Integrity. +10 VOSKHOD Rep. [Stable Connect]';
-    case 'tekstilschiki': return 'TEXTILE_GRID: +1 Card Draw/Turn. +25 VOSKHOD Rep.';
-    case 'perovo': return 'DATA_SLUMS: +30% Rare Card Find. +10 NEO_KYOTO Rep.';
-    case 'sokol': return 'TECH_HUB: +150 Integrity, +100 XP. +15 EU_SYNTAX & VOSKHOD Rep.';
-    case 'vdnkh': return 'PAVILION_ZERO: +128 RAM, +50 Bi. [System Heritage]';
-    case 'sokolniki': return 'SERVER_FOREST: +384 RAM, -30% Integrity. [Deep Dive]';
-    case 'fili': return 'SPACE_RUINS: +150 XP. Orbital Software [Sync].';
-    case 'taganka': return 'THE_BUNKER: -20% Service Costs (Local Discounts).';
-    case 'mitino': return 'RADIO_HEAVEN: +300 Bi. Illegal Import Protocol.';
-    default: return 'SLEEP_SECTOR: +50 Bi, +50 Integrity. [Generic Base]';
+    case 'altufyevo': return 'СЕВЕРНЫЕ_ХРАНИЛИЩА: +10% Урона (Buffer Underflow). [Начальный сектор]';
+    case 'vykhino': return 'ТОРГОВАЯ_ВЕТВЬ: +150 Bi, +20 Реп. GIGA_BANK. [Порт]';
+    case 'maryino': return 'ВЫХЛОП_СЕТИ: +80 Целостности, +128 RAM. +20 Реп. VOSKHOD.';
+    case 'chertanovo': return 'ГЛИТЧ_ГЕТТО: +256 RAM, -20 Макс. Целостности. +25 Реп. ANARCHO_VOID.';
+    case 'south_west': return 'АКАДЕМИЧЕСКИЙ_КАНАЛ: +200 XP. +25 Реп. EU_SYNTAX. [Путь учёного]';
+    case 'teply_stan': return 'ОПУШКА_ЛЕСА: +20% Уклонения. +10 Реп. ANARCHO_VOID.';
+    case 'izmailovo': return 'РЫНОК_МАСТЕРОВ: -25% Стоимость ПО. +20 Реп. NEO_KYOTO.';
+    case 'bibirevo': return 'СЕВЕРНЫЙ_КАНАЛ: +100 Целостности. +10 Реп. VOSKHOD. [Стабильный линк]';
+    case 'tekstilschiki': return 'ТЕКСТИЛЬНАЯ_СЕТЬ: +1 Карта/ход. +25 Реп. VOSKHOD.';
+    case 'perovo': return 'ТРУЩОБЫ_ДАННЫХ: +30% Шанс редких карт. +10 Реп. NEO_KYOTO.';
+    case 'sokol': return 'ТЕХНО_ХАБ: +150 Целостности, +100 XP. +15 Реп. EU_SYNTAX & VOSKHOD.';
+    case 'vdnkh': return 'ПАВИЛЬОН_НОЛЬ: +128 RAM, +50 Bi. [Наследие Системы]';
+    case 'sokolniki': return 'СЕРВЕРНЫЙ_ЛЕС: +384 RAM, -30% Целостности. [Глубокое погружение]';
+    case 'fili': return 'КОСМИЧЕСКИЕ_РУИНЫ: +150 XP. Орбитальное ПО [Синхронизация].';
+    case 'taganka': return 'БУНКЕР: -20% Стоимость сервисов (Локальные скидки).';
+    case 'mitino': return 'РАДИОРЫНОК: +300 Bi. Протоколы нелегального импорта.';
+    default: return 'СПАЛЬНЫЙ_СЕКТОР: +50 Bi, +50 Целостности. [Стандартная база]';
   }
 };
 
@@ -86,9 +86,9 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
         
         {/* Navigation Tabs (v0.07 Style) */}
         <div className="cc-nav-tabs">
-          <div className={`cc-nav-tab ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>IDENTITY</div>
-          <div className={`cc-nav-tab ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>DEPLOYMENT</div>
-          <div className={`cc-nav-tab ${step === 3 ? 'active' : ''}`} onClick={() => setStep(3)}>TRAITS</div>
+          <div className={`cc-nav-tab ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>ЛИЧНОСТЬ</div>
+          <div className={`cc-nav-tab ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>РАЗВЕРТЫВАНИЕ</div>
+          <div className={`cc-nav-tab ${step === 3 ? 'active' : ''}`} onClick={() => setStep(3)}>ОСОБЕННОСТИ</div>
         </div>
 
         <div className="cc-main-panel">
@@ -103,12 +103,12 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
             </div>
 
               <div className="cc-user-summary">
-                <div className="summary-item">CONNECTION_ORIGIN: <span className="copper">{userIp}</span></div>
-                <div className="summary-item">USER_ID: <span className="copper">{name || '---'}</span></div>
-                <div className="summary-item">FACTION_PROTOCOL: <span className="copper">{faction}</span></div>
-                <div className="summary-item">DEPLOY_ZONE: <span className="copper">{district?.name || '---'}</span></div>
-                <div className="summary-item">SKILL_MODE: <span className="copper">{skillMode.toLocaleUpperCase()}</span></div>
-                <div className="summary-item">TRAIT: <span className="copper">{hobby?.name || '---'}</span></div>
+                <div className="summary-item">ТОЧКА_ПОДКЛЮЧЕНИЯ: <span className="copper">{userIp}</span></div>
+                <div className="summary-item">ID_ПОЛЬЗОВАТЕЛЯ: <span className="copper">{name || '---'}</span></div>
+                <div className="summary-item">ПРОТОКОЛ_ФРАКЦИИ: <span className="copper">{faction}</span></div>
+                <div className="summary-item">ЗОНА_ВЫСАДКИ: <span className="copper">{district?.name || '---'}</span></div>
+                <div className="summary-item">УРОВЕНЬ_ДОСТУПА: <span className="copper">{skillMode.toLocaleUpperCase()}</span></div>
+                <div className="summary-item">ОСОБЕННОСТЬ: <span className="copper">{hobby?.name || '---'}</span></div>
               </div>
 
             <div className="cc-cursor-row">
@@ -122,10 +122,10 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
             <div className="cc-step-content">
               {step === 1 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">INSERT_NEURAL_ID</h2>
+                  <h2 className="cc-headline">ВВОД_НЕЙРО-ID_ЛИЧНОСТИ</h2>
                   <div className="cc-identity-form">
                     <div className="cc-form-group">
-                      <label>NEURAL_ID_INPUT</label>
+                      <label>ВВОД_НЕЙРО_ID</label>
                       <input
                         type="text"
                         value={name}
@@ -137,25 +137,25 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                     </div>
 
                     <div className="cc-form-group">
-                      <label>SKILL_LEVEL_INITIALIZATION</label>
+                      <label>ИНИЦИАЛИЗАЦИЯ_СЛОЖНОСТИ</label>
                       <div className="cc-skill-selector">
                         <button 
                           className={`cc-skill-btn ${skillMode === 'junior' ? 'active' : ''}`}
                           onClick={() => setSkillMode('junior')}
                         >
-                          NOVICE
+                          НОВИЧОК
                         </button>
                         <button 
                           className={`cc-skill-btn ${skillMode === 'mid' ? 'active' : ''}`}
                           onClick={() => setSkillMode('mid')}
                         >
-                          MID
+                          МИДЛ
                         </button>
                         <button 
                           className={`cc-skill-btn ${skillMode === 'senior' ? 'active' : ''}`}
                           onClick={() => setSkillMode('senior')}
                         >
-                          SENIOR
+                          СЕНЬОР
                         </button>
                       </div>
                       <div className="cc-skill-description">
@@ -165,14 +165,14 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                       </div>
                     </div>
                   </div>
-                  {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO CONFIRM</div>}
+                  {name.trim() && <div className="cc-enter-hint">НАЖМИТЕ [ENTER] ДЛЯ ПОДТВЕРЖДЕНИЯ</div>}
                   <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
                 </div>
               )}
 
               {step === 2 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">SELECT_DEPLOYMENT_ZONE</h2>
+                  <h2 className="cc-headline">ВЫБОР_ЗОНЫ_РАЗВЕРТЫВАНИЯ</h2>
                   <div className="cc-grid-wrapper">
                     <div className="cc-grid districts">
                       {districts.map(d => (
@@ -184,7 +184,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                           tabIndex={0}
                         >
                           <div className="cc-card-scan"></div>
-                          <div className="cc-card-id">ZONE_{d.id.toUpperCase()}</div>
+                          <div className="cc-card-id">ЗОНА_{d.id.toUpperCase()}</div>
                           <div className="cc-card-name">{d.name.split(':')[0]}</div>
                           <div className="cc-card-effect copper">{getDistrictBuffDescription(d.id)}</div>
                         </div>
@@ -196,7 +196,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
 
               {step === 3 && (
                 <div className="animate-in">
-                  <h2 className="cc-headline">LOAD_NEURAL_TRAITS</h2>
+                  <h2 className="cc-headline">ЗАГРУЗКА_НЕЙРО-ОСОБЕННОСТЕЙ</h2>
                   <div className="cc-grid-wrapper">
                     <div className="cc-grid hobbies">
                       {TRAITS.filter(t => t.type === 'HOBBY').map(h => (
@@ -232,7 +232,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                 }`} 
                 onClick={() => handleNext()} 
               >
-                {step === 1 ? "[ CONFIRM_IDENTITY ]" : step === 2 ? "[ CONFIRM_DEPLOYMENT ]" : "[ FINALIZE_BOOT ]"}
+                {step === 1 ? "[ ПОДТВЕРДИТЬ_ЛИЧНОСТЬ ]" : step === 2 ? "[ ПОДТВЕРДИТЬ_ЗОНУ ]" : "[ ЗАВЕРШИТЬ_ЗАГРУЗКУ ]"}
               </div>
             </div>
           </div>

@@ -40,11 +40,11 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
       <header className="char-header neon-panel">
         <div className="char-brand">
           <User size={20} color="var(--neon-cyan)" />
-          <h3>NEURAL_IDENTITY [SYS_OVERVIEW]</h3>
+          <h3>НЕЙРО-ЛИЧНОСТЬ [ОБЗОР_СИСТЕМЫ]</h3>
         </div>
         <div className="header-actions">
-           <button className="back-btn-v4" onClick={onBack}>[ RETURN ]</button>
-           <button className="logout-btn-v4" onClick={onLogout}>[ DISCONNECT ]</button>
+           <button className="back-btn-v4" onClick={onBack}>[ НАЗАД ]</button>
+           <button className="logout-btn-v4" onClick={onLogout}>[ ОТКЛЮЧИТЬСЯ ]</button>
         </div>
       </header>
 
@@ -52,18 +52,18 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
         {/* LEFT: STATUS & AVATAR */}
         <div className="stats-pane">
           <div className="stats-main-card neon-panel">
-            <div className="level-badge">LVL_{player.level}</div>
+            <div className="level-badge">УРОВ_ {player.level}</div>
             <div className="avatar-sim">
               <User size={64} color="var(--neon-cyan)" />
             </div>
             <h2 className="player-id-text">{player.name}</h2>
             <div className="district-tag mono-text">
-              <MapPin size={12} /> {player.district.toUpperCase()}_SECTOR
+              <MapPin size={12} /> СЕКТОР_{player.district.toUpperCase()}
             </div>
             
             <div className="xp-container v42">
               <div className="xp-labels">
-                <span>XP_SYNERGY</span>
+                <span>СИНЕРГИЯ_ОПЫТА</span>
                 <span>{player.xp}/{xpToNext}</span>
               </div>
               <div className="xp-bar-outer">
@@ -76,14 +76,14 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
             <div className="stat-card neon-panel">
               <Shield size={18} color="var(--neon-cyan)" />
               <div className="stat-info">
-                <span className="label">SYSTEM_STRESS</span>
+                <span className="label">СТРЕСС_СИСТЕМЫ</span>
                 <span className="val">{Math.round((player.hp / player.maxStress) * 100)}%</span>
               </div>
             </div>
             <div className="stat-card neon-panel">
               <Zap size={18} color="var(--neon-amber)" />
               <div className="stat-info">
-                <span className="label">BIT_CREDITS</span>
+                <span className="label">БИТ-КРЕДИТЫ</span>
                 <span className="val">{player.bits}</span>
               </div>
             </div>
@@ -97,19 +97,19 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                className={`tab-btn-v4 ${activeTab === 'IDENTITY' ? 'active' : ''}`} 
                onClick={() => setActiveTab('IDENTITY')}
              >
-               [ IDENTITY_MODULES ]
+               [ МОДУЛИ_ЛИЧНОСТИ ]
              </button>
              <button 
                className={`tab-btn-v4 ${activeTab === 'REPUTATION' ? 'active' : ''}`} 
                onClick={() => setActiveTab('REPUTATION')}
              >
-               [ REPUTATION_MATRIX ]
+               [ МАТРИЦА_РЕПУТАЦИИ ]
              </button>
              <button 
                className={`tab-btn-v4 ${activeTab === 'CONTRACTS' ? 'active' : ''}`} 
                onClick={() => setActiveTab('CONTRACTS')}
              >
-               [ CONTRACT_BACKLOG ]
+               [ ЖУРНАЛ_КОНТРАКТОВ ]
              </button>
           </div>
 
@@ -120,16 +120,16 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                 <div className="pane-header-v42" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                      <Briefcase size={18} color="var(--neon-cyan)" />
-                     <span>PROFESSIONAL_MODULES [ACTIVE]</span>
+                     <span>ПРОФЕССИОНАЛЬНЫЕ_МОДУЛИ [АКТИВНО]</span>
                   </div>
                   <button className="academy-btn" onClick={() => setShowAcademy(true)}>
-                     ACADEMY_ACCESS <ChevronRight size={14} />
+                     ДОСТУП_В_АКАДЕМИЮ <ChevronRight size={14} />
                   </button>
                 </div>
                 <div className="prof-body">
                   <div className="prof-path">
-                    <span className="p-label">PATH: </span>
-                    <span className="p-val">{player.profession.path === 'None' ? 'INITIALIZING...' : player.profession.path.toUpperCase()}</span>
+                    <span className="p-label">ПУТЬ: </span>
+                    <span className="p-val">{player.profession.path === 'None' ? 'ИНИЦИАЛИЗАЦИЯ...' : player.profession.path.toUpperCase()}</span>
                     <span className={`cat-tag ${player.profession.category}`}>{player.profession.category}</span>
                   </div>
                   <div className="prof-spec">
@@ -150,7 +150,7 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
               <div className="traits-pane-v42 neon-panel">
                 <div className="pane-header-v42">
                   <Award size={18} color="var(--neon-pink)" />
-                  <span>INSTALLED_ENHANCEMENTS</span>
+                  <span>УСТАНОВЛЕННЫЕ_УЛУЧШЕНИЯ</span>
                 </div>
                 <div className="traits-scroll-list-v42">
                   {player.traits.map((trait) => (
@@ -172,7 +172,7 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
             <div className="reputation-pane neon-panel">
                <div className="pane-header-v42">
                   <Shield size={18} color="var(--neon-amber)" />
-                  <span>GLOBAL_FACTION_STANDING</span>
+                  <span>ГЛОБАЛЬНЫЙ_СТАТУС_ФРАКЦИЙ</span>
                </div>
                <div className="rep-list">
                   {Object.entries(player.reputation || {}).map(([faction, value]) => {
@@ -199,18 +199,18 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                   })}
                </div>
                <p className="mono-text" style={{ fontSize: '0.65rem', marginTop: 'auto', opacity: 0.5, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                 REPUTATION_LOG: Standing is zero-sum for rival factions (MegaCorps vs State vs Anarchists). Your choices matter.
+                 ЛОГ_РЕПУТАЦИИ: Статус является игрой с нулевой суммой для соперничающих фракций (Мегакорпорации vs Государство vs Анархисты). Ваш выбор имеет значение.
                </p>
             </div>
           ) : (
             <div className="contracts-pane neon-panel">
                <div className="pane-header-v42">
                   <Award size={18} color="var(--neon-cyan)" />
-                  <span>CONTRACT_HISTORY_&_BACKLOG</span>
+                  <span>ИСТОРИЯ_И_ЖУРНАЛ_КОНТРАКТОВ</span>
                </div>
                <div className="contracts-list">
                   {questStates.length === 0 && (
-                    <div className="no-contracts mono-text opacity-50">NO_ACTIVE_OR_COMPLETED_CONTRACTS_FOUND</div>
+                    <div className="no-contracts mono-text opacity-50">АКТИВНЫХ_ИЛИ_ВЫПОЛНЕННЫХ_КОНТРАКТОВ_НЕ_НАЙДЕНО</div>
                   )}
                   {questStates.map(state => {
                     const quest = allQuests.find(q => q.id === state.questId);
@@ -223,8 +223,8 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                          </div>
                          <p className="c-desc mono-text">{quest.description}</p>
                          <div className="c-meta mono-text">
-                            <span>TYPE: {quest.type.toUpperCase()}</span>
-                            <span>TIER: {quest.tier}</span>
+                            <span>ТИП: {quest.type.toUpperCase()}</span>
+                            <span>УРОВЕНЬ: {quest.tier}</span>
                          </div>
                       </div>
                     );
@@ -240,9 +240,9 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
         <div className="academy-modal-overlay" onClick={() => setShowAcademy(false)}>
            <div className="academy-modal neon-panel" onClick={e => e.stopPropagation()}>
               <div className="academy-header">
-                 <h2 className="neon-text" style={{ fontSize: '1.5rem', marginBottom: '4px' }}>NEURAL_ACADEMY</h2>
+                 <h2 className="neon-text" style={{ fontSize: '1.5rem', marginBottom: '4px' }}>НЕЙРО-АКАДЕМИЯ</h2>
                  <p className="mono-text" style={{ fontSize: '0.75rem', color: '#888' }}>
-                   Acquire new classes using Bit Credits or Quests. [MVP_MODE: JAVA_ONLY]
+                   Приобретайте новые классы за Бит-кредиты или через квесты. [MVP_MODE: JAVA_ONLY]
                  </p>
               </div>
               

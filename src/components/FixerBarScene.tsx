@@ -121,7 +121,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     }
 
     if (option.cost && playerBits < option.cost) {
-      alert('INSUFFICIENT_BIT_CREDITS');
+      alert('НЕДОСТАТОЧНО_БИТ-КРЕДИТОВ');
       return;
     }
 
@@ -205,9 +205,9 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
                   {opt.nextId.includes('term') && <Terminal size={16} className="inline mr-2" />}
                   {opt.text.split('-')[0]?.trim() || opt.text}
                 </div>
-                <div className="npc-subtext">{opt.subtext || 'ВЗАИМОДЕЙСТВИЕ AVAILABLE'}</div>
+                <div className="npc-subtext">{opt.subtext || 'ВЗАИМОДЕЙСТВИЕ_ДОСТУПНО'}</div>
               </div>
-              {opt.cost ? <div className="npc-cost">[{opt.cost} BITS]</div> : null}
+              {opt.cost ? <div className="npc-cost">[{opt.cost} БИТ]</div> : null}
             </div>
           );
         })}
@@ -218,9 +218,9 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   return (
     <div className="fixer-bar-view animate-float main-crt">
       <div className="scene-header">
-        <h2 className="neon-text location-glitch">{locationId.toUpperCase()}_HUB</h2>
+        <h2 className="neon-text location-glitch">{locationId.toUpperCase()}_ХАБ</h2>
         <div className="header-stats">
-          <Fingerprint size={16} /> BITS: {playerBits}
+          <Fingerprint size={16} /> БИТЫ: {playerBits}
         </div>
       </div>
 
@@ -282,7 +282,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       
       {!isMenuMode && (
         <button className="exit-bar-btn mono-text" onClick={onLeave}>
-          [ ABORT_CONNECTION ]
+          [ РАЗОРВАТЬ_СОЕДИНЕНИЕ ]
         </button>
       )}
 

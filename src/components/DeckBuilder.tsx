@@ -98,7 +98,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
         <div className="deck-brand">
           <Database size={20} color="var(--neon-cyan)" />
           <div>
-            <h3>DECK_CONSTRUCTOR</h3>
+            <h3>КОНСТРУКТОР_КОЛОДЫ</h3>
             {beginner && (
               <p className="deck-subtitle mono-text">
                 Включите «ванильный Java» для чистого языка; отметьте библиотеки — Spring, сеть, Collections — чтобы
@@ -111,7 +111,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
       <div className="deck-stack-filters neon-panel">
         <div className="stack-filter-row">
-          <span className="filter-label mono-text">LANGUAGE</span>
+          <span className="filter-label mono-text">ЯЗЫК</span>
           <button type="button" className="filter-chip active" disabled>
             Java
           </button>
@@ -120,7 +120,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
         {classUnlocked && (
           <>
             <div className="stack-filter-row libs-row">
-              <span className="filter-label mono-text">ENGINE_BASE</span>
+              <span className="filter-label mono-text">ОСНОВА_ДВИЖКА</span>
               <div className="lib-chips">
                 <button 
                   key="core"
@@ -156,7 +156,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   className={`lib-chip core ${enabledCats.has('syntax') ? 'on' : ''}`} 
                   onClick={() => toggleCat('syntax')}
                 >
-                  CODE & LOGIC
+                  КОД_И_ЛОГИКА
                 </button>
                 <button 
                   key="soft" 
@@ -164,7 +164,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   className={`lib-chip soft ${enabledCats.has('soft') ? 'on' : ''}`} 
                   onClick={() => toggleCat('soft')}
                 >
-                  Soft Skills
+                  Гибкие_навыки
                 </button>
                 <button 
                   key="tests" 
@@ -172,7 +172,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   className={`lib-chip tests ${enabledCats.has('tests') ? 'on' : ''}`} 
                   onClick={() => toggleCat('tests')}
                 >
-                  Tests & Reactions
+                  Тесты_и_Реакции
                 </button>
                 <button 
                   key="infra" 
@@ -180,28 +180,28 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   className={`lib-chip infra ${enabledCats.has('infra') ? 'on' : ''}`} 
                   onClick={() => toggleCat('infra')}
                 >
-                  Infrastructure
+                  Инфраструктура
                 </button>
               </div>
             </div>
           </>
         )}
         <div className="stack-filter-row libs-row">
-          <span className="filter-label mono-text">SORT_BY</span>
+          <span className="filter-label mono-text">СОРТИРОВКА</span>
           <div className="lib-chips">
             <button 
               type="button" 
               className={`lib-chip ${sortBy === 'name' ? 'on' : ''}`} 
               onClick={() => setSortBy('name')}
             >
-              NAME
+              ИМЯ
             </button>
             <button 
               type="button" 
               className={`lib-chip ${sortBy === 'cost' ? 'on' : ''}`} 
               onClick={() => setSortBy('cost')}
             >
-              COST
+              СТОИМОСТЬ
             </button>
           </div>
         </div>
@@ -213,9 +213,9 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       <div className="inventory-pane">
         <div className="pane-header">
           <LayoutGrid size={16} />
-          <span>AVAILABLE_MODULES ({filteredInventory.length})</span>
+          <span>ДОСТУПНЫЕ_МОДУЛИ ({filteredInventory.length})</span>
           <div className="pane-hint mono-text">
-            {beginner ? 'CLICK_CARD · HOVER ADD' : 'ADD_TO_LOADOUT'}
+            {beginner ? 'КЛИК_ДЛЯ_ИНФО · НАВЕДИТЕ_ДЛЯ_ДОБАВЛЕНИЯ' : 'ДОБАВИТЬ_В_СНАРЯЖЕНИЕ'}
           </div>
         </div>
 
@@ -248,7 +248,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                           onClick={(e) => addCard(card, e)}
                           disabled={count >= 3}
                         >
-                          {count > 0 ? `${count}/3` : 'ADD'}
+                          {count > 0 ? `${count}/3` : 'ДОБАВИТЬ'}
                         </button>
                       </div>
                     }
@@ -257,7 +257,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
               );
             })
           ) : (
-            <div className="empty-deck-hint mono-text">ADJUST_FILTERS_ABOVE</div>
+            <div className="empty-deck-hint mono-text">ИЗМЕНИТЕ_ФИЛЬТРЫ_ВЫШЕ</div>
           )}
         </div>
       </div>
@@ -265,7 +265,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       <div className="active-deck-pane neon-panel">
         <div className="pane-header">
           <ArrowRight size={16} />
-          <span>ACTIVE_LOADOUT ({activeDeck.length}/30)</span>
+          <span>АКТИВНОЕ_СНАРЯЖЕНИЕ ({activeDeck.length}/30)</span>
         </div>
         <div className="active-list">
           {Array.from(new Set(activeDeck.map(c => c.id))).map(id => {
@@ -285,12 +285,12 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
                   <span className="active-card-type">{card.type}</span>
                 </div>
                 <button className="remove-pill" onClick={(e) => removeCard(card, e)}>
-                  REMOVE
+                  УДАЛИТЬ
                 </button>
               </div>
             );
           })}
-          {activeDeck.length === 0 && <div className="empty-deck-hint mono-text">NO_MODULES_SELECTED</div>}
+          {activeDeck.length === 0 && <div className="empty-deck-hint mono-text">МОДУЛИ_НЕ_ВЫБРАНЫ</div>}
         </div>
       </div>
 

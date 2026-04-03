@@ -64,7 +64,7 @@ const buildTraineeDeck = (): CombatCard[] => {
 function App() {
   const { user, isLoading } = useAuth();
   const [skillMode, setSkillMode] = useState<SkillMode>(() => parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY)));
-  const [userIp, setUserIp] = useState<string>('LOCATING...');
+  const [userIp, setUserIp] = useState<string>('ОПРЕДЕЛЕНИЕ...');
 
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
@@ -76,7 +76,7 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>('CREATION');
   const [lastView, setLastView] = useState<ViewType>('HUB');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [playerName, setPlayerName] = useState('ID_UNKNOWN');
+  const [playerName, setPlayerName] = useState('ID_НЕИЗВЕСТЕН');
   const [homeDistrict, setHomeDistrict] = useState<MapNodeData | null>(null);
   const [activeDistrictId, setActiveDistrictId] = useState('altufyevo');
   const [viewMode, setViewMode] = useState<'CITY' | 'DISTRICT'>('DISTRICT');
@@ -502,7 +502,7 @@ function App() {
     if (currentView === 'CHARACTER') {
       return (
         <CharacterScreen
-          player={{ name: playerName, district: homeDistrict?.name || 'UNKNOWN', profession, hp: stress, bits, xp, level, traits, classUnlocked, completedQuestCount, reputation, maxStress }}
+          player={{ name: playerName, district: homeDistrict?.name || 'НЕИЗВЕСТНО', profession, hp: stress, bits, xp, level, traits, classUnlocked, completedQuestCount, reputation, maxStress }}
           questStates={questStates}
           allQuests={QUEST_LIBRARY}
           onBack={() => setCurrentView('HUB')}
@@ -554,9 +554,9 @@ function App() {
       <div className="hub-v4-view animate-float">
         <header className="hub-header-v4">
           <div className="brand-box">
-            <h1 className="neon-text glow-green">MOSCOW_ZERO <span className="mvp-tag">[PROTOTYPE_v0.09]</span></h1>
+            <h1 className="neon-text glow-green">МОСКВА_НОЛЬ <span className="mvp-tag">[ПРОТОТИП_v0.09]</span></h1>
             <div className="meta-line mono-text">
-              <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name || 'SECURE_APARTMENT'}</span>
+              <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name || 'БЕЗОПАСНАЯ_КВАРТИРА'}</span>
               <span className="meta-divider">|</span>
               <span className="meta-item"><User size={12} /> {playerName}</span>
             </div>
@@ -564,24 +564,24 @@ function App() {
           <div className="hub-top-stats">
             <div className="top-stat arctic-monolith">
                   <div className="hub-stat-v4">
-                    <span className="stat-label">SYSTEM_STRESS [%]</span>
+                    <span className="stat-label">СТРЕСС_СИСТЕМЫ [%]</span>
                     <div className="stat-bar-v4 large">
                       <div className="stat-fill-v4 stress" style={{width: `${Math.round((stress/maxStress)*100)}%`}}></div>
                       <span className="stat-value">{Math.round((stress/maxStress)*100)}%</span>
                     </div>
                   </div>
                   <div className="hub-stat-v4">
-                    <span className="stat-label">CPU_CORES</span>
+                    <span className="stat-label">ЯДРА_ЦПУ</span>
                     <div className="stat-bar-v4">
                       <div className="stat-fill-v4 cpu" style={{width: `100%`}}></div>
-                      <span className="stat-value">1.0 Cores</span>
+                      <span className="stat-value">1.0 Ядра</span>
                     </div>
                   </div>
                   <div className="hub-stat-v4">
-                    <span className="stat-label">NEURAL_RAM</span>
+                    <span className="stat-label">НЕЙРО_ОЗУ</span>
                     <div className="stat-bar-v4">
                       <div className="stat-fill-v4 ram" style={{width: `${(ramPool/8)*100}%`}}></div>
-                      <span className="stat-value">{ramPool} UNITS</span>
+                      <span className="stat-value">{ramPool} ЕД.</span>
                     </div>
                   </div>
                <span className="val pulse-amber">ƀ{bits}</span>
@@ -592,10 +592,10 @@ function App() {
         <div className="hub-grid-v4">
           {/* COLUMN 1: IDENTITY */}
           <div className="hub-col identity">
-            <div className="col-header mono-text"><Shield size={14} /> IDENTITY_MODULE</div>
+            <div className="col-header mono-text"><Shield size={14} /> МОДУЛЬ_ЛИЧНОСТИ</div>
             <div className="neon-panel interactive arctic-monolith stat-card-v4" onClick={() => setCurrentView('CHARACTER')}>
               <div className="card-inner">
-                <div className="prof-tag">{classUnlocked ? profession.name : "UNAUTHORIZED_USER"}</div>
+                <div className="prof-tag">{classUnlocked ? profession.name : "НЕАВТОРИЗОВАННЫЙ_ПОЛЬЗОВАТЕЛЬ"}</div>
                  <div className="main-stat-row">
                     <div className="avatar-mini"><User size={32} /></div>
                     <div className="hp-ring">

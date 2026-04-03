@@ -31,7 +31,7 @@ const QuestLog: React.FC<QuestLogProps> = ({ questStates, onBack }) => {
             {q.type === 'delivery' && <Search size={12} />}
             <span>{q.type.toUpperCase()}</span>
           </div>
-          <div className="quest-tier">TIER_{q.tier}</div>
+          <div className="quest-tier">УРОВЕНЬ_{q.tier}</div>
         </div>
         
         <h3 className="quest-title">{q.title.includes(']') ? q.title.split(']')[1].trim() : q.title}</h3>
@@ -40,13 +40,13 @@ const QuestLog: React.FC<QuestLogProps> = ({ questStates, onBack }) => {
         <div className="quest-card-footer">
           <div className="quest-status">
             {isCompleted ? (
-              <><CheckCircle size={14} className="icon-done" /> <span>CONTRACT_FULFILLED</span></>
+              <><CheckCircle size={14} className="icon-done" /> <span>КОНТРАКТ_ВЫПОЛНЕН</span></>
             ) : (
-              <><Clock size={14} className="icon-active" /> <span>ACTIVE_DIRECTIVE</span></>
+              <><Clock size={14} className="icon-active" /> <span>АКТИВНАЯ_ДИРЕКТИВА</span></>
             )}
           </div>
           <div className="quest-reward">
-            REWARD: <span className="bits-val">ƀ{difficultyMultiplier[q.difficulty] * 50}</span>
+            НАГРАДА: <span className="bits-val">ƀ{difficultyMultiplier[q.difficulty] * 50}</span>
           </div>
         </div>
       </div>
@@ -56,16 +56,16 @@ const QuestLog: React.FC<QuestLogProps> = ({ questStates, onBack }) => {
   return (
     <div className="quest-log-view animate-float">
       <header className="log-header">
-        <h1 className="neon-text glow-cyan">CONTRACT_BACKLOG <span className="log-count">[{questStates.length}]</span></h1>
-        <button className="back-btn-v4 mono-text" onClick={onBack}>[ RETURN_TO_HUB ]</button>
+        <h1 className="neon-text glow-cyan">ЖУРНАЛ_КОНТРАКТОВ <span className="log-count">[{questStates.length}]</span></h1>
+        <button className="back-btn-v4 mono-text" onClick={onBack}>[ ВЕРНУТЬСЯ_В_ХАБ ]</button>
       </header>
 
       <div className="log-grid">
         <section className="log-section">
-          <h2 className="section-title active"><Clock size={18} /> ACTIVE_DIRECTIVES</h2>
+          <h2 className="section-title active"><Clock size={18} /> ТЕКУЩИЕ_ДИРЕКТИВЫ</h2>
           <div className="quest-list">
             {activeQuests.length === 0 ? (
-              <div className="empty-log mono-text">NO_ACTIVE_CONTRACTS_FOUND</div>
+              <div className="empty-log mono-text">АКТИВНЫХ_КОНТРАКТОВ_НЕ_НАЙДЕНО</div>
             ) : (
               activeQuests.map(s => renderQuestCard(s, false))
             )}
@@ -73,10 +73,10 @@ const QuestLog: React.FC<QuestLogProps> = ({ questStates, onBack }) => {
         </section>
 
         <section className="log-section">
-          <h2 className="section-title completed"><CheckCircle size={18} /> MISSION_HISTORY</h2>
+          <h2 className="section-title completed"><CheckCircle size={18} /> ИСТОРИЯ_МИССИЙ</h2>
           <div className="quest-list">
             {completedQuests.length === 0 ? (
-              <div className="empty-log mono-text">ARCHIVE_EMPTY</div>
+              <div className="empty-log mono-text">АРХИВ_ПУСТ</div>
             ) : (
               completedQuests.map(s => renderQuestCard(s, true))
             )}

@@ -30,12 +30,14 @@ const adapter = new PrismaBetterSqlite3({
 const prisma = new PrismaClient({ adapter });
 
 async function initDB() {
+  console.log(`[NEON_CORE] PERSISTENCE_PATH: ${dbPath}`);
+  console.log(`[NEON_CORE] AMVERA_DETECTED: ${isAmvera}`);
   console.log('[NEON_CORE] Background DB Init Started...');
   try {
     await prisma.$connect();
     console.log('[NEON_CORE] Database connected successfully.');
   } catch (e) {
-    console.error('[NEON_CORE] DB Connection Warning (This is expected in first seconds):', e);
+    console.error('[NEON_CORE] DB Connection Error:', e);
   }
 }
 
@@ -85,9 +87,10 @@ app.post('/neon_v1/auth/register', async (req, res) => {
       } 
     });
     res.status(201).json({ message: 'User created' });
-  } catch (error) { 
+  } catch (error: any) { 
     console.error('Registration Error:', error);
-    res.status(400).json({ error: 'Identity creation failed. Username may already be taken.' }); 
+    const msg = error.code === 'P2002' ? 'Identity already exists.' : 'Identity creation failed. Subsystem error.';
+    res.status(400).json({ error: msg }); 
   }
 });
 

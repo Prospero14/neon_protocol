@@ -5,8 +5,9 @@ meta:
     version: 20
 
 build:
-  additionalCommands: "export DATABASE_URL=file:./dev.db && npm run build:full"
+  additionalCommands: "export DATABASE_URL=file:/data/dev.db && npm run build:full"
 
 run:
+  persistenceMount: /data
   command: "npm start"
   containerPort: 8080

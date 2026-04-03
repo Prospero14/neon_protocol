@@ -116,6 +116,7 @@ function App() {
 
   const [profession, setProfession] = useState<Profession>(getProfessionById('trainee') ?? PROFESSIONS[0]);
   const [classUnlocked, setClassUnlocked] = useState(false);
+  const [maxStress, setMaxStress] = useState(100);
   const [ramPool, setRamPool] = useState(1);
   const [stress, setStress] = useState(0);
   const [bits, setBits] = useState(150);
@@ -151,6 +152,7 @@ function App() {
       if (gs.bits !== undefined) setBits(gs.bits);
       if (gs.xp !== undefined) setXp(gs.xp);
       if (gs.level !== undefined) setLevel(gs.level);
+      if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
       if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);

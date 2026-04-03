@@ -78,6 +78,7 @@ app.post('/neon_v1/auth/register', async (req, res) => {
         gameState: { 
           create: {
             bits: 150,
+            ramPool: 1.0,
             stress: 0,
             maxStress: 100,
             activeDeck: starterDeck,

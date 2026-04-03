@@ -116,8 +116,7 @@ function App() {
 
   const [profession, setProfession] = useState<Profession>(getProfessionById('trainee') ?? PROFESSIONS[0]);
   const [classUnlocked, setClassUnlocked] = useState(false);
-  const [maxStress, setMaxStress] = useState(100);
-  const [ramPool, setRamPool] = useState(3);
+  const [ramPool, setRamPool] = useState(1);
   const [stress, setStress] = useState(0);
   const [bits, setBits] = useState(150);
   const [xp, setXp] = useState(0);
@@ -138,7 +137,8 @@ function App() {
       stress, maxStress, bits, xp, level,
       activeDeck: activeDeck.map(c => ({ id: c.id })),
       inventory: inventoryUnique.map(c => ({ id: c.id })),
-      completedQuests: questStates
+      completedQuests: questStates,
+      ramPool: ramPool
     };
     await syncGameState(state);
   };
@@ -151,7 +151,11 @@ function App() {
       if (gs.bits !== undefined) setBits(gs.bits);
       if (gs.xp !== undefined) setXp(gs.xp);
       if (gs.level !== undefined) setLevel(gs.level);
-      if (gs.completedQuests) setQuestStates(gs.completedQuests);
+      if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
+      if (gs.completedQuests) {
+        setQuestStates(gs.completedQuests);
+        if (gs.completedQuests.length > 0) setCurrentView('HUB');
+      }
     }
   }, [user]);
 
@@ -234,7 +238,7 @@ function App() {
     const startRep = calculateStartingReputation(data.district.id);
     if (data.hobby.id === 'corporate_contact') { startRep['GIGA_BANK'] += 15; startRep['EU_SYNTAX'] += 15; }
     setReputation(startRep);
-    let initialMaxStress = 100, initialRam = 4.0; // 4 units = 2 GiB default
+    let initialMaxStress = 100, initialRam = 1.0; // 1 unit = 512 MiB default
     if (data.district.id === 'altufyevo') { initialMaxStress += 10; }
     if (data.district.id === 'bibirevo') { initialMaxStress += 40; }
     if (data.district.id === 'chertanovo') { initialRam += 0.5; initialMaxStress -= 15; }
@@ -277,6 +281,9 @@ function App() {
 
   const renderAppView = () => {
     if (currentView === 'CREATION') return <CharacterCreation skillMode={skillMode} setSkillMode={setSkillMode} userIp={userIp} faction={'INDEPENDENT_ANON'} onComplete={handleCreationComplete} />;
+    
+    const isHubView = !['CREATION', 'MAP', 'COMBAT', 'CHARACTER', 'DECK_BUILDER', 'REFERENCE', 'FIXER_BAR', 'QUEST_LOG'].includes(currentView);
+    
     if (currentView === 'MAP') return <MapView viewMode={viewMode} activeDistrictId={activeDistrictId} isCityMapUnlocked={isCityMapUnlocked} onNodeSelect={handleTravel} onBack={() => setCurrentView('HUB')} onToggleView={() => setViewMode((prev) => (prev === 'CITY' ? 'DISTRICT' : 'CITY'))} objectiveNodeId={objectiveNodeId} playerBits={bits} />;
     if (currentView === 'COMBAT') {
       const district = MAP_NODES.find((n) => n.id === activeDistrictId) ?? MAP_NODES[0];
@@ -304,6 +311,8 @@ function App() {
     if (currentView === 'REFERENCE') return <Documentation skillMode={skillMode} discoveredCardIds={new Set([...Array.from(discoveredCardIds), ...activeDeck.map((c) => c.id)])} initialEntryId={selectedDocId} onBack={() => { setCurrentView(lastView); setSelectedDocId(null); }} />;
     if (currentView === 'QUEST_LOG') return <QuestLog questStates={questStates} onBack={() => setCurrentView('HUB')} />;
 
+    if (!isHubView) return null; // Fallback for safety, though renderAppView usually returns earlier
+    
     return (
       <div className="hub-v4-view animate-float">
         <header className="hub-header-v4">

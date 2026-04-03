@@ -22,7 +22,8 @@ model GameState {
   
   stress       Int         @default(0)
   maxStress    Int         @default(100)
-  bits         Int         @default(100)
+  bits         Int         @default(150)
+  ramPool      Float       @default(1.0)
   xp           Int         @default(0)
   level        Int         @default(1)
   

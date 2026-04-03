@@ -9,7 +9,7 @@ export const tekstilschiki: WorldDistrict = {
     x: 75, y: 60, stability: 85, type: 'combat', tier: 1,
     subNodes: [
       { id: 'npc_vlad', name: 'Влад-Ткач', type: 'npc', description: 'Мастер защитных плетений. Создает лучшие файрволы.', x: 20, y: 20 },
-      { id: 'npc_weaver_apprentice', name: 'Подмастерье Ткача', type: 'npc', description: 'Учится плести логические цепи.', x: 45, y: 10 },
+      { id: 'npc_weaver_senior', name: 'Старший Ткач', type: 'npc', description: 'Хранитель древних паттернов плетения.', x: 45, y: 10 },
       { id: 'npc_safety_auditor', name: 'Аудитор Безопасности', type: 'npc', description: 'Инспектирует код на наличие уязвимостей.', x: 80, y: 15 },
       { id: 'shop_armor_weave', name: 'Лавка Бронеплетения', type: 'shop', description: 'Защитные скрипты и карты-щиты.', x: 60, y: 40 },
       { id: 'bar_oil_can', name: 'Кабак "Масленка"', type: 'bar', description: 'Где инженеры смазывают шестеренки.', x: 10, y: 45 },
@@ -22,6 +22,7 @@ export const tekstilschiki: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_vlad', name: 'Влад-Ткач', districtId: 'tekstilschiki', role: 'Инженер защит', greeting: 'Плетем защиту, а не сказки.', shortLore: 'Квесты на реактивные карты защиты.' },
+    { id: 'npc_weaver_senior', name: 'Старший Ткач', districtId: 'tekstilschiki', role: 'Мастер паттернов', greeting: 'Узор должен быть безупречным.', shortLore: 'Дает высокоуровневые производственные квесты.' },
     { id: 'job_board_tekstil', name: 'Узел Текстильщики', districtId: 'tekstilschiki', role: 'Контракты', greeting: 'Заказы на чистку ждут.', shortLore: 'Линейка боевых поручений.' },
   ],
   dialogues: {
@@ -31,7 +32,7 @@ export const tekstilschiki: WorldDistrict = {
         intro: {
           id: 'intro', speaker: 'ВЛАД_ТКАЧ', text: 'Смотри под ноги, хакер. Тут везде оптоволоконные нити. Я Влад, я слежу, чтобы Текстильщики не расплелись на байты. Что-то порвалось?', options: [
             { text: 'Нужна работа по зачистке.', nextId: 'quest' },
-            { text: 'Расскажи про район.', nextId: 'lore_vlad' },
+            { text: 'Расскажи про Старшего Ткача.', nextId: 'lore_vlad' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
         },
@@ -42,7 +43,7 @@ export const tekstilschiki: WorldDistrict = {
             ]
         },
         lore_vlad: {
-          id: 'lore_vlad', speaker: 'ВЛАД_ТКАЧ', text: 'Здесь раньше ткали ткани. Теперь мы ткаем реальность. Каждый узел — это стежок. Порвешь один — и вся Москва поплывет.', options: [{ text: 'Понял.', nextId: 'intro' }]
+          id: 'lore_vlad', speaker: 'ВЛАД_ТКАЧ', text: 'Старший? Он сидит в центре узла. Держит в голове паттерны, которые писали еще до твоего рождения. Без него тут всё развалится.', options: [{ text: 'Пойду пообщаюсь.', nextId: 'intro' }]
         }
       }
     },
@@ -72,15 +73,29 @@ export const tekstilschiki: WorldDistrict = {
             }
         }
     },
-    npc_weaver_apprentice: {
-        id: 'npc_weaver_apprentice', startNodeId: 'intro',
+    npc_weaver_senior: {
+        id: 'npc_weaver_senior', startNodeId: 'intro',
         nodes: {
             intro: {
-                id: 'intro', speaker: 'ПОДМАСТЕРЬЕ_ТКАЧА', text: 'Влад говорит, что я еще не умею правильно завязывать логические узлы. Могу попрактиковаться на тебе?',
+                id: 'intro', speaker: 'СТАРШИЙ_ТКАЧ', text: 'Нити судьбы спутались... или это просто плохой код? Каждому паттерну нужен свой поток. Ты пришел за наукой или за работой?',
                 options: [
-                    { text: 'Давай потренируемся (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_factory_bot' },
-                    { text: 'Слушай мастера.', nextId: 'LEAVE' }
+                    { text: 'Что за паттерны?', nextId: 'lore' },
+                    { text: 'Мне нужен "Промышленный Паттерн".', nextId: 'quest_pattern_start' },
+                    { text: 'Я принес Паттерн из Академии.', nextId: 'quest_pattern_finish', requireQuestId: 'q_weaver_pattern' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
                 ]
+            },
+            lore: {
+                id: 'lore', speaker: 'СТАРШИЙ_ТКАЧ', text: 'Паттерн — это образ мысли Ядра. Если ты знаешь паттерн, ты можешь предсказать любой баг. Но истинные узоры хранятся глубоко в архивах Академии Юго-Запада.',
+                options: [{ text: 'Интересно.', nextId: 'intro' }]
+            },
+            quest_pattern_start: {
+                id: 'quest_pattern_start', speaker: 'СТАРШИЙ_ТКАЧ', text: 'Нам нужен утерянный "Grid_Optimizer_v2". Он должен быть в Главном Мейнфрейме Академии. Профессор Архипов вряд ли отдаст его просто так, но ты найдешь способ. (Принять контракт)',
+                options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_weaver_pattern' }]
+            },
+            quest_pattern_finish: {
+                id: 'quest_pattern_finish', speaker: 'СТАРШИЙ_ТКАЧ', text: '*рассматривает данные* ...Да. Это оно. Тончайшая работа. С этим паттерном Текстильщики станут неприступными. Спасибо, мастер. Вот твоя награда — "Weavers Loop".',
+                options: [{ text: 'Рад помочь.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_weaver_pattern' }]
             }
         }
     },
@@ -88,14 +103,14 @@ export const tekstilschiki: WorldDistrict = {
         id: 'npc_safety_auditor', startNodeId: 'intro',
         nodes: {
             intro: {
-                id: 'intro', speaker: 'АУДИТОР_БЕЗОПАСНОСТИ', text: 'Ваша дека выглядит... подозрительно. Много неоптимизированных прыжков. Хотите аудит?',
+                id: 'intro', speaker: 'АУДИТОР_БЕЗОПАСНОСТЬ', text: 'Ваша дека выглядит... подозрительно. Много неоптимизированных прыжков. Хотите аудит?',
                 options: [
                     { text: 'Пройти аудит.', nextId: 'lore' },
                     { text: '[Уйти]', nextId: 'LEAVE' }
                 ]
             },
             lore: {
-                id: 'lore', speaker: 'АУДИТОР_БЕЗОПАСНОСТИ', text: 'Слишком много импортов. Слишком мало защиты. Вы — ходячая дыра в безопасности. (+5 Репутации GIGA_BANK)',
+                id: 'lore', speaker: 'АУДИТОР_БЕЗОПАСНОСТЬ', text: 'Слишком много импортов. Слишком мало защиты. Вы — ходячая дыра в безопасности. (+5 Репутации GIGA_BANK)',
                 options: [{ text: 'Спасибо...', nextId: 'LEAVE', effect: 'GIVE_REPUTATION', amount: 5, cardRewardId: 'GIGA_BANK' }]
             }
         }

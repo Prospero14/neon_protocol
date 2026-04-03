@@ -22,15 +22,27 @@ export const izmailovo: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_master', name: 'Мастер Верстак', districtId: 'izmailovo', role: 'Крафтер', greeting: 'Из лома делаем легенды.', shortLore: 'Крафтовые контракты и добыча.' },
+    { id: 'npc_artisan', name: 'Ремесленник Ли', districtId: 'izmailovo', role: 'Художник кода', greeting: 'Красота в логике.', shortLore: 'Эстетическая аутентификация.' },
+    { id: 'npc_collector', name: 'Коллекционер', districtId: 'izmailovo', role: 'Архивариус', greeting: 'Дампы не горят.', shortLore: 'Покупает старые данные.' },
+    { id: 'npc_gennady', name: 'Гена (Скупщик)', districtId: 'izmailovo', role: 'Черный рынок', greeting: 'Шепотом говори, у стен есть уши.', shortLore: 'Связующее звено для редких квестов.' },
   ],
   dialogues: {
     npc_master: {
       id: 'npc_master', startNodeId: 'intro',
       nodes: {
         intro: { id: 'intro', speaker: 'ВЕРСТАК', text: 'Собрать деку из хлама — это искусство. Хочешь научиться или просто пришел за деталями?', options: [
+            { text: 'Мне нужен хладагент для разгона...', nextId: 'quest_cooling_start' },
             { text: 'Нужны детали (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_craft_scrap', subtext: 'Добыча редкого лома.' }, 
             { text: '[Уйти]', nextId: 'LEAVE' }
-        ] }
+        ] },
+        quest_cooling_start: {
+            id: 'quest_cooling_start', speaker: 'ВЕРСТАК', text: 'Хладагент? Дефицит. Мои запасы выпили "чистильщики" из МКАДа. Сходи к Крысе в Марьино, у него всегда есть пара канистр "Buffer Liquid". Принесешь — соберу тебе деку по высшему разряду. (Принять контракт)',
+            options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_verstak_cooling' }]
+        },
+        quest_cooling_finish: {
+            id: 'quest_cooling_finish', speaker: 'ВЕРСТАК', text: 'О, свежак! Слышишь, как шипит? Теперь моя станция не расплавится при первой же компиляции. Вот, держи "Refactor Tool" — моя лучшая работа.',
+            options: [{ text: 'Спасибо, мастер.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_verstak_cooling' }]
+        }
       }
     },
     shop_legendary: {
@@ -104,10 +116,33 @@ export const izmailovo: WorldDistrict = {
         }
     },
     term_taxi_izmailovo: {
-      id: 'term_taxi_izmailovo', startNodeId: 's',
-      nodes: {
-        s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Измайловский рынок. Такси доступны для авторизованных курьеров.', options: [{ text: 'Авторизоваться (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 }, { text: 'Отмена', nextId: 'LEAVE' }] }
-      }
+        id: 'term_taxi_izmailovo', startNodeId: 's',
+        nodes: {
+            s: { id: 's', speaker: 'ТЕРМИНАЛ_ТАКСИ', text: 'СИСТЕМА_ТАКСИ: Измайловский рынок. Такси доступны для авторизованных курьеров.', options: [{ text: 'Авторизоваться (100 Bits) [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 }, { text: 'Отмена', nextId: 'LEAVE' }] }
+        }
+    },
+    npc_gennady: {
+        id: 'npc_gennady', startNodeId: 'intro',
+        nodes: {
+            intro: {
+                id: 'intro', speaker: 'ГЕНА_СКУПЩИК', text: 'Чего застыл? Если не покупаешь и не продаешь — проходи мимо. Ядро и так дышит в затылок.',
+                options: [
+                    { text: 'Мне нужны драйверы 1974 года для БЭСМ.', nextId: 'quest_vintage_check', requireQuestId: 'q_besm_vintage_code' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
+                ]
+            },
+            quest_vintage_check: {
+                id: 'quest_vintage_check', speaker: 'ГЕНА_СКУПЩИК', text: 'БЭСМ? Это же музейный экспонат! Ладно, у меня завалялся один чип "Legacy Core", но он битый. Тебе придется его "прогреть". Отдам за 30 Bits, или проваливай.',
+                options: [
+                    { text: 'Плачу 30 Bits.', nextId: 'quest_vintage_deal', cost: 30 },
+                    { text: 'Дорого.', nextId: 'intro' }
+                ]
+            },
+            quest_vintage_deal: {
+                id: 'quest_vintage_deal', speaker: 'ГЕНА_СКУПЩИК', text: 'Держи. И скажи Генералу, пусть не забывает, кто его кормит историей.',
+                options: [{ text: 'Забрать чип.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_besm_vintage_code' }]
+            }
+        }
     }
   }
 };

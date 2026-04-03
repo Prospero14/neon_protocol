@@ -25,6 +25,49 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* --- HUB V4 GRID POLISH --- */
+.hub-grid-v4 {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: calc(100% - 100px);
+}
+
+.hub-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.col-header {
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+/* Design Protocols */
+.arctic-monolith {
+  border: 1px solid var(--neon-cyan) !important;
+  box-shadow: 0 0 20px var(--neon-cyan-glow);
+  background: hsla(var(--hue-cyan), 100%, 50%, 0.03);
+}
+
+.emerald-monolith {
+  border: 1px solid var(--neon-green) !important;
+  box-shadow: 0 0 20px var(--neon-green-glow);
+  background: hsla(var(--hue-green), 100%, 50%, 0.03);
+}
+
 /* Global Reset & Base */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 

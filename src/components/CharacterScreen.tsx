@@ -18,6 +18,7 @@ interface CharacterScreenProps {
     classUnlocked?: boolean;
     completedQuestCount?: number;
     reputation?: Record<string, number>;
+    maxStress: number;
   };
   questStates: any[];
   allQuests: any[];
@@ -71,8 +72,8 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
             <div className="stat-card neon-panel">
               <Shield size={18} color="var(--neon-cyan)" />
               <div className="stat-info">
-                <span className="label">SYSTEM_INTEGRITY</span>
-                <span className="val">{player.hp}%</span>
+                <span className="label">SYSTEM_STRESS</span>
+                <span className="val">{Math.round((player.hp / player.maxStress) * 100)}%</span>
               </div>
             </div>
             <div className="stat-card neon-panel">

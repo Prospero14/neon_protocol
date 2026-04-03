@@ -20,8 +20,8 @@ model GameState {
   userId       String      @unique
   user         User        @relation(fields: [userId], references: [id])
   
-  hp           Int         @default(100)
-  maxHp        Int         @default(100)
+  stress       Int         @default(0)
+  maxStress    Int         @default(100)
   bits         Int         @default(100)
   xp           Int         @default(0)
   level        Int         @default(1)

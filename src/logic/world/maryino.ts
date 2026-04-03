@@ -1,7 +1,7 @@
 import type { WorldDistrict } from './types';
 
 export const maryino: WorldDistrict = {
-  id: 'maryino',
+  id: 'maryino', 
   node: {
     id: 'maryino', 
     name: 'МАРЬИНО: GRID_EXHAUST', 
@@ -31,16 +31,21 @@ export const maryino: WorldDistrict = {
       id: 'npc_tanya', startNodeId: 'intro',
       nodes: {
         intro: {
-          id: 'intro', speaker: 'ТАНЯ (QA)', text: 'Опять без тестов пришел? Какая наглость.',
+          id: 'intro', speaker: 'ТАНЯ (QA)', text: 'Внимание: целостность памяти скомпрометирована. Ты из тех, кто может пропинговать реальность? Клиент — Группа Оптимизации "Восход". В Марьинском узле пакеты данных теряются на уровне L2. Нужен принудительный стресс-тест локалки.',
           options: [
-            { text: 'Я от Бати. Нужна помощь с локалкой?', nextId: 'job' },
+            { text: 'Как именно пропинговать?', nextId: 'lore_stress' },
+            { text: 'Я готов к стресс-тесту.', nextId: 'job' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
         },
+        lore_stress: {
+          id: 'lore_stress', speaker: 'ТАНЯ (QA)', text: 'Там затык в коммутаторах. Нужно зайти и "протолкнуть" трафик грубой силой кода. Формат задачи: CONNECTIVITY_STRESS_TEST. Ожидаемая задержка: 0ms после фикса.',
+          options: [{ text: 'Понятно, иду.', nextId: 'intro' }]
+        },
         job: {
-          id: 'job', speaker: 'ТАНЯ (QA)', text: 'А, этот старый пень всё еще жив. Ладно, иди чини "Местную локалку". Заплачу 50 Bits, если всё будет ровно.',
+          id: 'job', speaker: 'ТАНЯ (QA)', text: 'Хорошо. Узел выделен. Если прозвон пройдет успешно — Bits будут на твоем счету моментально. Приступай.',
           options: [
-            { text: 'Иду (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_local_lan' }
+            { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'job_board_alt' }
           ]
         }
       }
@@ -86,12 +91,24 @@ export const maryino: WorldDistrict = {
         id: 'npc_rat', startNodeId: 'intro',
         nodes: {
             intro: {
-                id: 'intro', speaker: 'КРЫСА_КУРЬЕР', text: 'Пи-пи... Вижу тебя, кожаный. Ищешь дыры в заборе GIGA_CORP? У меня есть пара "хвостов" для тебя.',
+                id: 'intro', speaker: 'КРЫСА_КУРЬЕР', text: 'Пи-пи... Вижу тебя, кодер. У меня есть "горячий" дамп из Buffer Overflow Zone. Нам нужна помощь, чтобы отбить ферму.',
                 options: [
-                    { text: 'Что за хвосты?', nextId: 'lore' },
+                    { text: 'Что за серверная ферма?', nextId: 'lore_dump' },
+                    { text: 'Мне нужен хладагент для Мастера Верстака.', nextId: 'quest_cooling_finish', requireQuestId: 'q_verstak_cooling' },
                     { text: 'Мне нужно пройти через южные шлюзы...', nextId: 'passage_lead', requireQuestId: 'q_maryino_passage' },
-                    { text: 'Есть работа?', nextId: 'quest' },
+                    { text: 'Я готов забрать дамп.', nextId: 'quest' },
                     { text: '[Прогнать]', nextId: 'LEAVE' }
+                ]
+            },
+            lore_dump: {
+                id: 'lore_dump', speaker: 'КРЫСА_КУРЬЕР', text: 'Это теневой архив! Нас зажали патрули, и данные могут сгореть при дефрагментации сектора. Нужно отбить ферму и выкачать лог. Половина Bits — тебе.',
+                options: [{ text: 'Полезно. Я в деле.', nextId: 'intro' }]
+            },
+            quest_cooling_finish: {
+                id: 'quest_cooling_finish', speaker: 'КРЫСА_КУРЬЕР', text: 'Пи! Хладагент? "Buffer Liquid"? Есть у меня пара канистр. Отдам за 20 Bits, чисто за риск. Скажи Верстаку, что Крыса помнит старые долги.',
+                options: [
+                    { text: 'Плачу 20 Bits.', nextId: 'intro', cost: 20, effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_verstak_cooling' },
+                    { text: 'Позже.', nextId: 'intro' }
                 ]
             },
             passage_lead: {
@@ -100,13 +117,9 @@ export const maryino: WorldDistrict = {
                     { text: 'Я его найду.', nextId: 'intro', effect: 'GIVE_TRAIT', cardRewardId: 'trait_maryino_gang_lead', subtext: 'Получено: Зацепка по Сержанту.' }
                 ]
             },
-            lore: {
-                id: 'lore', speaker: 'КРЫСА_КУРЬЕР', text: 'Они думают, что контролируют Сетку. Но мы живем в её тени. Под фундаментом Марьино зарыты старые серверные стойки 20-го века.',
-                options: [{ text: 'Полезно.', nextId: 'intro' }]
-            },
             quest: {
-                id: 'quest', speaker: 'КРЫСА_КУРЬЕР', text: 'Помоги моей стае отбить Buffer Overflow Zone у патрулей. Мы в долгу не останемся.',
-                options: [{ text: 'Я помогу.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_overflow' }]
+                id: 'quest', speaker: 'КРЫСА_КУРЬЕР', text: 'Помоги моей стае отбить Buffer Overflow Zone. Мы в долгу не останемся. (Принять квест)',
+                options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_rat_data_dump' }]
             }
         }
     },
@@ -133,6 +146,7 @@ export const maryino: WorldDistrict = {
           id: 'intro', speaker: 'СЕРЖАНТ', text: 'Стой. Дальше только для сотрудников VOSKHOD или тех, у кого оплачен транзит. Твоего лица нет в базе.',
           options: [
             { text: 'Мне сказали, ты можешь помочь с проходом...', nextId: 'negotiate', requireTrait: 'trait_maryino_gang_lead' },
+            { text: 'Я хочу помочь с зачисткой сектора.', nextId: 'quest_start', requireQuestId: 'q_maryino_passage' },
             { text: 'Кто ты такой?', nextId: 'lore' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
@@ -141,18 +155,18 @@ export const maryino: WorldDistrict = {
           id: 'lore', speaker: 'СЕРЖАНТ', text: 'Я тот, кто отделяет чистый код Марьино от мусора снаружи. "Восход" держит порядок, а порядок стоит денег.',
           options: [{ text: 'Ясно.', nextId: 'intro' }]
         },
+        quest_start: {
+            id: 'quest_start', speaker: 'СЕРЖАНТ', text: 'Помощь? Ладно. На 15-й магистрали дроны-отступники блокируют курьерский шлюз. Разберись с ними, и я выдам тебе транзитный код. Бесплатно.',
+            options: [
+                { text: 'Приступить (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_grid_patrol' }
+            ]
+        },
         negotiate: {
           id: 'negotiate', speaker: 'СЕРЖАНТ', text: 'А, хвостатые напели? Ладно. Транзитный ключ на сутки стоит 50 Bits. Либо... помоги нам зачистить один глючный узел, и я выпишу тебе пропуск бесплатно.',
           options: [
-            { text: 'Заплатить 50 Bits', nextId: 'complete', cost: 50 },
-            { text: 'Я готов поработать. (Бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_grid_patrol' },
-            { text: 'Я вернусь позже.', nextId: 'LEAVE' }
-          ]
-        },
-        complete: {
-          id: 'complete', speaker: 'СЕРЖАНТ', text: 'Принято. Твой ID добавлен в список исключений на южном шлюзе. Свободен, кодер.',
-          options: [
-            { text: '[Завершить контракт]', nextId: 'LEAVE', completeQuestId: 'q_maryino_passage' }
+            { text: 'Плачу 50 Bits.', nextId: 'LEAVE', cost: 50, effect: 'GIVE_TRAIT', cardRewardId: 'trait_maryino_shluz_unlocked', subtext: 'Разблокировано: Проезд в Марьино.' },
+            { text: 'Я помогу.', nextId: 'quest_start' },
+            { text: 'Позже.', nextId: 'intro' }
           ]
         }
       }

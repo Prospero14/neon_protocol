@@ -23,6 +23,11 @@ interface FixerBarSceneProps {
   onAwardQuest?: (questId: string) => void;
   activeQuestIds?: string[];
   onCompleteQuest?: (questId: string) => void;
+  playerStress: number;
+  maxStress: number;
+  inventory: any[];
+  onRewardItem?: (itemId: string) => void;
+  onRemoveItem?: (itemId: string) => void;
   onLeave: () => void;
 }
 
@@ -45,6 +50,11 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onAwardQuest,
   activeQuestIds = [],
   onCompleteQuest,
+  playerStress,
+  maxStress,
+  inventory,
+  onRewardItem,
+  onRemoveItem,
   onLeave
 }) => {
   let tree = DIALOGUE_TREES[locationId];
@@ -58,6 +68,20 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   const [isTyping, setIsTyping] = useState(true);
 
   const node: DialogueNode = tree.nodes[currentNodeId];
+
+  // Stress-based text modification for the intro node
+  const displayNodeText = React.useMemo(() => {
+    if (currentNodeId === tree.startNodeId && (playerStress / maxStress) > 0.75) {
+       const reactions = [
+         "[ВНИМАНИЕ] Твои нейроны искрят. Перегрев системы 75%+. ",
+         "[ВАРНИНГ] Чипсет дымит, парень. У тебя логи текут прямо на пол. ",
+         "[СБОЙ_СИНХРО] Выглядишь паршиво. Слишком много мусора в кэше. ",
+       ];
+       const r = reactions[locationId.length % reactions.length];
+       return r + node.text;
+    }
+    return node.text;
+  }, [currentNodeId, node.text, playerStress, maxStress, tree.startNodeId]);
   const isMenuMode = node.speaker === 'MENU';
 
   const visibleOptions = node.options.filter(opt => {
@@ -70,6 +94,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     }
     if (opt.requireUnlock && !canUnlockNow) return false;
     if (opt.requireQuestId && !activeQuestIds.includes(opt.requireQuestId)) return false;
+    if (opt.requireItemId && !inventory.some(i => i.id === opt.requireItemId)) return false;
     return true;
   });
 
@@ -78,15 +103,15 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     setTypedText('');
     setIsTyping(true);
     const interval = setInterval(() => {
-      setTypedText(node.text.slice(0, i + 1));
+      setTypedText(displayNodeText.slice(0, i + 1));
       i++;
-      if (i > node.text.length) {
+      if (i > displayNodeText.length) {
         clearInterval(interval);
         setIsTyping(false);
       }
     }, 20); // slightly faster for better reading
     return () => clearInterval(interval);
-  }, [currentNodeId, node.text]);
+  }, [currentNodeId, displayNodeText]); // Use displayNodeText instead of node.text
 
   const handleOptionClick = (option: any) => {
     if (isTyping) {
@@ -121,6 +146,12 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       onUnlockCity();
     } else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) {
       onRewardXp(option.amount);
+    } else if (option.effect === 'AWARD_QUEST' && option.cardRewardId && onAwardQuest) {
+      onAwardQuest(option.cardRewardId);
+    } else if (option.effect === 'GIVE_ITEM' && option.cardRewardId && onRewardItem) {
+      onRewardItem(option.cardRewardId);
+    } else if (option.effect === 'REMOVE_ITEM' && option.cardRewardId && onRemoveItem) {
+      onRemoveItem(option.cardRewardId);
     } else if (option.reputationReward) {
       onRewardReputation(option.reputationReward.factionId, option.reputationReward.amount);
     }

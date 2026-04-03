@@ -32,9 +32,18 @@ export const vdnkh: WorldDistrict = {
         intro: {
           id: 'intro', speaker: 'ГЕНЕРАЛ_БЭСМ', text: '...Загрузка протокола 1974... Внимание, юнит. Ты находишься в зоне исторического резонанса. Я — Генерал БЭСМ, страж этого павильона. Зачем ты тревожишь спящую память?', options: [
             { text: 'Я пришел сдать Экзамен Стажёра.', nextId: 'exam_start' },
+            { text: 'Мне нужен винтажный софт для моей коллекции.', nextId: 'quest_vintage_start' },
             { text: 'Как вы здесь оказались?', nextId: 'lore_old' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
+        },
+        quest_vintage_start: {
+            id: 'quest_vintage_start', speaker: 'ГЕНЕРАЛ_БЭСМ', text: 'Винтаж... Мои драйверы рассыпались на биты еще в прошлом веке. Если хочешь помочь — найди Скупщика на Рынке в Измайлово. У него должно быть "Legacy Core 1974". Принесешь — и я поделюсь с тобой знаниями Архитекторов. (Принять квест)',
+            options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_besm_vintage_code' }]
+        },
+        quest_vintage_finish: {
+            id: 'quest_vintage_finish', speaker: 'ГЕНЕРАЛ_БЭСМ', text: '...Считывание... Да, это оно. Тёплый ламповый код. Мои системы стабилизируются. Ты хорошо поработал, юнит. Держи этот "Patch_0.01_Legacy".',
+            options: [{ text: 'Рад служить.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_besm_vintage_code' }]
         },
         exam_start: {
             id: 'exam_start', speaker: 'ГЕНЕРАЛ_БЭСМ', text: 'Экзамен... Да. Архипов присылает их пачками. Но ты выглядишь... иначе. Докажи, что твой стек выдержит нагрузку древнего Legacy. Порази Тренировочного Бота в главном павильоне.',
@@ -71,12 +80,17 @@ export const vdnkh: WorldDistrict = {
         id: 'npc_guide_vdnkh', startNodeId: 'intro',
         nodes: {
             intro: {
-                id: 'intro', speaker: 'ГИД_РАИСА', text: 'Посмотрите налево — здесь был первый мейнфрейм серии "Раздача". Хотите узнать больше о золотом веке советского кода?',
-                options: [
-                    { text: 'Расскажите о павильонах.', nextId: 'lore' },
-                    { text: '[Уйти]', nextId: 'LEAVE' }
-                ]
-            },
+            id: 'intro', speaker: 'ГИД_РАИСА', text: 'Посмотрите налево — здесь был первый мейнфрейм серии "Раздача". Хотите узнать больше о золотом веке советского кода?',
+            options: [
+                { text: 'Расскажите о павильонах.', nextId: 'lore' },
+                { text: 'Тут один Связист из Бибирево жалуется на эхо...', nextId: 'quest_echo_finish', requireQuestId: 'q_monya_signal_echo' },
+                { text: '[Уйти]', nextId: 'LEAVE' }
+            ]
+        },
+        quest_echo_finish: {
+            id: 'quest_echo_finish', speaker: 'ГИД_РАИСА', text: 'Эхо? Ах, это старые ретрансляторы в подвалах Pavilion #32. Они до сих пор пытаются передать новости Олимпиады-80. Вот, передай ему этот "Frequency Jammer", он заглушит исторический шум.',
+            options: [{ text: 'Спасибо, передам.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_monya_signal_echo' }]
+        },
             lore: {
                 id: 'lore', speaker: 'ГИД_РАИСА', text: 'Павильон "Космос" теперь — это огромный серверный массив. А "Земледелие" — ферма для майнинга древних алгоритмов. (+5 Репутации VOSKHOD)',
                 options: [{ text: 'Познавательно.', nextId: 'LEAVE', effect: 'GIVE_REPUTATION', amount: 5, cardRewardId: 'VOSKHOD_OFFICE' }]

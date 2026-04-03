@@ -27,6 +27,7 @@ import { applyBitModifiers, baseQuestBits } from './logic/economy';
 import { canUnlockClass, PRECLASS_UNLOCK_BITS, PRECLASS_UNLOCK_QUESTS } from './logic/preClassProgression';
 import { rollLoot } from './logic/lootTables';
 import type { GameItem } from './logic/items';
+import { getItemById } from './logic/items';
 import MapView from './components/MapView';
 import CombatBridge from './components/games/CombatBridge';
 import CharacterCreation from './components/CharacterCreation';
@@ -117,12 +118,12 @@ function App() {
 
   const [profession, setProfession] = useState<Profession>(getProfessionById('trainee') ?? PROFESSIONS[0]);
   const [classUnlocked, setClassUnlocked] = useState(false);
-  const [maxIntegrity, setMaxIntegrity] = useState(100);
+  const [maxStress, setMaxStress] = useState(100);
   const [ramPool, setRamPool] = useState(3);
-  const [hp, setHp] = useState(100);
+  const [stress, setStress] = useState(0);
   const [bits, setBits] = useState(150);
   const [xp, setXp] = useState(0);
-  const [level] = useState(1);
+  const [level, setLevel] = useState(1);
   const [traits, setTraits] = useState<Trait[]>([]);
   const [inventory, setInventory] = useState<CombatCard[]>(() => initialMergedInventory());
   const [activeDeck, setActiveDeck] = useState<CombatCard[]>(() => buildTraineeDeck());
@@ -130,6 +131,47 @@ function App() {
   const [questStates, setQuestStates] = useState<QuestState[]>([]);
   const [completedQuestCount, setCompletedQuestCount] = useState(0);
   const [bitsFromQuests, setBitsFromQuests] = useState(0);
+
+  const { syncGameState } = useAuth();
+  
+  // Sync Game State Helper
+  const syncGame = async () => {
+    if (!user) return;
+    const state = {
+      stress,
+      maxStress,
+      bits,
+      xp,
+      level,
+      activeDeck: activeDeck.map(c => ({ id: c.id })),
+      inventory: inventoryUnique.map(c => ({ id: c.id })),
+      completedQuests: questStates
+    };
+    await syncGameState(state);
+  };
+
+  // Load from Persistence
+  useEffect(() => {
+    if (user && user.gameState) {
+      const gs = user.gameState;
+      if (gs.stress !== undefined) setStress(gs.stress);
+      if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
+      if (gs.bits !== undefined) setBits(gs.bits);
+      if (gs.xp !== undefined) setXp(gs.xp);
+      if (gs.level !== undefined) setLevel(gs.level);
+      if (gs.completedQuests) setQuestStates(gs.completedQuests);
+      
+      // Deck/Inventory loading logic would go here if needed
+      // Currently using initialMergedInventory as base
+    }
+  }, [user]);
+
+  // Trigger sync on view change
+  useEffect(() => {
+    if (currentView !== 'CREATION') {
+      syncGame();
+    }
+  }, [currentView]);
 
   useEffect(() => {
     localStorage.setItem(SKILL_MODE_STORAGE_KEY, skillMode);
@@ -160,6 +202,28 @@ function App() {
     setLoot((prev) => [item, ...prev].slice(0, 120));
     setCompletedQuestCount((c) => c + 1);
     setBitsFromQuests((b) => b + gain);
+  };
+
+  const handleRewardItem = (itemId: string) => {
+    const itm = getItemById(itemId);
+    if (!itm) return;
+    // Map GameItem to CombatCard structure for inventory (simplified for quest items)
+    const card: CombatCard = {
+      id: itm.id,
+      name: itm.name,
+      type: 'SCRIPT', // Marker for quest items in current system
+      grade: 'Junior',
+      description: itm.description,
+      cost: 0,
+      power: 0,
+      integrity: 0,
+      tags: ['script']
+    };
+    setInventory(prev => [...prev, card]);
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    setInventory(prev => prev.filter(i => i.id !== itemId));
   };
 
   const preClassState = { 
@@ -222,22 +286,22 @@ function App() {
     setReputation(startRep);
 
     // Starting Stats from District/Trait
-    let initialMaxIntegrity = 100;
+    let initialMaxStress = 100;
     let initialRam = 3;
 
     // Apply District Stats (Hacky but matches current UI descriptions)
-    if (data.district.id === 'maryino') { initialMaxIntegrity += 80; initialRam += 0.5; }
-    if (data.district.id === 'bibirevo') { initialMaxIntegrity += 100; }
-    if (data.district.id === 'chertanovo') { initialRam += 1; initialMaxIntegrity -= 20; }
-    if (data.district.id === 'sokol') { initialMaxIntegrity += 150; }
+    if (data.district.id === 'maryino') { initialMaxStress += 80; initialRam += 0.5; }
+    if (data.district.id === 'bibirevo') { initialMaxStress += 100; }
+    if (data.district.id === 'chertanovo') { initialRam += 1; initialMaxStress -= 20; }
+    if (data.district.id === 'sokol') { initialMaxStress += 150; }
     
     // Trait: Hardware Hoarder
     if (data.hobby.id === 'hardware_hoarder') {
        initialRam += 1; // +256 RAM internally
     }
 
-    setMaxIntegrity(initialMaxIntegrity);
-    setHp(initialMaxIntegrity); 
+    setMaxStress(initialMaxStress);
+    setStress(0); // Start cold
     setRamPool(initialRam);
 
     const starterDeck = buildTraineeDeck();
@@ -406,9 +470,17 @@ function App() {
               setTraits((prev) => [...prev, { id, name: id.toUpperCase(), type: 'GENERAL', category: 'SOCIAL', description: 'Получено у фикcера.' }]);
             }
           }}
-          onRewardBits={(amount) => setBits((prev) => prev + amount)}
-          onRewardXp={(amount) => setXp((prev) => prev + amount)}
-          onRestoreHp={(amount) => setHp((prev) => Math.min(100, prev + amount))}
+          onRestoreHp={(amount) => setStress((prev) => Math.max(0, prev - amount))}
+          onAwardQuest={(questId) => {
+             const q = QUEST_LIBRARY.find(item => item.id === questId);
+             if (q) setQuestStates(prev => acceptQuest(prev, q.id));
+          }}
+          playerStress={stress}
+          maxStress={maxStress}
+          inventory={inventory}
+          onRewardItem={handleRewardItem}
+          onRemoveItem={handleRemoveItem}
+          onRewardBits={(amount) => setBits(b => b + amount)}
           activeQuestIds={questStates.filter(s => s.status === 'active').map(s => s.questId)}
           onCompleteQuest={handleCompleteTalkQuest}
           onUnlockCity={() => {
@@ -423,7 +495,6 @@ function App() {
               setClassUnlocked(true);
             }
           }}
-          onAwardQuest={handleAwardQuest}
           onStartCombat={(combatId) => {
             setActiveBarNode(combatId);
             setCurrentView('COMBAT');
@@ -436,7 +507,7 @@ function App() {
     if (currentView === 'CHARACTER') {
       return (
         <CharacterScreen
-          player={{ name: playerName, district: homeDistrict?.name || 'UNKNOWN', profession, hp, bits, xp, level, traits, classUnlocked, completedQuestCount, reputation }}
+          player={{ name: playerName, district: homeDistrict?.name || 'UNKNOWN', profession, hp: stress, bits, xp, level, traits, classUnlocked, completedQuestCount, reputation, maxStress }}
           questStates={questStates}
           allQuests={QUEST_LIBRARY}
           onBack={() => setCurrentView('HUB')}
@@ -496,11 +567,11 @@ function App() {
           </div>
           <div className="hub-top-stats">
             <div className="top-stat arctic-monolith">
-                  <div className="hub-stat-v4 stress-priority">
+                  <div className="hub-stat-v4">
                     <span className="stat-label">SYSTEM_STRESS [%]</span>
                     <div className="stat-bar-v4 large">
-                      <div className="stat-fill-v4 stress" style={{width: `${Math.round((1 - hp/maxIntegrity)*100)}%`}}></div>
-                      <span className="stat-value">{Math.round((1 - hp/maxIntegrity)*100)}%</span>
+                      <div className="stat-fill-v4 stress" style={{width: `${Math.round((stress/maxStress)*100)}%`}}></div>
+                      <span className="stat-value">{Math.round((stress/maxStress)*100)}%</span>
                     </div>
                   </div>
                   <div className="hub-stat-v4">
@@ -529,13 +600,13 @@ function App() {
             <div className="neon-panel interactive arctic-monolith stat-card-v4" onClick={() => setCurrentView('CHARACTER')}>
               <div className="card-inner">
                 <div className="prof-tag">{classUnlocked ? profession.name : "UNAUTHORIZED_USER"}</div>
-                <div className="main-stat-row">
-                   <div className="avatar-mini"><User size={32} /></div>
-                   <div className="hp-ring">
-                      <div className="hp-val">{hp}%</div>
-                      <div className="hp-label">INTEGRITY</div>
-                   </div>
-                </div>
+                 <div className="main-stat-row">
+                    <div className="avatar-mini"><User size={32} /></div>
+                    <div className="hp-ring">
+                       <div className="hp-val">{Math.round((stress/maxStress)*100)}%</div>
+                       <div className="hp-label">STRESS</div>
+                    </div>
+                 </div>
                 <div className="progress-mini">
                    <div className="prog-labels"><span>XP_LEVEL_{level}</span> <span>{xp}u</span></div>
                    <div className="prog-bar"><div className="prog-fill" style={{width: `${(xp/(level*100))*100}%`}}></div></div>
@@ -641,7 +712,7 @@ function App() {
 
   return (
     <div className="app-root main-crt">
-      {!hideNav && <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={hp} level={level} />}
+      {!hideNav && <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={stress} level={level} maxStress={maxStress} />}
       
       {/* Goal HUD Overlay - Hidden in focused scenes */}
       {trackedQuest && !hideNav && (

@@ -76,8 +76,8 @@ app.post('/neon_v1/auth/register', async (req, res) => {
         gameState: { 
           create: {
             bits: 150,
-            hp: 100,
-            maxHp: 100,
+            stress: 0,
+            maxStress: 100,
             activeDeck: starterDeck,
             inventory: starterDeck
           } 
@@ -107,13 +107,16 @@ app.post('/neon_v1/game/sync', async (req, res) => {
     if (!authHeader) return res.status(401).json({ error: 'No token' });
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    const { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
+    const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
     const updatedState = await prisma.gameState.update({
       where: { userId: decoded.userId },
-      data: { hp, bits, xp, level, activeDeck, inventory, artifacts, completedQuests }
+      data: { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests }
     });
     res.json(updatedState);
-  } catch (error) { res.status(401).json({ error: 'Invalid' }); }
+  } catch (error) { 
+    console.error('Sync Error:', error);
+    res.status(401).json({ error: 'Invalid' }); 
+  }
 });
 
 // --- 4. STATIC FILES AND SPA ---

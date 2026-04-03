@@ -11,6 +11,7 @@ export const bibirevo: WorldDistrict = {
       { id: 'npc_signalman', name: 'Связист Моня', type: 'npc', description: 'Ремонтирует обрывы нейросети. Постоянно жалуется на пинг.', x: 20, y: 30 },
       { id: 'npc_old_admin', name: 'Старый Админ', type: 'npc', description: 'Помнит времена, когда интернет был по карточкам.', x: 65, y: 15 },
       { id: 'npc_crawler', name: 'Кроулер', type: 'npc', description: 'Исследователь заброшенных подсетей.', x: 10, y: 55 },
+      { id: 'npc_bibirevo_coder', name: 'Сонный Кодер', type: 'npc', description: 'Засыпает прямо во время компиляции.', x: 70, y: 10 },
       { id: 'shop_north_link', name: 'Узел: Северный Поток', type: 'shop', description: 'Компоненты связи и высокоскоростные карты.', x: 50, y: 50 },
       { id: 'bar_signal', name: 'Бар "Сигнал"', type: 'bar', description: 'Чистый спирт и никакой задержки.', x: 35, y: 80 },
       { id: 'term_relay_stats', name: 'Статистика Реле', type: 'terminal', description: 'Данные о пакетах, потерянных в секторе.', x: 15, y: 10 },
@@ -22,6 +23,7 @@ export const bibirevo: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_signalman', name: 'Связист Моня', districtId: 'bibirevo', role: 'Связист', greeting: 'Линия живая? Тогда живем.', shortLore: 'Сетевые сервисные задания.' },
+    { id: 'npc_bibirevo_coder', name: 'Сонный Кодер', districtId: 'bibirevo', role: 'Программист', greeting: '...еще пять минут...', shortLore: 'Нуждается в стимуляторах.' },
     { id: 'job_board_bibi', name: 'Инфо-панель', districtId: 'bibirevo', role: 'Контракты', greeting: 'Север не спит.', shortLore: 'Быстрые районные квесты.' },
   ],
   dialogues: {
@@ -31,8 +33,18 @@ export const bibirevo: WorldDistrict = {
         intro: {
           id: 'intro', speaker: 'МОНЯ', text: 'Сынок, не стой под антенной, мозги выжгло? Я тут пытаюсь Бибирево к общей сети прикрутить. Обрывы везде!', options: [
             { text: 'Нужна работа по зачистке.', nextId: 'quest' },
+            { text: 'Тут какие-то странные помехи на линии...', nextId: 'quest_echo_start' },
+            { text: 'Я принес Frequency Jammer.', nextId: 'quest_echo_finish', requireQuestId: 'q_monya_signal_echo' },
             { text: 'Уйти', nextId: 'LEAVE' }
           ]
+        },
+        quest_echo_start: {
+            id: 'quest_echo_start', speaker: 'МОНЯ', text: 'Помехи? Это "Древнее Эхо". Говорят, на ВДНХ есть Гид, который знает, как глушить такие сигналы. Сходи к ней, если не хочешь, чтобы у тебя в голове вместо мыслей играли марши сорок восьмого года. (Принять контракт)',
+            options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_monya_signal_echo' }]
+        },
+        quest_echo_finish: {
+            id: 'quest_echo_finish', speaker: 'МОНЯ', text: 'О! Тишина. Ты слышишь? Этот блаженный белый шум... Спасибо, малец. Теперь я наконец-то смогу пропинговать Алтуфьево без потерь. Держи Bits.',
+            options: [{ text: 'Не за что.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_monya_signal_echo' }]
         },
         quest: {
           id: 'quest', speaker: 'МОНЯ', text: 'Проверь подстанцию на 14-м луче. Если там сидит Баг — выбей его, и я подкину тебе пару свежих Bits.', options: [
@@ -133,6 +145,27 @@ export const bibirevo: WorldDistrict = {
           { text: 'Отмена', nextId: 'LEAVE' }
         ] }
       }
+    },
+    npc_bibirevo_coder: {
+        id: 'npc_bibirevo_coder', startNodeId: 'intro',
+        nodes: {
+            intro: {
+                id: 'intro', speaker: 'СОННЫЙ_КОДЕР', text: '...а? Что? Баг в триста двенадцатой строке? Нет, это просто фича... подожди, я сейчас допишу... *зевает*',
+                options: [
+                    { text: 'Эй, не спи! Тебе нужна энергия.', nextId: 'quest_energy_start' },
+                    { text: 'Я принес Дзен-Лог от Олега.', nextId: 'quest_energy_finish', requireQuestId: 'q_bibirevo_energy' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
+                ]
+            },
+            quest_energy_start: {
+                id: 'quest_energy_start', speaker: 'СОННЫЙ_КОДЕР', text: 'Энергия... да. Обычный кофе уже не берет. Только "Дзен-Лог" от Мастера Чая с ВДНХ может поднять меня на ноги. Сходишь? Я заплачу... если не усну до твоего прихода. (Принять контракт)',
+                options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_energy' }]
+            },
+            quest_energy_finish: {
+                id: 'quest_energy_finish', speaker: 'СОННЫЙ_КОДЕР', text: '*делает глоток* ...Ух! Прямое попадание в нейросеть! Я вижу код... я вижу всё! Спасибо, хакер. Теперь я допишу этот патч за один цикл. Вот твоя награда.',
+                options: [{ text: 'Пожалуйста.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_bibirevo_energy' }]
+            }
+        }
     }
   }
 };

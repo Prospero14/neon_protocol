@@ -77,7 +77,6 @@ const GoalHUD: React.FC<GoalHUDProps> = ({ questName, objectiveText, hint, progr
       </div>
       
       <div className="goal-content">
-        <div className="goal-header">ТЕКУЩАЯ ДИРЕКТИВА</div>
         <div className="goal-title">{questName}: {objectiveText}</div>
         {hint && (
           <div className="goal-hint">

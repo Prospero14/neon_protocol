@@ -19,6 +19,7 @@ export interface DialogueOption {
   requireTrait?: string; // New: For trait-based dialogue options
   requireQuestId?: string; // New: For quest-specific dialogue options
   completeQuestId?: string; // New: For completing quest through dialogue
+  requireItemId?: string; // New: For requirement items like TZ
   subtext?: string; // New: For descriptive UI hints
 }
 

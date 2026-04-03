@@ -1,7 +1,7 @@
 import type { WorldDistrict } from './types';
 
 export const south_west: WorldDistrict = {
-  id: 'south_west',
+  id: 'south_west', 
   node: {
     id: 'south_west', 
     name: 'ЮГО-ЗАПАДНАЯ: ACADEMIC_UPLINK', 
@@ -22,18 +22,35 @@ export const south_west: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_professor', name: 'Профессор Архипов', districtId: 'south_west', role: 'Наставник', greeting: 'Класс начинается с main.', shortLore: 'Ведет к профессии Java Junior.' },
+    { id: 'npc_compiler', name: 'Компилятор', districtId: 'south_west', role: 'Мастер кода', greeting: 'Байт-код не лрет.', shortLore: 'Оптимизация и рефакторинг.' },
+    { id: 'npc_alumini', name: 'Беглый Выпускник', districtId: 'south_west', role: 'Трафикер', greeting: 'У тебя нет лишнего доступа?', shortLore: 'Знает обходные пути GIGA_BANK.' },
   ],
   dialogues: {
     npc_professor: {
       id: 'npc_professor', startNodeId: 'intro',
       nodes: {
         intro: {
-          id: 'intro', speaker: 'ПРОФЕССОР АРХИПОВ', text: 'Слушайте внимательно, аноним. Академический уплинк — это не место для "скрипт-кидди". Мы обучаем архитектуре, которую признаёт даже Ядро Октября. Хотите получить верифицированный класс от EU_SYNTAX?',
+          id: 'intro', speaker: 'ПРОФЕССОР АРХИПОВ', text: 'А, коллега. Вовремя. В Мейнфрейме Университета творится неладное — "битые ссылки" и зомби-объекты забили всю оперативную память. Что вас привело сегодня?',
           options: [
-            { text: 'Я готов к лицензированию (500 Bits)', nextId: 'check_exam', cost: 500 },
-            { text: 'Как сдать "Экзамен Стажёра"?', nextId: 'lore_exam' },
+            { text: 'Как я могу помочь с памятью?', nextId: 'quest_garbage' },
+            { text: 'Я принес рекомендацию от Никсанны.', nextId: 'quest_nixanna_finish', requireQuestId: 'q_niksanna_recommendation' },
+            { text: 'Мне нужен Промышленный Оптимизатор для Ткача.', nextId: 'quest_weaver_finish', requireQuestId: 'q_weaver_pattern' },
+            { text: 'Я за лицензией (500 Bits)', nextId: 'check_exam', cost: 500 },
+            { text: 'Что такое "Экзамен Стажёра"?', nextId: 'lore_exam' },
             { text: '[ Уйти ]', nextId: 'LEAVE' }
           ]
+        },
+        quest_garbage: {
+          id: 'quest_garbage', speaker: 'ПРОФЕССОР АРХИПОВ', text: 'Нужно вручную дефрагментировать критические сектора. Это опасная работа — охранные боты могут принять вас за вирус. Справитесь — и ваша репутация в EU_SYNTAX пойдет вверх.',
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_professor_garbage' }]
+        },
+        quest_nixanna_finish: {
+            id: 'quest_nixanna_finish', speaker: 'ПРОФЕССОР АРХИПОВ', text: '*рассматривает образец* ...Никсанна? Да, я помню её. Она всегда умела превращать хаос в искусство. Этот "Визуальный Образец" — шедевр оптимизации. Хорошо, я поставлю вам зачет авансом. Вот ваш Bits-грант.',
+            options: [{ text: 'Благодарю, Профессор.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_niksanna_recommendation' }]
+        },
+        quest_weaver_finish: {
+            id: 'quest_weaver_finish', speaker: 'ПРОФЕССОР АРХИПОВ', text: 'Старший Ткач всё еще пытается спасти свою фабрику старыми паттернами? Похвально. Вот, держи "Grid_Optimizer_v2" на внешнем носителе. Передай ему, что чистота кода важнее сложности узора.',
+            options: [{ text: 'Передам.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_weaver_pattern' }]
         },
         check_exam: {
             id: 'check_exam', speaker: 'ПРОФЕССОР АРХИПОВ', text: 'Посмотрим ваши логи... Если вы уже победили тренировочного бота на ВДНХ, я подпишу ваш диплом. Вам нужна только лицензия или полный вводный курс?',
@@ -98,6 +115,25 @@ export const south_west: WorldDistrict = {
             lore: {
                 id: 'lore', speaker: 'КОМПИЛЯТОР', text: 'Читай логи. Слушай ритм шины. Если ты не понимаешь байт-код — ты не контролируешь свою деку. (+10 Репутации EU_SYNTAX)',
                 options: [{ text: 'Запомню.', nextId: 'LEAVE', effect: 'GIVE_REPUTATION', amount: 10, cardRewardId: 'EU_SYNTAX' }]
+            }
+        }
+    },
+    npc_alumini: {
+        id: 'npc_alumini', startNodeId: 'intro',
+        nodes: {
+            intro: {
+                id: 'intro', speaker: 'БЕГЛЫЙ_ВЫПУСКНИК', text: 'Слышь, хакер... Тссс. Ядро считает нас "устаревшими", но мы — единственные, кто знает, как работает back-end этого города. Хочешь пару запрещенных библиотек?',
+                options: [
+                    { text: 'Покажи, что есть.', nextId: 'trade' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
+                ]
+            },
+            trade: {
+                id: 'trade', speaker: 'БЕГЛЫЙ_ВЫПУСКНИК', text: 'Только Bits. Никаких транзакций через GIGA_BANK.',
+                options: [
+                    { text: 'Shadow Copy (150 Bits)', nextId: 'intro', cost: 150, effect: 'GIVE_CARD', cardRewardId: 'fn_shadow_copy' },
+                    { text: 'Назад', nextId: 'intro' }
+                ]
             }
         }
     },

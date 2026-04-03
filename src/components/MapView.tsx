@@ -52,7 +52,6 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
-  const [briefingQuest, setBriefingQuest] = useState<{ snId: string, q: QuestDefinition } | null>(null);
   // showLanding removed for instant activity access
 
   // Zoom & Pan State
@@ -312,50 +311,12 @@ const MapView: React.FC<MapViewProps> = ({
                          [ CONNECT_TO_NODE ]
                       </button>
                     )}
+                    {sn.type === 'npc' && (
+                      <button className="btn-premium-engage" onClick={() => onNodeSelect(sn.id, 'npc')}>
+                         [ ESTABLISH_COMM ]
+                      </button>
+                    )}
                   </div>
-
-                  {sn.type === 'npc' && (
-                    <div className="map-quest-panel">
-                      <div className="map-quest-title">NPC_CONTRACTS</div>
-                      <div className="map-quest-item talk-option">
-                        <div className="map-quest-row">
-                           <span className="gold">[ TALK / INQUIRY ]</span>
-                           <span className="map-quest-status available">ACTIVE_LINK</span>
-                        </div>
-                        <div className="map-quest-actions">
-                           <button className="map-mini-btn talk" onClick={() => onAcceptQuest?.(sn.id)}>ESTABLISH_COMM</button>
-                        </div>
-                      </div>
-                      {selectedNpcQuests.slice(0, 4).map((q) => {
-                        const state = getQuestState(q.id);
-                        const status = state?.status ?? 'available';
-                        return (
-                          <div key={q.id} className="map-quest-item">
-                            <div className="map-quest-row">
-                              <span>{q.title}</span>
-                              <span className={`map-quest-status ${status}`}>{status.toUpperCase()}</span>
-                            </div>
-                            <div className="map-quest-actions">
-                              {status !== 'active' && status !== 'completed' && onAcceptQuest && (
-                                <button className="map-mini-btn" onClick={() => setBriefingQuest({ snId: sn.id, q: q })}>ACCEPT</button>
-                              )}
-                              {status === 'active' && onTrackQuest && (
-                                <button className="map-mini-btn" onClick={() => onTrackQuest(q.id)}>
-                                  {trackedQuestId === q.id ? 'TRACKED' : 'TRACK'}
-                                </button>
-                              )}
-                              {status === 'active' && q.type === 'talk' && (
-                                <button className="map-mini-btn talk" onClick={() => onNodeSelect(sn.id, 'npc')}>ESTABLISH_COMM</button>
-                              )}
-                              {status === 'active' && q.type === 'diagnostics' && (
-                                <button className="map-mini-btn diag" onClick={() => onNodeSelect(sn.id, sn.type)}>RUN_DIAGNOSTICS</button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </>
               );
             })()
@@ -402,55 +363,8 @@ const MapView: React.FC<MapViewProps> = ({
           )}
         </div>
       </div>
-      {/* QUEST_BRIEFING_OVERLAY */}
-      {briefingQuest && (
-        <div className="briefing-overlay" onClick={() => setBriefingQuest(null)}>
-           <div className="briefing-modal neon-panel arctic-monolith animate-scale-up" onClick={e => e.stopPropagation()}>
-              <div className="briefing-header">
-                 <div className="briefing-tag mono-text">INCOMING_CONTRACT_BRIEFING</div>
-                 <h2 className="neon-text glow-cyan">{briefingQuest.q.title}</h2>
-              </div>
-              <div className="briefing-body">
-                 <p className="briefing-story mono-text">{briefingQuest.q.description}</p>
-                 <div className="briefing-meta">
-                    <div className="meta-item">
-                       <span className="label">REWARD:</span>
-                       <span className="val glow-amber">ƀ{baseQuestBits(briefingQuest.q.tier, briefingQuest.q.difficulty)}</span>
-                    </div>
-                    <div className="meta-item">
-                       <span className="label">TYPE:</span>
-                       <span className="val">{briefingQuest.q.type.toUpperCase()}</span>
-                    </div>
-                 </div>
-              </div>
-              <div className="briefing-actions">
-                 <button className="btn-briefing accept" onClick={() => {
-                   onAcceptQuest?.(briefingQuest.snId, briefingQuest.q.id);
-                   setBriefingQuest(null);
-                 }}>
-                   <span className="b-bracket">[</span>
-                   <span className="b-text">ESTABLISH_CONTRACT</span>
-                   <span className="b-bracket">]</span>
-                 </button>
-                 <button className="btn-briefing abort" onClick={() => setBriefingQuest(null)}>
-                   <span className="b-bracket">[</span>
-                   <span className="b-text">ABORT_COMM</span>
-                   <span className="b-bracket">]</span>
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
 
       <style>{`
-        .briefing-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .briefing-modal { width: 100%; max-width: 500px; padding: 2rem; border-left: 4px solid var(--neon-cyan); }
-        .briefing-tag { font-size: 0.6rem; opacity: 0.5; margin-bottom: 10px; letter-spacing: 0.2em; }
-        .briefing-story { font-size: 0.85rem; line-height: 1.6; color: #ccc; margin: 1.5rem 0; background: rgba(0,255,255,0.03); padding: 15px; border-radius: 4px; }
-        .briefing-meta { display: flex; gap: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-bottom: 2rem; }
-        .meta-item .label { font-size: 0.6rem; display: block; opacity: 0.5; }
-        .meta-item .val { font-size: 0.9rem; font-weight: bold; font-family: var(--font-mono); }
-        .briefing-actions { display: flex; gap: 15px; margin-top: 10px; }
         .btn-briefing {
           flex: 1;
           display: flex;

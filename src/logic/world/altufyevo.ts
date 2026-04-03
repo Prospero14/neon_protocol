@@ -31,21 +31,21 @@ export const altufyevo: WorldDistrict = {
       id: 'npc_petrovich', startNodeId: 'intro',
       nodes: {
         intro: {
-          id: 'intro', speaker: 'ПЕТРОВИЧ (ВЕТЕРАН)', text: 'Здорово, племяш. Опять твоё кремниевое сердце барахлит? В мои времена мы писали код на перфокартах и не знали, что такое "нейроинтерфейс". Сейчас же каждый второй стажёр мнит себя Архитектором ЕС-Синтаксиса.',
+          id: 'intro', speaker: 'ПЕТРОВИЧ', text: 'Здорово, племяш. Чинишься помаленьку? Тут один старый клиент из Митинского радиорынка жалуется — у него в Северных Силосах старое оборудование взбесилось. Скрипты-зомби забили всю шину, новые чипы не прошиваются. Поможешь ветерану?',
           options: [
-            { text: 'Кто такие "ЕС-Синтаксис"?', nextId: 'lore_eu' },
+            { text: 'Что за Скрипты-зомби?', nextId: 'lore_zombie' },
+            { text: 'Я готов зачистить драйверы.', nextId: 'quest_accept' },
             { text: 'Нужны запчасти для деки.', nextId: 'trade' },
-            { text: 'Что слышно о Матрице Октября?', nextId: 'lore_matrix' },
             { text: 'Бывай, дядюшка.', nextId: 'farewell' }
           ]
         },
-        lore_eu: {
-          id: 'lore_eu', speaker: 'ПЕТРОВИЧ', text: 'Евро-центричные пижоны. Думают, что если у них в Брюсселе сервера стоят на гидропонике, то они могут диктовать алгоритмы всему миру. В Москве их не любят — здесь лог суров и беспощаден.',
-          options: [{ text: 'Понятно.', nextId: 'intro' }]
+        lore_zombie: {
+          id: 'lore_zombie', speaker: 'ПЕТРОВИЧ', text: 'Да мусор это, остатки старых прошивок. Они как крысы — плодятся в пустых кластерах и жрут циклы CPU. Без ручного CRC-чека их не выкурить. Формат задачи: DIRECT_PURGE, сложность: JUNIOR.',
+          options: [{ text: 'Понял, сделаю.', nextId: 'intro' }]
         },
-        lore_matrix: {
-          id: 'lore_matrix', speaker: 'ПЕТРОВИЧ', text: 'Матрица... Это не просто сеть, парень. Это коллективный сон, который видят Архитекторы. Если проснёшься — Ядро тебя сожрёт. Лучше держись низких уровней, как Алтуфьево. Тут ИИ-аудиторы редко патрулируют.',
-          options: [{ text: 'Совет дельный ( +5 VOID )', nextId: 'intro', reputationReward: { factionId: 'ANARCHO_VOID', amount: 5 } }]
+        quest_accept: {
+          id: 'quest_accept', speaker: 'ПЕТРОВИЧ', text: 'Вот и ладно. Узел забит под завязку, так что готовь дебаггер. Как закончишь — с меня 50 Bits на охлад.',
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_petrovich_legacy' }]
         },
         trade: {
           id: 'trade', speaker: 'ПЕТРОВИЧ', text: 'Смотри, что откопал сегодня. Почти не пользованные библиотеки. "System.out.print" — старая классика для дебага реальности.',
@@ -55,8 +55,12 @@ export const altufyevo: WorldDistrict = {
           ]
         },
         farewell: {
-          id: 'farewell', speaker: 'ПЕТРОВИЧ', text: 'Иди уже. И не забудь сделать бэкап. В Октябре память — единственное, что нельзя украсть... если ты не из ГБ.',
+          id: 'farewell', speaker: 'ПЕТРОВИЧ', text: 'Иди уже. И не забудь сделать бэкап. В Октябре память — единственное, что нельзя украсть...',
           options: [{ text: '[ УЙТИ ]', nextId: 'LEAVE' }]
+        },
+        quest_vykhino_finish: {
+          id: 'quest_vykhino_finish', speaker: 'ПЕТРОВИЧ', text: 'Опа! Это тот самый блок из Выхино? Фонит-то как... Видать, там внутри не только логи, но и пару килограмм "черного" кода. Спасибо, малец. Вот твоя доля.',
+          options: [{ text: 'Рад помочь.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_vykhino_delivery' }]
         }
       }
     },
@@ -64,30 +68,22 @@ export const altufyevo: WorldDistrict = {
       id: 'npc_varvar', startNodeId: 'intro',
       nodes: {
         intro: {
-          id: 'intro', speaker: 'ВАРВАР', text: '(Ворчит) Опять кривой патч? Что надо, скрипт-кидди?',
+          id: 'intro', speaker: 'ВАРВАР', text: 'Стой! Проверка контрольной суммы... Ладно, проходи. Видишь это? Магнус, мой хвостатый помощник, заперся в Уборной №4 и случайно активировал протокол "Локаут". Теперь там охранный бот VOSKHOD считает, что туалет — это секретный объект.',
           options: [
-            { text: 'Как жизнь?', nextId: 'anything_else' },
-            { text: 'Есть работа?', nextId: 'quest_start' },
+            { text: 'Кот заперся в туалете?', nextId: 'lore_cat' },
+            { text: 'Я разберусь с этим протоколом.', nextId: 'quest_start' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
         },
-        anything_else: {
-          id: 'anything_else', speaker: 'ВАРВАР', text: 'Да нормально. Если не считать Никсанны, которая опять жалуется на фреймрейт. Есть еще вопросы или делом займемся?',
-          options: [
-            { text: 'Расскажи о работе', nextId: 'quest_start' },
-            { text: 'Про Никсанну', nextId: 'lore_wife' },
-            { text: '[Уйти]', nextId: 'LEAVE' }
-          ]
-        },
-        lore_wife: {
-          id: 'lore_wife', speaker: 'ВАРВАР', text: 'Она геймдизайнер реальности. Вечно пытается сделать мир "красивеньким". А я говорю — код должен быть надежным, как танк. Мы вместе уже 30 аптаймов, привык уже.',
-          options: [{ text: 'Понятно.', nextId: 'anything_else' }]
+        lore_cat: {
+          id: 'lore_cat', speaker: 'ВАРВАР', text: 'Он не просто кот, он — ходячая уязвимость! Активировал IoT-блокировку по отпечатку лапы. Теперь система очистки считает любого входящего "критическим багом". Клиент — моя психика. Формат: BYPASS_SECURITY.',
+          options: [{ text: 'Звучит... специфично.', nextId: 'intro' }]
         },
         quest_start: {
-          id: 'quest_start', speaker: 'ВАРВАР', text: 'Кот Магнус заперся в Уборной №4. Взломай систему очистки, и я дам тебе кое-что ценное.',
+          id: 'quest_start', speaker: 'ВАРВАР', text: 'Уборная №4 — там сейчас жарко. Взломай систему очистки, и я дам тебе одну из своих старых наработок.',
           options: [
             { text: 'Я в деле (Начать бой)', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_magnus_toilet' },
-            { text: 'Позже', nextId: 'anything_else' }
+            { text: 'Позже', nextId: 'intro' }
           ]
         }
       }
@@ -96,31 +92,32 @@ export const altufyevo: WorldDistrict = {
       id: 'npc_nixanna', startNodeId: 'intro',
       nodes: {
         intro: {
-          id: 'intro', speaker: 'НИКСАННА', text: 'В этом секторе чудовищный баланс... Ты кто? Пришел подправить геймплей?',
+          id: 'intro', speaker: 'НИКСАННА', text: 'Внимание: обнаружена утечка в пайплайне рендеринга! Ты выглядишь как человек, который может поправить шейдеры реальности. Команда "Reality Engine" в панике — узел Визуализации начал выдавать артефакты в 4-м измерении.',
           options: [
-            { text: 'Кто ты?', nextId: 'anything_else' },
-            { text: 'Варвар послал меня.', nextId: 'husband_talk' },
+            { text: 'Что за артефакты?', nextId: 'lore_render' },
             { text: 'Нужен "Патч Визуализации".', nextId: 'quest_start' },
+            { text: 'Мне нужна рекомендация в Академию...', nextId: 'quest_recommendation' },
+            { text: 'Тут один паникер из Чертаново просил патч...', nextId: 'quest_chertanovo_finish', requireQuestId: 'q_chertanovo_privacy' },
             { text: '[Уйти]', nextId: 'LEAVE' }
           ]
         },
-        anything_else: {
-          id: 'anything_else', speaker: 'НИКСАННА', text: 'Я геймдизайнер реальности. Пытаюсь сделать этот мир играбельным. Что-то еще на твоем "UI"?',
-          options: [
-            { text: 'Про Варвара', nextId: 'husband_talk' },
-            { text: 'Про работу', nextId: 'quest_start' },
-            { text: 'Прощай', nextId: 'farewell' }
-          ]
+        quest_recommendation: {
+          id: 'quest_recommendation', speaker: 'НИКСАННА', text: 'Академия? Профессор Архипов всё еще там сидит? Ха! Ладно, я дам тебе "Визуальный Образец" — это скомпилированный лог одной из моих лучших сцен. Покажи его ему, он оценит уровень оптимизации. (Принять квест)',
+          options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_niksanna_recommendation' }]
         },
-        husband_talk: {
-          id: 'husband_talk', speaker: 'НИКСАННА', text: 'Мой благоверный... У него код как лапша, зато работает. Мы дополняем друг друга: он пишет логику, я — интерфейс жизни.',
-          options: [{ text: 'Ясно.', nextId: 'anything_else' }]
+        quest_chertanovo_finish: {
+            id: 'quest_chertanovo_finish', speaker: 'НИКСАННА', text: 'Опять эти параноики из высоток... Ладно, вот ему "Privacy Patch v.0.1". Скажи, пусть не забывает чистить куки перед сном, а то Ядро всё равно за ним придет.',
+            options: [{ text: 'Заберу патч.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_chertanovo_privacy' }]
+        },
+        lore_render: {
+          id: 'lore_render', speaker: 'НИКСАННА', text: 'Там переполнение буфера на уровне геометрии. Мир превращается в низкополигональную кашу. Формат задачи: VISUAL_STABILIZATION. Клиент: Департамент Эстетики ГБ.',
+          options: [{ text: 'Попробую оптимизировать.', nextId: 'intro' }]
         },
         quest_start: {
-          id: 'quest_start', speaker: 'НИКСАННА', text: 'Нужно оптимизировать пайплайн отрисовки в соседнем узле. Справишься — дам карту "Divine Debug".',
+          id: 'quest_start', speaker: 'НИКСАННА', text: 'Нужно зайти в узел "Ритуал" и сбросить кэш отрисовки. Справишься — дам карту "Divine Debug".',
           options: [
             { text: 'Готов к патчу.', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_nixanna_ritual' },
-            { text: 'Не сейчас', nextId: 'anything_else' }
+            { text: 'Не сейчас', nextId: 'intro' }
           ]
         },
         farewell: {

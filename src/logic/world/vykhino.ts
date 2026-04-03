@@ -9,6 +9,7 @@ export const vykhino: WorldDistrict = {
     x: 75, y: 70, stability: 85, type: 'trade', tier: 1,
     subNodes: [
       { id: 'npc_grey', name: 'Грей (Гоп-хакер)', type: 'npc', description: 'Знает все лазейки метро.', x: 40, y: 50 },
+      { id: 'npc_vykhino_loader', name: 'Грузчик данных', type: 'npc', description: 'Таскает тяжелые архивы между шлюзами.', x: 25, y: 15 },
       { id: 'npc_link_manager', name: 'Менеджер Каналов', type: 'npc', description: 'Бюрократичный бот следит за трафиком.', x: 15, y: 20 },
       { id: 'npc_corp_scout', name: 'Скаут GIGA_BANK', type: 'npc', description: 'Ищет таланты для корпоративного рабства.', x: 60, y: 60 },
       { id: 'shop_metro', name: 'Радио-палатка', type: 'shop', description: 'Боевой софт.', x: 40, y: 30 },
@@ -22,6 +23,7 @@ export const vykhino: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_grey', name: 'Грей', districtId: 'vykhino', role: 'Гоп-хакер', greeting: 'Метро - это мой VPN.', shortLore: 'Добывает маршруты и токены прохода.' },
+    { id: 'npc_vykhino_loader', name: 'Грузчик', districtId: 'vykhino', role: 'Транспортировщик', greeting: 'Осторожно, хрупкие байты!', shortLore: 'Переносит данные вручную.' },
     { id: 'npc_job_boss', name: 'Фиксер Батя', districtId: 'vykhino', role: 'Фиксер', greeting: 'Работа грязная, оплата чистая.', shortLore: 'Раздает высокодоходные контракты.' },
   ],
   dialogues: {
@@ -48,6 +50,22 @@ export const vykhino: WorldDistrict = {
           ]
         }
       }
+    },
+    npc_vykhino_loader: {
+        id: 'npc_vykhino_loader', startNodeId: 'intro',
+        nodes: {
+            intro: {
+                id: 'intro', speaker: 'ГРУЗЧИК', text: '*тяжело дышит* Уф... Эти блоки данных с каждым днем всё тяжелее. Ядро уплотняет трафик, а спина-то не железная! Хотя... наполовину железная.',
+                options: [
+                    { text: 'Нужна помощь с доставкой?', nextId: 'quest_start' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
+                ]
+            },
+            quest_start: {
+                id: 'quest_start', speaker: 'ГРУЗЧИК', text: 'Слушай, есть один "фонящий" блок. Нужно доставить его Петровичу в Алтуфьево. Он знает, как вскрыть эту оболочку без детонации кэша. Возьмешься? Плачу Bits и дам "Heavy_Package_v1". (Принять контракт)',
+                options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_vykhino_delivery' }]
+            }
+        }
     },
     npc_job_boss: {
       id: 'npc_job_boss', startNodeId: 'intro',

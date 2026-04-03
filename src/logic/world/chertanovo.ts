@@ -9,6 +9,7 @@ export const chertanovo: WorldDistrict = {
     x: 52, y: 80, stability: 40, type: 'bar', tier: 2,
     subNodes: [
       { id: 'npc_zero', name: 'Z3R0 (Анархист)', type: 'npc', description: 'Лидер Нулевых Указателей. Мечтает о чистой Пустоте.', x: 50, y: 50 },
+      { id: 'npc_chertanovo_paranoid', name: 'Параноик из высотки', type: 'npc', description: 'Боится, что Ядро читает его мысли через Wi-Fi.', x: 25, y: 15 },
       { id: 'npc_glitch', name: 'Глюк (Сломанный ИИ)', type: 'npc', description: 'Фрагмент старого помощника. Говорит загадками и ошибками.', x: 10, y: 15 },
       { id: 'npc_scrap_dealer', name: 'Торговец Шламом', type: 'npc', description: 'Скупщик горелых чипов и данных.', x: 85, y: 80 },
       { id: 'bar_null_pointer', name: 'Бар "Null Pointer"', type: 'bar', description: 'Где рождаются баги и умирает надежда.', x: 30, y: 70 },
@@ -22,6 +23,7 @@ export const chertanovo: WorldDistrict = {
   },
   npcs: [
     { id: 'npc_zero', name: 'Z3R0', districtId: 'chertanovo', role: 'Анархист', greeting: 'Null есть истина.', shortLore: 'Квесты с риском и большим RNG.' },
+    { id: 'npc_chertanovo_paranoid', name: 'Параноик', districtId: 'chertanovo', role: 'Резидент', greeting: 'Ты из Ядра? Уходи!', shortLore: 'Одержим приватностью.' },
     { id: 'npc_ripper_jax', name: 'Риппер Джакс', districtId: 'chertanovo', role: 'Риппердок', greeting: 'Импланты больно, но эффективно.', shortLore: 'Обменивает лут на бусты.' },
   ],
   dialogues: {
@@ -47,6 +49,27 @@ export const chertanovo: WorldDistrict = {
           ]
         }
       }
+    },
+    npc_chertanovo_paranoid: {
+        id: 'npc_chertanovo_paranoid', startNodeId: 'intro',
+        nodes: {
+            intro: {
+                id: 'intro', speaker: 'ПАРАНОИК', text: 'Тихо! Они слушают даже через выключенные терминалы. Тебе нужна защита? Мне нужна защита! Настоящая приватность стоит дорого.',
+                options: [
+                    { text: 'Я могу помочь с защитой.', nextId: 'quest_start' },
+                    { text: 'Я принес Privacy Patch от Никсанны.', nextId: 'quest_finish', requireQuestId: 'q_chertanovo_privacy' },
+                    { text: '[Уйти]', nextId: 'LEAVE' }
+                ]
+            },
+            quest_start: {
+                id: 'quest_start', speaker: 'ПАРАНОИК', text: 'Говорят, в Алтуфьево живет дизайнер Никсанна. Она делает патчи, которые Ядро не может взломать. Сходи к ней, принеси мне "Privacy Patch v.0.1". Только не пользуйся такси, они отслеживают маршруты! (Принять контракт)',
+                options: [{ text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_chertanovo_privacy' }]
+            },
+            quest_finish: {
+                id: 'quest_finish', speaker: 'ПАРАНОИК', text: '*быстро устанавливает патч* Да... Да! Видишь? Эти красные полоски в логах исчезли! Теперь я невидимка. Спасибо, хакер. Держи этот "Shadow_Layer" — он спасет твою деку от лишних взглядов.',
+                options: [{ text: 'Удачи с маскировкой.', nextId: 'intro', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_chertanovo_privacy' }]
+            }
+        }
     },
     npc_ripper_jax: {
       id: 'npc_ripper_jax', startNodeId: 'intro',

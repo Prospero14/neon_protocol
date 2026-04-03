@@ -38,7 +38,7 @@ import QuestLog from './components/QuestLog';
 import { 
   MapPin, User, Shield, Zap, Layout, ChevronRight, Award, Database 
 } from 'lucide-react';
-import GoalHUD from './components/GoalHUD';
+// import GoalHUD from './components/GoalHUD'; // Removed per v0.0947 protocol cleanup
 import { useAuth } from './logic/AuthContext';
 import { AuthForm } from './components/AuthForm';
 
@@ -64,7 +64,8 @@ const MISSION_STARTER_PACKS: Record<string, string[]> = {
   'combat_local_lan': ['script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix'],
   'job_board_bibi': ['script_ping', 'script_sudo_fix'],
   'job_board_tekstil': ['script_wash_logs', 'script_grep'],
-  'job_board_perovo': ['script_grep', 'script_sudo_fix']
+  'job_board_perovo': ['script_grep', 'script_sudo_fix'],
+  'combat_rat_invasion': ['script_ping', 'script_grep', 'script_wash_logs']
 };
 
 function App() {
@@ -156,7 +157,9 @@ function App() {
       if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);
-        if (gs.completedQuests.length > 0) setCurrentView('HUB');
+        if (gs.completedQuests.length > 0 && currentView === 'CREATION') {
+          setCurrentView('HUB');
+        }
       }
     }
   }, [user]);
@@ -263,7 +266,10 @@ function App() {
       if (!classUnlocked) {
         const tracked = getTrackedQuest(questStates);
         const hasStarterPack = tracked && MISSION_STARTER_PACKS[tracked.questId];
-        if (!hasStarterPack) { alert("ACCESS_DENIED: Neural ICE active. Install a valid Professional Class to bypass security for non-mission nodes."); return; }
+        if (!hasStarterPack) { 
+          // Silently return or provide subtle feedback, no more intrusive alert
+          return; 
+        }
       }
       setActiveBarNode(nodeId); setCurrentView('COMBAT'); return;
     }
@@ -466,16 +472,7 @@ function App() {
       {!hideNav && (
         <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={stress} level={level} maxStress={maxStress} onLogout={logout} />
       )}
-      {trackedQuest && !hideNav && currentView !== 'MAP' && (
-        <div style={{ position: 'fixed', top: '80px', left: '20px', zIndex: 1000, pointerEvents: 'none' }}>
-          <GoalHUD 
-            questName={trackedQuest.title}
-            objectiveText={trackedQuest.description}
-            hint={trackedQuest.objectiveNodeId ? `Цель: ${trackedQuest.objectiveNodeId}` : "Найдите контактное лицо в указанном районе."}
-            progress={trackedState?.status === 'completed' ? 100 : 50}
-          />
-        </div>
-      )}
+      {/* [PROTOCOL_CLEANUP] GoalHUD removed as requested */}
       <main className={`view-container ${hideNav ? 'fullscreen' : ''}`}>
         {renderAppView()}
       </main>

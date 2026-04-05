@@ -36,8 +36,43 @@ async function initDB() {
   try {
     await prisma.$connect();
     console.log('[NEON_CORE] Database connected successfully.');
+    await seedAdmin();
   } catch (e) {
     console.error('[NEON_CORE] DB Connection Error:', e);
+  }
+}
+
+async function seedAdmin() {
+  const admin = await prisma.user.findUnique({ where: { username: 'admin' } });
+  if (!admin) {
+    console.log('[NEON_CORE] Seeding admin account...');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const starterDeck = [
+      { id: 'script_ping', count: 4 },
+      { id: 'script_grep', count: 4 },
+      { id: 'soft_coffee', count: 4 }
+    ];
+    await prisma.user.create({
+      data: {
+        username: 'admin',
+        passwordHash: hashedPassword,
+        gameState: {
+          create: {
+            bits: 10000,
+            level: 5,
+            ramPool: 4.0,
+            stress: 0,
+            maxStress: 100,
+            activeDeck: starterDeck,
+            inventory: starterDeck,
+            artifacts: [],
+            completedQuests: [],
+            reputation: { EU_SYNTAX: 50 },
+            intel: ['EU Syntax']
+          }
+        }
+      }
+    });
   }
 }
 
@@ -82,7 +117,11 @@ app.post('/neon_v1/auth/register', async (req, res) => {
             stress: 0,
             maxStress: 100,
             activeDeck: starterDeck,
-            inventory: starterDeck
+            inventory: starterDeck,
+            artifacts: [],
+            completedQuests: [],
+            reputation: {},
+            intel: []
           } 
         } 
       } 

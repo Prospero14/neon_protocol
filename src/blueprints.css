@@ -1,0 +1,103 @@
+/* 
+  BLUEPRINT & HUD ENHANCEMENTS 
+  Neon Protocol V6.0
+*/
+
+/* --- DISTRICT SUBSTRATE --- */
+.district-substrate {
+  pointer-events: none;
+}
+
+.substrate-boundary {
+  filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.1));
+  animation: boundary-pulse 4s ease-in-out infinite;
+}
+
+@keyframes boundary-pulse {
+  0%, 100% { opacity: 0.8; stroke-width: 0.1; }
+  50% { opacity: 1; stroke-width: 0.15; }
+}
+
+.substrate-road {
+  stroke-dasharray: 0.5, 0.5;
+  opacity: 0.3;
+}
+
+.substrate-park {
+  filter: blur(0.5px);
+}
+
+.substrate-lake {
+  filter: blur(1px);
+}
+
+/* --- PHASE INTRO OVERLAY --- */
+.phase-intro-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.pi-content {
+  text-align: center;
+  display: flex; flex-direction: column; gap: 20px;
+  max-width: 80%;
+}
+
+.pi-title {
+  font-size: 4rem; font-weight: 950; letter-spacing: 15px;
+  color: var(--neon-cyan); 
+  text-shadow: 0 0 40px var(--neon-cyan-glow), 0 0 10px #fff;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.pi-sub {
+  font-size: 1rem; color: #889; letter-spacing: 6px;
+  text-transform: uppercase; opacity: 0.7;
+  margin: 0;
+}
+
+.pi-resource-note {
+  margin-top: 40px; padding: 20px 40px;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid var(--neon-amber);
+  color: var(--neon-amber); font-weight: 800;
+  font-size: 1rem; letter-spacing: 2px;
+  box-shadow: 0 0 30px rgba(255, 170, 0, 0.15);
+  animation: pulse-amber 2s infinite;
+}
+
+@keyframes pulse-amber {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 2.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: scale(0.95) translateY(20px); }
+  15% { opacity: 1; transform: scale(1) translateY(0); }
+  85% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(1.05) translateY(-20px); }
+}
+
+/* BLUEPRINT SELECTION SQUARE */
+.blueprint-selection-sq {
+  animation: bp-scan 2s linear infinite;
+}
+
+@keyframes bp-scan {
+  0%, 100% { stroke-dasharray: 1, 1; opacity: 0.8; }
+  50% { stroke-dasharray: 3, 1; opacity: 1; }
+}
+
+.substrate-park_hatch {
+  stroke-dasharray: 0.2, 0.4;
+  opacity: 0.4;
+}

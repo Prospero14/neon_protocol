@@ -49,8 +49,56 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'script_sudo_fix', name: 'SUDO_FORCE_FIX', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 2, power: 15, integrity: 4,
-    description: 'sudo apt-get fix-broken. Грубое исправление системы.',
+    description: 'sudo !!. Принудительное выполнение с правами суперпользователя. Пробивает фаерволы.',
     language: 'none', tags: ['script'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'script_auth', name: 'AUTH_HANDSHAKE', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 5, integrity: 10,
+    description: 'auth -u admin. Попытка авторизации в системе. Критично для доступа к защищенным узлам.',
+    language: 'none', tags: ['script'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'script_ls', name: 'LS_DISCOVER', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 0, power: 2, integrity: 8,
+    description: 'ls -la. Листинг директорий. Позволяет найти скрытые точки входа (инфо-дампы).',
+    language: 'none', tags: ['script'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'script_cat', name: 'CAT_READ', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 10, integrity: 5,
+    description: 'cat secret.txt. Чтение содержимого файлов. Извлечение полезной инфы и повреждение данных.',
+    language: 'none', tags: ['script'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'script_ssh', name: 'SSH_TUNNEL', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 2, power: 12, integrity: 15,
+    description: 'ssh root@host. Установка защищенного туннеля для удаленного исполнения команд.',
+    language: 'none', tags: ['script'], phaseConstraint: 'DESIGN'
+  },
+  {
+    id: 'script_curl', name: 'CURL_REQUEST', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 15, integrity: 3,
+    description: 'curl -X POST. Прямой запрос к API или загрузка вредоносного ПО.',
+    language: 'none', tags: ['script'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'script_chmod', name: 'CHMOD_PERMS', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 5, integrity: 12,
+    description: 'chmod +x exploit. Смена прав доступа. Делает ваш код исполняемым.',
+    language: 'none', tags: ['script'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'script_cron', name: 'CRONTAB_PERSIST', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 2, power: 0, integrity: 25,
+    description: 'crontab -e. Закрепление в системе (Persistence). Дает +5 HP щита за каждый ход.',
+    language: 'none', tags: ['script'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'script_nc', name: 'NETCAT_BACKDOOR', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 20, integrity: 2,
+    description: 'nc -lvp 4444. Открытие бэкдора. Наносит большой урон, но демаскирует систему.',
+    language: 'none', tags: ['script'], phaseConstraint: 'CODING'
   },
   {
     id: 'soft_coffee', name: 'ВЫПИТЬ КОФЕ', type: 'SOFT', grade: 'Script-Kiddo',
@@ -181,6 +229,42 @@ export const CARD_LIBRARY: CombatCard[] = [
     cost: 1, power: 5, integrity: 20,
     description: 'Optional.ofNullable(). Предотвращает ошибки NullPointerException.',
     tags: ['base-java'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'lib_lombok_data', name: 'LOMBOK_DATA', type: 'FUNCTION', grade: 'Middle',
+    cost: 1, power: 0, integrity: 15,
+    description: '@Data. Генерирует геттеры, сеттеры и toString. Экономит 3 слота на шине.',
+    tags: ['utility'], phaseConstraint: 'DESIGN'
+  },
+  {
+    id: 'lib_lombok_builder', name: 'LOMBOK_BUILDER', type: 'FUNCTION', grade: 'Middle',
+    cost: 1, power: 5, integrity: 10,
+    description: '@Builder. Паттерн Строитель для создания сложных объектов без длинных конструкторов.',
+    tags: ['utility'], phaseConstraint: 'DESIGN'
+  },
+  {
+    id: 'lib_commons_blank', name: 'STR_IS_BLANK', type: 'FUNCTION', grade: 'Junior',
+    cost: 1, power: 10, integrity: 5,
+    description: 'StringUtils.isBlank(). Профессиональная проверка строки на пустоту и пробелы.',
+    tags: ['utility'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'mid_stream_filter', name: 'STREAM_FILTER', type: 'FUNCTION', grade: 'Middle',
+    cost: 1, power: 15, integrity: 5,
+    description: '.filter(x -> x > 0). Функциональный способ фильтрации данных без циклов.',
+    requires: 'mid_stream_init', tags: ['base-java'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'mid_stream_collect', name: 'STREAM_COLLECT', type: 'FUNCTION', grade: 'Middle',
+    cost: 1, power: 10, integrity: 10,
+    description: '.collect(Collectors.toList()). Терминальная операция для сборки результата стрима.',
+    requires: 'mid_stream_init', tags: ['base-java'], phaseConstraint: 'CODING'
+  },
+  {
+    id: 'lib_spring_repo', name: 'JPA_REPOSITORY', type: 'FUNCTION', grade: 'Senior',
+    cost: 2, power: 0, integrity: 30,
+    description: 'interface UserRepository extends JpaRepository. Автоматическое управление БД без SQL.',
+    tags: ['spring'], phaseConstraint: 'DESIGN'
   },
 
   // --- INFRASTRUCTURE CARDS (PLANNING PHASE) ---

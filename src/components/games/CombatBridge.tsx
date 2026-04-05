@@ -25,8 +25,11 @@ interface CombatBridgeProps {
   initialTaskIndex?: number;
   onDiscoverCard?: (id: string) => void;
   onViewChange?: (view: any) => void;
-  onWin: (bitsEarned: number) => void;
+  onWin: (bitsEarned: number, taskRank: 'script-kiddie' | 'junior' | 'mid' | 'senior') => void;
   tier: number;
+  deckCores: number;
+  deckRamMb: number;
+  homeDistrictId?: string;
 }
 
 type RailSlotType = 'EMPTY' | 'PLAYER_CODE' | 'BUG_ERROR';
@@ -46,8 +49,12 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   initialTaskIndex = 0,
   onWin,
   tier,
+  deckCores,
+  deckRamMb,
+  homeDistrictId
 }) => {
   const missionTz = taskLibrary[initialTaskIndex] ?? taskLibrary[0];
+  const START_HAND_SIZE = homeDistrictId === 'tekstilschiki' ? 6 : 5;
 
   // --- CORE STATE ---
   const [currentPhase, setCurrentPhase] = useState<CombatPhase>('ARCHITECTURE');
@@ -62,9 +69,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const [showDefeat, setShowDefeat] = useState(false);
   const [deploymentReport, setDeploymentReport] = useState<any>(null);
 
-  const [cpuMax, setCpuMax] = useState(1); 
-  const [cpu, setCpu] = useState(1);
-  const [ramMaxMb, setRamMaxMb] = useState(512); 
+  const [cpuMax, setCpuMax] = useState(deckCores); 
+  const [cpu, setCpu] = useState(deckCores);
+  const [ramMaxMb, setRamMaxMb] = useState(deckRamMb); 
 
   const [planningTurn, setPlanningTurn] = useState(0);
   const [mulliganUsed, setMulliganUsed] = useState(false);
@@ -87,6 +94,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [log, setLog] = useState<string[]>([]);
   const [canAdvancePhase, setCanAdvancePhase] = useState(false);
+  const [phaseIntro, setPhaseIntro] = useState<string | null>(null);
 
   // --- DERIVED ---
   const ramSlotsMax = Math.floor(ramMaxMb / 512);
@@ -112,9 +120,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   useEffect(() => {
     // Шаттл колоды
     const shuffled = [...initialDrawDeck].sort(() => Math.random() - 0.5);
-    // Стартовая рука из 5 карт по ТЗ
-    const startHand = shuffled.slice(0, 5);
-    const remainingDeck = shuffled.slice(5);
+    // Стартовая рука по ТЗ (5 карт база, 6 для Текстильщиков)
+    const startHand = shuffled.slice(0, START_HAND_SIZE);
+    const remainingDeck = shuffled.slice(START_HAND_SIZE);
     
     setHand(startHand);
     setDeck(remainingDeck);
@@ -133,6 +141,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
       setCpuMax(prev => prev + 1);
       setCpu(prev => prev + 1);
     }
+
+    // Trigger initial phase intro
+    setPhaseIntro(currentPhase);
+    setTimeout(() => setPhaseIntro(null), 2500);
   }, []);
 
   const handleMulligan = () => {
@@ -141,8 +153,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     addLog(`[SYSTEM] REDRAW_BUFFER_INITIATED...`);
     const oldHand = [...hand];
     const newDeck = [...deck, ...oldHand].sort(() => Math.random() - 0.5);
-    const newHand = newDeck.slice(0, 5);
-    const finalDeck = newDeck.slice(5);
+    const newHand = newDeck.slice(0, START_HAND_SIZE);
+    const finalDeck = newDeck.slice(START_HAND_SIZE);
     
     setHand(newHand);
     setDeck(finalDeck);
@@ -392,7 +404,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
         const targetPhase = rules.nextPhaseId;
         setCurrentPhase(targetPhase);
         setCanAdvancePhase(false);
+        setPhaseIntro(targetPhase);
         addLog(`[PHASE] ${targetPhase}`);
+        setTimeout(() => setPhaseIntro(null), 2500);
         
         // Автоматическая подгрузка всех карт для фазы DEVELOPMENT
         if (targetPhase === 'DEVELOPMENT') {
@@ -420,7 +434,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     
     // 1. Проверка ТЗ (Steps)
     const railIds = runtimeRail.filter(s => s.type === 'PLAYER_CODE').map(s => (s.content as CombatCard).id);
-    const missingSteps = missionTz.steps.filter(step => !railIds.includes(step.requiredCardId));
+    const missingSteps = missionTz.steps.filter(step => !step.requiredCardIds.some(id => railIds.includes(id)));
     
     // 2. Проверка ресурсов (Capacity)
     // Допустим, каждая карта на шине потребляет 0.5 CPU и 256MB RAM (упрощенно)
@@ -471,6 +485,21 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
 
   return (
     <div className="combat-bridge-root">
+      {/* PHASE INTRO OVERLAY */}
+      {phaseIntro && (
+        <div className="phase-intro-overlay animate-fade-in-out">
+          <div className="pi-content">
+            <h1 className="pi-title">{SDLC_PHASES[phaseIntro as CombatPhase].name.toUpperCase()}</h1>
+            <p className="pi-sub">{SDLC_PHASES[phaseIntro as CombatPhase].description}</p>
+            {skillMode === 'script-kiddie' && phaseIntro === 'ARCHITECTURE' && (
+              <div className="pi-resource-note pulse-amber">
+                Используются ресурсы вашей деки: [ЦПУ: {cpuMax}] [RAM: {ramMaxMb}MB]
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* TZ MISSION MODAL */}
       {showTzModal && (
         <div className="tz-modal-overlay" onClick={() => setShowTzModal(false)}>
@@ -481,21 +510,18 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             </div>
             
             <div className="tz-req-grid">
-              <div className="tz-req-item">
-                <span className="lbl">СЛОЖНОСТЬ ТЗ:</span>
-                <span className="val">{(missionTz.rank || skillMode).toUpperCase()} LVL</span>
-              </div>
-              <div className="tz-req-item">
-                <span className="lbl">TARGET_MODULE:</span>
-                <span className="val">{missionTz.name}</span>
-              </div>
-              <div className="tz-req-item">
-                <span className="lbl">ALLOCATED_CPU:</span>
-                <span className="val">{missionTz.rank === 'junior' ? 1 : 2} CORE</span>
-              </div>
-              <div className="tz-req-item">
-                <span className="lbl">HEAP_MEMORY:</span>
-                <span className="val">{missionTz.rank === 'junior' ? '512MB' : '1024MB'} (PROVISIONED)</span>
+              <div className="tz-req-item full-width">
+                <span className="lbl">ТРЕБУЕМЫЕ ШАГИ РЕАЛИЗАЦИИ:</span>
+                <div className="tz-steps-list">
+                  {missionTz.steps.map((step, idx) => (
+                    <div key={idx} className="tz-step-row">
+                      <span className="step-name">{step.name}:</span>
+                      <span className="step-options">
+                        {step.requiredCardIds.map(id => id.replace('syntax_', '').replace('fn_', '')).join(' | ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -772,7 +798,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
                 <span className="gold">{200 + tier * 100} BITS</span>
               </div>
             </div>
-            <button className="result-btn green" onClick={() => onWin(200 + tier * 100)}>
+            <button className="result-btn green" onClick={() => onWin(200 + tier * 100, missionTz.rank)}>
               [ CONTINUE_TO_CITY ]
             </button>
           </div>
@@ -821,7 +847,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
                 </>
               )}
             </div>
-            <button className="result-btn red" onClick={() => onWin(0)}>
+            <button className="result-btn red" onClick={() => onWin(0, missionTz.rank)}>
               [ RETURN_TO_CITY_HUB ]
             </button>
           </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { NPC_PRESENCE_CONFIGS } from './logic/npcPresence';
 import './App.css';
 import './combat-hud.css';
 import type { Trait } from './logic/traits';
@@ -35,14 +36,17 @@ import Documentation from './components/Documentation';
 import ResponsiveNav from './components/ResponsiveNav';
 import FixerBarScene from './components/FixerBarScene';
 import QuestLog from './components/QuestLog';
+import IntelView from './components/IntelView';
 import { 
-  MapPin, User, Shield, Zap, Layout, ChevronRight, Award, Database 
+  MapPin, User, Shield, Zap, Layout, ChevronRight, Award, Database, Globe
 } from 'lucide-react';
 // import GoalHUD from './components/GoalHUD'; // Removed per v0.0947 protocol cleanup
 import { useAuth } from './logic/AuthContext';
 import { AuthForm } from './components/AuthForm';
+import { FACTIONS } from './logic/factions';
+import { IMPLANT_CATALOG } from './logic/hardware';
 
-type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG';
+type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
 
 function initialMergedInventory(): CombatCard[] {
   const byId = new Map<string, CombatCard>();
@@ -54,18 +58,29 @@ function initialMergedInventory(): CombatCard[] {
 const buildTraineeDeck = (): CombatCard[] => {
   const starterIds = [
     'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
+    'script_ls', 'script_cat', 'script_auth',
     'soft_coffee', 'soft_ai_ask', 'infra_old_hw'
   ];
   return starterIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 };
 
 const MISSION_STARTER_PACKS: Record<string, string[]> = {
-  'q_kiddo_first_bits': ['script_ping', 'script_grep', 'script_wash_logs'],
-  'combat_local_lan': ['script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix'],
-  'job_board_bibi': ['script_ping', 'script_sudo_fix'],
-  'job_board_tekstil': ['script_wash_logs', 'script_grep'],
-  'job_board_perovo': ['script_grep', 'script_sudo_fix'],
-  'combat_rat_invasion': ['script_ping', 'script_grep', 'script_wash_logs']
+  'default': ['script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs'],
+  'q_kiddo_start': ['script_ls', 'script_cat', 'script_ping'],
+  'q_kiddo_first_bits': ['script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs'],
+  'local_lan': ['script_ls', 'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix'],
+  'job_board_bibi': ['script_ls', 'script_ping', 'script_auth', 'script_sudo_fix'],
+  'job_board_tekstil': ['script_ls', 'script_grep', 'script_wash_logs', 'script_cat'],
+  'job_board_perovo': ['script_ls', 'script_grep', 'script_auth', 'script_sudo_fix'],
+  'rat_invasion': ['script_ping', 'script_ssh', 'script_auth', 'script_grep', 'script_wash_logs'],
+  'trainee_exam': ['script_ls', 'script_auth', 'script_ssh', 'script_curl', 'script_chmod', 'script_cron', 'script_nc', 'script_sudo_fix']
+};
+
+const getStarterPackForQuest = (questId?: string): string[] => {
+  if (!questId) return MISSION_STARTER_PACKS['default'];
+  if (MISSION_STARTER_PACKS[questId]) return MISSION_STARTER_PACKS[questId];
+  const match = Object.keys(MISSION_STARTER_PACKS).find(key => questId.includes(key));
+  return match ? MISSION_STARTER_PACKS[match] : MISSION_STARTER_PACKS['default'];
 };
 
 function App() {
@@ -85,32 +100,18 @@ function App() {
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState('ID_НЕИЗВЕСТЕН');
   const [homeDistrict, setHomeDistrict] = useState<MapNodeData | null>(null);
+  const [homeDistrictId, setHomeDistrictId] = useState<string>('altufyevo');
   const [activeDistrictId, setActiveDistrictId] = useState('altufyevo');
   const [viewMode, setViewMode] = useState<'CITY' | 'DISTRICT'>('DISTRICT');
   const [isCityMapUnlocked, setIsCityMapUnlocked] = useState(false);
   const [reputation, setReputation] = useState<Record<string, number>>({
-    'GIGA_BANK': 0, 'NEO_KYOTO': 0, 'VOSKHOD_OFFICE': 0, 'EU_SYNTAX': 0, 'ANARCHO_VOID': 0
+    'GIGABANK': 0, 'TELECON': 0, 'KRYLOVO_CORP': 0, 'FEDERAL_OVERSIGHT': 0, 'NULLPOINTERS': 0,
+    'RUST_VALLEY': 0, 'SILICON_HEDGE': 0, 'BIOSYNDICATE': 0, 'REDUNDANTS': 0, 'NET_DRIVERS': 0
   });
 
-  const factionConflictGroups = {
-    'GIGA_BANK': ['ANARCHO_VOID', 'EU_SYNTAX'],
-    'NEO_KYOTO': ['EU_SYNTAX', 'VOSKHOD_OFFICE'],
-    'VOSKHOD_OFFICE': ['ANARCHO_VOID', 'GIGA_BANK'],
-    'EU_SYNTAX': ['NEO_KYOTO', 'GIGA_BANK'],
-    'ANARCHO_VOID': ['GIGA_BANK', 'VOSKHOD_OFFICE']
-  };
+  const [discoveredIntel, setDiscoveredIntel] = useState<Record<string, string[]>>({}); // factionId -> loreNodes[]
 
-  const applyReputationChange = (factionId: string, amount: number) => {
-    setReputation(prev => {
-      const next = { ...prev };
-      next[factionId] = (next[factionId] || 0) + amount;
-      const rivals = factionConflictGroups[factionId as keyof typeof factionConflictGroups] || [];
-      rivals.forEach(rivalId => {
-        if (amount > 0) next[rivalId] = Math.max(-100, (next[rivalId] || 0) - Math.floor(amount / 2));
-      });
-      return next;
-    });
-  };
+
 
   const [activeBarNode, setActiveBarNode] = useState<string | null>(null);
   const [activeCombatPack, setActiveCombatPack] = useState<CombatPack>('java_core');
@@ -121,8 +122,16 @@ function App() {
   const [ramPool, setRamPool] = useState(1);
   const [stress, setStress] = useState(0);
   const [bits, setBits] = useState(150);
-  const [xp, setXp] = useState(0);
-  const [level, setLevel] = useState(1);
+  const [solvedTaskCounts, setSolvedTaskCounts] = useState<Record<string, number>>({
+    'script-kiddie': 0, 'junior': 0, 'mid': 0, 'senior': 0
+  });
+
+  // v0.10: Deck Power & Implants
+  const [deckCores, setDeckCores] = useState(1.0);
+  const [deckRamMb, setDeckRamMb] = useState(512);
+  const [maxImplantSlots] = useState(4);
+  const [installedImplants, setInstalledImplants] = useState<Array<{ id: string, battlesLeft: number }>>([]);
+
   const [traits, setTraits] = useState<Trait[]>([]);
   const [inventory, setInventory] = useState<CombatCard[]>(() => initialMergedInventory());
   const [activeDeck, setActiveDeck] = useState<CombatCard[]>(() => buildTraineeDeck());
@@ -130,13 +139,26 @@ function App() {
   const [questStates, setQuestStates] = useState<QuestState[]>([]);
   const [completedQuestCount, setCompletedQuestCount] = useState(0);
   const [bitsFromQuests, setBitsFromQuests] = useState(0);
+  
+  // v0.10: NPC Presence System
+  const [isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked] = useState(false);
+  const [npcPresenceMap, setNpcPresenceMap] = useState<Record<string, 'HOME' | 'AWAY'>>({});
+
+  const rollNpcPresence = () => {
+    const newMap: Record<string, 'HOME' | 'AWAY'> = {};
+    Object.values(NPC_PRESENCE_CONFIGS).forEach(config => {
+      newMap[config.npcId] = Math.random() < config.awayChance ? 'AWAY' : 'HOME';
+    });
+    setNpcPresenceMap(newMap);
+    console.log("[PRESENCE] Re-rolled NPC locations:", newMap);
+  };
 
   const { syncGameState, logout } = useAuth();
   
   const syncGame = async () => {
     if (!user) return;
     const state = {
-      stress, maxStress, bits, xp, level,
+      stress, maxStress, bits, solvedTaskCounts,
       activeDeck: activeDeck.map(c => ({ id: c.id })),
       inventory: inventoryUnique.map(c => ({ id: c.id })),
       completedQuests: questStates,
@@ -151,10 +173,9 @@ function App() {
       if (gs.stress !== undefined) setStress(gs.stress);
       if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
       if (gs.bits !== undefined) setBits(gs.bits);
-      if (gs.xp !== undefined) setXp(gs.xp);
-      if (gs.level !== undefined) setLevel(gs.level);
-      if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
+      if (gs.solvedTaskCounts !== undefined) setSolvedTaskCounts(gs.solvedTaskCounts);
       if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
+      if (gs.homeDistrictId !== undefined) setHomeDistrictId(gs.homeDistrictId);
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);
         if (gs.completedQuests.length > 0 && currentView === 'CREATION') {
@@ -192,17 +213,7 @@ function App() {
     setBitsFromQuests((b) => b + gain);
   };
 
-  const handleRewardItem = (itemId: string) => {
-    const itm = getItemById(itemId);
-    if (!itm) return;
-    const card: CombatCard = {
-      id: itm.id, name: itm.name, type: 'SCRIPT', grade: 'Junior',
-      description: itm.description, cost: 0, power: 0, integrity: 0, tags: ['script']
-    };
-    setInventory(prev => [...prev, card]);
-  };
 
-  const handleRemoveItem = (itemId: string) => setInventory(prev => prev.filter(i => i.id !== itemId));
 
   const preClassState = { 
     classUnlocked, completedQuestCount, bitsEarnedFromQuests: bitsFromQuests,
@@ -222,63 +233,108 @@ function App() {
   };
 
   const calculateStartingReputation = (districtId: string) => {
-    const initial: Record<string, number> = { 'GIGA_BANK': 0, 'NEO_KYOTO': 0, 'VOSKHOD_OFFICE': 0, 'EU_SYNTAX': 0, 'ANARCHO_VOID': 0 };
+    const initial: Record<string, number> = { 
+      'GIGABANK': 0, 'TELECON': 0, 'KRYLOVO_CORP': 0, 'FEDERAL_OVERSIGHT': 0, 'NULLPOINTERS': 0,
+      'RUST_VALLEY': 0, 'SILICON_HEDGE': 0, 'BIOSYNDICATE': 0, 'REDUNDANTS': 0, 'NET_DRIVERS': 0 
+    };
     switch(districtId) {
-      case 'vykhino': initial['GIGA_BANK'] = 20; break;
-      case 'maryino': initial['VOSKHOD_OFFICE'] = 20; break;
-      case 'chertanovo': initial['ANARCHO_VOID'] = 25; break;
-      case 'south_west': initial['EU_SYNTAX'] = 25; break;
-      case 'tekstilschiki': initial['VOSKHOD_OFFICE'] = 25; break;
-      case 'sokol': initial['EU_SYNTAX'] = 15; initial['VOSKHOD_OFFICE'] = 15; break;
-      case 'izmailovo': initial['NEO_KYOTO'] = 20; break;
-      case 'bibirevo': initial['VOSKHOD_OFFICE'] = 10; break;
-      case 'teply_stan': initial['ANARCHO_VOID'] = 10; break;
-      case 'perovo': initial['NEO_KYOTO'] = 10; break;
+      case 'altufyevo': initial['RUST_VALLEY'] = 20; break;
+      case 'maryino': initial['FEDERAL_OVERSIGHT'] = 20; initial['NULLPOINTERS'] = 10; break;
+      case 'chertanovo': initial['NULLPOINTERS'] = 25; break;
+      case 'south_west': initial['SILICON_HEDGE'] = 25; break;
+      case 'tekstilschiki': initial['REDUNDANTS'] = 25; break;
+      case 'sokol': initial['KRYLOVO_CORP'] = 20; break;
+      case 'izmailovo': initial['SILICON_HEDGE'] = 20; break;
+      case 'bibirevo': initial['REDUNDANTS'] = 10; break;
+      case 'teply_stan': initial['BIOSYNDICATE'] = 20; break;
+      case 'perovo': initial['NET_DRIVERS'] = 20; break;
     }
     return initial;
   };
 
   const handleCreationComplete = (data: { name: string; district: MapNodeData; hobby: Trait; ambition?: Profession }) => {
-    setPlayerName(data.name); setHomeDistrict(data.district); setActiveDistrictId(data.district.id); setTraits([data.hobby]);
+    setPlayerName(data.name); 
+    setHomeDistrict(data.district); 
+    setHomeDistrictId(data.district.id);
+    setActiveDistrictId(data.district.id); 
+    setTraits([data.hobby]);
+    
     const startRep = calculateStartingReputation(data.district.id);
-    if (data.hobby.id === 'corporate_contact') { startRep['GIGA_BANK'] += 15; startRep['EU_SYNTAX'] += 15; }
+    if (data.hobby.id === 'corporate_contact') { 
+      startRep['GIGA_BANK'] += 15; 
+      startRep['EU_SYNTAX'] += 15; 
+    }
     setReputation(startRep);
-    let initialMaxStress = 100, initialRam = 1.0; // 1 unit = 512 MiB default
-    if (data.district.id === 'altufyevo') { initialMaxStress += 10; }
-    if (data.district.id === 'bibirevo') { initialMaxStress += 40; }
+
+    let initialMaxStress = 100, initialRam = 1.0; 
+    
+    // Balanced District Bonuses (v0.13: Max +10 Stress Cap)
+    if (data.district.id === 'altufyevo') { /* Only Discount handled via homeDistrictId */ }
+    if (data.district.id === 'bibirevo') { initialMaxStress += 10; } // Balanced from +40
     if (data.district.id === 'chertanovo') { initialRam += 0.5; initialMaxStress -= 15; }
-    if (data.district.id === 'maryino') { initialMaxStress += 20; initialRam += 0.25; }
-    if (data.district.id === 'south_west') { initialRam += 1.0; }
+    if (data.district.id === 'maryino') { initialMaxStress += 10; initialRam += 0.25; }
+    if (data.district.id === 'south_west') { initialRam += 1.0; initialMaxStress += 10; }
+    if (data.district.id === 'tekstilschiki') { initialMaxStress += 10; }
+    if (data.district.id === 'sokol') { initialMaxStress += 10; }
+    if (data.district.id === 'vdnkh') { initialMaxStress += 10; initialRam += 0.5; }
+    if (data.district.id === 'academy') { initialMaxStress += 10; }
+    
     if (data.hobby.id === 'hardware_hoarder') initialRam += 1.0;
-    setMaxStress(initialMaxStress); setStress(0); setRamPool(initialRam);
-    const starterDeck = buildTraineeDeck(); setActiveDeck(starterDeck);
+    
+    setMaxStress(initialMaxStress); 
+    setStress(0); 
+    setRamPool(initialRam);
+    
+    const starterDeck = buildTraineeDeck(); 
+    setActiveDeck(starterDeck);
     starterDeck.forEach((c) => discoverCard(c.id));
+    setQuestStates(prev => acceptQuest(prev, 'q_kiddo_start'));
     setCurrentView('HUB');
   };
 
   const handleTravel = (nodeId: string, type: string, cost?: number) => {
-    if (cost && bits < cost) return;
+    console.group(`[APP_NAV] Transition: ${nodeId} (${type})`);
+    console.trace();
+    rollNpcPresence(); // Re-roll locations on every primary transition
+    if (cost && bits < cost) { console.warn("LOCKED: INSUFFICIENT_BITS"); console.groupEnd(); return; }
+
+    // v0.095 Reputation Check: Blocking transitions at -30
+    const targetDistrict = MAP_NODES.find((n) => n.id === nodeId);
+    if (type === 'district' && targetDistrict && targetDistrict.dominantFactionId) {
+       const rep = reputation[targetDistrict.dominantFactionId] || 0;
+       if (rep <= -30) {
+         setLoot(prev => [{ id: 'msg_blocked', name: 'ДОСТУП ЗАБЛОКИРОВАН', description: `Ваша репутация у ${targetDistrict.dominantFactionId} слишком низкая. Пути перекрыты.` } as any, ...prev]);
+         return; 
+       }
+    }
+
     if (cost) setBits((prev) => prev - cost);
     if (nodeId === 'UNLOCK_CITY') { setIsCityMapUnlocked(true); setViewMode('CITY'); return; }
     const district = MAP_NODES.find((n) => n.id === nodeId);
     if (type === 'district' && district) { setActiveDistrictId(nodeId); setViewMode('DISTRICT'); setActiveCombatPack(district.combatPack ?? 'java_core'); return; }
+    
+    // v0.095: Punitive Combat chance at -50
+    if (['npc', 'shop', 'terminal', 'bar', 'story', 'combat'].includes(type) && targetDistrict?.dominantFactionId) {
+       const rep = reputation[targetDistrict.dominantFactionId] || 0;
+       if (rep <= -50 && Math.random() < 0.3) {
+         // Force combat with punitive squad
+         setActiveBarNode('punitive_squad'); 
+         setCurrentView('COMBAT'); 
+         return; 
+       }
+    }
+
     if (type === 'combat') {
-      if (!classUnlocked) {
-        const tracked = getTrackedQuest(questStates);
-        const hasStarterPack = tracked && MISSION_STARTER_PACKS[tracked.questId];
-        if (!hasStarterPack) { 
-          // Silently return or provide subtle feedback, no more intrusive alert
-          return; 
-        }
-      }
       setActiveBarNode(nodeId); setCurrentView('COMBAT'); return;
     }
     if (['npc', 'shop', 'terminal', 'bar', 'story'].includes(type)) {
       setActiveBarNode(nodeId); setCurrentView('FIXER_BAR');
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
-      if (tracked && tracked.status === 'active' && trackedDef && trackedDef.type === 'talk') {
-        if (trackedDef.objectiveNodeId === nodeId || (trackedDef.giverNpcId === nodeId && !trackedDef.objectiveNodeId)) handleCompleteTalkQuest(trackedDef.id);
+      if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics')) {
+        if (trackedDef.objectiveNodeId === nodeId) {
+          handleCompleteTalkQuest(trackedDef.id);
+        }
       }
     }
   };
@@ -292,32 +348,139 @@ function App() {
     
     const isHubView = !['CREATION', 'MAP', 'COMBAT', 'CHARACTER', 'DECK_BUILDER', 'REFERENCE', 'FIXER_BAR', 'QUEST_LOG'].includes(currentView);
     
-    if (currentView === 'MAP') return <MapView viewMode={viewMode} activeDistrictId={activeDistrictId} isCityMapUnlocked={isCityMapUnlocked} onNodeSelect={handleTravel} onBack={() => setCurrentView('HUB')} onToggleView={() => setViewMode((prev) => (prev === 'CITY' ? 'DISTRICT' : 'CITY'))} objectiveNodeId={objectiveNodeId} playerBits={bits} />;
+    if (currentView === 'MAP') {
+      const district = MAP_NODES.find((n) => n.id === activeDistrictId) ?? MAP_NODES[0];
+      const filteredNodes = district.subNodes.filter(node => {
+        // Hide Petrovich if his home isn't unlocked yet
+        if (node.id === 'npc_petrovich' && !isPetrovichHomeUnlocked) return false;
+        return true;
+      });
+
+      return <MapView 
+        viewMode={viewMode} 
+        activeDistrictId={activeDistrictId} 
+        isCityMapUnlocked={isCityMapUnlocked} 
+        onNodeSelect={handleTravel} 
+        onBack={() => setCurrentView('HUB')} 
+        onToggleView={() => setViewMode((prev) => (prev === 'CITY' ? 'DISTRICT' : 'CITY'))} 
+        objectiveNodeId={objectiveNodeId} 
+        playerBits={bits} 
+        customSubNodes={filteredNodes} // MapView will need to handle this or App needs to override MAP_NODES
+      />;
+    }
     if (currentView === 'COMBAT') {
       const district = MAP_NODES.find((n) => n.id === activeDistrictId) ?? MAP_NODES[0];
       const taskLibrary = activeCombatPack === 'java_spring' ? SPRING_TZ_LIBRARY : TZ_LIBRARY;
-      const effectiveRank = !classUnlocked ? 'script-kiddie' : skillMode;
+      
+      let effectiveRank: SkillMode = 'script-kiddie';
+      if (classUnlocked) {
+        if (profession.grade === 'Junior') effectiveRank = 'junior';
+        else if (profession.grade === 'Middle') effectiveRank = 'mid';
+        else if (profession.grade === 'Senior') effectiveRank = 'senior';
+      }
+
       const tierTasks = taskLibrary.filter((t) => t.rank === effectiveRank);
       const safeLibrary = tierTasks.length > 0 ? tierTasks : taskLibrary;
       const idx = Math.floor(Math.random() * safeLibrary.length);
-      const tracked = getTrackedQuest(questStates);
       let combatDeck = activeDeck;
-      if (!classUnlocked && tracked && MISSION_STARTER_PACKS[tracked.questId]) {
-        combatDeck = MISSION_STARTER_PACKS[tracked.questId].map((id: string) => CARD_LIBRARY.find((c: CombatCard) => c.id === id) || null).filter((c: CombatCard | null): c is CombatCard => c !== null);
+      if (!classUnlocked) {
+        const tracked = getTrackedQuest(questStates);
+        const pack = getStarterPackForQuest(tracked?.questId);
+        combatDeck = pack.map((id: string) => CARD_LIBRARY.find((c: CombatCard) => c.id === id) || null).filter((c: CombatCard | null): c is CombatCard => c !== null);
       }
-      return <CombatBridge skillMode={skillMode} playerTraits={traits} activeDeck={combatDeck} taskLibrary={safeLibrary} initialTaskIndex={idx} tier={district.tier} onDiscoverCard={discoverCard} onViewChange={(v: any) => { if (typeof v === 'string') setCurrentView(v as ViewType); else { setCurrentView(v.view as ViewType); if (v.cardId) setSelectedDocId(v.cardId); } }} onWin={(earned) => {
-        setBits((prev) => Math.max(0, prev + earned)); setXp((prev) => prev + (earned > 0 ? 45 : 10));
+      return <CombatBridge 
+        skillMode={effectiveRank} 
+        playerTraits={traits} 
+        activeDeck={combatDeck} 
+        taskLibrary={safeLibrary} 
+        initialTaskIndex={idx} 
+        tier={district.tier} 
+        deckCores={deckCores} 
+        deckRamMb={deckRamMb} 
+        homeDistrictId={homeDistrictId}
+        onDiscoverCard={discoverCard} 
+        onViewChange={(v: any) => { if (typeof v === 'string') setCurrentView(v as ViewType); else { setCurrentView(v.view as ViewType); if (v.cardId) setSelectedDocId(v.cardId); } }} 
+        onWin={(earned, rank) => {
+        setBits((prev) => Math.max(0, prev + earned));
+        if (earned > 0) {
+          setSolvedTaskCounts(prev => ({ ...prev, [rank]: (prev[rank] || 0) + 1 }));
+          // Adaptation logic
+          setInstalledImplants(prev => prev.map(imp => ({ ...imp, battlesLeft: Math.max(0, imp.battlesLeft - 1) })));
+        }
         const tracked = getTrackedQuest(questStates);
         const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
         if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === activeBarNode) && earned > 0) { setQuestStates((prev) => completeQuest(prev, trackedDef.id)); rewardForQuest(trackedDef); }
         setCurrentView('MAP'); setViewMode('DISTRICT');
       }} />;
     }
-    if (currentView === 'FIXER_BAR') return <FixerBarScene locationId={activeBarNode || 'altufyevo'} playerBits={bits} playerTraits={traits} playerReputation={reputation} canUnlockNow={canUnlockNow} onRewardReputation={applyReputationChange} onPay={(amount) => setBits((b) => Math.max(0, b - amount))} onRewardCard={(id) => { const card = getCardById(id); if (card) { setInventory((inv) => [...inv, card]); setActiveDeck((deck) => (deck.length < 10 && !deck.some((c) => c.id === id) ? [...deck, card] : deck)); discoverCard(id); } }} onRewardTrait={(id) => { if (!traits.some((t) => t.id === id)) setTraits((prev) => [...prev, { id, name: id.toUpperCase(), type: 'GENERAL', category: 'SOCIAL', description: 'Получено у фикcера.' }]); }} onRestoreHp={(amount) => setStress((prev) => Math.max(0, prev - amount))} onAwardQuest={(questId) => { const q = QUEST_LIBRARY.find(item => item.id === questId); if (q) setQuestStates(prev => acceptQuest(prev, q.id)); }} playerStress={stress} maxStress={maxStress} inventory={inventory} onRewardItem={handleRewardItem} onRemoveItem={handleRemoveItem} onRewardBits={(amount) => setBits(b => b + amount)} activeQuestIds={questStates.filter(s => s.status === 'active').map(s => s.questId)} onCompleteQuest={handleCompleteTalkQuest} onUnlockCity={() => { setIsCityMapUnlocked(true); setViewMode('CITY'); setCurrentView('MAP'); }} onSetProfession={(profId) => { const prof = getProfessionById(profId); if (prof) { setProfession(prof); setClassUnlocked(true); } }} onStartCombat={(combatId) => { setActiveBarNode(combatId); setCurrentView('COMBAT'); }} onLeave={() => setCurrentView('MAP')} />;
-    if (currentView === 'CHARACTER') return <CharacterScreen player={{ name: playerName, district: homeDistrict?.name || 'НЕИЗВЕСТНО', profession, hp: stress, bits, xp, level, traits, classUnlocked, completedQuestCount, reputation, maxStress }} questStates={questStates} allQuests={QUEST_LIBRARY} onBack={() => setCurrentView('HUB')} onLogout={logout} />;
+    if (currentView === 'FIXER_BAR') {
+      const activeQuests = questStates.filter(s => s.status === 'active' || s.status === 'completed').map(s => s.questId);
+      return <FixerBarScene 
+        locationId={activeBarNode || 'altufyevo'} 
+        playerBits={bits} 
+        playerTraits={traits} 
+        playerReputation={reputation} 
+        canUnlockNow={classUnlocked} 
+        homeDistrictId={activeDistrictId}
+        onPay={(amount: number) => setBits((b) => Math.max(0, b - amount))} 
+        onRewardCard={(id: string) => { const card = getCardById(id); if (card) { setInventory((inv) => [...inv, card]); setActiveDeck((deck) => (deck.length < 10 && !deck.some((c) => c.id === id) ? [...deck, card] : deck)); discoverCard(id); } }} 
+        onRewardTrait={(id: string) => { if (!traits.some((t) => t.id === id)) setTraits((prev) => [...prev, { id, name: id.toUpperCase(), type: 'GENERAL', category: 'SOCIAL', description: 'Получено у фикcера.' }]); }} 
+        onRestoreHp={(amount: number) => setStress((prev) => Math.max(0, prev - amount))} 
+        onAwardQuest={(questId: string) => { 
+        if (questId === 'UNLOCK_PETROVICH_HOME') {
+          setIsPetrovichHomeUnlocked(true);
+          return;
+        }
+        const q = QUEST_LIBRARY.find(item => item.id === questId); 
+        if (q) setQuestStates(prev => acceptQuest(prev, q.id)); 
+      }} 
+        playerLevel={classUnlocked ? 5 : 1} 
+        inventory={inventory} 
+        onRewardBits={(amount: number) => setBits(b => b + amount)} 
+        activeQuestIds={activeQuests} 
+        onCompleteQuest={handleCompleteTalkQuest} 
+        onUnlockCity={() => { setIsCityMapUnlocked(true); setViewMode('CITY'); setCurrentView('MAP'); }} 
+        onSetProfession={(profId: string) => { const prof = getProfessionById(profId); if (prof) { setProfession(prof); setClassUnlocked(true); } }} 
+        onStartCombat={(combatId: string) => { setActiveBarNode(combatId); setCurrentView('COMBAT'); }} 
+        onTravel={handleTravel} 
+        onLeave={() => setCurrentView('MAP')} 
+        npcPresenceMap={npcPresenceMap}
+        isPetrovichHomeUnlocked={isPetrovichHomeUnlocked}
+      />;
+    }
+    if (currentView === 'CHARACTER') return <CharacterScreen player={{ 
+      name: playerName, 
+      district: homeDistrict?.name || 'НЕИЗВЕСТНО', 
+      profession, 
+      hp: stress, 
+      bits, 
+      solvedTaskCounts, 
+      traits, 
+      classUnlocked, 
+      completedQuestCount, 
+      reputation, 
+      maxStress, 
+      deckCores, 
+      deckRamMb, 
+      installedImplants, 
+      maxImplantSlots 
+    }} questStates={questStates} allQuests={QUEST_LIBRARY} onBack={() => setCurrentView('HUB')} onLogout={logout} onUpgradeHardware={(cores: number, ram: number) => { 
+      if (bits >= 500) { 
+        setDeckCores(cores); 
+        setDeckRamMb(ram);
+        setBits(b => b - 500);
+      }
+    }} onInstallImplant={(id: string) => { 
+      const imp = IMPLANT_CATALOG.find(i => i.id === id);
+      if (imp && bits >= imp.cost && installedImplants.length < maxImplantSlots) {
+        setInstalledImplants(prev => [...prev, { id, battlesLeft: 10 }]); 
+        setBits(b => b - imp.cost);
+      }
+    }} />;
     if (currentView === 'DECK_BUILDER') return <DeckBuilder skillMode={skillMode} inventoryUnique={inventoryUnique} activeDeck={activeDeck} onUpdateDeck={setActiveDeck} onViewChange={(v, id) => { setLastView(currentView); setCurrentView(v); if (id) setSelectedDocId(id); }} />;
-    if (currentView === 'REFERENCE') return <Documentation skillMode={skillMode} discoveredCardIds={new Set([...Array.from(discoveredCardIds), ...activeDeck.map((c) => c.id)])} initialEntryId={selectedDocId} onBack={() => { setCurrentView(lastView); setSelectedDocId(null); }} />;
+    if (currentView === 'REFERENCE') return <Documentation discoveredCardIds={new Set([...Array.from(discoveredCardIds), ...activeDeck.map((c) => c.id)])} initialEntryId={selectedDocId} onBack={() => { setCurrentView(lastView); setSelectedDocId(null); }} />;
     if (currentView === 'QUEST_LOG') return <QuestLog questStates={questStates} onBack={() => setCurrentView('HUB')} />;
+    if (currentView === 'INTEL') return <IntelView reputation={reputation} discoveredIntel={discoveredIntel} onBack={() => setCurrentView('HUB')} />;
 
     if (!isHubView) return null; // Fallback for safety, though renderAppView usually returns earlier
     
@@ -341,18 +504,18 @@ function App() {
                   <span className="stat-value">{Math.min(100, Math.round((stress/maxStress)*100))}%</span>
                 </div>
               </div>
-              <div className="hub-stat-v4">
-                <span className="stat-label">CPU_LOAD</span>
+              <div className="hub-stat-v4" title="МОЩНОСТЬ ДЕКИ (ЦПУ)">
+                <span className="stat-label">DECK_POWER (CPU)</span>
                 <div className="stat-bar-v4">
                   <div className="stat-fill-v4 cpu" style={{width: `100%`}}></div>
-                  <span className="stat-value">1.0 CORES</span>
+                  <span className="stat-value">{deckCores.toFixed(1)} CORES</span>
                 </div>
               </div>
-              <div className="hub-stat-v4">
-                <span className="stat-label">ALLOCATED_RAM</span>
+              <div className="hub-stat-v4" title="МОЩНОСТЬ ДЕКИ (RAM)">
+                <span className="stat-label">RAM_CAPACITY</span>
                 <div className="stat-bar-v4">
-                  <div className="stat-fill-v4 ram" style={{width: `${(ramPool/8)*100}%`}}></div>
-                  <span className="stat-value">{(ramPool * 512).toFixed(0)} MiB</span>
+                  <div className="stat-fill-v4 ram" style={{width: `${(deckRamMb/8192)*100}%`}}></div>
+                  <span className="stat-value">{deckRamMb >= 1024 ? `${(deckRamMb/1024).toFixed(1)} GiB` : `${deckRamMb} MiB`}</span>
                 </div>
               </div>
               <div className="val pulse-amber">ƀ{bits}</div>
@@ -365,7 +528,7 @@ function App() {
             <div className="col-header mono-text"><Shield size={14} /> IDENTITY_MODULE</div>
             <div className="neon-panel interactive arctic-monolith stat-card-v4" onClick={() => setCurrentView('CHARACTER')}>
               <div className="card-inner">
-                <div className="prof-tag">{classUnlocked ? profession.name : "UNAUTHORIZED_IDENTITY_0x00"}</div>
+                <div className="prof-tag">{classUnlocked ? profession.name : "SCRIPT-KIDDO"}</div>
                  <div className="main-stat-row">
                     <div className="avatar-mini"><User size={32} /></div>
                     <div className="hp-ring">
@@ -373,10 +536,18 @@ function App() {
                        <div className="hp-label">STRESS_LEVEL</div>
                     </div>
                  </div>
-                <div className="progress-mini">
-                   <div className="prog-labels"><span>SESSION_XP_{level}</span> <span>{xp}U</span></div>
-                   <div className="prog-bar"><div className="prog-fill" style={{width: `${(xp/(level*100))*100}%`}}></div></div>
-                </div>
+                 <div className="progress-mini">
+                    <div className="prog-labels">
+                      <span>SOLVED_TASKS_SUMMARY</span>
+                      <span className="gold">[{Object.values(solvedTaskCounts).reduce((a, b) => a + b, 0)}]</span>
+                    </div>
+                    <div className="task-mini-grid">
+                       <div className="task-mini-item">KIDDIE: {solvedTaskCounts['script-kiddie']}</div>
+                       <div className="task-mini-item">JUNIOR: {solvedTaskCounts['junior']}</div>
+                       <div className="task-mini-item">MIDDLE: {solvedTaskCounts['mid']}</div>
+                       <div className="task-mini-item">SENIOR: {solvedTaskCounts['senior']}</div>
+                    </div>
+                 </div>
               </div>
             </div>
             {!classUnlocked && (
@@ -408,6 +579,14 @@ function App() {
                 <div className="op-text">
                    <div className="op-title">DECK_CONSTRUCTOR</div>
                    <div className="op-sub">{activeDeck.length}/30 Modules Loaded</div>
+                </div>
+                <ChevronRight className="op-arrow" />
+             </div>
+             <div className="neon-panel interactive op-card intel-lnk glow-amber" onClick={() => setCurrentView('INTEL')}>
+                <div className="op-icon"><Globe size={32} /></div>
+                <div className="op-text">
+                   <div className="op-title">INTEL_FEED [ИНФОСВОДКА]</div>
+                   <div className="op-sub">Faction Lore & Recognition</div>
                 </div>
                 <ChevronRight className="op-arrow" />
              </div>
@@ -452,9 +631,9 @@ function App() {
              <div className="neon-panel interactive intel-card" style={{ marginTop: '15px' }} onClick={() => setCurrentView('REFERENCE')}>
                 <div className="intel-header">
                    <div className="intel-title">DOCUMENTATION</div>
-                   <div className="intel-count">{discoveredCardIds.size}</div>
+                   <div className="intel-count gold">{inventoryUnique.length}</div>
                 </div>
-                <p className="intel-desc mono-text">Found concepts and library references.</p>
+                <p className="intel-desc mono-text">LIBRARIES_OPENED / ARCHED_CONCEPTS</p>
              </div>
           </div>
         </div>
@@ -470,7 +649,7 @@ function App() {
   return (
     <div className="app-root main-crt">
       {!hideNav && (
-        <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={stress} level={level} maxStress={maxStress} onLogout={logout} />
+        <ResponsiveNav currentView={currentView} onViewChange={(v) => setCurrentView(v)} hp={stress} level={classUnlocked ? 5 : 1} maxStress={maxStress} onLogout={logout} />
       )}
       {/* [PROTOCOL_CLEANUP] GoalHUD removed as requested */}
       <main className={`view-container ${hideNav ? 'fullscreen' : ''}`}>
@@ -485,6 +664,8 @@ function App() {
         .completed .b-status { color: var(--neon-green); }
         .b-title { color: #fff; }
         .b-body { font-size: 0.65rem; color: #aaa; line-height: 1.4; }
+        .task-mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 0.6rem; color: var(--neon-cyan); margin-top: 5px; opacity: 0.8; }
+        .task-mini-item { border-left: 1px solid rgba(0,255,255,0.2); padding-left: 4px; }
       `}</style>
     </div>
   );

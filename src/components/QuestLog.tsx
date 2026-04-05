@@ -29,10 +29,12 @@ const QuestLog: React.FC<QuestLogProps> = ({ questStates, onBack }) => {
             {q.type === 'combat' && <Shield size={12} />}
             {q.type === 'talk' && <Terminal size={12} />}
             {q.type === 'delivery' && <Search size={12} />}
+            {q.type === 'diagnostics' && <Clock size={12} />}
             <span>
               {q.type === 'combat' ? 'БОЕВОЙ_КОНТРАКТ' : 
                q.type === 'talk' ? 'ИНФО_ЗАПРОС' : 
-               'ДОСТАВКА_ПАКЕТОВ'}
+               q.type === 'delivery' ? 'ДОСТАВКА_ПАКЕТОВ' :
+               'ДИАГНОСТИКА_СИСТЕМ'}
             </span>
           </div>
           <div className="quest-tier">УРОВЕНЬ_{q.tier}</div>

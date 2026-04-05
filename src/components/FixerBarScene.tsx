@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DIALOGUE_TREES } from '../logic/dialogues';
-import type { DialogueNode } from '../logic/dialogues';
+import type { DialogueNode, DialogueOption } from '../logic/dialogues';
 import type { Trait } from '../logic/traits';
-import { Terminal, LogOut, Cpu, Fingerprint, Users, Wine, Coffee, Skull, Package, Shield } from 'lucide-react';
+import { FACTIONS } from '../logic/factions';
+import { NPC_PRESENCE_CONFIGS } from '../logic/npcPresence';
+import { Cpu, Fingerprint } from 'lucide-react';
 
 interface FixerBarSceneProps {
   locationId: string;
@@ -10,7 +12,6 @@ interface FixerBarSceneProps {
   playerTraits: Trait[];
   playerReputation: Record<string, number>;
   canUnlockNow: boolean;
-  onRewardReputation: (factionId: string, amount: number) => void;
   onPay: (amount: number) => void;
   onRewardCard: (cardId: string) => void;
   onRewardTrait: (traitId: string) => void;
@@ -23,12 +24,14 @@ interface FixerBarSceneProps {
   onAwardQuest?: (questId: string) => void;
   activeQuestIds?: string[];
   onCompleteQuest?: (questId: string) => void;
-  playerStress: number;
-  maxStress: number;
+  onDiscoverIntel?: (factionId: string, lore: string) => void;
+  playerLevel: number;
   inventory: any[];
-  onRewardItem?: (itemId: string) => void;
-  onRemoveItem?: (itemId: string) => void;
+  onTravel?: (nodeId: string, type: string, cost?: number) => void;
   onLeave: () => void;
+  homeDistrictId?: string;
+  npcPresenceMap: Record<string, 'HOME' | 'AWAY'>;
+  isPetrovichHomeUnlocked: boolean;
 }
 
 const FixerBarScene: React.FC<FixerBarSceneProps> = ({
@@ -37,7 +40,6 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   playerTraits,
   playerReputation,
   canUnlockNow,
-  onRewardReputation,
   onPay,
   onRewardCard,
   onRewardTrait,
@@ -50,12 +52,13 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onAwardQuest,
   activeQuestIds = [],
   onCompleteQuest,
-  playerStress,
-  maxStress,
+  playerLevel,
   inventory,
-  onRewardItem,
-  onRemoveItem,
-  onLeave
+  onTravel,
+  onLeave,
+  homeDistrictId,
+  npcPresenceMap,
+  isPetrovichHomeUnlocked
 }) => {
   let tree = DIALOGUE_TREES[locationId];
   if (!tree) {
@@ -63,350 +66,281 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     tree = DIALOGUE_TREES['GENERIC_STUB'];
   }
 
+  // Find NPC faction. 
+  let npcFactionId = 'NET_DRIVERS';
+  if (locationId.includes('corp') || locationId.includes('regulator')) npcFactionId = 'KRYLOVO_CORP';
+  if (locationId.includes('bank') || locationId.includes('gigabank')) npcFactionId = 'GIGABANK';
+  if (locationId.includes('null') || locationId.includes('hacker') || locationId.includes('chertanovo')) npcFactionId = 'NULLPOINTERS';
+  if (locationId.includes('rust') || locationId.includes('scav') || locationId.includes('vykhino') || locationId.includes('altufyevo')) npcFactionId = 'RUST_VALLEY';
+  if (locationId.includes('federal') || locationId.includes('over')) npcFactionId = 'FEDERAL_OVERSIGHT';
+  if (locationId.includes('bio')) npcFactionId = 'BIOSYNDICATE';
+  if (locationId.includes('hedge') || locationId.includes('south_west')) npcFactionId = 'SILICON_HEDGE';
+  if (locationId.includes('redundant')) npcFactionId = 'REDUNDANTS';
+  if (locationId.includes('commis') || locationId.includes('perovo')) npcFactionId = 'CYBERCOMMIS';
+
+  const faction = FACTIONS[npcFactionId];
+  const currentRep = faction ? (playerReputation[faction.id] || 0) : 0;
+
   const [currentNodeId, setCurrentNodeId] = useState<string>(tree.startNodeId);
   const [typedText, setTypedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
+  const [dialogueTurn, setDialogueTurn] = useState(0);
 
-  const node: DialogueNode = tree.nodes[currentNodeId];
-
-  // Stress-based text modification for the intro node
-  const displayNodeText = React.useMemo(() => {
-    if (currentNodeId === tree.startNodeId && (playerStress / maxStress) > 0.75) {
-       const reactions = [
-         "[ВНИМАНИЕ] Твои нейроны искрят. Перегрев системы 75%+. ",
-         "[ВАРНИНГ] Чипсет дымит, парень. У тебя логи текут прямо на пол. ",
-         "[СБОЙ_СИНХРО] Выглядишь паршиво. Слишком много мусора в кэше. ",
-       ];
-       const r = reactions[locationId.length % reactions.length];
-       return r + node.text;
+  // v0.10: Handle Presence Overrides (Note on door)
+  useEffect(() => {
+    const config = Object.values(NPC_PRESENCE_CONFIGS).find(c => c.homeNodeId === locationId);
+    if (config && npcPresenceMap[config.npcId] === 'AWAY') {
+       // Check if there is an intro_note node in this tree (to be added in next phase)
+       if (tree.nodes['intro_note']) {
+         setCurrentNodeId('intro_note');
+       } else {
+         // Fallback: modify the intro text temporarily if node doesn't exist yet
+         setTypedText(config.awayNote);
+       }
+    } else {
+       setCurrentNodeId(tree.startNodeId);
     }
-    return node.text;
-  }, [currentNodeId, node.text, playerStress, maxStress, tree.startNodeId]);
-  const isMenuMode = node.speaker === 'MENU';
+    setTypedText('');
+    setIsTyping(true);
+  }, [locationId, tree.startNodeId, npcPresenceMap]);
+
+  const node: DialogueNode = tree.nodes[currentNodeId] || tree.nodes[tree.startNodeId];
 
   const visibleOptions = node.options.filter(opt => {
-    if (opt.requireTrait) {
-      if (!playerTraits.some((t: Trait) => t.id === opt.requireTrait)) return false;
-    }
-    if (opt.requireReputation) {
-      const currentRep = playerReputation[opt.requireReputation.factionId] || 0;
-      if (currentRep < opt.requireReputation.minPoints) return false;
-    }
+    if (opt.requireTrait && !playerTraits.some((t: Trait) => t.id === opt.requireTrait)) return false;
+    if (opt.requireReputation && (playerReputation[opt.requireReputation.factionId] || 0) < opt.requireReputation.minPoints) return false;
     if (opt.requireUnlock && !canUnlockNow) return false;
     if (opt.requireQuestId && !activeQuestIds.includes(opt.requireQuestId)) return false;
     if (opt.requireItemId && !inventory.some(i => i.id === opt.requireItemId)) return false;
+    if (opt.requireMinLevel && playerLevel < opt.requireMinLevel) return false;
+    if (opt.requireMaxLevel && playerLevel > opt.requireMaxLevel) return false;
+    if (opt.isProOnly && !canUnlockNow) return false; 
+    if (opt.isTraineeOnly && canUnlockNow) return false;
+    if (opt.effect === 'AWARD_QUEST' && opt.cardRewardId && activeQuestIds.includes(opt.cardRewardId)) return false;
+    if (opt.awardQuestId && activeQuestIds.includes(opt.awardQuestId)) return false;
+
     return true;
   });
 
-  useEffect(() => {
-    let i = 0;
-    setTypedText('');
-    setIsTyping(true);
-    const interval = setInterval(() => {
-      setTypedText(displayNodeText.slice(0, i + 1));
-      i++;
-      if (i > displayNodeText.length) {
-        clearInterval(interval);
-        setIsTyping(false);
+  // v0.10: Inject Guest NPCs if they are present at this location
+  const finalOptions = [...visibleOptions];
+  if (currentNodeId === tree.startNodeId) {
+    Object.values(NPC_PRESENCE_CONFIGS).forEach(config => {
+      // Show Petrovich in bar if he's not unlocked OR rolled as AWAY at bar
+      const isPetrovichSpecial = config.npcId === 'npc_petrovich' && !isPetrovichHomeUnlocked;
+      if (config.awayNodeId === locationId && (npcPresenceMap[config.npcId] === 'AWAY' || isPetrovichSpecial)) {
+         finalOptions.unshift({
+           text: `ПОГОВОРИТЬ: ${config.name.toUpperCase()}`,
+           nextId: 'TRAVEL_GUEST',
+           cardRewardId: config.npcId, // Use as target nodeId
+           subtext: 'ПРИСУТСТВУЕТ_В_ЛОКАЦИИ'
+         } as any);
       }
-    }, 20); // slightly faster for better reading
-    return () => clearInterval(interval);
-  }, [currentNodeId, displayNodeText]); // Use displayNodeText instead of node.text
+    });
+  }
 
-  const handleOptionClick = (option: any) => {
-    if (isTyping) {
+  useEffect(() => {
+    if (node && node.text) {
       setTypedText(node.text);
       setIsTyping(false);
-      return;
+    }
+  }, [currentNodeId, node]);
+
+  const handleOptionClick = (option: DialogueOption) => {
+    if (isTyping) { setTypedText(node.text); setIsTyping(false); return; }
+
+    const isAltufyevoResident = homeDistrictId === 'altufyevo';
+    const isLocalAltufyevo = locationId.includes('altufyevo') || (['npc_petrovich', 'shop_scrap', 'npc_varvar', 'npc_nixanna', 'job_board_alt', 'term_silo_7', 'bar_chips'].includes(locationId));
+    const hasDiscount = isAltufyevoResident && isLocalAltufyevo;
+    
+    let effectiveCost = option.cost || 0;
+    if (hasDiscount && effectiveCost > 0) effectiveCost = Math.floor(effectiveCost * 0.9);
+
+    if (effectiveCost > 0 && playerBits < effectiveCost) return;
+    if (effectiveCost > 0) onPay(effectiveCost);
+
+    // v0.10: Handle Guest Navigation
+    if (option.nextId === 'TRAVEL_GUEST' && option.cardRewardId && onTravel) {
+       onTravel(option.cardRewardId, 'npc', 0);
+       return;
     }
 
-    if (option.cost && playerBits < option.cost) {
-      alert('НЕДОСТАТОЧНО_БИТ-КРЕДИТОВ');
-      return;
-    }
+    if (option.effect === 'GIVE_CARD' && option.cardRewardId) onRewardCard(option.cardRewardId);
+    else if (option.effect === 'GIVE_TRAIT' && option.cardRewardId) onRewardTrait(option.cardRewardId);
+    else if (option.effect === 'GIVE_BITS' && option.amount) onRewardBits(option.amount);
+    else if (option.effect === 'RESTORE_HP' && option.amount) onRestoreHp(option.amount);
+    else if (option.effect === 'SET_PROFESSION' && option.cardRewardId) onSetProfession(option.cardRewardId);
+    else if (option.effect === 'START_COMBAT' && option.cardRewardId) onStartCombat(option.cardRewardId);
+    else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) onUnlockCity();
+    else if (option.effect === 'TRAVEL' && onTravel && option.cardRewardId) onTravel(option.cardRewardId, 'district', option.cost);
+    else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) onRewardXp(option.amount);
+    else if (option.effect === 'AWARD_QUEST' && option.cardRewardId && onAwardQuest) onAwardQuest(option.cardRewardId);
+    else if (option.effect === 'COMPLETE_TALK_QUEST' && option.cardRewardId && onCompleteQuest) onCompleteQuest(option.cardRewardId);
 
-    if (option.cost) onPay(option.cost);
-
-    if (option.effect === 'GIVE_CARD' && option.cardRewardId) {
-      onRewardCard(option.cardRewardId);
-    } else if (option.effect === 'GIVE_TRAIT' && option.cardRewardId) {
-      onRewardTrait(option.cardRewardId); // Reusing field for trait ID
-    } else if (option.effect === 'GIVE_BITS' && option.amount) {
-      onRewardBits(option.amount);
-    } else if (option.effect === 'RESTORE_HP' && option.amount) {
-      onRestoreHp(option.amount);
-    } else if (option.effect === 'SET_PROFESSION' && option.cardRewardId) {
-      onSetProfession(option.cardRewardId); // Reusing cardRewardId as profId
-    } else if (option.effect === 'SET_PROFESSION_WITH_ACADEMY' && option.cardRewardId) {
-      onSetProfession(option.cardRewardId);
-      if (onAwardQuest) onAwardQuest('q_neon_academy_bootcamp');
-    } else if (option.effect === 'START_COMBAT' && option.cardRewardId) {
-      onStartCombat(option.cardRewardId);
-    } else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) {
-      onUnlockCity();
-    } else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) {
-      onRewardXp(option.amount);
-    } else if (option.effect === 'AWARD_QUEST' && option.cardRewardId && onAwardQuest) {
-      onAwardQuest(option.cardRewardId);
-    } else if (option.effect === 'GIVE_ITEM' && option.cardRewardId && onRewardItem) {
-      onRewardItem(option.cardRewardId);
-    } else if (option.effect === 'REMOVE_ITEM' && option.cardRewardId && onRemoveItem) {
-      onRemoveItem(option.cardRewardId);
-    } else if (option.reputationReward) {
-      onRewardReputation(option.reputationReward.factionId, option.reputationReward.amount);
-    }
-
-    if (option.completeQuestId && onCompleteQuest) {
-      onCompleteQuest(option.completeQuestId);
-    }
+    if (option.completeQuestId && onCompleteQuest) onCompleteQuest(option.completeQuestId);
+    if (option.awardQuestId && onAwardQuest) onAwardQuest(option.awardQuestId);
 
     if (option.nextId === 'LEAVE') {
-      // Don't call onLeave if we just triggered a screen change effect
-      if (option.effect !== 'START_COMBAT' && option.effect !== 'UNLOCK_CITY') {
-        onLeave();
-      }
+      onLeave();
     } else {
+      if (option.nextId === tree.startNodeId) setDialogueTurn(prev => prev + 1);
       setCurrentNodeId(option.nextId);
     }
   };
 
-  // Вспомогательная логика для визуализации Меню Хаба
-  const renderHubMenu = () => {
-    return (
-      <div className="hub-locations-grid">
-        {visibleOptions.map((opt, idx) => {
-          const cantAfford = opt.cost && playerBits < opt.cost;
-          const isLeave = opt.nextId === 'LEAVE';
-          
-          let Icon = Users;
-          let color = 'var(--neon-cyan)';
-          
-          if (opt.nextId.includes('spider')) { Icon = Cpu; color = 'var(--neon-green)'; }
-          else if (opt.nextId.includes('mira')) { Icon = Wine; color = 'var(--neon-pink)'; }
-          else if (opt.nextId.includes('ghost')) { Icon = Terminal; color = 'var(--neon-green)'; }
-          else if (opt.nextId.includes('oracle')) { Icon = Fingerprint; color = '#a8e063'; }
-          else if (opt.nextId.includes('zero')) { Icon = Skull; color = 'var(--neon-pink)'; }
-          else if (opt.nextId.includes('junkie')) { Icon = Package; color = '#888'; }
-          else if (opt.text.toLowerCase().includes('бармен')) { Icon = Coffee; color = 'var(--neon-amber)'; }
-          else if (isLeave) { Icon = LogOut; color = '#555'; }
-
-          return (
-            <div 
-              key={idx} 
-              className={`npc-card neon-panel interactive ${cantAfford ? 'locked' : ''} ${isLeave ? 'leave-card' : ''}`}
-              onClick={() => handleOptionClick(opt)}
-            >
-              <Icon size={48} color={color} className="npc-icon" />
-              <div className="npc-details">
-                <div className="npc-action">
-                  {opt.nextId.includes('npc') && <Users size={16} className="inline mr-2" />}
-                  {opt.nextId.includes('bar') && <Wine size={16} className="inline mr-2" />}
-                  {opt.nextId.includes('shop') && <Package size={16} className="inline mr-2" />}
-                  {opt.nextId.includes('term') && <Terminal size={16} className="inline mr-2" />}
-                  {opt.text.split('-')[0]?.trim() || opt.text}
-                </div>
-                <div className="npc-subtext">{opt.subtext || 'ВЗАИМОДЕЙСТВИЕ_ДОСТУПНО'}</div>
-              </div>
-              {opt.cost ? <div className="npc-cost">[{opt.cost} БИТ]</div> : null}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   return (
-    <div className="fixer-bar-view animate-float main-crt">
-      <div className="scene-header">
-        <h2 className="neon-text location-glitch">{locationId.toUpperCase()}_ХАБ</h2>
-        <div className="header-stats">
-          <Fingerprint size={16} /> БИТЫ: {playerBits}
+    <div className="fixer-bar-view main-crt">
+      <header className="bar-header">
+        <div className="header-left">
+          <div className="header-marker"></div>
+          <span className="location-tag mono-text">{locationId.toUpperCase()}_ХАБ</span>
         </div>
-      </div>
+        <div className="header-right mono-text">
+          <Fingerprint size={14} className="bits-icon" /> БИТЫ: {playerBits}
+        </div>
+      </header>
 
-      <div className={`dialogue-container ${isMenuMode ? 'menu-mode' : ''}`}>
-        
-        {!isMenuMode && (() => {
-           let SpeakerIcon = Cpu;
-           let speakerColor = 'var(--neon-green)';
-           if (node.speaker === 'MIRA') { SpeakerIcon = Wine; speakerColor = 'var(--neon-pink)'; }
-           else if (node.speaker === 'SPIDER') { SpeakerIcon = Users; speakerColor = 'var(--neon-cyan)'; }
-           else if (node.speaker === 'GHOST') { SpeakerIcon = Terminal; speakerColor = 'var(--neon-amber)'; }
-           else if (node.speaker === 'ORACLE') { SpeakerIcon = Fingerprint; speakerColor = '#a8e063'; }
-           else if (node.speaker === 'ZERO') { SpeakerIcon = Skull; speakerColor = 'var(--neon-pink)'; }
-           else if (node.speaker === 'JUNKIE') { SpeakerIcon = Package; speakerColor = '#888'; }
-           else if (node.speaker === 'СЕРЖАНТ') { SpeakerIcon = Shield; speakerColor = 'var(--neon-cyan)'; }
-
-           return (
-             <div className="speaker-avatar-v4">
-                <div className="avatar-frame" style={{ borderColor: speakerColor }}>
-                   <div className="avatar-scanline"></div>
-                   <SpeakerIcon size={60} color={speakerColor} className="avatar-icon" />
-                </div>
-                <div className="speaker-name-v4 neon-text" style={{ color: speakerColor, textShadow: `0 0 10px ${speakerColor}` }}>
-                  {node.speaker}
-                </div>
-                <div className="speaker-id mono-text">[ID_{locationId.toUpperCase().slice(0,8)}]</div>
-             </div>
-           );
-        })()}
-
-        <div className="dialogue-box-v4">
-          <div className="text-wrap-v4">
-            <div className="dialogue-text-v4 mono-text">
-              <span className="text-content">{typedText}</span>
-              {isTyping && <span className="terminal-cursor">█</span>}
+      <main className="bar-main">
+        <aside className="bar-sidebar">
+          <div className="node-title neon-text green">{tree.nodes[tree.startNodeId].speaker || 'ОБЪЕКТ'}</div>
+          <div className="node-icon-frame">
+            <div className="icon-container">
+              <Cpu size={80} strokeWidth={1} className="chip-icon" />
             </div>
+            <div className="frame-footer"></div>
           </div>
-          
-          {isMenuMode && !isTyping ? renderHubMenu() : (
-            <div className="dialogue-options-v4">
-              {!isTyping && visibleOptions.map((opt, idx) => {
-                const cantAfford = opt.cost && playerBits < opt.cost;
-                return (
-                  <button
-                    key={idx}
-                    className={`dialogue-btn-v4 ${cantAfford ? 'locked' : ''}`}
-                    onClick={() => handleOptionClick(opt)}
-                  >
-                    <span className="opt-marker">{cantAfford ? '!!' : '>_'}</span>
-                    <span className="opt-text">{opt.text}</span>
-                    {opt.cost ? <span className="opt-cost">ƀ{opt.cost}</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {!isMenuMode && (
-        <button className="exit-bar-btn mono-text" onClick={onLeave}>
-          [ РАЗОРВАТЬ_СОЕДИНЕНИЕ ]
-        </button>
-      )}
+          <div className="node-meta mono-text">
+            @ {faction?.name || 'UNKNOWN'} | REP: {currentRep}
+          </div>
+        </aside>
+
+        <section className="bar-content">
+          <div className="content-text-area mono-text">
+            {typedText}
+          </div>
+
+          <div className="content-actions">
+            {finalOptions.map((opt, idx) => {
+              const cantAfford = opt.cost && playerBits < opt.cost;
+              return (
+                <button
+                  key={idx}
+                  className={`action-button mono-text ${cantAfford ? 'locked' : ''}`}
+                  onClick={() => handleOptionClick(opt)}
+                >
+                  <div className="action-main">
+                    <span className="action-prompt">{">_"}</span>
+                    <span className="action-text">{opt.text}</span>
+                  </div>
+                  {opt.cost && <div className="action-cost amber">b{opt.cost}</div>}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      </main>
 
       <style>{`
         .fixer-bar-view {
-          height: 100%;
+          height: 100vh;
+          background: #000;
           display: flex;
           flex-direction: column;
-          padding: 3rem 10%;
-          background: #000;
-          position: relative;
+          color: #e0e0e0;
+          padding: 2rem 4rem;
+          box-sizing: border-box;
           overflow: hidden;
         }
-        .fixer-bar-view::before {
-          content: '';
-          position: absolute; top:0; left:0; right:0; bottom:0;
-          background: repeating-linear-gradient(0deg, rgba(0,0,0,0) 0px, rgba(0,0,0,0.1) 1px, rgba(0,0,0,0) 2px);
-          pointer-events: none;
-          z-index: 10;
+
+        .bar-header {
+          display: flex;
+          justify-content: space-between;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          padding-bottom: 1rem;
+          margin-bottom: 3rem;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-marker { width: 4px; height: 18px; background: #00ff99; }
+        .location-tag { font-size: 1.1rem; letter-spacing: 1px; }
+        .header-right { opacity: 0.8; display: flex; align-items: center; gap: 8px; }
+        .bits-icon { color: #ffcc00; }
+
+        .bar-main {
+          flex: 1;
+          display: flex;
+          gap: 5rem;
         }
 
-        .scene-header {
+        .bar-sidebar {
+          width: 280px;
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+        .node-title { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
+        .node-icon-frame {
+           border: 1px solid #00ff99;
+           padding: 2px;
+           background: rgba(0,255,153,0.03);
+           position: relative;
+        }
+        .icon-container {
+           height: 240px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           border: 1px solid rgba(0,255,153,0.3);
+           background: #000;
+        }
+        .chip-icon { color: #00ff99; opacity: 0.8; filter: drop-shadow(0 0 10px rgba(0,255,153,0.3)); }
+        .frame-footer { height: 30px; border-top: 1px solid #00ff99; background: rgba(0,255,153,0.05); }
+        .node-meta { font-size: 0.75rem; opacity: 0.5; text-transform: uppercase; }
+
+        .bar-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4rem;
+          padding-top: 2rem;
+        }
+        .content-text-area {
+          font-size: 1.4rem;
+          line-height: 1.7;
+          max-width: 800px;
+          min-height: 200px;
+        }
+
+        .content-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          max-width: 650px;
+        }
+        .action-button {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.06);
+          padding: 1.2rem 1.8rem;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 2rem;
-          border-left: 4px solid var(--neon-cyan);
-          padding-left: 20px;
-        }
-        
-        .dialogue-container {
-          flex: 1;
-          display: flex;
-          gap: 4rem;
-          max-width: 1200px;
-          margin: 0 auto;
-          width: 100%;
-        }
-
-        .speaker-avatar-v4 {
-          width: 240px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1.5rem;
-        }
-        .avatar-frame {
-          width: 200px;
-          height: 200px;
-          border: 1px solid;
-          background: rgba(0,0,0,0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          box-shadow: 0 0 30px rgba(0,0,0,1);
-        }
-        .avatar-scanline {
-          position: absolute; top:0; left:0; width: 100%; height: 2px;
-          background: rgba(255,255,255,0.1);
-          animation: scanline 4s linear infinite;
-        }
-        @keyframes scanline { from { top: 0; } to { top: 100%; } }
-        
-        .speaker-name-v4 { font-size: 1.8rem; letter-spacing: 4px; font-weight: 900; }
-        .speaker-id { font-size: 0.7rem; opacity: 0.4; }
-
-        .dialogue-box-v4 {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 3rem;
-          padding-top: 2rem;
-        }
-        .dialogue-text-v4 {
-          font-size: 1.5rem;
-          line-height: 1.6;
-          color: #fff;
-          text-shadow: 0 0 5px rgba(255,255,255,0.2);
-          min-height: 150px;
-        }
-        .terminal-cursor { animation: blink 1s infinite; margin-left: 8px; color: var(--neon-cyan); }
-        
-        .dialogue-options-v4 {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 1rem;
-        }
-        .dialogue-btn-v4 {
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.05);
-          color: #aaa;
-          padding: 1.5rem 2rem;
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          font-family: var(--font-mono);
           cursor: pointer;
           transition: 0.2s;
-          text-align: left;
+          color: #a0a0a0;
         }
-        .dialogue-btn-v4:hover:not(.locked) {
-          background: rgba(255,255,255,0.08);
-          color: var(--neon-cyan);
-          border-color: var(--neon-cyan);
-          box-shadow: 0 0 20px rgba(0,255,255,0.1);
+        .action-button:hover:not(.locked) {
+          background: rgba(0,255,153,0.05);
+          border-color: #00ff99;
+          color: #fff;
           transform: translateX(10px);
         }
-        .opt-marker { color: var(--neon-cyan); font-weight: bold; width: 30px; }
-        .opt-text { flex: 1; font-size: 1.1rem; }
-        .opt-cost { color: var(--neon-amber); font-weight: bold; }
+        .action-main { display: flex; gap: 20px; align-items: center; }
+        .action-prompt { color: #00ff99; font-weight: bold; }
+        .action-text { font-size: 1.1rem; }
+        .action-cost { font-weight: bold; font-size: 0.9rem; }
 
-        .exit-bar-btn {
-          margin-top: 3rem;
-          align-self: center;
-          background: none;
-          border: 1px solid #333;
-          color: #555;
-          padding: 10px 30px;
-          cursor: pointer;
-          font-size: 0.8rem;
-          transition: 0.2s;
-        }
-        .exit-bar-btn:hover { border-color: #666; color: #fff; }
+        .neon-text.green { color: #00ff99; text-shadow: 0 0 10px rgba(0,255,153,0.3); }
+        .amber { color: #ffcc00; }
+        .mono-text { font-family: 'JetBrains Mono', 'Courier New', monospace; }
       `}</style>
     </div>
   );

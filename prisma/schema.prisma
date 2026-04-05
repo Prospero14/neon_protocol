@@ -28,10 +28,12 @@ model GameState {
   level        Int         @default(1)
   
   // JSON stores for complex structures
-  activeDeck   Json        @default("[]")
-  inventory    Json        @default("[]")
-  artifacts    Json        @default("[]")
-  completedQuests Json     @default("[]")
+  activeDeck   Json
+  inventory    Json
+  artifacts    Json
+  completedQuests Json
+  reputation   Json
+  intel        Json
   
   updatedAt    DateTime    @updatedAt
 }

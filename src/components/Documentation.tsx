@@ -5,19 +5,17 @@ import { CARD_LIBRARY } from '../logic/combatCards';
 import type { CombatCard } from '../logic/combatCards';
 import { SPRING_CARD_LIBRARY } from '../logic/springCards';
 import { SPRING_JAVA_REFERENCE } from '../logic/springReferenceData';
-import type { SkillMode } from '../logic/skillMode';
 
-type DocPack = 'core' | 'spring' | 'infra' | 'soft' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics';
+type DocPack = 'core' | 'spring' | 'infra' | 'soft-skills' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics' | 'scripting';
 
 interface DocumentationProps {
-  skillMode: SkillMode;
   discoveredCardIds: Set<string>;
   initialEntryId?: string | null;
   onBack: () => void;
 }
 
-const Documentation: React.FC<DocumentationProps> = ({ skillMode, discoveredCardIds, initialEntryId, onBack }) => {
-  const [pack, setPack] = useState<DocPack>(() => (skillMode === 'junior' ? 'cookbook' : 'mechanics'));
+const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initialEntryId, onBack }) => {
+  const [pack, setPack] = useState<DocPack>('mechanics');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(initialEntryId || null);
   
   // Sandbox State
@@ -38,7 +36,8 @@ const Documentation: React.FC<DocumentationProps> = ({ skillMode, discoveredCard
        const card = CARD_LIBRARY.find(c => c.id === initialEntryId) || SPRING_CARD_LIBRARY.find(c => c.id === initialEntryId);
        if (card) {
           if (card.type === 'INFRASTRUCTURE') setPack('infra');
-          else if (card.type === 'SOFT') setPack('soft');
+          else if (card.type === 'SOFT') setPack('soft-skills');
+          else if (card.type === 'SCRIPT') setPack('scripting');
           else if (card.type === 'REACTION' || card.type === 'DEFENSIVE') setPack('testing');
           else if (card.libs?.includes('spring')) setPack('spring');
           else setPack('core');
@@ -50,7 +49,8 @@ const Documentation: React.FC<DocumentationProps> = ({ skillMode, discoveredCard
       switch(pack) {
           case 'spring': return SPRING_CARD_LIBRARY;
           case 'infra': return CARD_LIBRARY.filter(c => c.type === 'INFRASTRUCTURE');
-          case 'soft': return CARD_LIBRARY.filter(c => c.type === 'SOFT');
+          case 'soft-skills': return CARD_LIBRARY.filter(c => c.type === 'SOFT');
+          case 'scripting': return CARD_LIBRARY.filter(c => c.type === 'SCRIPT');
           case 'testing': return CARD_LIBRARY.filter(c => c.type === 'REACTION' || c.type === 'DEFENSIVE');
           case 'core': return CARD_LIBRARY.filter(c => c.type === 'SYNTAX' || c.type === 'FUNCTION');
           default: return CARD_LIBRARY;
@@ -116,16 +116,17 @@ const Documentation: React.FC<DocumentationProps> = ({ skillMode, discoveredCard
             <div className="ref-pack-tabs mono-text">
               <button className={`ref-pack-tab ${pack === 'mechanics' ? 'active' : ''}`} onClick={() => setPack('mechanics')}>GAME_SYSTEMS</button>
               <button className={`ref-pack-tab core ${pack === 'core' ? 'active' : ''}`} onClick={() => setPack('core')}>JAVA_CORE</button>
+              <button className={`ref-pack-tab scripting ${pack === 'scripting' ? 'active' : ''}`} onClick={() => setPack('scripting')}>SCRIPTS</button>
               <button className={`ref-pack-tab spring ${pack === 'spring' ? 'active' : ''}`} onClick={() => setPack('spring')}>SPRING_BOOT</button>
               <button className={`ref-pack-tab infra ${pack === 'infra' ? 'active' : ''}`} onClick={() => setPack('infra')}>INFRA</button>
-              <button className={`ref-pack-tab soft ${pack === 'soft' ? 'active' : ''}`} onClick={() => setPack('soft')}>SOFT_SKILLS</button>
+              <button className={`ref-pack-tab soft ${pack === 'soft-skills' ? 'active' : ''}`} onClick={() => setPack('soft-skills')}>SOFT_SKILLS</button>
               <button className={`ref-pack-tab testing ${pack === 'testing' ? 'active' : ''}`} onClick={() => setPack('testing')}>TESTS & REACTIONS</button>
               <button className={`ref-pack-tab cookbook ${pack === 'cookbook' ? 'active' : ''}`} onClick={() => setPack('cookbook')}>DEV_COOKBOOK</button>
               <button className={`ref-pack-tab sandbox ${pack === 'sandbox' ? 'active' : ''}`} onClick={() => setPack('sandbox')}>SANDBOX</button>
             </div>
           </div>
         </div>
-        <button className="back-btn" onClick={onBack}>[ EXIT_DOCS ]</button>
+        <div style={{ flex: 1 }} />
       </header>
 
       {pack === 'mechanics' && (
@@ -338,7 +339,7 @@ spec: { containers: [{ image: neon-app:latest }] }`}</pre>
         </div>
       )}
 
-      {(pack === 'core' || pack === 'spring' || pack === 'infra' || pack === 'soft' || pack === 'testing') && (
+      {(pack === 'core' || pack === 'spring' || pack === 'infra' || pack === 'soft-skills' || pack === 'testing' || pack === 'scripting') && (
         <div className="ref-layout">
           <div className="ref-list-pane neon-panel">
             <div className="pane-header">

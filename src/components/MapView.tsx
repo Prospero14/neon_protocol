@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
-import { X, Search, MousePointer2 } from 'lucide-react';
+import { Search, MousePointer2 } from 'lucide-react';
 import { type QuestState } from '../logic/questEngine';
+import '../blueprints.css';
 
 interface MapViewProps {
   viewMode: 'CITY' | 'DISTRICT';
@@ -14,17 +15,18 @@ interface MapViewProps {
   questStates?: QuestState[];
   objectiveNodeId?: string | null;
   playerBits?: number;
+  customSubNodes?: any[]; // To override the district subNodes
 }
 
 const NODE_COLORS: Record<string, string> = {
-  combat:   '#ff2d6d',
+  combat:   'var(--neon-pink)',
   bar:      'var(--neon-amethyst)',
   trade:    'var(--neon-amber)',
-  story:    '#a78bfa',
+  story:    'var(--neon-amethyst)',
   hub:      'var(--neon-cyan)',
   npc:      'var(--neon-amethyst)',
-  shop:     'var(--neon-magenta)',
-  terminal: '#00ffff',
+  shop:     'var(--neon-amber)',
+  terminal: 'var(--neon-amber)',
 };
 
 const MapView: React.FC<MapViewProps> = ({ 
@@ -36,49 +38,32 @@ const MapView: React.FC<MapViewProps> = ({
   onToggleView,
   objectiveNodeId = null,
   playerBits = 0,
+  customSubNodes = null,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
 
-  // Zoom & Pan State
+  // Zoom State (Pan disabled by USER_REQUEST)
   const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
-  // Fix: The local scope state needs to be handled inside the functions below.
   
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomSpeed = 0.1;
+    const zoomSpeed = 0.05;
     const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    setZoom(prev => Math.min(Math.max(prev + delta, 0.8), 3.0));
+    setZoom(prev => Math.min(Math.max(prev + delta, 1.0), 1.2));
   };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
-    setOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
 
   const resetView = () => {
     setZoom(1);
-    setOffset({ x: 0, y: 0 });
   };
 
-  const activeDistrict = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
+  const activeDistrictBase = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
+  const activeDistrict = {
+    ...activeDistrictBase,
+    subNodes: customSubNodes || activeDistrictBase.subNodes
+  };
   const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
 
   const getTravelCost = (targetNode: MapNodeData) => {
@@ -88,26 +73,32 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="map-view-v4">
-      <header className="map-hdr">
-        <div className="map-hdr-left">
-          <span className="map-hdr-icon">◎</span>
-          <span className="map-hdr-title">МОСКВА_СЕТЕВОЙ_РАДАР</span>
-          <span className="map-hdr-sub">// СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%]</span>
+    <div className="map-view-v4 no-pan">
+      <header className="map-hdr-v5">
+        <div className="hdr-main-area">
+          <div className="hdr-micro-label side-fixed">
+            GEOGRAPHIC_INDEX // {viewMode === 'DISTRICT' ? `${activeDistrict.name.split(':')[0].toUpperCase()}_СЕТЕВОЙ_РАДАР` : 'МОСКВА_СЕТЕВОЙ_РАДАР'}
+          </div>
+          <h1 className="hdr-headline">SELECT_ENGAGEMENT_TARGET</h1>
         </div>
-        <div className="map-hdr-right">
-          {viewMode === 'DISTRICT' && isCityMapUnlocked && (
-             <button className="map-hdr-btn" onClick={onToggleView}>
-               <Search size={14} /> ОБЩАЯ_КАРТА
-             </button>
-          )}
-          {viewMode === 'CITY' && (
-             <button className="map-hdr-btn" onClick={onToggleView}>
-               <MousePointer2 size={14} /> КАРТА_РАЙОНА
-             </button>
-          )}
-          <button className="map-hdr-btn" onClick={resetView}>[ СБРОС_ОКНА ]</button>
-          <button className="map-hdr-btn exit" onClick={onBack}><X size={14} /> [ ВЫХОД_В_ХАБ ]</button>
+        <div className="hdr-actions-area">
+          <div className="hdr-status-row">
+            <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%] </div>
+            <div className="hdr-actions">
+            {viewMode === 'DISTRICT' && isCityMapUnlocked && (
+               <button className="map-hdr-btn" onClick={onToggleView}>
+                 <Search size={14} /> ОБЩАЯ_КАРТА
+               </button>
+            )}
+            {viewMode === 'CITY' && (
+               <button className="map-hdr-btn" onClick={onToggleView}>
+                 <MousePointer2 size={14} /> КАРТА_РАЙОНА
+               </button>
+            )}
+            <button className="map-hdr-btn" onClick={resetView}>[ СБРОС_ЗУМА ]</button>
+            <button className="map-hdr-btn exit" onClick={onBack}>[ ВЫХОД_В_ХАБ ]</button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -115,10 +106,6 @@ const MapView: React.FC<MapViewProps> = ({
         <div 
           className="map-canvas-wrap"
           onWheel={handleWheel}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
           ref={containerRef}
         >
           <svg viewBox="0 0 100 100" className="map-svg" preserveAspectRatio="xMidYMid meet">
@@ -127,24 +114,40 @@ const MapView: React.FC<MapViewProps> = ({
                 <stop offset="0%" stopColor="rgba(0, 255, 255, 0.05)" />
                 <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
               </radialGradient>
+              
+              {/* CITY BLOCKS PATTERN (Blueprint Detail) */}
+              <pattern id="cityBlocks" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                 <rect x="1" y="1" width="3" height="2" fill="none" stroke="rgba(0, 255, 255, 0.08)" strokeWidth="0.05" />
+                 <rect x="5" y="1" width="4" height="4" fill="none" stroke="rgba(0, 255, 255, 0.08)" strokeWidth="0.05" />
+                 <rect x="1" y="4" width="2" height="5" fill="none" stroke="rgba(0, 255, 255, 0.08)" strokeWidth="0.05" />
+                 <rect x="4" y="6" width="5" height="3" fill="none" stroke="rgba(0, 255, 255, 0.08)" strokeWidth="0.05" />
+                 <line x1="0" y1="0" x2="10" y2="0" stroke="rgba(0, 255, 255, 0.03)" strokeWidth="0.02" />
+                 <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(0, 255, 255, 0.03)" strokeWidth="0.02" />
+              </pattern>
+
+              {/* DISTRICT MASK */}
+              {viewMode === 'DISTRICT' && activeDistrict.boundary && (
+                <mask id="districtMask">
+                   <path d={activeDistrict.boundary} fill="white" />
+                </mask>
+              )}
             </defs>
             <circle cx="50" cy="50" r="50" fill="url(#radarGlow)" />
             
-            <g className="radar-grid" opacity="0.1">
+            <g className="radar-grid" opacity="0.05">
               {[...Array(11)].map((_, i) => (
-                <line key={`v-${i}`} x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="var(--neon-cyan)" strokeWidth="0.05" />
+                <line key={`v-${i}`} x1={i * 10} y1="0" x2={i * 10} y2="100" stroke="var(--neon-amethyst)" strokeWidth="0.04" />
               ))}
               {[...Array(11)].map((_, i) => (
-                <line key={`h-${i}`} x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="var(--neon-cyan)" strokeWidth="0.05" />
+                <line key={`h-${i}`} x1="0" y1={i * 10} x2="100" y2={i * 10} stroke="var(--neon-amethyst)" strokeWidth="0.04" />
               ))}
             </g>
 
             <line x1="50" y1="50" x2="50" y2="0" stroke="var(--neon-cyan)" strokeWidth="0.1" opacity="0.3" className="radar-sweep" />
 
             <g style={{ 
-              transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-              transformOrigin: '0 0',
-              transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transform: `translate(50px, 50px) scale(${zoom}) translate(-50px, -50px)`,
+              transition: 'transform 0.4s cubic-bezier(0.1, 0.9, 0.2, 1)'
             }}>
               {viewMode === 'CITY' ? (
                 MAP_NODES.map(node => {
@@ -173,13 +176,129 @@ const MapView: React.FC<MapViewProps> = ({
                   );
                 })
               ) : (
-                activeDistrict.subNodes?.map(sn => (
-                  <g key={sn.id} onClick={() => setSelectedSubNodeId(sn.id)} style={{ cursor: 'pointer' }}>
-                    <rect x={sn.x - 2} y={sn.y - 2} width="4" height="4" fill="none" stroke={NODE_COLORS[sn.type]} strokeWidth="0.1" opacity="0.1" />
-                    <circle cx={sn.x} cy={sn.y} r={selectedSubNodeId === sn.id ? 1.5 : 1.0} fill={NODE_COLORS[sn.type] || '#fff'} />
-                    <text x={sn.x} y={sn.y+3.5} fontSize="1.5" fill="#fff" textAnchor="middle" style={{fontFamily: 'monospace', fontWeight: 600}}>{sn.name.toUpperCase()}</text>
+                <g className="district-view-blueprint">
+                  {/* PNG SUBSTRATE LAYER (High Fidelity Backdrop) */}
+                  {activeDistrict.imageSubstrate && (
+                    <image 
+                      href={activeDistrict.imageSubstrate} 
+                      x="0" y="0" width="100" height="100" 
+                      opacity="0.85"
+                      style={{ filter: 'grayscale(0.3) brightness(0.8) contrast(1.2)' }}
+                    />
+                  )}
+
+                  {/* GENERATIVE CITY BLOCKS LAYER (Fallback/Detail) */}
+                  {!activeDistrict.imageSubstrate && (
+                    <rect x="0" y="0" width="100" height="100" fill="url(#cityBlocks)" mask="url(#districtMask)" opacity="0.4" />
+                  )}
+
+                  {/* Grid Numbers Layer */}
+                  <g className="blueprint-grid-labels" opacity="0.3" fontSize="1.0" fill="var(--neon-cyan)" style={{ fontFamily: 'monospace', fontWeight: 300 }}>
+                    {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(val => (
+                      <g key={val}>
+                        <text x={val} y="3" textAnchor="middle">{val}</text>
+                        <text x="3" y={val + 0.3} textAnchor="start">{val}</text>
+                      </g>
+                    ))}
                   </g>
-                ))
+
+                  <g className="district-substrate">
+                    {/* Boundary */}
+                    {activeDistrict.boundary && (
+                      <path 
+                        d={activeDistrict.boundary} 
+                        fill="rgba(0, 255, 255, 0.005)" 
+                        stroke="rgba(0, 255, 255, 0.5)" 
+                        strokeWidth="0.12" 
+                        className="substrate-boundary"
+                      />
+                    )}
+                    
+                    {/* Coordinate Markers at Corners */}
+                    {activeDistrict.boundary && (
+                      <g className="blueprint-coords" fontSize="0.7" fill="var(--neon-cyan)" opacity="0.5" style={{fontFamily: 'monospace'}}>
+                         <text x="36" y="8">[X:35.00 Y:05.12]</text>
+                         <text x="86" y="8">[X:85.00 Y:05.00]</text>
+                         <text x="94" y="32">[X:95.12 Y:30.44]</text>
+                         <text x="11" y="58">[X:10.04 Y:55.21]</text>
+                      </g>
+                    )}
+
+                    {/* Features */}
+                    {activeDistrict.features?.map((f, i) => {
+                      const isRoad = f.type === 'road';
+                      const isLake = f.type === 'lake';
+                      const isLabel = f.type === 'label';
+                      
+                      if (isLabel) {
+                         const coords = f.path.replace('M ', '').split(' ');
+                         return (
+                           <g key={i} transform={`translate(${coords[0]}, ${coords[1]})`} opacity="0.3">
+                              <circle r="0.5" fill="var(--neon-cyan)" />
+                              <text x="1" y="0.3" fontSize="0.6" fill="var(--neon-cyan)" style={{fontFamily: 'monospace'}}>
+                                {i % 2 === 0 ? 'STATUS: ACTIVE' : 'SECTOR_ID: 0x4F'}
+                              </text>
+                           </g>
+                         );
+                      }
+                      
+                      return (
+                        <path 
+                          key={i}
+                          d={f.path}
+                          fill={isLake ? 'rgba(0, 255, 255, 0.12)' : (f.type === 'park' ? 'rgba(0, 255, 0, 0.01)' : 'none')}
+                          stroke={isRoad ? 'rgba(0, 255, 255, 0.18)' : (f.type === 'park_hatch' ? 'rgba(0, 255, 0, 0.25)' : 'rgba(0, 255, 255, 0.3)')}
+                          strokeWidth={isRoad ? "0.08" : "0.15"}
+                          className={`substrate-${f.type}`}
+                        />
+                      );
+                    })}
+                  </g>
+
+                  {/* Active Selection Scanning Square */}
+                  {selectedSubNode && (
+                    <g className="blueprint-selection-wrap">
+                      <rect 
+                        x={selectedSubNode.x - 4} 
+                        y={selectedSubNode.y - 4} 
+                        width="8" 
+                        height="8" 
+                        fill="none" 
+                        stroke="var(--neon-cyan)" 
+                        strokeWidth="0.08" 
+                        strokeDasharray="1, 2"
+                        className="blueprint-selection-sq"
+                      />
+                      <line x1={selectedSubNode.x} y1="0" x2={selectedSubNode.x} y2="100" stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
+                      <line x1="0" y1={selectedSubNode.y} x2="100" y2={selectedSubNode.y} stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
+                    </g>
+                  )}
+
+                  {/* Nodes Layer */}
+                  <g className="blueprint-nodes-layer">
+                    {activeDistrict.subNodes?.map(sn => {
+                       const isSelected = selectedSubNodeId === sn.id;
+                       return (
+                        <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
+                          <circle cx={sn.x} cy={sn.y} r="5" fill="transparent" />
+                          <circle cx={sn.x} cy={sn.y} r="0.8" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
+                          <circle cx={sn.x} cy={sn.y} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
+                          
+                          <g transform={`translate(${sn.x}, ${sn.y + 4.5})`}>
+                            <text fontSize="1.1" fill={isSelected ? "var(--neon-cyan)" : "rgba(255,255,255,0.7)"} textAnchor="middle" style={{fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px'}}>
+                              {sn.name.toUpperCase()}
+                            </text>
+                            {isSelected && (
+                              <text y="1.2" fontSize="0.5" fill="var(--neon-cyan)" textAnchor="middle" style={{fontFamily: 'monospace', opacity: 0.8}}>
+                                // TARGET_LOCKED
+                              </text>
+                            )}
+                          </g>
+                        </g>
+                       );
+                    })}
+                  </g>
+                </g>
               )}
             </g>
           </svg>
@@ -213,7 +332,13 @@ const MapView: React.FC<MapViewProps> = ({
                     <span>PING: STABLE</span>
                  </div>
               </div>
-              <button className="btn-engage" onClick={() => onNodeSelect(selectedSubNode.id, selectedSubNode.type)}>
+              <button className="btn-engage" onClick={() => {
+                console.group(`[MAP_RADAR] Node Select: ${selectedSubNode.id}`);
+                console.log("Type:", selectedSubNode.type);
+                console.log("Handler Status: OPERATIONAL");
+                console.groupEnd();
+                onNodeSelect(selectedSubNode.id, selectedSubNode.type);
+              }}>
                  ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
               </button>
             </div>
@@ -228,46 +353,71 @@ const MapView: React.FC<MapViewProps> = ({
 
       <style>{`
         .map-view-v4 { height: 100%; display: flex; flex-direction: column; background: #000; overflow: hidden; }
-        .map-hdr {
-          height: 60px; display: flex; justify-content: space-between; align-items: center;
-          padding: 0 20px; background: rgba(0,20,20,0.8); border-bottom: 1px solid rgba(0,255,255,0.1);
+        .map-hdr-v5 {
+          height: 100px; display: grid; grid-template-columns: 1fr 340px; 
+          background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(188,19,254,0.1);
         }
-        .map-hdr-left { display: flex; align-items: center; gap: 15px; }
-        .map-hdr-title { font-weight: 900; letter-spacing: 2px; color: var(--neon-cyan); }
-        .map-hdr-sub { font-family: var(--font-mono); font-size: 0.65rem; opacity: 0.5; }
-        .map-hdr-btn { 
-          background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.2); 
-          color: #fff; padding: 6px 12px; font-family: var(--font-mono); font-size: 0.7rem;
-          cursor: pointer; transition: 0.2s; margin-left: 8px;
+        .hdr-main-area {
+          display: flex; align-items: center; justify-content: center; position: relative;
         }
-        .map-hdr-btn:hover { background: var(--neon-cyan); color: #000; }
+        .hdr-micro-label.side-fixed { 
+          position: absolute; left: 40px; top: 50%; transform: translateY(-50%); 
+          margin: 0; white-space: nowrap; 
+        }
+        .hdr-actions-area {
+          display: flex; align-items: center; justify-content: flex-end; padding-right: 25px;
+        }
+        .hdr-status-row { display: flex; align-items: center; gap: 20px; justify-content: flex-end; width: 100%; }
+        .hdr-micro-label { font-size: 0.65rem; color: var(--neon-amethyst); letter-spacing: 2px; font-weight: 800; font-family: var(--font-mono); }
+        .hdr-headline { font-size: 1.8rem; font-weight: 950; color: #fff; letter-spacing: 2px; margin: 0; text-transform: uppercase; }
+        .hdr-tech-meta { font-family: var(--font-mono); font-size: 0.6rem; opacity: 0.6; color: var(--neon-amethyst); white-space: nowrap; }
+        .pulse-opacity { animation: pulseOpacity 2s infinite; }
+        @keyframes pulseOpacity { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+        .hdr-actions { display: flex; gap: 10px; }
         
-        .map-body { flex: 1; display: grid; grid-template-columns: 1fr 350px; overflow: hidden; }
-        .map-canvas-wrap { position: relative; background: radial-gradient(circle at 50% 50%, #001a1a 0%, #000 100%); cursor: crosshair; overflow: hidden; }
+        .map-hdr-btn { 
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          background: rgba(188,19,254,0.05); border: 1px solid rgba(188,19,254,0.2); 
+          color: #fff; padding: 6px 14px; font-family: var(--font-mono); font-size: 0.65rem;
+          cursor: pointer; transition: 0.2s; 
+          height: 32px; white-space: nowrap; border-radius: 2px;
+        }
+        .map-hdr-btn:hover { background: var(--neon-amethyst); color: #000; box-shadow: 0 0 15px var(--neon-purple-glow); }
+        .map-hdr-btn.exit { border-color: rgba(255,255,255,0.1); opacity: 0.7; }
+        
+        .map-body { flex: 1; display: grid; grid-template-columns: 1fr 340px; overflow: hidden; position: relative; }
+        .map-canvas-wrap { 
+          position: relative; background: radial-gradient(circle at 50% 50%, rgba(26,11,46,0.3) 0%, #000 100%); 
+          cursor: crosshair; overflow: hidden; 
+        }
         .map-svg { width: 100%; height: 100%; }
         
         .radar-sweep { transform-origin: 50px 50px; animation: radar-rotate 5s linear infinite; }
         @keyframes radar-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .map-info-panel {
-          background: rgba(0,10,10,0.9); border-left: 1px solid rgba(0,255,255,0.1);
-          padding: 30px; display: flex; flex-direction: column;
+          background: rgba(13,2,8,0.95); border-left: 1px solid rgba(188,19,254,0.1);
+          padding: 40px 25px; display: flex; flex-direction: column; position: relative;
+          height: 100%; z-index: 100; pointer-events: auto;
         }
-        .node-tag { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 900; margin-bottom: 8px; }
-        .node-title { font-size: 1.8rem; margin-bottom: 15px; color: #fff; line-height: 1.1; }
-        .node-desc { font-size: 0.9rem; color: #888; line-height: 1.6; margin-bottom: 2rem; }
+        .map-info-panel::before {
+          content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--neon-amethyst); opacity: 0.3;
+        }
+        .node-tag { font-family: var(--font-mono); font-size: 0.65rem; font-weight: 950; margin-bottom: 12px; letter-spacing: 1px; color: var(--neon-amethyst) !important; }
+        .node-title { font-size: 2.2rem; margin-bottom: 20px; color: #fff; line-height: 1.1; font-weight: 900; }
+        .node-desc { font-size: 0.85rem; color: #888; line-height: 1.6; margin-bottom: 2.5rem; }
         
-        .tech-briefing { background: rgba(0,255,255,0.03); padding: 15px; border-left: 3px solid var(--neon-cyan); margin-bottom: 2rem; }
-        .brief-label { font-size: 0.6rem; opacity: 0.5; margin-bottom: 10px; }
-        .brief-stats { display: flex; flex-direction: column; gap: 5px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--neon-cyan); margin-top: 10px; }
+        .tech-briefing { background: rgba(188,19,254,0.03); padding: 20px; border-left: 2px solid var(--neon-amethyst); margin-bottom: 2.5rem; }
+        .brief-label { font-size: 0.55rem; opacity: 0.4; margin-bottom: 12px; letter-spacing: 1px; color: var(--neon-amethyst); }
+        .brief-stats { display: flex; flex-direction: column; gap: 8px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--neon-amber); margin-top: 10px; }
         
         .btn-engage {
-          background: var(--neon-cyan); color: #000; font-family: var(--font-mono);
-          font-weight: 900; padding: 15px; border: none; cursor: pointer; transition: 0.2s;
-          letter-spacing: 1px;
+          background: transparent; color: var(--neon-amber); font-family: var(--font-mono);
+          font-weight: 900; padding: 18px; border: 1px solid var(--neon-amber); cursor: pointer; transition: 0.2s;
+          letter-spacing: 2px; text-transform: uppercase; font-size: 0.9rem;
         }
-        .btn-engage:hover:not(.locked) { box-shadow: 0 0 20px var(--neon-cyan-glow); transform: translateY(-3px); }
-        .btn-engage.locked { background: #333; color: #666; cursor: not-allowed; }
+        .btn-engage:hover:not(.locked) { background: var(--neon-amber); color: #000; box-shadow: 0 0 25px var(--neon-amber-glow); }
+        .btn-engage.locked { border-color: #333; color: #666; cursor: not-allowed; }
         
         .no-selection { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; color: #333; }
         .animate-slide-in { animation: slideIn 0.3s ease-out; }

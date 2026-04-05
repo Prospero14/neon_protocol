@@ -19,43 +19,43 @@ export interface Trait {
 export const TRAITS: Trait[] = [
   // --- HOBBY PERKS (Script-Kiddo Backgrounds) ---
   { 
-    id: 'stack_archaeologist', name: 'АРХЕОЛОГ_СТЕКА', type: 'HOBBY', category: 'TECH',
+    id: 'stack_archaeologist', name: 'REVERSE_ENGINEER', type: 'HOBBY', category: 'TECH',
     description: 'Ты годами копался в руинах Старой Сети (Web 2.0). Шанс 25% вернуть разыгранную SCRIPT карту в руку.' 
   },
   { 
-    id: 'neural_sync_junkie', name: 'НЕЙРО-СИНХРОНИСТ', type: 'HOBBY', category: 'TECH',
+    id: 'neural_sync_junkie', name: 'NEURAL_SYNC_JUNKIE', type: 'HOBBY', category: 'TECH',
     description: 'Твой мозг разогнан сильнее деки. В начале фазы CODING видишь 3 следующие карты Bug-стека врага.' 
   },
   { 
-    id: 'zero_day_collector', name: 'СОБИРАТЕЛЬ_0DAY', type: 'HOBBY', category: 'TECH',
+    id: 'zero_day_collector', name: 'ZERO_DAY_COLLECTOR', type: 'HOBBY', category: 'TECH',
     description: 'Ты торгуешь уязвимостями. FUNCTION карты игнорируют 5 ед. Integrity (брони) противника.' 
   },
   { 
-    id: 'glitch_impressionist', name: 'ГЛИТЧ-ИМПРЕССИОНИСТ', type: 'HOBBY', category: 'SOCIAL',
+    id: 'glitch_impressionist', name: 'GLITCH_IMPRESSIONIST', type: 'HOBBY', category: 'SOCIAL',
     description: 'Ты видишь красоту в системных ошибках. Кадый ход случайная карта в руке: +50% Power, но -50% Integrity.' 
   },
   { 
-    id: 'packet_sniffer', name: 'ПАКЕТНЫЙ_СНИФФЕР', type: 'HOBBY', category: 'SRE',
+    id: 'packet_sniffer', name: 'NETWORK_INTERCEPTOR', type: 'HOBBY', category: 'SRE',
     description: 'Ни один пакет не проскочит мимо. После фазы TESTING шанс 30% получить случайную SOFT карту.' 
   },
   { 
-    id: 'debug_masochist', name: 'ДЕБАГ-МАЗОХИСТ', type: 'HOBBY', category: 'SOFT',
+    id: 'debug_masochist', name: 'DEBUG_MASOCHIST', type: 'HOBBY', category: 'SOFT',
     description: 'Ты любишь боль отладки. При нарушении Integrity от врага, следующая твоя карта дает +128 RAM.' 
   },
   { 
-    id: 'corporate_contact', name: 'КОРПОРАТИВНЫЙ_СВЯЗНОЙ', type: 'HOBBY', category: 'SOCIAL',
+    id: 'corporate_contact', name: 'CORPORATE_CONTACT', type: 'HOBBY', category: 'SOCIAL',
     description: 'Знакомый корпорат. Репутация с GIGA_BANK и EU_SYNTAX +15. Доступ к закрытым API-каналам.' 
   },
   { 
-    id: 'hardware_hoarder', name: 'БАРАХОЛЬЩИК_ЖЕЛЕЗА', type: 'HOBBY', category: 'SRE',
+    id: 'hardware_hoarder', name: 'HARDWARE_HOARDER', type: 'HOBBY', category: 'SRE',
     description: 'Легендарный Барахольщик. Твой риг из мусора выдает +256 RAM и +0.5 CPU для INFRASTRUCTURE карт.' 
   },
   { 
-    id: 'script_ghost', name: 'ПРИЗРАК_СКРИПТА', type: 'HOBBY', category: 'SOFT',
+    id: 'script_ghost', name: 'SCRIPTOVICHOK', type: 'HOBBY', category: 'SOFT',
     description: 'Ты не оставляешь следов. Пассивное накопление Stress от Deadline снижено на 20%.' 
   },
   { 
-    id: 'legacy_diggr', name: 'ДИГГЕР_НАСЛЕДИЯ', type: 'HOBBY', category: 'TECH',
+    id: 'legacy_diggr', name: 'LEGACY_DIGGER', type: 'HOBBY', category: 'TECH',
     description: 'Ты эксперт по COBOL и Fortran. SCRIPT карты стоят на 128 RAM меньше в фазе ARCHITECTURE.' 
   },
 

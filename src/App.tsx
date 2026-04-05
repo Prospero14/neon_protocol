@@ -27,7 +27,6 @@ import { applyBitModifiers, baseQuestBits } from './logic/economy';
 import { canUnlockClass, PRECLASS_UNLOCK_BITS, PRECLASS_UNLOCK_QUESTS } from './logic/preClassProgression';
 import { rollLoot } from './logic/lootTables';
 import type { GameItem } from './logic/items';
-import { getItemById } from './logic/items';
 import MapView from './components/MapView';
 import CombatBridge from './components/games/CombatBridge';
 import CharacterCreation from './components/CharacterCreation';
@@ -44,7 +43,6 @@ import {
 // import GoalHUD from './components/GoalHUD'; // Removed per v0.0947 protocol cleanup
 import { useAuth } from './logic/AuthContext';
 import { AuthForm } from './components/AuthForm';
-import { FACTIONS } from './logic/factions';
 import { IMPLANT_CATALOG } from './logic/hardware';
 
 type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
@@ -110,7 +108,7 @@ function App() {
     'RUST_VALLEY': 0, 'SILICON_HEDGE': 0, 'BIOSYNDICATE': 0, 'REDUNDANTS': 0, 'NET_DRIVERS': 0
   });
 
-  const [discoveredIntel, setDiscoveredIntel] = useState<Record<string, string[]>>({}); // factionId -> loreNodes[]
+  const [discoveredIntel] = useState<Record<string, string[]>>({}); // factionId -> loreNodes[]
 
 
 
@@ -418,8 +416,6 @@ function App() {
       const activeQuests = questStates.filter(s => s.status === 'active').map(s => s.questId);
       const readyQuests = questStates.filter(s => s.status === 'ready_to_turn_in').map(s => s.questId);
       const completedQuests = questStates.filter(s => s.status === 'completed').map(s => s.questId);
-      
-      const allActiveOrCompletedQuestsForUI = questStates.filter(s => s.status !== 'available' && s.status !== 'failed').map(s => s.questId);
 
       return <FixerBarScene 
         locationId={activeBarNode || 'altufyevo'} 

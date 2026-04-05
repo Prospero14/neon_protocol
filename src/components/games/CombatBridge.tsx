@@ -116,6 +116,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     });
   }, [hand, activeHandTab, codingPalette]);
 
+  const addLog = (msg: string) => setLog(prev => [msg, ...prev].slice(0, 15));
+
   // --- INIT ---
   useEffect(() => {
     // Шаттл колоды
@@ -161,11 +163,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     setMulliganUsed(true);
   };
 
-  const addLog = (msg: string) => setLog(prev => [msg, ...prev].slice(0, 15));
 
   const drawCards = (count: number) => {
     setHand(prevHand => {
-        let newHand = [...prevHand];
+        const newHand = [...prevHand];
         let currentDeck = [...deck];
         let currentDiscard = [...discard];
 
@@ -323,6 +324,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     setPlayerProgress(prev => Math.min(100, prev + progGain));
 
     if (selectedCard.source === 'hand') {
+        // eslint-disable-next-line react-hooks/purity
         const canReturnToHand = (card.type === 'SCRIPT' && playerTraits.some(t => t.id === 'stack_archaeologist') && Math.random() < 0.25);
         
         if (!canReturnToHand) {

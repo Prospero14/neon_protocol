@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Trait } from '../../logic/traits';
 
 interface TaxiRaceProps {
@@ -52,36 +52,43 @@ const TaxiRace: React.FC<TaxiRaceProps> = ({ playerTraits, onFinish }) => {
     setLane(Math.max(0, Math.min(2, newLane)));
   };
 
+  // Используем ref для lane, чтобы не пересоздавать интервал при каждом движении
+  const laneRef = useRef(lane);
+  useEffect(() => { laneRef.current = lane; }, [lane]);
+
   /**
-   * ИГРОВОЙ ЦИКЛ
+   * ИГРОВОЙ ЦИКЛ & КОЛЛИЗИИ
    */
   useEffect(() => {
     if (status !== 'PLAYING') return;
 
     const gameLoop = setInterval(() => {
-      setObstacles((prev) => 
-        prev
+      setObstacles((prev) => {
+        const next = prev
           .map((obs) => ({ ...obs, y: obs.y + (hasNitro ? 7 : 5) }))
-          .filter((obs) => obs.y < 100)
-      );
+          .filter((obs) => obs.y < 100);
 
-      if (Math.random() < 0.1) {
-        setObstacles((prev) => [...prev, { id: Date.now(), lane: Math.floor(Math.random() * 3), y: 0 }]);
-      }
+        // Проверка коллизий внутри цикла (без каскадных рендеров)
+        const crash = next.some(obs => obs.lane === laneRef.current && obs.y > 80 && obs.y < 95);
+        if (crash) {
+          setStatus('GAMEOVER');
+          clearInterval(gameLoop);
+        }
+        return next;
+      });
+
+      setObstacles((prev) => {
+         if (Math.random() < 0.1) {
+            return [...prev, { id: Date.now(), lane: Math.floor(Math.random() * 3), y: 0 }];
+         }
+         return prev;
+      });
 
       setScore((s) => s + 1);
     }, gameSpeed);
 
     return () => clearInterval(gameLoop);
   }, [status, hasNitro, gameSpeed]);
-
-  /**
-   * КОЛЛИЗИИ
-   */
-  useEffect(() => {
-    const crash = obstacles.some(obs => obs.lane === lane && obs.y > 80 && obs.y < 95);
-    if (crash) setStatus('GAMEOVER');
-  }, [obstacles, lane]);
 
   return (
     <div className="game-overlay taxi-game-v2">

@@ -1,5 +1,5 @@
 import type { DialogueTree } from '../../dialogues';
-import { DialogueBuilder, createServiceNpc } from '../../dialogueUtils';
+import { DialogueBuilder } from '../../dialogueUtils';
 
 export const sokol_dialogues: Record<string, DialogueTree> = {
   // --- DEAN ---

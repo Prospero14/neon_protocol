@@ -88,7 +88,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   const [currentNodeId, setCurrentNodeId] = useState<string>(tree.startNodeId);
   const [typedText, setTypedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
-  const [dialogueTurn, setDialogueTurn] = useState(0);
+
 
   // v0.10: Handle Presence Overrides (Note on door)
   useEffect(() => {
@@ -190,7 +190,6 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     if (option.nextId === 'LEAVE') {
       onLeave();
     } else {
-      if (option.nextId === tree.startNodeId) setDialogueTurn(prev => prev + 1);
       setCurrentNodeId(option.nextId);
     }
   };

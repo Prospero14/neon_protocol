@@ -183,7 +183,7 @@ app.get('/', (req, res) => {
 });
 
 // Standard wildcard handler for SPA sub-pages (Express 5 compatible)
-app.get('*splat', (req, res) => {
+app.get('*', (req, res) => {
   if (req.path.startsWith('/neon_v1')) return res.status(404).json({ error: 'Not found' });
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);

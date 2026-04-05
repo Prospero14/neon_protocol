@@ -32,8 +32,8 @@ model GameState {
   inventory    Json
   artifacts    Json
   completedQuests Json
-  reputation   Json
-  intel        Json
+  reputation   Json?
+  intel        Json?
   
   updatedAt    DateTime    @updatedAt
 }

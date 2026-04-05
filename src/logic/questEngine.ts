@@ -1,6 +1,6 @@
 import type { QuestDefinition } from './questData';
 
-export type QuestStatus = 'available' | 'active' | 'completed' | 'failed';
+export type QuestStatus = 'available' | 'active' | 'ready_to_turn_in' | 'completed' | 'failed';
 
 export interface QuestState {
   questId: string;
@@ -34,6 +34,10 @@ export function acceptQuest(states: QuestState[], questId: string): QuestState[]
 
 export function completeQuest(states: QuestState[], questId: string): QuestState[] {
   return states.map((s) => (s.questId === questId ? { ...s, status: 'completed', tracked: false } : s));
+}
+
+export function markQuestReady(states: QuestState[], questId: string): QuestState[] {
+  return states.map((s) => (s.questId === questId && s.status === 'active' ? { ...s, status: 'ready_to_turn_in' } : s));
 }
 
 export function getTrackedQuest(states: QuestState[]): QuestState | undefined {

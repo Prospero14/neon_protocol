@@ -14,11 +14,11 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     .addNode('intro', 'ПЕТРОВИЧ', 'Здорово, племяш. Чинишься помаленьку?', [
       { text: 'Как дела в "Раст Валли"?', nextId: 'lore_faction' },
       { text: 'Что за Скрипты-зомби (Митино)?', nextId: 'lore_client' },
-      { text: 'Ты должен знать, как тут всё устроено. (Закончить ввод)', nextId: 'quest_start_finish', requireQuestId: 'q_kiddo_start' },
+      { text: 'Ты должен знать, как тут всё устроено. (Закончить ввод)', nextId: 'quest_start_finish', requireActiveQuestId: 'q_kiddo_start' },
       { text: 'Нужна работа, дядя.', nextId: 'job_selection' },
-      { text: 'По поводу Силоса №7 (Завершить зачистку)', nextId: 'quest_silo_finish', requireQuestId: 'q_altufyevo_silo_clear' },
-      { text: 'Тут один "грызун" из Марьино передал тебе чип...', nextId: 'quest_rogue_module_finish', requireQuestId: 'q_petrovich_rogue_module' },
-      { text: 'Я принес тот опечатанный архив из Выхино.', nextId: 'quest_vykhino_check', requireQuestId: 'q_vykhino_delivery' },
+      { text: 'По поводу Силоса №7 (Завершить зачистку)', nextId: 'quest_silo_finish', requireReadyQuestId: 'q_altufyevo_silo_clear' },
+      { text: 'Тут один "грызун" из Марьино передал тебе чип...', nextId: 'quest_rogue_module_finish', requireReadyQuestId: 'q_petrovich_rogue_module' },
+      { text: 'Я принес тот опечатанный архив из Выхино.', nextId: 'quest_vykhino_check', requireReadyQuestId: 'q_vykhino_delivery' },
       { text: 'Нужны запчасти для деки.', nextId: 'trade' },
       { text: 'Бывай, дядюшка.', nextId: 'farewell' }
     ])
@@ -29,11 +29,11 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     ])
     .addNode('intro_v2', 'ПЕТРОВИЧ', '*протирает ветошью процессор* О, живой! А я уж думал, тебя в Выхино на запчасти разобрали. Принес что-нибудь интересное?', [
       { text: 'Что за Скрипты-зомби?', nextId: 'lore_zombie' },
-      { text: 'Есть посылка из Выхино.', nextId: 'quest_vykhino_check', requireQuestId: 'q_vykhino_delivery' },
+      { text: 'Есть посылка из Выхино.', nextId: 'quest_vykhino_check', requireReadyQuestId: 'q_vykhino_delivery' },
       { text: '[Уйти]', nextId: 'farewell' }
     ])
     .addNode('intro_friendly_v2', 'ПЕТРОВИЧ', 'Племяш! Ты теперь в Раст Валли — свой человек. Заходи, чаю выпьем, или дело обсудим?', [
-      { text: 'Есть посылка из Выхино.', nextId: 'quest_vykhino_check', requireQuestId: 'q_vykhino_delivery' },
+      { text: 'Есть посылка из Выхино.', nextId: 'quest_vykhino_check', requireReadyQuestId: 'q_vykhino_delivery' },
       { text: '[Уйти]', nextId: 'farewell' }
     ])
     .addNode('intro_repeat_v2', 'ПЕТРОВИЧ', 'Снова за запчастями? Или Силосы опять фонят? В Октябре время — это Bits.', [
@@ -151,9 +151,9 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
       { text: 'Кот заперся в туалете?', nextId: 'lore_cat' },
       { text: 'Я разберусь с этим протоколом. (Нужен 1 уровень)', nextId: 'quest_explain_1' },
       { text: 'Петрович сказал, ты можешь дать работу.', nextId: 'quest_talk' },
-      { text: 'Магнус в безопасности. Локаут снят.', nextId: 'quest_magnus_finish', requireQuestId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
-      { text: 'Диагностика Силоса №7 завершена.', nextId: 'quest_silo_scout_finish', requireQuestId: 'q_altufyevo_silo_scout' },
-      { text: 'Очистка Силоса №7 завершена (квест Петровича).', nextId: 'lore_silo_alt', requireQuestId: 'q_altufyevo_silo_clear' },
+      { text: 'Магнус в безопасности. Локаут снят.', nextId: 'quest_magnus_finish', requireReadyQuestId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
+      { text: 'Диагностика Силоса №7 завершена.', nextId: 'quest_silo_scout_finish', requireReadyQuestId: 'q_altufyevo_silo_scout' },
+      { text: 'Очистка Силоса №7 завершена (квест Петровича).', nextId: 'lore_silo_alt', requireCompletedQuestId: 'q_altufyevo_silo_clear' },
       { text: 'Кто такие Nullpointers?', nextId: 'lore_faction' },
       { text: '[Уйти]', nextId: 'LEAVE' }
     ])
@@ -224,7 +224,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     .addLoreNode('lore_cat', 'ВАРВАР', 'Он не просто кот, он — ходячая уязвимость! Активировал IoT-блокировку по лапе. Система считает всех врагами.', 'intro')
     .addNode('quest_talk', 'ВАРВАР', 'Работа? Federal Oversight не погладит по головке. Нужно прозвонить железо или доставить данные. Что потянешь?', [
       { text: 'Нужна работа по сканированию Силоса.', nextId: 'quest_silo_scout_accept' },
-      { text: 'Есть посылки на доставку? (После Силоса)', nextId: 'quest_backup_delivery_accept', requireQuestId: 'q_altufyevo_silo_scout' },
+      { text: 'Есть посылки на доставку? (После Силоса)', nextId: 'quest_backup_delivery_accept', requireCompletedQuestId: 'q_altufyevo_silo_scout' },
       { text: 'Я еще подумаю.', nextId: 'intro' }
     ])
     .addNode('quest_silo_scout_accept', 'ВАРВАР', 'Силос №7 перегрет. Нужно пропинговать порты на верхнем ярусе. Награда: 40 Bits.', [
@@ -253,7 +253,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
       { text: 'Кто такие Silicon Hedge?', nextId: 'lore_faction' },
       { text: 'Что за проблемы с визуализацией?', nextId: 'lore_scene' },
       { text: 'Есть работа по профилю?', nextId: 'quest_talk' },
-      { text: 'Я сбросил кэш в "Ритуале". Все отрендерилось.', nextId: 'quest_ritual_finish', requireQuestId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
+      { text: 'Я сбросил кэш в "Ритуале". Все отрендерилось.', nextId: 'quest_ritual_finish', requireReadyQuestId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
       { text: '[Уйти]', nextId: 'LEAVE' }
     ])
     .addNode('intro_v2', 'НИКСАННА', 'Твоя тесселяция оставляет желать лучшего. Чего пришел? Прерывание в потоке вызываешь?', [
@@ -265,7 +265,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
       { text: '[Уйти]', nextId: 'LEAVE' }
     ])
     .addNode('intro_friendly', 'НИКСАННА', 'Визуальный ряд в норме! Твои правки были кинематографичны. Чем могу помочь?', [
-      { text: 'Нужен патч для Чертаново.', nextId: 'quest_chertanovo_check', requireQuestId: 'q_chertanovo_privacy' },
+      { text: 'Нужен патч для Чертаново.', nextId: 'quest_chertanovo_check', requireActiveQuestId: 'q_chertanovo_privacy' },
       { text: '[Уйти]', nextId: 'LEAVE' }
     ])
     .addNode('intro_friendly_v2', 'НИКСАННА', 'О, мой любимый тестер! У меня есть новый паттерн для рендеринга удачи. Хочешь?', [
@@ -295,7 +295,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     .addLoreNode('lore_faction', 'НИКСАННА', 'Silicon Hedge считают, что реальность можно оптимизировать под прибыль. Мы — их баги.', 'intro', 'Silicon Hedge')
     .addLoreNode('lore_scene', 'НИКСАННА', 'Тут утечки памяти. Текстуры плывут. Кто-то явно сэкономил на полигонах.', 'intro')
     .addNode('quest_chertanovo_check', 'НИКСАННА', 'Снова параноики из Чертаново? Им кажется, что за ними следят чайники. Решим как-нибудь?', [
-        { text: 'Ты же знаешь, я помог тебе с "Ритуалом". (Бесплатно)', nextId: 'quest_chertanovo_free', requireQuestId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
+        { text: 'Ты же знаешь, я помог тебе с "Ритуалом". (Бесплатно)', nextId: 'quest_chertanovo_free', requireCompletedQuestId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
         { text: 'Оплатить библиотеку (80 Bits).', nextId: 'quest_chertanovo_finish', cost: 80 },
         { text: 'Предложить данные из Марьино. (Lore)', nextId: 'quest_chertanovo_lore', requireReputation: { factionId: 'NET_DRIVERS', minPoints: 15 } },
         { text: 'Я позже зайду.', nextId: 'intro' }
@@ -311,7 +311,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     ])
     .addNode('quest_talk', 'НИКСАННА', 'Работа? Мой "Ритуал" зарос багами. Нужно сбросить кэш отрисовки или заняться Академией. Выбирай.', [
         { text: 'Зачистить "Ритуал".', nextId: 'quest_pitch' },
-        { text: 'Рекомендация для Академии?', nextId: 'recommend_pitch', requireQuestId: 'q_trainee_first_bits' },
+        { text: 'Рекомендация для Академии?', nextId: 'recommend_pitch', requireCompletedQuestId: 'q_kiddo_first_bits' },
         { text: 'Я передумал.', nextId: 'intro' }
     ])
     .addNode('quest_pitch', 'НИКСАННА', 'Зайди в узел "Ритуал" и сбрось кэш. Твои логи чисты?', [
@@ -356,7 +356,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
       { text: '[ВЫХОД]', nextId: 'LEAVE' }
     ])
     .addNode('unlock_confirm', 'ТЕРМИНАЛ_ТАКСИ', 'ПРОТОКОЛ_ПРИНЯТ. Маршрутизация на Марьино, Выхино и Центр открыта.', [
-      { text: '[РАЗБЛОКИРОВАТЬ КАРТУ ГОРОДА]', nextId: 'LEAVE', effect: 'UNLOCK_CITY' }
+      { text: '[РАЗБЛОКИРОВАТЬ КАРТУ ГОРОДА]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', completeQuestId: 'q_kiddo_metro_access' }
     ])
     .build(),
 
@@ -402,6 +402,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
   term_silo_7: new DialogueBuilder('term_silo_7')
     .addNode('intro', 'СИЛОС_#7', '[SYSTEM_ALERT] Температура: 115°C. Ошибка контура. Сервисный лог: Нашествие вредителей ("rats").', [
       { text: 'Провести диагностику охлаждения', nextId: 'diag_finish', requireQuestId: 'q_altufyevo_silo_scout' },
+      { text: '[ ЗАЧИСТКА: ВЛОМИТЬСЯ В СИСТЕМУ ]', nextId: 'LEAVE', effect: 'START_COMBAT', cardRewardId: 'combat_silo_inner', requireQuestId: 'q_altufyevo_silo_clear' },
       { text: '[ВЫХОД]', nextId: 'LEAVE' }
     ])
     .addNode('diag_finish', 'СИЛОС_#7', '[SUCCESS] Пингую систему... Узел "Внутренний Контур" заблокирован физически. Требуется локальная зачистка.', [
@@ -420,7 +421,7 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
     .addNode('intro', 'СЕРЫЙ', 'Эй, кодер! Ищешь что-то по дешёвке? У меня есть чипсеты "невозможные".', [
       { text: 'Как движется торговля?', nextId: 'lore_trade' },
       { text: 'Есть работа?', nextId: 'quest_scrap_accept' },
-      { text: 'Процессоры "Восход" у меня.', nextId: 'quest_scrap_finish', requireQuestId: 'q_altufyevo_scrap_hunt' },
+      { text: 'Процессоры "Восход" у меня.', nextId: 'quest_scrap_finish', requireReadyQuestId: 'q_altufyevo_scrap_hunt' },
       { text: '[УЙТИ]', nextId: 'LEAVE' }
     ])
     .addLoreNode('lore_trade', 'СЕРЫЙ', 'Да как... Свалка — это жизнь. Корпораты выбрасывают, мы подбираем. Главное — чтобы "Восход" не накрыл. (+Intel: Scrap_Market)', 'intro')

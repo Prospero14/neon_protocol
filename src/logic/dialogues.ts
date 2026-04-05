@@ -17,7 +17,10 @@ export interface DialogueOption {
   };
   requireUnlock?: boolean; // For professional branches
   requireTrait?: string; // New: For trait-based dialogue options
-  requireQuestId?: string; // New: For quest-specific dialogue options
+  requireQuestId?: string; // Legacy/Active: For quest-specific dialogue options (includes active & ready)
+  requireActiveQuestId?: string; // New: STRICTLY active (not ready to turn in)
+  requireReadyQuestId?: string; // New: STRICTLY ready to turn in (combat/travel done)
+  requireCompletedQuestId?: string; // New: STRICTLY completed (turned in/finished)
   completeQuestId?: string; // New: For completing quest through dialogue
   awardQuestId?: string; // New: For awarding quest through dialogue
   requireItemId?: string; // New: For requirement items like TZ

@@ -16,9 +16,10 @@ import {
   type SkillMode,
 } from './logic/skillMode';
 import { QUEST_LIBRARY, type QuestDefinition } from './logic/questData';
-import { 
+import {
   acceptQuest, 
   completeQuest, 
+  markQuestReady,
   getTrackedQuest,
   type QuestState 
 } from './logic/questEngine';
@@ -238,7 +239,7 @@ function App() {
       'RUST_VALLEY': 0, 'SILICON_HEDGE': 0, 'BIOSYNDICATE': 0, 'REDUNDANTS': 0, 'NET_DRIVERS': 0 
     };
     switch(districtId) {
-      case 'altufyevo': initial['RUST_VALLEY'] = 20; break;
+      case 'altufyevo': initial['NULLPOINTERS'] = 20; break;
       case 'maryino': initial['FEDERAL_OVERSIGHT'] = 20; initial['NULLPOINTERS'] = 10; break;
       case 'chertanovo': initial['NULLPOINTERS'] = 25; break;
       case 'south_west': initial['SILICON_HEDGE'] = 25; break;
@@ -333,7 +334,7 @@ function App() {
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
       if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics')) {
         if (trackedDef.objectiveNodeId === nodeId) {
-          handleCompleteTalkQuest(trackedDef.id);
+          setQuestStates((prev) => markQuestReady(prev, trackedDef.id));
         }
       }
     }
@@ -409,12 +410,17 @@ function App() {
         }
         const tracked = getTrackedQuest(questStates);
         const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
-        if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === activeBarNode) && earned > 0) { setQuestStates((prev) => completeQuest(prev, trackedDef.id)); rewardForQuest(trackedDef); }
+        if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === activeBarNode) && earned > 0) { setQuestStates((prev) => markQuestReady(prev, trackedDef.id)); }
         setCurrentView('MAP'); setViewMode('DISTRICT');
       }} />;
     }
     if (currentView === 'FIXER_BAR') {
-      const activeQuests = questStates.filter(s => s.status === 'active' || s.status === 'completed').map(s => s.questId);
+      const activeQuests = questStates.filter(s => s.status === 'active').map(s => s.questId);
+      const readyQuests = questStates.filter(s => s.status === 'ready_to_turn_in').map(s => s.questId);
+      const completedQuests = questStates.filter(s => s.status === 'completed').map(s => s.questId);
+      
+      const allActiveOrCompletedQuestsForUI = questStates.filter(s => s.status !== 'available' && s.status !== 'failed').map(s => s.questId);
+
       return <FixerBarScene 
         locationId={activeBarNode || 'altufyevo'} 
         playerBits={bits} 
@@ -438,7 +444,9 @@ function App() {
         inventory={inventory} 
         onRewardBits={(amount: number) => setBits(b => b + amount)} 
         activeQuestIds={activeQuests} 
-        onCompleteQuest={handleCompleteTalkQuest} 
+        readyQuestIds={readyQuests}
+        completedQuestIds={completedQuests}
+        onCompleteQuest={handleCompleteTalkQuest}  
         onUnlockCity={() => { setIsCityMapUnlocked(true); setViewMode('CITY'); setCurrentView('MAP'); }} 
         onSetProfession={(profId: string) => { const prof = getProfessionById(profId); if (prof) { setProfession(prof); setClassUnlocked(true); } }} 
         onStartCombat={(combatId: string) => { setActiveBarNode(combatId); setCurrentView('COMBAT'); }} 

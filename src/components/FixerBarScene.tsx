@@ -23,6 +23,8 @@ interface FixerBarSceneProps {
   onRewardXp?: (amount: number) => void;
   onAwardQuest?: (questId: string) => void;
   activeQuestIds?: string[];
+  readyQuestIds?: string[];
+  completedQuestIds?: string[];
   onCompleteQuest?: (questId: string) => void;
   onDiscoverIntel?: (factionId: string, lore: string) => void;
   playerLevel: number;
@@ -51,6 +53,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onRewardXp,
   onAwardQuest,
   activeQuestIds = [],
+  readyQuestIds = [],
+  completedQuestIds = [],
   onCompleteQuest,
   playerLevel,
   inventory,
@@ -70,8 +74,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   let npcFactionId = 'NET_DRIVERS';
   if (locationId.includes('corp') || locationId.includes('regulator')) npcFactionId = 'KRYLOVO_CORP';
   if (locationId.includes('bank') || locationId.includes('gigabank')) npcFactionId = 'GIGABANK';
-  if (locationId.includes('null') || locationId.includes('hacker') || locationId.includes('chertanovo')) npcFactionId = 'NULLPOINTERS';
-  if (locationId.includes('rust') || locationId.includes('scav') || locationId.includes('vykhino') || locationId.includes('altufyevo')) npcFactionId = 'RUST_VALLEY';
+  if (locationId.includes('null') || locationId.includes('hacker') || locationId.includes('chertanovo') || locationId.includes('altufyevo')) npcFactionId = 'NULLPOINTERS';
+  if (locationId.includes('rust') || locationId.includes('scav') || locationId.includes('vykhino')) npcFactionId = 'RUST_VALLEY';
   if (locationId.includes('federal') || locationId.includes('over')) npcFactionId = 'FEDERAL_OVERSIGHT';
   if (locationId.includes('bio')) npcFactionId = 'BIOSYNDICATE';
   if (locationId.includes('hedge') || locationId.includes('south_west')) npcFactionId = 'SILICON_HEDGE';
@@ -110,7 +114,10 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     if (opt.requireTrait && !playerTraits.some((t: Trait) => t.id === opt.requireTrait)) return false;
     if (opt.requireReputation && (playerReputation[opt.requireReputation.factionId] || 0) < opt.requireReputation.minPoints) return false;
     if (opt.requireUnlock && !canUnlockNow) return false;
-    if (opt.requireQuestId && !activeQuestIds.includes(opt.requireQuestId)) return false;
+    if (opt.requireQuestId && !activeQuestIds.includes(opt.requireQuestId) && !readyQuestIds.includes(opt.requireQuestId)) return false;
+    if (opt.requireActiveQuestId && !activeQuestIds.includes(opt.requireActiveQuestId)) return false;
+    if (opt.requireReadyQuestId && !readyQuestIds.includes(opt.requireReadyQuestId)) return false;
+    if (opt.requireCompletedQuestId && !completedQuestIds.includes(opt.requireCompletedQuestId)) return false;
     if (opt.requireItemId && !inventory.some(i => i.id === opt.requireItemId)) return false;
     if (opt.requireMinLevel && playerLevel < opt.requireMinLevel) return false;
     if (opt.requireMaxLevel && playerLevel > opt.requireMaxLevel) return false;
@@ -129,7 +136,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       // Show Petrovich in bar if he's not unlocked OR rolled as AWAY at bar
       const isPetrovichSpecial = config.npcId === 'npc_petrovich' && !isPetrovichHomeUnlocked;
       if (config.awayNodeId === locationId && (npcPresenceMap[config.npcId] === 'AWAY' || isPetrovichSpecial)) {
-         finalOptions.unshift({
+         finalOptions.push({
            text: `ПОГОВОРИТЬ: ${config.name.toUpperCase()}`,
            nextId: 'TRAVEL_GUEST',
            cardRewardId: config.npcId, // Use as target nodeId
@@ -322,10 +329,12 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           padding: 1.2rem 1.8rem;
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           cursor: pointer;
           transition: 0.2s;
           color: #a0a0a0;
+          text-align: left;
+          width: 100%;
         }
         .action-button:hover:not(.locked) {
           background: rgba(0,255,153,0.05);
@@ -333,10 +342,19 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           color: #fff;
           transform: translateX(10px);
         }
-        .action-main { display: flex; gap: 20px; align-items: center; }
-        .action-prompt { color: #00ff99; font-weight: bold; }
-        .action-text { font-size: 1.1rem; }
-        .action-cost { font-weight: bold; font-size: 0.9rem; }
+        .action-main { 
+          display: flex; 
+          gap: 20px; 
+          align-items: flex-start; 
+          flex: 1;
+        }
+        .action-prompt { color: #00ff99; font-weight: bold; padding-top: 2px; }
+        .action-text { 
+          font-size: 1.1rem; 
+          line-height: 1.4;
+          flex: 1;
+        }
+        .action-cost { font-weight: bold; font-size: 0.9rem; padding-top: 4px; }
 
         .neon-text.green { color: #00ff99; text-shadow: 0 0 10px rgba(0,255,153,0.3); }
         .amber { color: #ffcc00; }

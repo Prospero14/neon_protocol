@@ -9,6 +9,7 @@ export const altufyevo: WorldDistrict = {
     name: 'ALTUFYEVO: NORTH_SILOS', 
     description: 'Северные промышленные силосы. Место сбора старого железа и остатков серверов.', 
     x: 52, y: 10, stability: 100, type: 'hub', tier: 1,
+    dominantFactionId: 'NULLPOINTERS',
     imageSubstrate: '/assets/maps/altufyevo_blueprint.png',
     boundary: 'M 35 5 L 85 5 L 95 30 L 85 45 L 80 50 L 90 75 L 80 95 L 45 95 L 35 85 L 25 90 L 10 55 L 25 35 L 20 15 Z',
     features: [

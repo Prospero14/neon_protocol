@@ -15,6 +15,7 @@ export interface TechnicalTask {
   description: string;
   steps: TZStep[];
   rank: 'script-kiddie' | 'junior' | 'mid' | 'senior';
+  isExecutionChain?: boolean; // If true, the task requires exact sequence execution on the bus
 }
 
 export const TZ_LIBRARY: TechnicalTask[] = [
@@ -224,6 +225,18 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     ]
   },
   // --- JOB TASKS (EASY BITS) ---
+  {
+    id: 'combat_copy_logs',
+    name: 'JOB: TARGETED_LOG_EXTRACTION',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
+    description: 'Нам нужны доказательства. Сначала найди нужный лог среди файлов (ls). Затем отфильтруй только строки с ошибками (grep). Наконец, выгрузи эти логи ко мне на безопасный сервер (scp). Порядок действий критически важен, иначе мы скачаем тонну бесполезного мусора.',
+    steps: [
+      { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'FILTER_DATA', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'SECURE_COPY_EXPORT', requiredCardIds: ['script_scp'] }
+    ]
+  },
   {
     id: 'job_delivery',
     name: 'JOB: DATA_COURIER',

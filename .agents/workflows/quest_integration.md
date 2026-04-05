@@ -69,3 +69,9 @@ If you introduce a new interaction node, make sure it is registered:
 1. Under `subNodes` in `src/logic/world/[district]/index.ts`.
 2. Add its `DialogueTree` to the same folder's `dialogues.ts`.
 3. If it is an NPC, add their lore entry to `npcs.ts` if required.
+
+## 🔗 6. Execution Chains (Script-Kiddie & Junior Combat)
+Starting with `v0.10+`, Scripting and Logic combat tasks require **Execution Chains** (strict card ordering on the rail) instead of just filling a progress bar. 
+* **MANDATORY DIALOGUE RULE:** If an NPC gives a `combat` or `diagnostics` quest that requires a specific chain of tools (e.g., `ls` -> `grep` -> `scp`), the NPC **MUST** explicitly justify this chain in their text!
+* **Example:** *"You need to find the deleted records containing her name and extract them to my drive. Remember: first list the directory contents, then filter by her ID, and finally initiate a secure copy export."*
+* The player needs this textual clue to solve the puzzle in `CombatBridge`.

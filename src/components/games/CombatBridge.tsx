@@ -89,7 +89,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     Array(8).fill(null).map(() => ({ type: 'EMPTY', content: null, integrity: 0 }))
   );
 
-  const [enemy] = useState<BugEnemy | null>(BUGS[0]);
+  const [enemy] = useState<BugEnemy | null>(() => {
+    if (missionTz.id.includes('copy_logs') || missionTz.isExecutionChain) {
+      return BUGS.find(b => b.id === 'enemy_passive') || BUGS[0];
+    }
+    const enemies = BUGS.filter(b => b.id !== 'enemy_passive');
+    return enemies[Math.floor(Math.random() * enemies.length)];
+  });
   const [nextBugAction, setNextBugAction] = useState<BugAction | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [log, setLog] = useState<string[]>([]);
@@ -356,8 +362,22 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             if (enemy) setNextBugAction(getRandomBugAction(enemy));
             
             // Auto-Stress Accumulation (Pressure)
-            setStress(prev => Math.min(100, prev + 5)); 
-            addLog(`[WARNING] SYSTEM_STRESS: +5% (PASSIVE_LOAD)`);
+            if (enemy?.visualType === 'DEVELOPER') {
+              // PASSIVE TIMER MODE
+              setAiDeadline(prev => {
+                const clock = prev - 1;
+                if (clock <= 0) {
+                   setShowDefeat(true);
+                   addLog(`[CRITICAL] SYSTEM_TIMEOUT`);
+                } else {
+                   addLog(`[WARNING] SYSTEM_CLOCK: ${clock} CYCLES_LEFT`);
+                }
+                return clock;
+              });
+            } else {
+              setStress(prev => Math.min(100, prev + 5)); 
+              addLog(`[WARNING] SYSTEM_STRESS: +5% (PASSIVE_LOAD)`);
+            }
             
             // ARCHITECTURE phase turn logic
             if (currentPhase === 'ARCHITECTURE') {
@@ -436,7 +456,17 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     
     // 1. Проверка ТЗ (Steps)
     const railIds = runtimeRail.filter(s => s.type === 'PLAYER_CODE').map(s => (s.content as CombatCard).id);
-    const missingSteps = missionTz.steps.filter(step => !step.requiredCardIds.some(id => railIds.includes(id)));
+    let missingSteps = missionTz.steps.filter(step => !step.requiredCardIds.some(id => railIds.includes(id)));
+    
+    if (missionTz.isExecutionChain) {
+      const isSequenceValid = missionTz.steps.every((step, index) => {
+        return railIds[index] && step.requiredCardIds.includes(railIds[index]);
+      });
+      if (!isSequenceValid || railIds.length !== missionTz.steps.length) {
+         missingSteps = [...missionTz.steps]; // Fail chain
+         addLog('[ERROR] EXECUTION_CHAIN_BROKEN_OR_EXCEEDED');
+      }
+    }
     
     // 2. Проверка ресурсов (Capacity)
     // Допустим, каждая карта на шине потребляет 0.5 CPU и 256MB RAM (упрощенно)

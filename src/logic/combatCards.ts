@@ -59,6 +59,12 @@ export const CARD_LIBRARY: CombatCard[] = [
     language: 'none', tags: ['script'], phaseConstraint: 'PLANNING'
   },
   {
+    id: 'script_scp', name: 'SCP_EXPORT', type: 'SCRIPT', grade: 'Script-Kiddo',
+    cost: 1, power: 10, integrity: 8,
+    description: 'scp logs.txt. Защищенное копирование данных (Экспорт). Финальное звено во многих цепочках сбора данных.',
+    language: 'none', tags: ['script'], phaseConstraint: 'CODING'
+  },
+  {
     id: 'script_ls', name: 'LS_DISCOVER', type: 'SCRIPT', grade: 'Script-Kiddo',
     cost: 0, power: 2, integrity: 8,
     description: 'ls -la. Листинг директорий. Позволяет найти скрытые точки входа (инфо-дампы).',

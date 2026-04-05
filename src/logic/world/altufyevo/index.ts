@@ -27,6 +27,7 @@ export const altufyevo: WorldDistrict = {
       { id: 'job_board_alt', name: 'Доска объявлений', type: 'npc', description: 'Срочные контракты за Bits.', x: 55, y: 15 },
       { id: 'bar_chips', name: 'Синий Чип', type: 'bar', description: 'Дешевый охлад и восстановление.', x: 25, y: 70 },
       { id: 'combat_rats', name: 'Крысы-кодеры', type: 'combat', description: 'Мелкие вредители в кабельных каналах.', x: 45, y: 85 },
+      { id: 'combat_client_proxy', name: 'Удаленный Прокси', type: 'combat', description: 'Слепая зона для выгрузки чужих логов.', x: 20, y: 80 },
       { id: 'term_silo_7', name: 'Силос №7', type: 'terminal', description: 'Инженерная панель глубокого залегания.', x: 88, y: 18 },
       { id: 'term_taxi_alt', name: 'Такси', type: 'terminal', description: 'Разблокировка города.', x: 52, y: 95 },
       { id: 'combat_silo_inner', name: 'Внутренний контур', type: 'combat', description: 'Сердце промышленного массива.', x: 82, y: 12 }

@@ -141,6 +141,17 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     preClassOnly: true,
   },
   {
+    id: 'q_bar_copy_logs',
+    title: '[ПАЙПЛАЙН] Компрометирующие логи',
+    description: 'Нервный Клиент из бара Синий Чип нанял вас, чтобы вытащить данные из Удаленного Прокси. Требуется собрать алгоритмическую цепь: ls -> grep -> scp.',
+    districtId: 'altufyevo',
+    giverNpcId: 'bar_chips', // Dialog occurs in bar_chips node
+    objectiveNodeId: 'combat_client_proxy', // This is where combat happens
+    type: 'combat',
+    difficulty: 'standard',
+    tier: 1,
+  },
+  {
     id: 'q_altufyevo_scrap_hunt',
     title: 'Охота за Восходом',
     description: 'Серый просит добыть процессоры с ботов "Восход" на Свалке.',

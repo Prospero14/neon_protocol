@@ -471,9 +471,30 @@ export const altufyevo_dialogues: Record<string, DialogueTree> = {
       { text: 'Заказать охладитель (25 Bits, -15 Stress)', nextId: 'intro', cost: 25, effect: 'RESTORE_HP', amount: 15 },
       { text: 'Синтетический кофе (10 Bits, -5 Stress)', nextId: 'intro', cost: 10, effect: 'RESTORE_HP', amount: 5 },
       { text: 'Послушать сплетни (5 Bits)', nextId: 'lore_bar', cost: 5 },
+      { text: '[Подойти к Декеру на пенсии]', nextId: 'bar_decker_intro' },
+      { text: '[Подсесть к Нервному Клиенту]', nextId: 'bar_client_intro' },
+      { text: '[Отдать данные Клиенту]', nextId: 'bar_client_finish', requireReadyQuestId: 'q_bar_copy_logs' },
       { text: '[УЙТИ]', nextId: 'LEAVE' }
     ])
     .addLoreNode('lore_bar', 'БАРМЕН', 'Говорят, в Силосе №12 вчера видели кого-то из "Элиты". Искали старые бэкапы... Странно это.', 'intro')
+    // Old Decker Branch
+    .addNode('bar_decker_intro', 'СТАРЫЙ ДЕКЕР', '*Он механически помешивает синтетический джин.* Эх, молодежь... Вы думаете, что Сеть всегда была такой? С этими вашими ICE и корпоративными прокси? В мое время TCP-пакеты летали свободно, как птицы.', [
+      { text: 'Расскажи про корпоративные войны.', nextId: 'bar_decker_lore_wars' },
+      { text: 'Оставить старика в покое.', nextId: 'intro' }
+    ])
+    .addLoreNode('bar_decker_lore_wars', 'СТАРЫЙ ДЕКЕР', 'Когда произошел Раскол, "Элита" просто переписала протоколы маршрутизации под себя. Они закрыли Верхний Уровень и оставили нас копаться в этом мусоре. Будь осторожен там... Ядро следит за каждым твоим PING-ом. (+Intel: Network_History)', 'intro')
+    // Nervous Client Branch
+    .addNode('bar_client_intro', 'НЕРВНЫЙ КЛИЕНТ', '*Он постоянно оглядывается и теребит край куртки.* Ты... ты ведь занимаешься "грязной" работой? Мне нужно, чтобы кто-то скачал одни удаленные логи с Удаленного Прокси. Я хорошо заплачу.', [
+      { text: 'В чем подвох?', nextId: 'bar_client_explain' },
+      { text: 'Не интересует.', nextId: 'intro' }
+    ])
+    .addNode('bar_client_explain', 'НЕРВНЫЙ КЛИЕНТ', 'Подвох в том, что система мониторит трафик. **Обязательно нужно соблюсти алгоритмическую цепочку (Execution Chain).** Слушай внимательно: мне нужно, чтобы ты проник в лог-архив (карточка `ls`), нашел строки с моим профилем (карточка `grep`) и тихо выгрузил их мне на сервер (карточка `scp`). Никаких лишних действий, не перепутай порядок, иначе сработает сигнализация.', [
+      { text: 'Понял: ls, затем grep, затем scp. Берусь.', nextId: 'LEAVE', awardQuestId: 'q_bar_copy_logs' },
+      { text: 'Слишком сложно.', nextId: 'intro' }
+    ])
+    .addNode('bar_client_finish', 'НЕРВНЫЙ КЛИЕНТ', 'Ты сделал это?! *Он судорожно проверяет данные на дата-паде.* Да, это они... Мои логи из Бибирево... Спасибо! Держи оплату.', [
+      { text: 'Всегда к вашим услугам.', nextId: 'intro', effect: 'GIVE_BITS', amount: 150, completeQuestId: 'q_bar_copy_logs' }
+    ])
     .build(),
 
   // --- COMBAT NODES (Hard Audit Pass) ---

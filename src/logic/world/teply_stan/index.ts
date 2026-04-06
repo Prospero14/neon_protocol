@@ -1,13 +1,24 @@
 import type { WorldDistrict } from '../types';
-import { teply_stan_npcs } from './npcs';
-import { teply_stan_dialogues } from './dialogues';
+import { npc_ranger_profile } from './npcs/npc_ranger/profile';
+import { npc_ranger_dialogues } from './npcs/npc_ranger/dialogues';
+import { npc_hermit_forest_profile } from './npcs/npc_hermit_forest/profile';
+import { npc_hermit_forest_dialogues } from './npcs/npc_hermit_forest/dialogues';
+import { npc_sre_recruit_profile } from './npcs/npc_sre_recruit/profile';
+import { npc_sre_recruit_dialogues } from './npcs/npc_sre_recruit/dialogues';
+import { shop_forest_dialogues } from './objects/shop_forest/dialogues';
+import { shop_wild_dialogues } from './objects/shop_wild/dialogues';
+import { bar_forest_shadow_dialogues } from './objects/bar_forest_shadow/dialogues';
+import { term_nature_log_dialogues } from './objects/term_nature_log/dialogues';
+import { combat_forest_hunt_dialogues } from './objects/combat_forest_hunt/dialogues';
+import { combat_wild_node_dialogues } from './objects/combat_wild_node/dialogues';
+import { combat_router_clash_dialogues } from './objects/combat_router_clash/dialogues';
 
 export const teply_stan: WorldDistrict = {
   id: 'teply_stan',
   node: {
     id: 'teply_stan', 
     name: 'TEPLY_STAN: FOREST_EDGE', 
-    description: 'Окраина Москвы, где город встречается con одичавшим лесом. Идеальное место для скрытых баз.', 
+    description: 'Окраина Москвы, где город встречается с одичавшим лесом. Идеальное место для скрытых баз.', 
     x: 20, y: 90, stability: 88, type: 'combat', tier: 1,
     subNodes: [
         { id: 'npc_ranger', name: 'Егерь (SRE-патруль)', type: 'npc', description: 'Следит за стабильностью региона. Недолюбливает дикий код.', x: 50, y: 20 },
@@ -22,6 +33,21 @@ export const teply_stan: WorldDistrict = {
         { id: 'combat_router_clash', name: 'Стык Роутеров', type: 'combat', description: 'Территориальный конфликт за сигнал.', x: 35, y: 90 }
     ]
   },
-  npcs: teply_stan_npcs,
-  dialogues: teply_stan_dialogues
+  npcs: [
+    npc_ranger_profile,
+    npc_hermit_forest_profile,
+    npc_sre_recruit_profile
+  ],
+  dialogues: {
+    npc_ranger: npc_ranger_dialogues,
+    npc_hermit_forest: npc_hermit_forest_dialogues,
+    npc_sre_recruit: npc_sre_recruit_dialogues,
+    shop_forest: shop_forest_dialogues,
+    shop_wild: shop_wild_dialogues,
+    bar_forest_shadow: bar_forest_shadow_dialogues,
+    term_nature_log: term_nature_log_dialogues,
+    combat_forest_hunt: combat_forest_hunt_dialogues,
+    combat_wild_node: combat_wild_node_dialogues,
+    combat_router_clash: combat_router_clash_dialogues
+  }
 };

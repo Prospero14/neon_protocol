@@ -75,9 +75,19 @@ function App() {
         else if (gs.profession.grade === 'Senior') effectiveRank = 'senior';
       }
 
-      const tierTasks = taskLibrary.filter((t) => t.rank === effectiveRank);
-      const safeLibrary = tierTasks.length > 0 ? tierTasks : taskLibrary;
-      const idx = Math.floor(Math.random() * safeLibrary.length);
+      const safeLibrary = taskLibrary.filter((t) => {
+        const matchesRank = t.rank === effectiveRank;
+        const matchesDistrict = !t.districtId || t.districtId === gs.activeDistrictId;
+        return matchesRank && matchesDistrict;
+      });
+      
+      // Поиск конкретной задачи по активной ноде (фикчеру/квесту)
+      let idx = safeLibrary.findIndex(t => t.id === gs.activeBarNode);
+      if (idx === -1) {
+        // Если нода не является ID задачи, выбираем рандомную, но СТАБИЛЬНУЮ для этой сессии ноды
+        // (или просто рандомную, если нода пуста)
+        idx = Math.floor(Math.random() * safeLibrary.length);
+      }
       
       let combatDeck = gs.activeDeck;
       if (!gs.classUnlocked) {
@@ -98,6 +108,12 @@ function App() {
           deckRamMb={gs.deckRamMb} 
           homeDistrictId={gs.homeDistrictId}
           onDiscoverCard={gs.discoverCard} 
+          isQuestCombat={(() => {
+            const tracked = getTrackedQuest(gs.questStates);
+            if (!tracked) return false;
+            const tDef = QUEST_LIBRARY.find(q => q.id === tracked.questId);
+            return !!(tDef && tDef.type === 'combat' && (!tDef.objectiveNodeId || tDef.objectiveNodeId === gs.activeBarNode));
+          })()}
           onViewChange={(v: any) => { 
             if (typeof v === 'string') gs.setCurrentView(v as ViewType); 
             else { 
@@ -105,7 +121,8 @@ function App() {
               if (v.cardId) gs.setSelectedDocId(v.cardId); 
             } 
           }} 
-          onWin={(earned, rank) => {
+          onWin={(earned, rank, chain, missionName) => {
+            gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);
             gs.setBits((prev) => Math.max(0, prev + earned));
             if (earned > 0) {
               gs.setSolvedTaskCounts(prev => ({ ...prev, [rank]: (prev[rank] || 0) + 1 }));
@@ -158,8 +175,10 @@ function App() {
             if (q) gs.setQuestStates(prev => acceptQuest(prev, q.id)); 
           }} 
           playerLevel={gs.classUnlocked ? 5 : 1} 
-          inventory={gs.inventory} 
+          inventory={[...gs.inventory, ...gs.loot]} 
           onRewardBits={(amount: number) => gs.setBits(b => b + amount)} 
+          onRewardItem={gs.onRewardItem}
+          onRemoveItem={gs.onRemoveItem}
           activeQuestIds={activeQuests} 
           readyQuestIds={readyQuests}
           completedQuestIds={completedQuests}
@@ -198,8 +217,6 @@ function App() {
             installedImplants: gs.installedImplants, 
             maxImplantSlots: gs.maxImplantSlots 
           }} 
-          questStates={gs.questStates} 
-          allQuests={QUEST_LIBRARY} 
           onBack={() => gs.setCurrentView('HUB')} 
           onLogout={gs.logout} 
           onUpgradeHardware={(cores: number, ram: number) => { 
@@ -242,6 +259,7 @@ function App() {
           discoveredCardIds={new Set([...Array.from(gs.discoveredCardIds), ...gs.activeDeck.map((c) => c.id)])} 
           initialEntryId={gs.selectedDocId} 
           onBack={() => { gs.setCurrentView(gs.lastView); gs.setSelectedDocId(null); }} 
+          solvedChains={gs.solvedChains}
         />
       );
     }

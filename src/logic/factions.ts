@@ -37,9 +37,9 @@ export const FACTIONS: Record<string, Faction> = {
     homeDistrictIds: ['vdnkh', 'sokol'],
     enemies: ['NULLPOINTERS', 'REDUNDANTS']
   },
-  FEDERAL_OVERSIGHT: {
-    id: 'FEDERAL_OVERSIGHT',
-    name: 'Federal Oversight',
+  REGULATORS: {
+    id: 'REGULATORS',
+    name: 'Regulators',
     sector: 'STATE',
     description: 'Остатки государственного аппарата. Бюрократия, карательные боты и поддержание "стабильности".',
     homeDistrictIds: ['maryino'],
@@ -51,7 +51,7 @@ export const FACTIONS: Record<string, Faction> = {
     sector: 'UNDERGROUND',
     description: 'Анархо-хакеры. Считают, что весь код должен быть свободным, а лицензии — это цепи.',
     homeDistrictIds: ['chertanovo', 'maryino'],
-    enemies: ['KRYLOVO_CORP', 'FEDERAL_OVERSIGHT', 'TELECON']
+    enemies: ['KRYLOVO_CORP', 'REGULATORS', 'TELECON']
   },
   RUST_VALLEY: {
     id: 'RUST_VALLEY',

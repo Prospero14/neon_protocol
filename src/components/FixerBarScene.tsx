@@ -30,6 +30,8 @@ interface FixerBarSceneProps {
   playerLevel: number;
   inventory: any[];
   onTravel?: (nodeId: string, type: string, cost?: number) => void;
+  onRewardItem?: (itemId: string, amount?: number) => void;
+  onRemoveItem?: (itemId: string) => void;
   onLeave: () => void;
   homeDistrictId?: string;
   npcPresenceMap: Record<string, 'HOME' | 'AWAY'>;
@@ -59,6 +61,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   playerLevel,
   inventory,
   onTravel,
+  onRewardItem,
+  onRemoveItem,
   onLeave,
   homeDistrictId,
   npcPresenceMap,
@@ -71,12 +75,12 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   }
 
   // Find NPC faction. 
-  let npcFactionId = 'NET_DRIVERS';
-  if (locationId.includes('corp') || locationId.includes('regulator')) npcFactionId = 'KRYLOVO_CORP';
+  let npcFactionId: string = 'NET_DRIVERS';
+  if (locationId.includes('corp')) npcFactionId = 'KRYLOVO_CORP';
   if (locationId.includes('bank') || locationId.includes('gigabank')) npcFactionId = 'GIGABANK';
   if (locationId.includes('null') || locationId.includes('hacker') || locationId.includes('chertanovo') || locationId.includes('altufyevo')) npcFactionId = 'NULLPOINTERS';
   if (locationId.includes('rust') || locationId.includes('scav') || locationId.includes('vykhino')) npcFactionId = 'RUST_VALLEY';
-  if (locationId.includes('federal') || locationId.includes('over')) npcFactionId = 'FEDERAL_OVERSIGHT';
+  if (locationId.includes('regulator') || locationId.includes('federal') || locationId.includes('over')) npcFactionId = 'REGULATORS';
   if (locationId.includes('bio')) npcFactionId = 'BIOSYNDICATE';
   if (locationId.includes('hedge') || locationId.includes('south_west')) npcFactionId = 'SILICON_HEDGE';
   if (locationId.includes('redundant')) npcFactionId = 'REDUNDANTS';
@@ -140,11 +144,16 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
            text: `ПОГОВОРИТЬ: ${config.name.toUpperCase()}`,
            nextId: 'TRAVEL_GUEST',
            cardRewardId: config.npcId, // Use as target nodeId
-           subtext: 'ПРИСУТСТВУЕТ_В_ЛОКАЦИИ'
+           subtext: 'ПРИСУТСТВУЕТ_В_ЛОКАЦИИ',
+           isNpcInteraction: true
          } as any);
       }
     });
   }
+
+  // v0.10: Categorize for Layout
+  const serviceOptions = finalOptions.filter(o => (o.cost || 0) > 0);
+  const primaryOptions = finalOptions.filter(o => !((o.cost || 0) > 0));
 
   useEffect(() => {
     if (node && node.text) {
@@ -172,23 +181,31 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
        return;
     }
 
-    if (option.effect === 'GIVE_CARD' && option.cardRewardId) onRewardCard(option.cardRewardId);
+    let effectFired = false;
+    if (option.effect === 'GIVE_CARD') {
+       if (option.cardRewardId) onRewardCard(option.cardRewardId);
+       if (option.cardRewardIds && option.cardRewardIds.length > 0) {
+           option.cardRewardIds.forEach(id => onRewardCard(id));
+       }
+    }
     else if (option.effect === 'GIVE_TRAIT' && option.cardRewardId) onRewardTrait(option.cardRewardId);
     else if (option.effect === 'GIVE_BITS' && option.amount) onRewardBits(option.amount);
     else if (option.effect === 'RESTORE_HP' && option.amount) onRestoreHp(option.amount);
     else if (option.effect === 'SET_PROFESSION' && option.cardRewardId) onSetProfession(option.cardRewardId);
-    else if (option.effect === 'START_COMBAT' && option.cardRewardId) onStartCombat(option.cardRewardId);
-    else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) onUnlockCity();
-    else if (option.effect === 'TRAVEL' && onTravel && option.cardRewardId) onTravel(option.cardRewardId, 'district', option.cost);
+    else if (option.effect === 'START_COMBAT' && option.cardRewardId) { onStartCombat(option.cardRewardId); effectFired = true; }
+    else if (option.effect === 'UNLOCK_CITY' && onUnlockCity) { onUnlockCity(); effectFired = true; }
+    else if (option.effect === 'TRAVEL' && onTravel && option.cardRewardId) { onTravel(option.cardRewardId, 'district', option.cost); effectFired = true; }
     else if (option.effect === 'GIVE_XP' && option.amount && onRewardXp) onRewardXp(option.amount);
     else if (option.effect === 'AWARD_QUEST' && option.cardRewardId && onAwardQuest) onAwardQuest(option.cardRewardId);
     else if (option.effect === 'COMPLETE_TALK_QUEST' && option.cardRewardId && onCompleteQuest) onCompleteQuest(option.cardRewardId);
 
     if (option.completeQuestId && onCompleteQuest) onCompleteQuest(option.completeQuestId);
     if (option.awardQuestId && onAwardQuest) onAwardQuest(option.awardQuestId);
+    if (option.awardItemId && onRewardItem) onRewardItem(option.awardItemId, option.amount);
+    if (option.removeItemId && onRemoveItem) onRemoveItem(option.removeItemId);
 
     if (option.nextId === 'LEAVE') {
-      onLeave();
+      if (!effectFired) onLeave();
     } else {
       setCurrentNodeId(option.nextId);
     }
@@ -206,42 +223,68 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
         </div>
       </header>
 
-      <main className="bar-main">
-        <aside className="bar-sidebar">
-          <div className="node-title neon-text green">{tree.nodes[tree.startNodeId].speaker || 'ОБЪЕКТ'}</div>
-          <div className="node-icon-frame">
-            <div className="icon-container">
-              <Cpu size={80} strokeWidth={1} className="chip-icon" />
-            </div>
-            <div className="frame-footer"></div>
+      <main className="bar-main-grid">
+        {/* LEFT: SPEAKER / ASIDE */}
+        <aside className="bar-aside neon-panel">
+          <div className="speaker-label mono-text">
+             <Fingerprint size={14} color="var(--neon-cyan)" />
+             <span>ID_{locationId.toUpperCase()}</span>
           </div>
-          <div className="node-meta mono-text">
-            @ {faction?.name || 'UNKNOWN'} | REP: {currentRep}
+          <div className="speaker-avatar-frame">
+             <div className="avatar-noise"></div>
+             <Cpu size={64} strokeWidth={1} className="avatar-icon" />
+             <div className="frame-scanner"></div>
+          </div>
+          <div className="speaker-metadata mono-text">
+            <div className="meta-f">@ {faction?.name || 'UNKNOWN'}</div>
+            <div className="meta-r gold">RECOGNITION_{currentRep}</div>
           </div>
         </aside>
 
-        <section className="bar-content">
-          <div className="content-text-area mono-text">
-            {typedText}
+        {/* RIGHT: CONTENT & ACTION CENTER */}
+        <section className="action-center">
+          <div className="story-area neon-panel arctic-monolith">
+            <div className="text-scroll">
+              <span className="prompt-v4">{">_"}</span> {typedText}
+            </div>
           </div>
 
-          <div className="content-actions">
-            {finalOptions.map((opt, idx) => {
-              const cantAfford = opt.cost && playerBits < opt.cost;
-              return (
-                <button
-                  key={idx}
-                  className={`action-button mono-text ${cantAfford ? 'locked' : ''}`}
-                  onClick={() => handleOptionClick(opt)}
-                >
-                  <div className="action-main">
-                    <span className="action-prompt">{">_"}</span>
-                    <span className="action-text">{opt.text}</span>
-                  </div>
-                  {opt.cost && <div className="action-cost amber">b{opt.cost}</div>}
-                </button>
-              );
-            })}
+          <div className="interaction-matrix">
+            {/* SERVICES GRID */}
+            {serviceOptions.length > 0 && (
+              <div className="service-matrix">
+                <div className="matrix-label mono-text">ЛОКАЛЬНЫЙ_СЕРВИС [BITS_REQUIRED]</div>
+                <div className="service-grid">
+                  {serviceOptions.map((opt, idx) => (
+                    <button key={idx} className="service-tile interactive" onClick={() => handleOptionClick(opt)}>
+                       <div className="tile-text">{opt.text}</div>
+                       <div className="tile-price">ƀ{opt.cost}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* PRIMARY ACTIONS LIST */}
+            <div className="primary-actions-list">
+              {primaryOptions.map((opt, idx) => {
+                const isNpc = (opt as any).isNpcInteraction;
+                const isLeave = opt.nextId === 'LEAVE';
+                return (
+                  <button 
+                    key={idx} 
+                    className={`primary-action-v4 interactive ${isNpc ? 'npc-glow' : ''} ${isLeave ? 'leave-btn' : ''}`}
+                    onClick={() => handleOptionClick(opt)}
+                  >
+                    <span className="btn-p">{(isNpc ? '://' : '>_')}</span>
+                    <div className="btn-content">
+                       <div className="btn-t">{opt.text}</div>
+                       {opt.subtext && <div className="btn-s">{opt.subtext}</div>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
       </main>
@@ -249,115 +292,145 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       <style>{`
         .fixer-bar-view {
           height: 100vh;
-          background: #000;
+          background: radial-gradient(circle at center, #0a0e14 0%, #000 100%);
           display: flex;
           flex-direction: column;
           color: #e0e0e0;
-          padding: 2rem 4rem;
+          padding: 1.5rem 2rem;
           box-sizing: border-box;
           overflow: hidden;
+          font-family: var(--font-mono);
         }
 
         .bar-header {
           display: flex;
           justify-content: space-between;
+          padding: 8px 15px;
           border-bottom: 1px solid rgba(255,255,255,0.05);
-          padding-bottom: 1rem;
-          margin-bottom: 3rem;
+          margin-bottom: 2rem;
+          background: rgba(255,255,255,0.02);
+          border-radius: 4px;
         }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .header-marker { width: 4px; height: 18px; background: #00ff99; }
-        .location-tag { font-size: 1.1rem; letter-spacing: 1px; }
-        .header-right { opacity: 0.8; display: flex; align-items: center; gap: 8px; }
-        .bits-icon { color: #ffcc00; }
+        .header-marker { width: 4px; height: 14px; background: var(--neon-cyan); box-shadow: 0 0 10px var(--neon-cyan); }
+        .location-tag { font-size: 0.8rem; font-weight: bold; letter-spacing: 2px; }
+        .header-right { font-size: 0.8rem; color: var(--neon-amber); font-weight: bold; }
 
-        .bar-main {
+        .bar-main-grid {
           flex: 1;
-          display: flex;
-          gap: 5rem;
+          display: grid;
+          grid-template-columns: 240px 1fr;
+          gap: 2rem;
+          overflow: hidden;
         }
 
-        .bar-sidebar {
-          width: 280px;
+        .bar-aside {
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 1rem;
+          padding: 15px;
+          background: rgba(0,0,0,0.6);
+          backdrop-filter: blur(10px);
+          height: fit-content;
         }
-        .node-title { font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px; }
-        .node-icon-frame {
-           border: 1px solid #00ff99;
-           padding: 2px;
-           background: rgba(0,255,153,0.03);
-           position: relative;
-        }
-        .icon-container {
-           height: 240px;
+        .speaker-label { font-size: 0.65rem; opacity: 0.5; display: flex; gap: 8px; align-items: center; }
+        .speaker-avatar-frame {
+           height: 180px;
+           background: #000;
+           border: 1px solid rgba(255,255,255,0.1);
            display: flex;
            align-items: center;
            justify-content: center;
-           border: 1px solid rgba(0,255,153,0.3);
-           background: #000;
+           position: relative;
+           overflow: hidden;
         }
-        .chip-icon { color: #00ff99; opacity: 0.8; filter: drop-shadow(0 0 10px rgba(0,255,153,0.3)); }
-        .frame-footer { height: 30px; border-top: 1px solid #00ff99; background: rgba(0,255,153,0.05); }
-        .node-meta { font-size: 0.75rem; opacity: 0.5; text-transform: uppercase; }
-
-        .bar-content {
-          flex: 1;
+        .avatar-noise { position: absolute; inset: 0; background: url('https://grainy-gradients.vercel.app/noise.svg'); opacity: 0.1; }
+        .avatar-icon { color: var(--neon-cyan); opacity: 0.8; filter: drop-shadow(0 0 10px var(--neon-cyan-glow)); }
+        .frame-scanner { position: absolute; width: 100%; height: 2px; background: rgba(0,255,255,0.2); animation: scan 3s linear infinite; }
+        .speaker-metadata { font-size: 0.7rem; display: flex; flex-direction: column; gap: 4px; }
+        
+        .action-center {
           display: flex;
           flex-direction: column;
-          gap: 4rem;
-          padding-top: 2rem;
+          gap: 1.5rem;
+          overflow-y: auto;
+          padding-right: 10px;
         }
-        .content-text-area {
-          font-size: 1.4rem;
-          line-height: 1.7;
-          max-width: 800px;
-          min-height: 200px;
+        .story-area {
+          padding: 20px;
+          background: rgba(255,255,255,0.03);
+          border-left: 3px solid var(--neon-cyan);
+          min-height: 120px;
+          display: flex;
+          align-items: center;
         }
+        .text-scroll { font-size: 1.1rem; line-height: 1.5; color: #d0d0d0; }
+        .prompt-v4 { color: var(--neon-cyan); font-weight: bold; margin-right: 10px; }
 
-        .content-actions {
+        .interaction-matrix {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          max-width: 650px;
+          gap: 2rem;
         }
-        .action-button {
+        .matrix-label { font-size: 0.6rem; opacity: 0.4; letter-spacing: 2px; margin-bottom: 8px; }
+        
+        .service-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+        .service-tile {
           background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.06);
-          padding: 1.2rem 1.8rem;
+          border: 1px solid rgba(255,255,255,0.1);
+          padding: 12px 15px;
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
+          align-items: center;
           cursor: pointer;
           transition: 0.2s;
-          color: #a0a0a0;
-          text-align: left;
-          width: 100%;
+          border-radius: 4px;
         }
-        .action-button:hover:not(.locked) {
-          background: rgba(0,255,153,0.05);
-          border-color: #00ff99;
-          color: #fff;
+        .service-tile:hover {
+          background: rgba(255,191,0,0.1);
+          border-color: var(--neon-amber);
+          transform: translateY(-2px);
+        }
+        .tile-text { font-size: 0.8rem; color: #ccc; }
+        .service-tile:hover .tile-text { color: #fff; }
+        .tile-price { color: var(--neon-amber); font-weight: bold; font-size: 0.75rem; }
+
+        .primary-actions-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .primary-action-v4 {
+          background: rgba(0,255,255,0.03);
+          border: 1px solid rgba(0,255,255,0.15);
+          padding: 15px 20px;
+          display: flex;
+          align-items: center;
+          gap: 15px;
+          cursor: pointer;
+          transition: 0.3s;
+          border-radius: 6px;
+        }
+        .primary-action-v4:hover {
+          background: rgba(0,255,255,0.1);
+          border-color: var(--neon-cyan);
+          box-shadow: 0 0 20px rgba(0,255,255,0.1);
           transform: translateX(10px);
         }
-        .action-main { 
-          display: flex; 
-          gap: 20px; 
-          align-items: flex-start; 
-          flex: 1;
-        }
-        .action-prompt { color: #00ff99; font-weight: bold; padding-top: 2px; }
-        .action-text { 
-          font-size: 1.1rem; 
-          line-height: 1.4;
-          flex: 1;
-        }
-        .action-cost { font-weight: bold; font-size: 0.9rem; padding-top: 4px; }
+        .primary-action-v4.npc-glow { border-color: rgba(0,255,255,0.4); background: rgba(0,255,255,0.06); }
+        .primary-action-v4.leave-btn { border-color: rgba(255,0,100,0.3); background: rgba(255,0,100,0.03); margin-top: 10px; }
+        .primary-action-v4.leave-btn:hover { background: rgba(255,0,100,0.1); border-color: var(--neon-pink); color: #fff; }
+        
+        .btn-p { font-weight: bold; color: var(--neon-cyan); width: 25px; }
+        .leave-btn .btn-p { color: var(--neon-pink); }
+        .btn-t { font-size: 0.95rem; font-weight: 800; color: #fff; }
+        .btn-s { font-size: 0.6rem; opacity: 0.6; text-transform: uppercase; margin-top: 2px; }
 
-        .neon-text.green { color: #00ff99; text-shadow: 0 0 10px rgba(0,255,153,0.3); }
-        .amber { color: #ffcc00; }
-        .mono-text { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+        @keyframes scan { from { top: 0%; } to { top: 100%; } }
+        .gold { color: var(--neon-amber); }
       `}</style>
     </div>
   );

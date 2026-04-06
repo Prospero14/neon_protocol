@@ -6,15 +6,16 @@ import type { CombatCard } from '../logic/combatCards';
 import { SPRING_CARD_LIBRARY } from '../logic/springCards';
 import { SPRING_JAVA_REFERENCE } from '../logic/springReferenceData';
 
-type DocPack = 'core' | 'spring' | 'infra' | 'soft-skills' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics' | 'scripting';
+type DocPack = 'core' | 'spring' | 'infra' | 'soft-skills' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics' | 'scripting' | 'exploits';
 
 interface DocumentationProps {
   discoveredCardIds: Set<string>;
   initialEntryId?: string | null;
   onBack: () => void;
+  solvedChains: Array<{ taskId: string, name: string, chain: string[] }>;
 }
 
-const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initialEntryId, onBack }) => {
+const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initialEntryId, onBack, solvedChains }) => {
   const [pack, setPack] = useState<DocPack>('mechanics');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(initialEntryId || null);
   
@@ -123,6 +124,7 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
               <button className={`ref-pack-tab testing ${pack === 'testing' ? 'active' : ''}`} onClick={() => setPack('testing')}>TESTS & REACTIONS</button>
               <button className={`ref-pack-tab cookbook ${pack === 'cookbook' ? 'active' : ''}`} onClick={() => setPack('cookbook')}>DEV_COOKBOOK</button>
               <button className={`ref-pack-tab sandbox ${pack === 'sandbox' ? 'active' : ''}`} onClick={() => setPack('sandbox')}>SANDBOX</button>
+              <button className={`ref-pack-tab exploits ${pack === 'exploits' ? 'active' : ''}`} onClick={() => setPack('exploits')}>EXPLOITS_DB</button>
             </div>
           </div>
         </div>
@@ -273,6 +275,47 @@ spec: { containers: [{ image: neon-app:latest }] }`}</pre>
                   </div>
                 </section>
              )}
+          </div>
+        </div>
+      )}
+
+      {pack === 'exploits' && (
+        <div className="ref-guide-full exploits-view-v4 neon-panel animate-float-stable">
+          <div className="exploits-header">
+            <Terminal size={24} color="var(--neon-amethyst)" />
+            <h3 className="mono-text">PERSONAL_EXPLOIT_DATABASE [VERIFIED_STABLE]</h3>
+          </div>
+          
+          <div className="exploits-scroll-area">
+            {solvedChains.length === 0 ? (
+               <div className="empty-exploits-state mono-text">
+                  &gt; NO_SUCCESSFUL_CHAINS_RECORDED
+                  <br/>&gt; PERFORM_INJECTION_OR_CLEANUP_TO_GENERATE_LOG
+               </div>
+            ) : (
+               <div className="exploits-grid">
+                 {solvedChains.map((item, idx) => (
+                   <div key={idx} className="exploit-card mono-text">
+                     <div className="ex-header">
+                        <span className="ex-task-id">#{item.taskId.slice(0, 8)}</span>
+                        <span className="ex-job-name">{item.name}</span>
+                     </div>
+                     <div className="ex-chain-rail">
+                        {item.chain.map((card, cidx) => (
+                          <div key={cidx} className="ex-chain-node">
+                             <div className="ex-node-val">{card}</div>
+                             {cidx < item.chain.length - 1 && <ChevronRight size={12} color="#444" />}
+                          </div>
+                        ))}
+                     </div>
+                     <div className="ex-footer">
+                        <span className="ex-status-tag">STABLE_EXPLOIT</span>
+                        <span className="ex-timestamp">LOG_SAVED: {new Date().toLocaleDateString()}</span>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+            ) }
           </div>
         </div>
       )}

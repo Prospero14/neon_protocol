@@ -5,17 +5,20 @@ export const academy_dialogues: Record<string, DialogueTree> = {
   // --- PROFESSOR ARKHIPOV ---
   npc_professor_arkhipov: new DialogueBuilder('npc_professor_arkhipov')
     .withGreetings({
-      neutral: ['welcome', 'welcome_v2'],
+      neutral: ['intro', 'welcome_v2'],
       friendly: ['welcome_friendly'],
       stressed: ['stressed_welcome'],
       repeat: ['welcome_repeat']
     })
-    .addNode('welcome', 'ПРОФЕССОР АРХИПОВ', 'IDENTITY_VERIFIED: Поздравляю con получением лицензии Silicon Hedge. Твоя дека — это скальпель в руках хирурга. Начнем con основ архитектуры.', [
+    .addNode('intro', 'ПРОФЕССОР АРХИПОВ', 'IDENTITY_VERIFIED: Поздравляю с получением лицензии Silicon Hedge. Твоя дека — это скальпель в руках хирурга. Начнем с основ архитектуры.', [
       { text: 'Я принес методички от Ильи.', nextId: 'delivery_complete', requireQuestId: 'q_sokol_talk_lab_delivery' },
-      { text: 'Я от Никсанны из Алтуфьево.', nextId: 'lore_nixanna' },
+      { text: 'Где мне искать продвинутые библиотеки (Collections/Streams)?', nextId: 'lore_libraries', requireReputation: { factionId: 'SILICON_HEDGE', minPoints: 25 } },
       { text: 'Я готов слушать. [ CORE_CPU ]', nextId: 'cpu_lecture' },
-      { text: 'Кто такие Silicon Hedge?', nextId: 'lore_hedge' },
+      { text: 'Кто такие Silicon Hedge?', nextId: 'lore_faction' },
       { text: 'Пропустить теорию (Не рекомендуется)', nextId: 'LEAVE' }
+    ])
+    .addNode('lore_libraries', 'ПРОФЕССОР АРХИПОВ', 'Вы по адресу. Наши архивы содержат полные спецификации Collections и Streams API. Ищите у дирижеров EU Syntax. Но если вам нужен Spring — это к фанатичным изгнанникам в Измайлово.', [
+      { text: 'Благодарю.', nextId: 'intro' }
     ])
     .addNode('welcome_v2', 'ПРОФЕССОР АРХИПОВ', 'Циклы Академии никогда не останавливаются. Опять ты? Твои показатели в норме, но теория никогда не бывает лишней. Продолжим?', [
       { text: 'Пожалуй.', nextId: 'cpu_lecture' },
@@ -32,7 +35,7 @@ export const academy_dialogues: Record<string, DialogueTree> = {
     .addNode('stressed_welcome', 'ПРОФЕССОР АРХИПОВ', '[ERR_STRESS_OVERFLOW] Твой нейроинтерфейс дрожит, юнит. С таким шумом ты не усвоишь даже простейший цикл. Попробуем стабилизировать тебя.', [
       { text: 'Слушаю лекцию.', nextId: 'cpu_lecture' }
     ])
-    .addLoreNode('lore_hedge', 'ПРОФЕССОР АРХИПОВ', 'Silicon Hedge — это фундамент. Мы не просто пишем код, мы строим законы, по которым живет эта цифровая реальность. Порядок — высшая ценность.', 'welcome', 'Silicon Hedge')
+    .addLoreNode('lore_faction', 'ПРОФЕССОР АРХИПОВ', 'Silicon Hedge — это фундамент. Мы не просто пишем код, мы строим законы, по которым живет эта цифровая реальность. Порядок — высшая ценность.', 'intro', 'Silicon Hedge')
     .addNode('cpu_lecture', 'ПРОФЕССОР АРХИПОВ', 'CORE_CPU — это твои когнитивные ядра. Каждое действие в бою "ест" один такт. Если ядра на нуле — твой ход окончен. Не думай быстрее железа.', [
       { text: 'Понял. Что насчет NEURAL_RAM?', nextId: 'ram_lecture' }
     ])
@@ -46,10 +49,10 @@ export const academy_dialogues: Record<string, DialogueTree> = {
       { text: 'Я готов к практике. [ ЗАВЕРШИТЬ ОБУЧЕНИЕ ]', nextId: 'installed_end', completeQuestId: 'q_neon_academy_bootcamp' }
     ])
     .addNode('delivery_complete', 'ПРОФЕССОР АРХИПОВ', 'О, материалы от Ильи. Оперативно. Твоя дисциплина впечатляет. Держи небольшой бонус к репутации.', [
-      { text: 'Спасибо, Профессор.', nextId: 'welcome', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_sokol_talk_lab_delivery', reputationReward: { factionId: 'SILICON_HEDGE', amount: 10 } }
+      { text: 'Спасибо, Профессор.', nextId: 'intro', effect: 'GIVE_REPUTATION', amount: 10, cardRewardId: 'SILICON_HEDGE' }
     ])
     .addNode('lore_nixanna', 'ПРОФЕССОР АРХИПОВ', 'Никсанна... Давно её не было в сети Академии. Говорят, она ушла в глубокий аутсорс в Алтуфьево. Хороший специалист, хоть и со странностями.', [
-      { text: 'Она помогла мне.', nextId: 'welcome' }
+      { text: 'Она помогла мне.', nextId: 'intro' }
     ])
     .addNode('installed_end', 'ПРОФЕССОР АРХИПОВ', 'Теперь ты — сертифицированный оператор. Твоя дека разблокирована. Иди и не позорь мои алгоритмы.', [
       { text: 'Спасибо, Профессор.', nextId: 'LEAVE' }
@@ -96,7 +99,7 @@ export const academy_dialogues: Record<string, DialogueTree> = {
     .addNode('intro_repeat', 'ТЬЮТОР-БОТ', 'Обнаружен ранее сертифицированный юнит. Желаете повторить цикл тренировки для закрепления навыков?', [
         { text: 'Повторить цикл.', nextId: 'quest_explain' }
     ])
-    .addNode('quest_explain', 'ТЬЮТОР-БОТ', 'Симуляция "Academy_Defense_v0.1". Тебе предстоит столкнуться con учебным процессом-манекеном. Он не наносит критического вреда, но отлично проверяет твою RAM. Берешь контракт?', [
+    .addNode('quest_explain', 'ТЬЮТОР-БОТ', 'Симуляция "Academy_Defense_v0.1". Тебе предстоит столкнуться с учебным процессом-манекеном. Порядок действий: сначала просканируй структуру (ls), затем выведи приветствие (cat). Порядок — это дисциплина. Начинаем?', [
         { text: '[ ПРИНЯТЬ: БОЕВАЯ ПРАКТИКА ]', nextId: 'LEAVE', awardQuestId: 'q_academy_combat_training' },
         { text: 'Позже.', nextId: 'intro' }
     ])

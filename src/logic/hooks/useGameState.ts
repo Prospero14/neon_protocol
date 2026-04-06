@@ -10,12 +10,12 @@ import { SPRING_CARD_LIBRARY } from '../springCards';
 import type { QuestState } from '../questEngine';
 import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../questEngine';
 import { useAuth } from '../AuthContext';
-import { canUnlockClass, PRECLASS_UNLOCK_BITS, PRECLASS_UNLOCK_QUESTS } from '../preClassProgression';
+import { canUnlockClass } from '../preClassProgression';
 import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
 import { rollLoot } from '../lootTables';
-import type { GameItem } from '../items';
-import { IMPLANT_CATALOG } from '../hardware';
+import { ITEM_LIBRARY, type GameItem } from '../items';
+
 
 export type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
 
@@ -36,13 +36,31 @@ export const buildTraineeDeck = (): CombatCard[] => {
 };
 
 export const MISSION_STARTER_PACKS: Record<string, string[]> = {
-  'default': ['script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs'],
-  'q_kiddo_start': ['script_ls', 'script_cat', 'script_ping'],
-  'q_kiddo_first_bits': ['script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs'],
-  'local_lan': ['script_ls', 'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix'],
-  'job_board_bibi': ['script_ls', 'script_ping', 'script_auth', 'script_sudo_fix'],
-  'job_board_tekstil': ['script_ls', 'script_grep', 'script_wash_logs', 'script_cat'],
-  'job_board_perovo': ['script_ls', 'script_grep', 'script_auth', 'script_sudo_fix'],
+  'default': [
+    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs', 
+    'script_sudo_fix', 'script_auth', 'script_rm', 'script_ssh', 'script_curl'
+  ],
+  'q_kiddo_start': [
+    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs',
+    'script_auth', 'script_rm'
+  ],
+  'q_kiddo_first_bits': [
+    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs',
+    'script_sudo_fix', 'script_rm'
+  ],
+  'local_lan': [
+    'script_ls', 'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
+    'script_auth', 'script_rm'
+  ],
+  'job_board_bibi': [
+    'script_ls', 'script_ping', 'script_auth', 'script_sudo_fix', 'script_ssh'
+  ],
+  'job_board_tekstil': [
+    'script_ls', 'script_grep', 'script_wash_logs', 'script_cat', 'script_rm'
+  ],
+  'job_board_perovo': [
+    'script_ls', 'script_grep', 'script_auth', 'script_sudo_fix', 'script_curl'
+  ],
   'rat_invasion': ['script_ping', 'script_ssh', 'script_auth', 'script_grep', 'script_wash_logs'],
   'trainee_exam': ['script_ls', 'script_auth', 'script_ssh', 'script_curl', 'script_chmod', 'script_cron', 'script_nc', 'script_sudo_fix']
 };
@@ -76,7 +94,7 @@ export function useGameState() {
   const [viewMode, setViewMode] = useState<'CITY' | 'DISTRICT'>('DISTRICT');
   const [isCityMapUnlocked, setIsCityMapUnlocked] = useState(false);
   const [reputation, setReputation] = useState<Record<string, number>>({
-    'GIGABANK': 0, 'TELECON': 0, 'KRYLOVO_CORP': 0, 'FEDERAL_OVERSIGHT': 0, 'NULLPOINTERS': 0,
+    'GIGABANK': 0, 'TELECON': 0, 'KRYLOVO_CORP': 0, 'REGULATORS': 0, 'NULLPOINTERS': 0,
     'RUST_VALLEY': 0, 'SILICON_HEDGE': 0, 'BIOSYNDICATE': 0, 'REDUNDANTS': 0, 'NET_DRIVERS': 0
   });
 
@@ -93,6 +111,7 @@ export function useGameState() {
   const [solvedTaskCounts, setSolvedTaskCounts] = useState<Record<string, number>>({
     'script-kiddie': 0, 'junior': 0, 'mid': 0, 'senior': 0
   });
+  const [solvedChains, setSolvedChains] = useState<Array<{ taskId: string, name: string, chain: string[] }>>([]);
 
   const [deckCores, setDeckCores] = useState(1.0);
   const [deckRamMb, setDeckRamMb] = useState(512);
@@ -118,6 +137,53 @@ export function useGameState() {
 
   const [discoveredCardIds, setDiscoveredCardIds] = useState<Set<string>>(new Set(activeDeck.map((c) => c.id)));
   const discoverCard = (id: string) => setDiscoveredCardIds((prev) => new Set(prev).add(id));
+
+  // --- PROGRESSION LOGIC ---
+  const playerLevel = useMemo(() => {
+    const exploits = solvedChains.length;
+    if (exploits >= 50) return 5;
+    if (exploits >= 40) return 4;
+    if (exploits >= 30) return 3;
+    if (exploits >= 20) return 2;
+    if (exploits >= 10) return 1;
+    return 0;
+  }, [solvedChains]);
+  const playerGrade = useMemo(() => {
+    // Grade is derived from the official Profession. Exam bossfights unlock these.
+    if (profession.id === 'trainee') return 'Script-Kiddo';
+    return profession.grade;
+  }, [profession]);
+
+  const onRewardItem = (itemId: string, amount: number = 1) => {
+    const item = ITEM_LIBRARY.find((i: GameItem) => i.id === itemId);
+    if (item) {
+      setLoot(prev => {
+        const newItems = Array(amount).fill(item);
+        return [...prev, ...newItems];
+      });
+    }
+  };
+
+  const onRemoveItem = (itemId: string) => {
+    setLoot(prev => {
+      const idx = prev.findIndex(i => i.id === itemId);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+  };
+
+  const saveSolvedChain = (taskId: string, name: string, chain: string[]) => {
+    setSolvedChains(prev => {
+      // Don't duplicate exactly the same chain for the same task
+      const exists = prev.some(c => c.taskId === taskId && c.chain.join(',') === chain.join(','));
+      if (exists) return prev;
+      const next = [{ taskId, name, chain }, ...prev].slice(0, 50);
+      localStorage.setItem(`neon_exploit_db_${user?.id || 'anon'}`, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const rollNpcPresence = () => {
     const newMap: Record<string, 'HOME' | 'AWAY'> = {};
@@ -155,6 +221,9 @@ export function useGameState() {
           setCurrentView('HUB');
         }
       }
+      // Load exploits
+      const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
+      if (saved) setSolvedChains(JSON.parse(saved));
     }
   }, [user]);
 
@@ -248,36 +317,62 @@ export function useGameState() {
 
   const handleTravel = (nodeId: string, type: string, cost?: number) => {
     rollNpcPresence();
-    if (cost && bits < cost) return;
-
-    const targetDistrict = MAP_NODES.find((n) => n.id === nodeId);
-    if (type === 'district' && targetDistrict && targetDistrict.dominantFactionId) {
-       const rep = reputation[targetDistrict.dominantFactionId] || 0;
-       if (rep <= -30) {
-         setLoot(prev => [{ id: 'msg_blocked', name: 'ДОСТУП ЗАБЛОКИРОВАН', description: `Ваша репутация у ${targetDistrict.dominantFactionId} слишком низкая.` } as any, ...prev]);
-         return; 
-       }
+    
+    if (cost && cost > 0) {
+      if (bits >= cost) {
+        setBits((prev) => prev - cost);
+      } else {
+        const token = loot.find(i => i.id === 'itm_taxi_token' || i.id === 'art_monya_taxi_pass');
+        if (token) {
+          onRemoveItem(token.id);
+          setLoot(prev => [{ id: 'msg_taxi', name: 'TAXI_TOKEN_USED', description: 'Вы использовали жетон для оплаты проезда.' } as any, ...prev]);
+        } else {
+          setLoot(prev => [{ id: 'msg_no_bits', name: 'INSUFFICIENT_FUNDS', description: 'Недостаточно бит или жетонов для проезда.' } as any, ...prev]);
+          return;
+        }
+      }
     }
 
-    if (cost) setBits((prev) => prev - cost);
-    if (nodeId === 'UNLOCK_CITY') { setIsCityMapUnlocked(true); setViewMode('CITY'); return; }
-    const district = MAP_NODES.find((n) => n.id === nodeId);
-    if (type === 'district' && district) { setActiveDistrictId(nodeId); setViewMode('DISTRICT'); setActiveCombatPack(district.combatPack ?? 'java_core'); return; }
-    
-    if (['npc', 'shop', 'terminal', 'bar', 'story', 'combat'].includes(type) && targetDistrict?.dominantFactionId) {
-       const rep = reputation[targetDistrict.dominantFactionId] || 0;
-       if (rep <= -50 && Math.random() < 0.3) {
-         setActiveBarNode('punitive_squad'); 
-         setCurrentView('COMBAT'); 
-         return; 
-       }
+    if (nodeId === 'UNLOCK_CITY') {
+      setIsCityMapUnlocked(true);
+      setViewMode('CITY');
+      return;
+    }
+
+    const currentDistrictId = activeDistrictId;
+    const targetDistrict = MAP_NODES.find((n) => n.id === nodeId);
+
+    if (type === 'district' && targetDistrict) {
+      const rep = targetDistrict.dominantFactionId ? (reputation[targetDistrict.dominantFactionId] || 0) : 0;
+      if (targetDistrict.dominantFactionId && rep <= -30) {
+        setLoot(prev => [{ id: 'msg_blocked', name: 'ДОСТУП ЗАБЛОКИРОВАН', description: `Репутация слишком низкая.` } as any, ...prev]);
+        return;
+      }
+      setActiveDistrictId(nodeId);
+      setViewMode('DISTRICT');
+      setActiveCombatPack(targetDistrict.combatPack ?? 'java_core');
+      return;
+    }
+
+    const nodeOwnerDistrict = targetDistrict || MAP_NODES.find(n => n.id === currentDistrictId);
+    if (['npc', 'shop', 'terminal', 'bar', 'story', 'combat'].includes(type) && nodeOwnerDistrict?.dominantFactionId) {
+      const rep = reputation[nodeOwnerDistrict.dominantFactionId] || 0;
+      if (rep <= -50 && Math.random() < 0.3) {
+        setActiveBarNode('punitive_squad');
+        setCurrentView('COMBAT');
+        return;
+      }
     }
 
     if (type === 'combat') {
-      setActiveBarNode(nodeId); setCurrentView('COMBAT'); return;
+      setActiveBarNode(nodeId);
+      setCurrentView('COMBAT');
+      return;
     }
+
     if (['npc', 'shop', 'terminal', 'bar', 'story'].includes(type)) {
-      setActiveBarNode(nodeId); setCurrentView('FIXER_BAR');
+      setActiveBarNode(nodeId);
+      setCurrentView('FIXER_BAR');
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
       if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics')) {
@@ -290,6 +385,7 @@ export function useGameState() {
 
   const preClassState = { 
     classUnlocked, completedQuestCount, bitsEarnedFromQuests: bitsFromQuests,
+    exploitsCount: playerLevel,
     tutorialCompleted: questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')
   };
   const canUnlockNow = canUnlockClass(preClassState);
@@ -320,6 +416,7 @@ export function useGameState() {
     stress, setStress,
     bits, setBits,
     solvedTaskCounts, setSolvedTaskCounts,
+    solvedChains, saveSolvedChain,
     deckCores, setDeckCores,
     deckRamMb, setDeckRamMb,
     maxImplantSlots, installedImplants, setInstalledImplants,
@@ -334,7 +431,9 @@ export function useGameState() {
     discoveredCardIds, setDiscoveredCardIds,
     isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked,
     npcPresenceMap, setNpcPresenceMap,
+    playerLevel, playerGrade,
     handleCreationComplete, handleTravel, handleCompleteTalkQuest,
-    discoverCard, canUnlockNow, objectiveNodeId
+    discoverCard, canUnlockNow, objectiveNodeId,
+    onRewardItem, onRemoveItem
   };
 }

@@ -72,6 +72,6 @@ If you introduce a new interaction node, make sure it is registered:
 
 ## 🔗 6. Execution Chains (Script-Kiddie & Junior Combat)
 Starting with `v0.10+`, Scripting and Logic combat tasks require **Execution Chains** (strict card ordering on the rail) instead of just filling a progress bar. 
-* **MANDATORY DIALOGUE RULE:** If an NPC gives a `combat` or `diagnostics` quest that requires a specific chain of tools (e.g., `ls` -> `grep` -> `scp`), the NPC **MUST** explicitly justify this chain in their text!
-* **Example:** *"You need to find the deleted records containing her name and extract them to my drive. Remember: first list the directory contents, then filter by her ID, and finally initiate a secure copy export."*
-* The player needs this textual clue to solve the puzzle in `CombatBridge`.
+* **MANDATORY DIALOGUE RULE (TUTORIAL ONLY):** For the **VERY FIRST** combat or diagnostics quest of the game (typically `q_altufyevo_silo_clear`), the NPC **MUST** explicitly justify the required tool chain (e.g., `ls` -> `cat`) in their text! 
+* For all subsequent quests, this is optional unless the puzzle is uniquely complex. This ensures players learn the mechanics during the intro without unnecessary hand-holding later.
+* **Example:** *"You need to find the deleted records containing her name and extract them to my drive. Remember: first list the directory contents, then filter by her ID, and finally initiate a secure copy export."* (This clue is vital for the intro task in `CombatBridge`).

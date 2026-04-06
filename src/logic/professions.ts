@@ -3,7 +3,7 @@
  */
 
 export type ProfessionCategory = 'HARD' | 'SOFT';
-export type ProfessionGrade = 'Junior' | 'Middle' | 'Senior';
+export type ProfessionGrade = 'Trainee' | 'Junior' | 'Middle' | 'Senior' | 'Principal';
 
 export interface Profession {
   id: string;
@@ -25,7 +25,7 @@ export const PROFESSIONS: Profession[] = [
     path: 'None',
     specialization: 'Terminal Basics',
     description: 'У тебя нет класса. Ты всего лишь шум в системе, "скрипт-кидди", пытающийся выжить. Отрасти зубы или стань кормом для ботов.',
-    grade: 'Junior',
+    grade: 'Trainee',
     isUnlocked: true
   },
 

@@ -10,6 +10,7 @@
     "build:full": "npx prisma generate && npm run build",
     "start": "DATABASE_URL=file:/data/dev.db npx prisma db push --accept-data-loss && node dist_server/index.js",
     "lint": "eslint .",
+    "test:world": "node --max-old-space-size=4096 --loader ts-node/esm scripts/validate-dialogues.ts",
     "preview": "vite preview"
   },
   "dependencies": {

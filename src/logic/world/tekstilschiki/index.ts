@@ -1,6 +1,15 @@
 import type { WorldDistrict } from '../types';
-import { tekstilschiki_npcs } from './npcs';
-import { tekstilschiki_dialogues } from './dialogues';
+import { npc_vlad } from './npcs/npc_vlad/profile';
+import { npc_vlad_dialogues } from './npcs/npc_vlad/dialogues';
+import { npc_weaver_senior } from './npcs/npc_weaver_senior/profile';
+import { npc_weaver_senior_dialogues } from './npcs/npc_weaver_senior/dialogues';
+import { npc_safety_auditor } from './npcs/npc_safety_auditor/profile';
+import { npc_safety_auditor_dialogues } from './npcs/npc_safety_auditor/dialogues';
+import { job_board_tekstil_dialogues } from './objects/job_board_tekstil/dialogues';
+import { shop_armor_weave_dialogues } from './objects/shop_armor_weave/dialogues';
+import { bar_oil_can_dialogues } from './objects/bar_oil_can/dialogues';
+import { term_loom_control_dialogues } from './objects/term_loom_control/dialogues';
+import { term_taxi_tekstil_dialogues } from './objects/term_taxi_tekstil/dialogues';
 
 export const tekstilschiki: WorldDistrict = {
   id: 'tekstilschiki',
@@ -22,6 +31,19 @@ export const tekstilschiki: WorldDistrict = {
       { id: 'term_taxi_tekstil', name: 'Такси: Текстильщики', type: 'terminal', description: 'Выход на МКАД.', x: 80, y: 30 }
     ]
   },
-  npcs: tekstilschiki_npcs,
-  dialogues: tekstilschiki_dialogues
+  npcs: [
+    npc_vlad,
+    npc_weaver_senior,
+    npc_safety_auditor
+  ],
+  dialogues: {
+    npc_vlad: npc_vlad_dialogues,
+    npc_weaver_senior: npc_weaver_senior_dialogues,
+    npc_safety_auditor: npc_safety_auditor_dialogues,
+    job_board_tekstil: job_board_tekstil_dialogues,
+    shop_armor_weave: shop_armor_weave_dialogues,
+    bar_oil_can: bar_oil_can_dialogues,
+    term_loom_control: term_loom_control_dialogues,
+    term_taxi_tekstil: term_taxi_tekstil_dialogues
+  }
 };

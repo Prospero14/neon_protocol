@@ -26,8 +26,8 @@ export const punitive_dialogues: Record<string, DialogueTree> = {
     .addNode('intro_stressed', 'СИСТЕМА_ПОДАВЛЕНИЯ', '[DETECTED] ВЫСОКИЙ УРОВЕНЬ ШУМА ЦЕЛИ. ОБЛЕГЧАЕМ ПРОЦЕСС ОБНУЛЕНИЯ. ПРИГОТОВЬТЕСЬ К ПЕРЕЗАГРУЗКЕ.', [
       { text: 'Не дождетесь.', nextId: 'combat_start' }
     ])
-    .addNode('combat_start', 'СИСТЕМА_ПОДАВЛЕНИЯ', 'ИНТЕРФЕЙС БОЯ АКТИВИРОВАН. УДАЧИ В ПУСТОТЕ, ИНФОРМАЦИОННЫЙ МУСОР. (Начать бой)', [
-      { text: '[ ВСТУПИТЬ В БОЙ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_punitive_squad_combat' }
+    .addNode('combat_start', 'СИСТЕМА_ПОДАВЛЕНИЯ', 'ИНТЕРФЕЙС БОЯ АКТИВИРОВАН. ПОРЯДОК ОБНУЛЕНИЯ: LS -> AUTH -> SUDO_FIX -> WASH -> RM. УДАЧИ В ПУСТОТЕ, ИНФОРМАЦИОННЫЙ МУСОР. (Начать бой)', [
+      { text: '[ ВСТУПИТЬ В БОЙ ]', nextId: 'LEAVE', awardQuestId: 'q_punitive_squad_combat' }
     ])
     .addNode('tech_override', 'СИСТЕМА_ПОДАВЛЕНИЯ', '[ERROR] АДМИНИСТРАТИВНЫЙ ИНЪЕКТОР... ПРОВЕРКА COMMANDER-LEVEL... [OK] РЕЖИМ ОЖИДАНИЯ ВКЛЮЧЕН. У ВАС 60 СЕКУНД.', [
       { text: 'Уйти.', nextId: 'LEAVE', effect: 'RESET_STRESS' }

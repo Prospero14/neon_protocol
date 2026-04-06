@@ -1,6 +1,20 @@
 import type { WorldDistrict } from '../types';
-import { sokolniki_npcs } from './npcs';
-import { sokolniki_dialogues } from './dialogues';
+import { npc_hermit_profile } from './npcs/npc_hermit/profile';
+import { npc_hermit_dialogues } from './npcs/npc_hermit/dialogues';
+import { npc_druid_coder_profile } from './npcs/npc_druid_coder/profile';
+import { npc_druid_coder_dialogues } from './npcs/npc_druid_coder/dialogues';
+import { npc_forest_guard_profile } from './npcs/npc_forest_guard/profile';
+import { npc_forest_guard_dialogues } from './npcs/npc_forest_guard/dialogues';
+import { npc_ghost_server_profile } from './npcs/npc_ghost_server/profile';
+import { npc_ghost_server_dialogues } from './npcs/npc_ghost_server/dialogues';
+
+import { bar_deep_root_dialogues } from './objects/bar_deep_root/dialogues';
+import { shop_nature_logic_dialogues } from './objects/shop_nature_logic/dialogues';
+import { combat_recursive_loop_dialogues } from './objects/combat_recursive_loop/dialogues';
+import { combat_wild_firewall_dialogues } from './objects/combat_wild_firewall/dialogues';
+import { combat_fox_virus_dialogues } from './objects/combat_fox_virus/dialogues';
+import { term_forest_log_dialogues } from './objects/term_forest_log/dialogues';
+import { term_taxi_sokolniki_dialogues } from './objects/term_taxi_sokolniki/dialogues';
 
 export const sokolniki: WorldDistrict = {
   id: 'sokolniki', 
@@ -23,6 +37,23 @@ export const sokolniki: WorldDistrict = {
       { id: 'npc_ghost_server', name: 'Призрак Серверной', type: 'npc', description: 'Мерцающая голограмма в пыльной серверной стойке.', x: 45, y: 45 }
     ]
   },
-  npcs: sokolniki_npcs,
-  dialogues: sokolniki_dialogues
+  npcs: [
+    npc_hermit_profile,
+    npc_druid_coder_profile,
+    npc_forest_guard_profile,
+    npc_ghost_server_profile
+  ],
+  dialogues: {
+    npc_hermit: npc_hermit_dialogues,
+    npc_druid_coder: npc_druid_coder_dialogues,
+    npc_forest_guard: npc_forest_guard_dialogues,
+    npc_ghost_server: npc_ghost_server_dialogues,
+    bar_deep_root: bar_deep_root_dialogues,
+    shop_nature_logic: shop_nature_logic_dialogues,
+    combat_recursive_loop: combat_recursive_loop_dialogues,
+    combat_wild_firewall: combat_wild_firewall_dialogues,
+    combat_fox_virus: combat_fox_virus_dialogues,
+    term_forest_log: term_forest_log_dialogues,
+    term_taxi_sokolniki: term_taxi_sokolniki_dialogues
+  }
 };

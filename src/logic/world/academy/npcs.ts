@@ -6,7 +6,7 @@ export const academy_npcs: NpcProfile[] = [
     name: 'Профессор Архипов', 
     districtId: 'academy', 
     role: 'Deus Ex Academia', 
-    greeting: 'IDENTITY_VERIFIED: Поздравляю con получением лицензии.', 
+    greeting: 'IDENTITY_VERIFIED: Поздравляю с получением лицензии.', 
     shortLore: 'Академик Silicon Hedge. Верит в чистоту кода и дисциплину.', 
     factionId: 'SILICON_HEDGE' 
   },

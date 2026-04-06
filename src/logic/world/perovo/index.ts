@@ -1,6 +1,26 @@
 import type { WorldDistrict } from '../types';
-import { perovo_npcs } from './npcs';
-import { perovo_dialogues } from './dialogues';
+import { npc_marina_profile } from './npcs/npc_marina/profile';
+import { npc_marina_dialogues } from './npcs/npc_marina/dialogues';
+import { npc_commissar_byte_profile } from './npcs/npc_commissar_byte/profile';
+import { npc_commissar_byte_dialogues } from './npcs/npc_commissar_byte/dialogues';
+import { npc_basement_coder_profile } from './npcs/npc_basement_coder/profile';
+import { npc_basement_coder_dialogues } from './npcs/npc_basement_coder/dialogues';
+import { npc_resident_perovo_profile } from './npcs/npc_resident_perovo/profile';
+import { npc_resident_perovo_dialogues } from './npcs/npc_resident_perovo/dialogues';
+import { npc_foreman_profile } from './npcs/npc_foreman/profile';
+import { npc_foreman_dialogues } from './npcs/npc_foreman/dialogues';
+import { npc_zina_profile } from './npcs/npc_zina/profile';
+import { npc_zina_dialogues } from './npcs/npc_zina/dialogues';
+
+import { shop_logic_gate_dialogues } from './objects/shop_logic_gate/dialogues';
+import { bar_basement_dialogues } from './objects/bar_basement/dialogues';
+import { combat_data_mining_dialogues } from './objects/combat_data_mining/dialogues';
+import { combat_rat_invasion_dialogues } from './objects/combat_rat_invasion/dialogues';
+import { perovo_shluze_4_dialogues } from './objects/perovo_shluze_4/dialogues';
+import { job_board_perovo_dialogues } from './objects/job_board_perovo/dialogues';
+import { engine_perovo_dialogues } from './objects/engine_perovo/dialogues';
+import { term_sub_net_dialogues } from './objects/term_sub_net/dialogues';
+import { term_taxi_perovo_dialogues } from './objects/term_taxi_perovo/dialogues';
 
 export const perovo: WorldDistrict = {
   id: 'perovo',
@@ -27,6 +47,29 @@ export const perovo: WorldDistrict = {
       { id: 'term_taxi_perovo', name: 'Такси: Перово', type: 'terminal', description: 'Вылет в город.', x: 85, y: 85 }
     ]
   },
-  npcs: perovo_npcs,
-  dialogues: perovo_dialogues
+  npcs: [
+    npc_marina_profile,
+    npc_commissar_byte_profile,
+    npc_basement_coder_profile,
+    npc_resident_perovo_profile,
+    npc_foreman_profile,
+    npc_zina_profile
+  ],
+  dialogues: {
+    npc_marina: npc_marina_dialogues,
+    npc_commissar_byte: npc_commissar_byte_dialogues,
+    npc_basement_coder: npc_basement_coder_dialogues,
+    npc_resident_perovo: npc_resident_perovo_dialogues,
+    npc_foreman: npc_foreman_dialogues,
+    npc_zina: npc_zina_dialogues,
+    shop_logic_gate: shop_logic_gate_dialogues,
+    bar_basement: bar_basement_dialogues,
+    combat_data_mining: combat_data_mining_dialogues,
+    combat_rat_invasion: combat_rat_invasion_dialogues,
+    perovo_shluze_4: perovo_shluze_4_dialogues,
+    job_board_perovo: job_board_perovo_dialogues,
+    engine_perovo: engine_perovo_dialogues,
+    term_sub_net: term_sub_net_dialogues,
+    term_taxi_perovo: term_taxi_perovo_dialogues
+  }
 };

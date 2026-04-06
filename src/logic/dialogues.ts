@@ -6,6 +6,8 @@ export interface DialogueOption {
   cost?: number;
   effect?: string;
   cardRewardId?: string;
+  cardRewardIds?: string[]; // Give multiple cards at once
+
   amount?: number;
   requireReputation?: {
     factionId: string;
@@ -23,6 +25,8 @@ export interface DialogueOption {
   requireCompletedQuestId?: string; // New: STRICTLY completed (turned in/finished)
   completeQuestId?: string; // New: For completing quest through dialogue
   awardQuestId?: string; // New: For awarding quest through dialogue
+  awardItemId?: string; // New: For giving a quest item
+  removeItemId?: string; // New: For consuming a quest item
   requireItemId?: string; // New: For requirement items like TZ
   requireMinLevel?: number; // New: Level-gating
   requireMaxLevel?: number; // New: For 'low rank' specific lines

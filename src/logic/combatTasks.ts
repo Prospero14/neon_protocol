@@ -16,6 +16,9 @@ export interface TechnicalTask {
   steps: TZStep[];
   rank: 'script-kiddie' | 'junior' | 'mid' | 'senior';
   isExecutionChain?: boolean; // If true, the task requires exact sequence execution on the bus
+  districtId?: string; // Optional: restrict task to a specific district
+  minLevel?: number; // E.g. 1 (10 exploits), 2 (20 exploits) inside the grade
+  resistanceType?: 'ENCRYPTED' | 'AUTH_LOCKED'; // Forces specific bypass cards
 }
 
 export const TZ_LIBRARY: TechnicalTask[] = [
@@ -196,21 +199,92 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 't5_memory_leak_fix',
     name: 'PROJECT: MEMORY_OPTIMIZER',
     rank: 'senior',
-    description: 'Система задыхается от утечек. Нужно принудительно очистить ресурсы и оптимизировать обращения.',
+    isExecutionChain: true,
+    description: 'Система задыхается от утечек. Нужно принудительно очистить ресурсы: проинициализируй поток, отфильтруй мертвые объекты и вызови сборщик. Любая ошибка в порядке приведет к переполнению кучи.',
     steps: [
-      { id: '1', name: 'COLLECT_GARBAGE', requiredCardIds: ['fn_sysout_print'] },
-      { id: '2', name: 'FINAL_CLEANUP', requiredCardIds: ['syntax_break'] }
+      { id: '1', name: 'STREAM_INIT', requiredCardIds: ['mid_stream_init'] },
+      { id: '2', name: 'STREAM_FILTER', requiredCardIds: ['mid_stream_filter'] },
+      { id: '3', name: 'STREAM_COLLECT', requiredCardIds: ['mid_stream_collect'] }
     ]
   },
   {
-    id: 'altufyevo_magnus_toilet',
-    name: 'QUEST: SMART_TOILET_BYPASS',
+    id: 'combat_maryino_data_exfil',
+    name: 'PROJECT: MARYINO_DATA_EXFIL',
     rank: 'mid',
+    isExecutionChain: true,
+    description: 'Нужно выкачать ядро из лог-архива. Сначала просканируй директорию, затем отфильтруй нужные данные и наконец выкачивай. Если порядок будет нарушен — защита заблокирует доступ к файлам.',
+    steps: [
+      { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'FILTER_DATA', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'SECURE_COPY', requiredCardIds: ['script_scp'] }
+    ]
+  },
+  {
+    id: 'combat_perovo_registry_wipe',
+    name: 'PROJECT: REGISTRY_REDISTRIBUTION',
+    rank: 'senior',
+    isExecutionChain: true,
+    description: 'Цель — реестр долгов GigaBank. Сначала найди нужную запись, выдели долговые обязательства и примени команду полного удаления. Народу не нужны долги!',
+    steps: [
+      { id: '1', name: 'FILE_DISCOVERY', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'TARGET_SELECTION', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'TOTAL_WIPE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  {
+    id: 'trainee_exam_final',
+    name: 'EXAM: AURORA_VB1_LEETCODE',
+    rank: 'junior',
+    isExecutionChain: true,
+    description: 'Финальный этап аттестации. Бот "Аврора" требует реализации алгоритма "Contains Duplicate". Тебе нужно: объявить класс и метод, инициализировать HashSet, запустить цикл по входящему массиву, проверить наличие текущего элемента в сете. Если элемент найден — вернуть true. Если нет — добавить его в сет и продолжить. В конце вернуть false. Любая ошибка в логике приведет к немедленному сбросу сессии.',
+    steps: [
+      { id: '1', name: 'DECLARE_CLASS', requiredCardIds: ['syntax_class_decl'] },
+      { id: '2', name: 'DECLARE_METHOD', requiredCardIds: ['syntax_method_decl'] },
+      { id: '3', name: 'INIT_HASHSET', requiredCardIds: ['syntax_set_init'] },
+      { id: '4', name: 'LOOP_ITEMS', requiredCardIds: ['syntax_foreach'] },
+      { id: '5', name: 'CHECK_EXISTS', requiredCardIds: ['syntax_if'] },
+      { id: '6', name: 'CONTAINS_PROBE', requiredCardIds: ['fn_set_contains'] },
+      { id: '7', name: 'FOUND_RETURN', requiredCardIds: ['syntax_return_true'] },
+      { id: '8', name: 'ADD_TO_SET', requiredCardIds: ['fn_set_add'] },
+      { id: '9', name: 'END_RETURN', requiredCardIds: ['syntax_return_false'] }
+    ]
+  },
+  {
+    id: 'haunted_log_cleansing',
+    name: 'PROJECT: LOG_RECONSTRUCTION',
+    rank: 'mid',
+    isExecutionChain: true,
+    description: 'Логи Сокольников прокляты "призраком в машине". Нужно провести ритуал очистки: найди битые записи, выдели аномалии, отстирай следы и удали проклятый сектор.',
+    steps: [
+      { id: '1', name: 'GHOST_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'ANOMALY_GRIP', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'ETHICAL_WASH', requiredCardIds: ['script_wash_logs'] },
+      { id: '4', name: 'FINAL_PURGE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  {
+    id: 'satellite_handshake',
+    name: 'PROJECT: ORBITAL_HANDSHAKE',
+    rank: 'senior',
+    isExecutionChain: true,
+    description: 'Сигнал со спутника Фили. Установи соединение, стяни прошивку реле, выдай права и слушай обратный канал. Поторопись, спутник уходит за горизонт!',
+    steps: [
+      { id: '1', name: 'RADIO_BOOT', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'FIRMWARE_CURL', requiredCardIds: ['script_curl'] },
+      { id: '3', name: 'RIGHTS_MOD', requiredCardIds: ['script_chmod'] },
+      { id: '4', name: 'LISTENING_NC', requiredCardIds: ['script_nc'] }
+    ]
+  },
+  {
+    id: 'combat_magnus_toilet',
+    name: 'QUEST: SMART_TOILET_BYPASS',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
     description: 'Система очистки Умной Уборной №4 перешла в режим самоликвидации. Нужно прокинуть исключение, перехватить поток управления и принудительно завершить процесс смыва. Кот Магнус рассчитывает на тебя.',
     steps: [
-      { id: '1', name: 'TRY_BLOCK', requiredCardIds: ['syntax_try_catch'] },
-      { id: '2', name: 'THROW_EX', requiredCardIds: ['soft_throw_ex'] },
-      { id: '3', name: 'FINALLY_CLEANUP', requiredCardIds: ['soft_finally'] }
+      { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'PROCESS_FILTER', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'FORCE_TERMINATE', requiredCardIds: ['script_sudo_fix'] }
     ]
   },
   {
@@ -230,7 +304,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'JOB: TARGETED_LOG_EXTRACTION',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Нам нужны доказательства. Сначала найди нужный лог среди файлов (ls). Затем отфильтруй только строки с ошибками (grep). Наконец, выгрузи эти логи ко мне на безопасный сервер (scp). Порядок действий критически важен, иначе мы скачаем тонну бесполезного мусора.',
+    description: 'Нам нужны доказательства. Сначала найди нужный лог среди файлов. Затем отфильтруй только строки с ошибками. Наконец, выгрузи эти логи ко мне на безопасный сервер. Порядок действий критически важен, иначе мы скачаем тонну бесполезного мусора.',
     steps: [
       { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
       { id: '2', name: 'FILTER_DATA', requiredCardIds: ['script_grep'] },
@@ -271,6 +345,8 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'job_board_alt',
     name: 'JOB: CACHE_CLEANUP',
     rank: 'script-kiddie',
+    isExecutionChain: true,
+    districtId: 'altufyevo',
     description: 'Система Алтуфьево задыхается от логов. Нужно запустить сборщик мусора и очистить буферы. Работа скучная, но Bits не пахнут.',
     steps: [
       { id: 'GC_START', name: 'GC_INITIALIZE', requiredCardIds: ['script_wash_logs'] },
@@ -281,6 +357,8 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'job_board_bibi',
     name: 'JOB: BIBIREVO_LINK',
     rank: 'script-kiddie',
+    isExecutionChain: true,
+    districtId: 'bibirevo',
     description: 'Узел связи в Бибирево искрит. Нужно пропинговать шлюз и сбросить ошибки.',
     steps: [
       { id: 'PING', name: 'UPSTREAM_PING', requiredCardIds: ['script_ping'] },
@@ -291,6 +369,8 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'job_board_tekstil',
     name: 'JOB: TEXTILE_LOGS',
     rank: 'script-kiddie',
+    isExecutionChain: true,
+    districtId: 'tekstilschiki',
     description: 'Ткацкая сеть забита мусором. Промой логи и удали следы сбоя.',
     steps: [
       { id: 'WASH', name: 'WASH_LOGS', requiredCardIds: ['script_wash_logs'] },
@@ -301,6 +381,8 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'job_board_perovo',
     name: 'JOB: PEROVO_HUNT',
     rank: 'script-kiddie',
+    isExecutionChain: true,
+    districtId: 'perovo',
     description: 'В подвалах Перово что-то фонит. Найди источник в дампе и пропатчи.',
     steps: [
       { id: 'FIND', name: 'GREP_SOURCE', requiredCardIds: ['script_grep'] },
@@ -311,6 +393,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'sk_remote_breach',
     name: 'PROJECT: REMOTE_SSH_BREACH',
     rank: 'script-kiddie',
+    isExecutionChain: true,
     description: 'Цель на связи. Пробрось SSH-туннель, пробей авторизацию и осмотрись. Если найдешь что-то ценное — читай без промедления. Это твой билет в высшую лигу.',
     steps: [
       { id: 'TUNNEL', name: 'ESTABLISH_SSH', requiredCardIds: ['script_ssh'] },
@@ -323,6 +406,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'sk_persistence_op',
     name: 'PROJECT: PERSISTENT_BACKDOOR',
     rank: 'script-kiddie',
+    isExecutionChain: true,
     description: 'Нам нужно закрепиться на этом узле. Загрузи бинарник, дай ему права на исполнение и повесь в крон. И не забудь открыть бэкдор для прямого доступа. Грязная работа, но кто-то должен её делать.',
     steps: [
       { id: 'FETCH', name: 'CURL_DROPPER', requiredCardIds: ['script_curl'] },
@@ -335,12 +419,261 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     id: 'sk_stealth_exfil',
     name: 'PROJECT: STEALTH_DATA_MINE',
     rank: 'script-kiddie',
+    isExecutionChain: true,
     description: 'Тихая охота. Проверь окружение, найди пароли в логах и вали оттуда, пока защитные скрипты не проснулись. И прибери за собой в логах, скрипт-киддо.',
     steps: [
       { id: 'DISCOVERY', name: 'LS_PROBE', requiredCardIds: ['script_ls'] },
       { id: 'FIND_ID', name: 'GREP_CREDS', requiredCardIds: ['script_grep'] },
       { id: 'READ_FILE', name: 'CAT_SECRET', requiredCardIds: ['script_cat'] },
       { id: 'WIPE', name: 'LOG_PURGE', requiredCardIds: ['script_wash_logs'] }
+    ]
+  },
+  {
+    id: 'academy_tutorial_debug',
+    name: 'TUTORIAL: SEQUENTIAL_DEBUG',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
+    description: 'Учебный манекен Академии. Сначала просканируй структуру (ls), затем выведи приветствие (cat). Порядок — это дисциплина.',
+    steps: [
+      { id: '1', name: 'DISCOVERY_PING', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'HELLO_WORLD', requiredCardIds: ['script_cat'] }
+    ]
+  },
+  {
+    id: 'combat_silo_inner',
+    name: 'CLEANUP: SILO_7_INFESTATION',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
+    description: 'Силосы забиты мусором и кодерами-грызунами. Проведи зачистку: сначала осмотрись (ls), затем отфильтруй записи вредителей (grep) и выведи статус ядра (cat). Это стабилизирует узел.',
+    steps: [
+      { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'CONFIG_FILTER', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'SYSTEM_ECHO', requiredCardIds: ['script_cat'] }
+    ]
+  },
+  {
+    id: 'combat_rats',
+    name: 'CLEANUP: RAT_INFESTATION',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
+    description: 'Крысы-кодеры перегрызли магистраль. Нужно осмотреть сектор и удалить вредоносные процессы.',
+    steps: [
+      { id: '1', name: 'SECTOR_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'PROCESS_WIPE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  {
+    id: 'vykhino_audit_wipe',
+    name: 'JOB: AUDIT_EVASION_WIPE',
+    rank: 'script-kiddie',
+    isExecutionChain: true,
+    description: 'Аудиторы наступают. Найди свои логи, выдели записи за 24 часа и "отстирай" их до блеска. Порядок важен, иначе останутся фантомные следы.',
+    steps: [
+      { id: '1', name: 'LOG_FIND', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'FILTER_PAGES', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'WASH_TRACE', requiredCardIds: ['script_wash_logs'] }
+    ]
+  },
+  {
+    id: 'chertanovo_night_scan',
+    name: 'TASK: CHERTANOVO_NIGHT_SCAN',
+    rank: 'mid',
+    isExecutionChain: true,
+    description: 'Ночной перехват в Гетто. Найди пакеты в эфире, отфильтруй сигнатуру Анархистов и выгрузи дамп на "Черный Линк".',
+    steps: [
+      { id: '1', name: 'ETH_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'SIGNAL_GRIP', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'VOID_EXFIL', requiredCardIds: ['script_scp'] }
+    ]
+  },
+  {
+    id: 'taganka_deep_audit',
+    name: 'PROJECT: TAGANKA_DEEP_AUDIT',
+    rank: 'senior',
+    isExecutionChain: true,
+    description: 'Высшая лига. Пробей SSH-туннель в Бункер, пройди авторизацию, примени Sudo-фикс к ядру и выгрузи Истину. Если ошибешься — аудит обнулит тебя.',
+    steps: [
+      { id: '1', name: 'SSH_TUNNEL', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'AUTH_SESSION', requiredCardIds: ['script_auth'] },
+      { id: '3', name: 'CORE_PATCH', requiredCardIds: ['fn_sudo_fix'] },
+      { id: '4', name: 'TRUTH_EXPORT', requiredCardIds: ['script_scp'] }
+    ]
+  },
+  {
+    id: 'punitive_squad_wipe',
+    name: 'ENFORCEMENT: PUNITIVE_WIPE',
+    rank: 'senior',
+    isExecutionChain: true,
+    description: 'Система подавления Regulators. Просканируй их щиты, пройди авторизацию командира, примени Sudo-фикс к протоколу, "отстирай" следы взлома и удали девиантный шелл. Если промахнешься — тебя обнулят.',
+    steps: [
+      { id: '1', name: 'SHIELD_SCAN', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'CMD_AUTH', requiredCardIds: ['script_auth'] },
+      { id: '3', name: 'PROTO_PATCH', requiredCardIds: ['fn_sudo_fix'] },
+      { id: '4', name: 'TRACE_WASH', requiredCardIds: ['script_wash_logs'] },
+      { id: '5', name: 'SHELL_PURGE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  // --- PROGRESSIVE SCRIPT-KIDDIE TASKS ---
+  {
+    id: 'sk_lvl1_data_breach',
+    name: 'JOB: TIER_1_AUTH_BREACH',
+    rank: 'script-kiddie',
+    minLevel: 1,
+    resistanceType: 'AUTH_LOCKED',
+    description: 'Сеть Синхрофазотрона в Сокольниках защищена базовыми паролями. Эта задача с сопротивлением (Resistance). Сначала ломани авторизацию (Auth), иначе любой скрипт отскочит. А потом найди скрытые файлы.',
+    steps: [
+      { id: '1', name: 'OVERRIDE_AUTH', requiredCardIds: ['script_auth'] },
+      { id: '2', name: 'DISCOVERY', requiredCardIds: ['script_ls'] }
+    ]
+  },
+  {
+    id: 'sk_lvl2_proxy_tunnel',
+    name: 'JOB: TIER_2_ENCRYPTED_TUNNEL',
+    rank: 'script-kiddie',
+    minLevel: 2,
+    resistanceType: 'ENCRYPTED',
+    description: 'Узел старых серверов Измайлово зашифрован. ICE "Морозко" блокирует твои пинги. Сначала прокинь туннель (SSH), чтобы обойти лед, а затем вытяни данные.',
+    steps: [
+      { id: '1', name: 'SECURE_TUNNEL', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'PING_INTERNAL', requiredCardIds: ['script_ping'] },
+      { id: '3', name: 'GREP_DATA', requiredCardIds: ['script_grep'] }
+    ]
+  },
+  {
+    id: 'sk_lvl3_sokol_wipe',
+    name: 'JOB: TIER_3_SUDO_WIPE',
+    rank: 'script-kiddie',
+    minLevel: 3,
+    resistanceType: 'AUTH_LOCKED',
+    isExecutionChain: true,
+    description: 'Файловая система Сокола. Сюда не пускают без прав (Sudo). Введи учетные данные, повысь права (sudo), очисти логи и затри систему.',
+    steps: [
+      { id: '1', name: 'AUTH_SESSION', requiredCardIds: ['script_auth'] },
+      { id: '2', name: 'ELEVATE_SUDO', requiredCardIds: ['script_sudo_fix'] },
+      { id: '3', name: 'WASH_LOGS', requiredCardIds: ['script_wash_logs'] },
+      { id: '4', name: 'RM_TRACE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  {
+    id: 'sk_lvl4_black_ice',
+    name: 'JOB: TIER_4_BLACK_ICE',
+    rank: 'script-kiddie',
+    minLevel: 4,
+    resistanceType: 'ENCRYPTED',
+    isExecutionChain: true,
+    description: 'Магистраль ВДНХ. Последня преграда скриптера - Черный Лед Станции. Пробивай туннель, получай Sudo, скачивай ядро ИИ и вали.',
+    steps: [
+      { id: '1', name: 'SSH_TUNNEL', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'SUDO_ACCESS', requiredCardIds: ['script_sudo_fix'] },
+      { id: '3', name: 'SCP_EXFIL', requiredCardIds: ['script_scp'] },
+      { id: '4', name: 'LOG_PURGE', requiredCardIds: ['script_wash_logs'] }
+    ]
+  },
+  {
+    id: 'sk_lvl1_bibi_cams',
+    name: 'JOB: BIBIREVO_CAM_DECOY',
+    rank: 'script-kiddie',
+    minLevel: 1,
+    districtId: 'bibirevo',
+    resistanceType: 'AUTH_LOCKED',
+    description: 'Камеры в Бибирево зациклены на одном кадре. Нужно авторизоваться и подменить видеопоток. Это даст нам окно в 30 секунд.',
+    steps: [
+      { id: '1', name: 'AUTH', requiredCardIds: ['script_auth'] },
+      { id: '2', name: 'DECOY_INJECT', requiredCardIds: ['script_ls', 'script_cat'] }
+    ]
+  },
+  {
+    id: 'sk_lvl2_tekstil_looms',
+    name: 'JOB: TEXTILE_LOOM_OVERRIDE',
+    rank: 'script-kiddie',
+    minLevel: 2,
+    districtId: 'tekstilschiki',
+    resistanceType: 'ENCRYPTED',
+    description: 'Станки на Текстильщиках работают по зашифрованным протоколам. Пробей туннель и останови конвейер.',
+    steps: [
+      { id: '1', name: 'TUNNEL', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'STOP_SIGNAL', requiredCardIds: ['script_sudo_fix'] }
+    ]
+  },
+  {
+    id: 'sk_lvl3_alt_silo_bypass',
+    name: 'JOB: SILO_7_BYPASS_VALVE',
+    rank: 'script-kiddie',
+    minLevel: 3,
+    districtId: 'altufyevo',
+    resistanceType: 'AUTH_LOCKED',
+    description: 'Клапан сброса в Силосе №7 заблокирован администратором. Повысь права и открой шлюз, пока давление не критическое.',
+    steps: [
+      { id: '1', name: 'AUTH', requiredCardIds: ['script_auth'] },
+      { id: '2', name: 'SUDO_OPEN', requiredCardIds: ['script_sudo_fix'] },
+      { id: '3', name: 'VALVE_ECHO', requiredCardIds: ['script_cat'] }
+    ]
+  },
+  {
+    id: 'sk_lvl4_perovo_grid',
+    name: 'JOB: PEROVO_SUBSTATION_REROUTE',
+    rank: 'script-kiddie',
+    minLevel: 4,
+    districtId: 'perovo',
+    resistanceType: 'ENCRYPTED',
+    isExecutionChain: true,
+    description: 'Подстанция Перово. Самый сложный узел в округе. Нужно зашифровать свой пульс, получить права и перенаправить ток на север.',
+    steps: [
+      { id: '1', name: 'SSH', requiredCardIds: ['script_ssh'] },
+      { id: '2', name: 'AUTH', requiredCardIds: ['script_auth'] },
+      { id: '3', name: 'SUDO', requiredCardIds: ['script_sudo_fix'] },
+      { id: '4', name: 'REROUTE', requiredCardIds: ['script_rm'] }
+    ]
+  },
+  // --- JUNIOR REINFORCEMENTS ---
+  {
+    id: 'jr_reverse_string',
+    name: 'ALGO: REVERSE_STRING_VAL',
+    rank: 'junior',
+    description: 'Бот-цензор требует перевернуть строку приветствия. Объяви метод, создай StringBuilder, запусти цикл с конца и верни результат (String).',
+    steps: [
+      { id: '1', name: 'METHOD', requiredCardIds: ['syntax_method_decl'] },
+      { id: '2', name: 'SB_INIT', requiredCardIds: ['syntax_class_decl'] }, // Representative for building
+      { id: '3', name: 'FOR_REVERSE', requiredCardIds: ['syntax_foreach'] },
+      { id: '4', name: 'RESULT', requiredCardIds: ['syntax_return_true'] }
+    ]
+  },
+  {
+    id: 'jr_find_min',
+    name: 'ALGO: FIND_MINIMUM_ID',
+    rank: 'junior',
+    description: 'Нужно найти минимальный ID в поврежденном массиве. Проинициализируй переменную min, пройдись циклом и сравнивай каждое значение.',
+    steps: [
+      { id: '1', name: 'DECLARE', requiredCardIds: ['syntax_method_decl'] },
+      { id: '2', name: 'LOOP', requiredCardIds: ['syntax_foreach'] },
+      { id: '3', name: 'COMPARE', requiredCardIds: ['syntax_if'] },
+      { id: '4', name: 'FINISH', requiredCardIds: ['syntax_return_true'] }
+    ]
+  },
+  {
+    id: 'jr_fizz_buzz_lite',
+    name: 'ALGO: FIZZ_BUZZ_VALIDATOR',
+    rank: 'junior',
+    description: 'Классика. Пройди от 1 до N. Если делится на 3 — выведи Fizz, на 5 — Buzz, на оба — FizzBuzz. Тебе понадобятся циклы и много условных операторов.',
+    steps: [
+      { id: '1', name: 'LOOP', requiredCardIds: ['syntax_foreach'] },
+      { id: '2', name: 'IF_3', requiredCardIds: ['syntax_if'] },
+      { id: '3', name: 'IF_5', requiredCardIds: ['syntax_elseif'] },
+      { id: '4', name: 'PRINT', requiredCardIds: ['fn_sysout_print'] }
+    ]
+  },
+  {
+    id: 'jr_max_subarray',
+    name: 'ALGO: MAX_SUBARRAY_SUM',
+    rank: 'junior',
+    isExecutionChain: true,
+    description: 'Бот "Кадане" требует найти максимальную сумму подмассива. Инициализируй maxSoFar и maxEndingHere. Пройдись по массиву, обновляй текущую сумму. Если она стала отрицательной — сбрось в ноль. Твоя цель — глобальный максимум.',
+    steps: [
+      { id: '1', name: 'DECLARE_ALGO', requiredCardIds: ['syntax_method_decl'] },
+      { id: '2', name: 'INIT_VARS', requiredCardIds: ['syntax_class_decl'] },
+      { id: '3', name: 'LOOP_ARRAY', requiredCardIds: ['syntax_foreach'] },
+      { id: '4', name: 'UPDATE_SUM', requiredCardIds: ['syntax_if'] },
+      { id: '5', name: 'CHECK_MAX', requiredCardIds: ['syntax_return_true'] }
     ]
   }
 ];

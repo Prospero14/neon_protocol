@@ -25,7 +25,8 @@ interface CombatBridgeProps {
   initialTaskIndex?: number;
   onDiscoverCard?: (id: string) => void;
   onViewChange?: (view: any) => void;
-  onWin: (bitsEarned: number, taskRank: 'script-kiddie' | 'junior' | 'mid' | 'senior') => void;
+  onWin: (bitsEarned: number, taskRank: 'script-kiddie' | 'junior' | 'mid' | 'senior', finalChain: string[], missionName: string) => void;
+  isQuestCombat?: boolean;
   tier: number;
   deckCores: number;
   deckRamMb: number;
@@ -51,14 +52,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   tier,
   deckCores,
   deckRamMb,
-  homeDistrictId
+  homeDistrictId,
+  isQuestCombat = false
 }) => {
   const missionTz = taskLibrary[initialTaskIndex] ?? taskLibrary[0];
   const START_HAND_SIZE = homeDistrictId === 'tekstilschiki' ? 6 : 5;
 
   // --- CORE STATE ---
-  const [currentPhase, setCurrentPhase] = useState<CombatPhase>('ARCHITECTURE');
-  const [playerProgress, setPlayerProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState<CombatPhase>(skillMode === 'script-kiddie' ? 'DEVELOPMENT' : 'ARCHITECTURE');
+  const [playerProgress, setPlayerProgress] = useState(0); // This will be calculated in a useEffect below
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
   const [stress, setStress] = useState(0); 
@@ -67,6 +69,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
 
   const [showVictory, setShowVictory] = useState(false);
   const [showDefeat, setShowDefeat] = useState(false);
+  const [victoryResult, setVictoryResult] = useState<{ bits: number, chain: string[] } | null>(null);
   const [deploymentReport, setDeploymentReport] = useState<any>(null);
 
   const [cpuMax, setCpuMax] = useState(deckCores); 
@@ -100,10 +103,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [log, setLog] = useState<string[]>([]);
   const [canAdvancePhase, setCanAdvancePhase] = useState(false);
-  const [phaseIntro, setPhaseIntro] = useState<string | null>(null);
+  const [phaseIntro, setPhaseIntro] = useState<string | null>(skillMode === 'script-kiddie' ? 'DEVELOPMENT' : 'ARCHITECTURE');
 
   // --- DERIVED ---
-  const ramSlotsMax = Math.floor(ramMaxMb / 512);
+  const ramSlotsMax = useMemo(() => {
+    const raw = Math.floor(ramMaxMb / 512);
+    if (skillMode === 'script-kiddie') return Math.max(raw, missionTz.steps.length);
+    return raw;
+  }, [ramMaxMb, skillMode, missionTz]);
+
   const codingPalette = useMemo(() => 
     activeDeck.filter(c => c.type === 'SYNTAX' || c.type === 'FUNCTION'), 
   [activeDeck]);
@@ -113,13 +121,22 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
   [activeDeck]);
 
   const filteredHand = useMemo(() => {
+    const scriptsHand = hand
+      .map((c, i) => ({ card: c, source: 'hand' as const, idx: i }))
+      .filter(item => item.card.type === 'SCRIPT');
+
     if (activeHandTab === 'CODE') {
-       return codingPalette;
+       const palette = codingPalette.map((c, i) => ({ card: c, source: 'palette' as const, idx: i }));
+       return [...palette, ...scriptsHand];
     }
-    return hand.filter(card => {
-      if (activeHandTab === 'AUX') return ['INFRASTRUCTURE', 'SOFT', 'REACTION', 'DEFENSIVE', 'HARD', 'SCRIPT'].includes(card.type);
-      return true;
-    });
+    return hand
+      .map((c, i) => ({ card: c, source: 'hand' as const, idx: i }))
+      .filter(item => {
+        if (activeHandTab === 'AUX') {
+          return ['INFRASTRUCTURE', 'SOFT', 'REACTION', 'DEFENSIVE', 'HARD'].includes(item.card.type);
+        }
+        return true;
+      });
   }, [hand, activeHandTab, codingPalette]);
 
   const addLog = (msg: string) => setLog(prev => [msg, ...prev].slice(0, 15));
@@ -129,8 +146,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     // Шаттл колоды
     const shuffled = [...initialDrawDeck].sort(() => Math.random() - 0.5);
     // Стартовая рука по ТЗ (5 карт база, 6 для Текстильщиков)
-    const startHand = shuffled.slice(0, START_HAND_SIZE);
-    const remainingDeck = shuffled.slice(START_HAND_SIZE);
+    let startHand = shuffled.slice(0, START_HAND_SIZE);
+    let remainingDeck = shuffled.slice(START_HAND_SIZE);
+
+    if (skillMode === 'script-kiddie') {
+        const scripts = shuffled.filter(c => c.type === 'SCRIPT');
+        const rest = shuffled.filter(c => c.type !== 'SCRIPT');
+        startHand = [...scripts, ...rest.slice(0, START_HAND_SIZE)];
+        remainingDeck = rest.slice(START_HAND_SIZE);
+    }
     
     setHand(startHand);
     setDeck(remainingDeck);
@@ -154,6 +178,30 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     setPhaseIntro(currentPhase);
     setTimeout(() => setPhaseIntro(null), 2500);
   }, []);
+
+  // --- PROGRESS LOGIC ---
+  useEffect(() => {
+    if (!missionTz.steps) return;
+    
+    const railIds = runtimeRail.filter(s => s.type === 'PLAYER_CODE').map(s => (s.content as CombatCard).id);
+    
+    if (missionTz.isExecutionChain) {
+        let matchedSteps = 0;
+        for (let i = 0; i < missionTz.steps.length; i++) {
+            const step = missionTz.steps[i];
+            const deployedCardId = railIds[i];
+            if (deployedCardId && step.requiredCardIds.includes(deployedCardId)) {
+                matchedSteps++;
+            } else {
+                break; // Chain broken
+            }
+        }
+        setPlayerProgress(Math.floor((matchedSteps / missionTz.steps.length) * 100));
+    } else {
+        const satisfiedSteps = missionTz.steps.filter(step => step.requiredCardIds.some(id => railIds.includes(id)));
+        setPlayerProgress(Math.floor((satisfiedSteps.length / missionTz.steps.length) * 100));
+    }
+  }, [runtimeRail, missionTz]);
 
   const handleMulligan = () => {
     if (mulliganUsed || currentPhase !== 'ARCHITECTURE' || planningTurn > 0) return;
@@ -304,35 +352,69 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     const card = selectedCard.source === 'hand' ? hand[selectedCard.idx] : codingPalette[selectedCard.idx];
     const slot = runtimeRail[idx];
 
-    if (slot.type === 'BUG_ERROR' && (card.type === 'DEFENSIVE' || card.type === 'REACTION')) {
-        const newRail = [...runtimeRail];
-        newRail[idx] = { type: 'EMPTY', content: null, integrity: 0 };
-        setRuntimeRail(newRail);
-        if (selectedCard.source === 'hand') {
-            setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
-            setDiscard(prev => [...prev, card]);
+    if (slot.type === 'BUG_ERROR') {
+        const canDestroyIce = 
+            card.type === 'DEFENSIVE' || 
+            card.type === 'REACTION' || 
+            (card.type === 'SCRIPT' && (card.id === 'script_ping' || card.id === 'script_auth'));
+
+        if (canDestroyIce) {
+            const newRail = [...runtimeRail];
+            newRail[idx] = { type: 'EMPTY', content: null, integrity: 0 };
+            setRuntimeRail(newRail);
+            if (selectedCard.source === 'hand') {
+                setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
+                setDiscard(prev => [...prev, card]);
+            }
+            setSelectedCard(null);
+            addLog(`[SEC] ${card.name} PATCHED/BYPASSED_ICE.`);
+        } else {
+            addLog(`[DENIED] CANNOT_PATCH_WITH_THIS_CARD. USE REACTION/DEFENSE OR PING/AUTH.`);
         }
-        setSelectedCard(null);
-        addLog(`[SEC] ${card.name} PATCHED.`);
         return;
     }
 
     if (slot.type !== 'EMPTY') return;
 
+    // --- SCRIPT RESISTANCE MECHANIC ---
+    const activeCards = runtimeRail.filter(s => s.type === 'PLAYER_CODE').length;
+    if (activeCards === 0) { // First card played against target
+        if (missionTz.resistanceType === 'AUTH_LOCKED') {
+            if (card.id !== 'script_auth' && card.id !== 'script_sudo_fix' && card.id !== 'fn_sudo_fix') {
+                addLog(`[DENIED] TARGET_REQUIRES_AUTH. ACCESS_BOUNCED.`);
+                return;
+            }
+        } else if (missionTz.resistanceType === 'ENCRYPTED') {
+            if (card.id !== 'script_ssh') {
+                addLog(`[DENIED] TARGET_IS_ENCRYPTED. SSH_TUNNEL_REQUIRED_FIRST.`);
+                return;
+            }
+        }
+    }
+
     const cost = getEffectiveCost(card);
     setCpu(prev => prev - cost);
     
+    // --- PIPELINE SYNERGY MECHANIC ---
+    let finalIntegrity = card.integrity ?? 10;
+    if (idx > 0 && runtimeRail[idx - 1].type === 'PLAYER_CODE') {
+        const prevCard = runtimeRail[idx - 1].content as CombatCard;
+        if (
+            (prevCard.id === 'script_ls' && card.id === 'script_grep') ||
+            (prevCard.id === 'script_grep' && card.id === 'script_cat') ||
+            (prevCard.id === 'script_grep' && card.id === 'script_wash_logs')
+        ) {
+            finalIntegrity *= 2;
+            addLog(`[SYNERGY] PIPELINE_BONUS_ACTIVATED! INT_MULTIPLY`);
+        }
+    }
+
     const newRail = [...runtimeRail];
-    newRail[idx] = { type: 'PLAYER_CODE', content: card, integrity: card.integrity };
+    newRail[idx] = { type: 'PLAYER_CODE', content: card, integrity: finalIntegrity };
     setRuntimeRail(newRail);
 
-    const progGain = card.power || 10;
-    setPlayerProgress(prev => Math.min(100, prev + progGain));
-
     if (selectedCard.source === 'hand') {
-        // eslint-disable-next-line react-hooks/purity
         const canReturnToHand = (card.type === 'SCRIPT' && playerTraits.some(t => t.id === 'stack_archaeologist') && Math.random() < 0.25);
-        
         if (!canReturnToHand) {
             setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
             setDiscard(prev => [...prev, card]);
@@ -340,14 +422,35 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             addLog(`[RECOVERY] ${card.name} RETURNED_TO_STACK.`);
         }
     }
+
     setSelectedCard(null);
     addLog(`[EXEC] ${card.name}`);
 
     const rules = SDLC_PHASES[currentPhase];
-    if (rules.targetProgress && playerProgress + progGain >= rules.targetProgress) setCanAdvancePhase(true);
+    // Progress is now calculated in useEffect, but we check if we met phase requirements here
+    if (rules.targetProgress && playerProgress >= rules.targetProgress) setCanAdvancePhase(true);
+  };
+
+  const handleOverclock = () => {
+    if (!isPlayerTurn) return;
+    if (stress >= 85) {
+      addLog('[ERROR] NEURAL_BURN_IMMINENT. CANNOT_OVERCLOCK.');
+      return;
+    }
+    setStress(prev => Math.min(100, prev + 15));
+    setCpu(prev => prev + 1);
+    addLog('[WARN] OVERCLOCK_ENGAGED. +1 CPU, +15 STRESS.');
   };
 
   const endTurn = () => {
+    // 1. ПОБЕДА ПО ТЗ (Execution Chain)
+    if (missionTz.isExecutionChain && playerProgress >= 100) {
+        addLog('[SYSTEM] COMPILE... [OK]');
+        setIsPlayerTurn(false); // Disable interaction immediately
+        runFinalDeploymentCheck();
+        return;
+    }
+
     setIsPlayerTurn(false);
     setSelectedCard(null);
     setAiDeadline(prev => Math.max(0, prev - 1));
@@ -469,10 +572,16 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
     }
     
     // 2. Проверка ресурсов (Capacity)
-    // Допустим, каждая карта на шине потребляет 0.5 CPU и 256MB RAM (упрощенно)
-    const activeCodeCount = runtimeRail.filter(s => s.type === 'PLAYER_CODE').length;
-    const totalCpuNeeded = activeCodeCount * 0.5;
-    const totalRamNeeded = activeCodeCount * 256;
+    // Каждая карта "полноценного кода" (SYNTAX/FUNCTION) на шине требует 0.5 CPU и 256MB RAM.
+    // Скриптовые команды (SCRIPT) и утилиты (SOFT) ресурсов не потребляют (запуск через интерпретатор).
+    const productionCards = runtimeRail.filter(s => 
+        s.type === 'PLAYER_CODE' && 
+        s.content && 
+        ['SYNTAX', 'FUNCTION', 'REACTION'].includes((s.content as any).type)
+    ).length;
+    
+    const totalCpuNeeded = productionCards * 0.5;
+    const totalRamNeeded = productionCards * 256;
     
     const cpuOk = cpuMax >= totalCpuNeeded;
     const ramOk = ramMaxMb >= totalRamNeeded;
@@ -503,10 +612,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
         isSuccess
     });
 
+    const finalBits = isQuestCombat ? 15 : (skillMode === 'script-kiddie' ? 25 : 100 + tier * 50);
+    const finalChain = runtimeRail
+      .filter(s => s.type === 'PLAYER_CODE' && s.content)
+      .map(s => (s.content as CombatCard).name);
+
     setTimeout(() => {
         if (isSuccess) {
+            setVictoryResult({ bits: finalBits, chain: finalChain });
             setShowVictory(true);
-            // ПРИМЕЧАНИЕ: onWin теперь вызывается при нажатии кнопки на экране победы
         } else {
             setShowDefeat(true);
         }
@@ -566,19 +680,20 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
 
       <div className="combat-hud">
         <aside className="combat-sidebar">
-          <div className="sb-section stress-priority">
+          <div className="sb-section">
             <div className="sb-title">SYSTEM_STRESS_DIAG</div>
-            <div className="sb-stat stress-container large">
-              <ShieldAlert size={28} color="var(--neon-pink)" />
-              <div className="sb-stat-info">
-                <span className="sb-stat-name highlight">STRESS_LEVEL:</span>
-                <div className="stress-meter-wrap large">
+            <div className="sb-stat">
+              <ShieldAlert size={20} color="var(--neon-pink)" />
+              <div className="sb-stat-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                <span className="sb-stat-name">STRESS_LEVEL:</span>
+                <div className="stress-meter-wrap" style={{ flex: 1, margin: '0 5px' }}>
                   <div className="stress-meter-fill" style={{ 
                     width: `${stress}%`,
-                    boxShadow: stress > 70 ? '0 0 15px var(--neon-pink)' : 'none'
+                    background: stress > 70 ? 'var(--neon-pink)' : 'var(--neon-amethyst)',
+                    boxShadow: stress > 70 ? '0 0 10px var(--neon-pink)' : 'none'
                   }}></div>
                 </div>
-                <span className="sb-stat-val big">{stress}%</span>
+                <span className="sb-stat-val" style={{ fontSize: '1rem', minWidth: '45px', textAlign: 'right' }}>{stress}%</span>
               </div>
             </div>
 
@@ -619,6 +734,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             )}
             
             <button 
+              className="sb-btn"
+              onClick={handleOverclock}
+              disabled={!isPlayerTurn || stress >= 85}
+              style={{ marginTop: '10px', borderColor: 'var(--neon-amber)', color: 'var(--neon-amber)' }}
+            >
+              [ OVERCLOCK: +1 CPU / -15 HP ]
+            </button>
+
+            <button 
               className="sb-btn" 
               onClick={() => setShowDefeat(true)} 
               style={{ marginTop: '10px', borderColor: 'var(--neon-pink)', color: 'var(--neon-pink)', opacity: 0.9 }}
@@ -647,7 +771,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
           </div>
 
           <div className="ws-main-stage">
-            {currentPhase === 'ARCHITECTURE' ? (
+            {(currentPhase === 'ARCHITECTURE' && skillMode !== 'script-kiddie') ? (
               <div className="planning-view">
                 <div className="sb-title">INFRASTRUCTURE_RESOURCES</div>
                 <div className="pipeline-track wrap">
@@ -712,14 +836,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
             </div>
             
             <div className="hand-grid-area">
-              {filteredHand.map((card, i) => {
-                const source: 'hand' | 'palette' = activeHandTab === 'CODE' ? 'palette' : 'hand';
+              {filteredHand.map((item, i) => {
                 return (
-                  <div key={card.id + i} className={`hand-card-wrap ${selectedCard?.source === source && selectedCard.idx === i ? 'selected' : ''}`}>
+                  <div key={item.card.id + i} className={`hand-card-wrap ${selectedCard?.source === item.source && selectedCard.idx === item.idx ? 'selected' : ''}`}>
                     <CyberCard 
-                      card={card} 
-                      onClick={() => handleCardSelect(source, i)} 
-                      disabled={!isPlayerTurn || cpu < (card.cost ?? 0)}
+                      card={item.card} 
+                      onClick={() => handleCardSelect(item.source, item.idx)} 
+                      disabled={!isPlayerTurn || cpu < (item.card.cost ?? 0)}
                     />
                   </div>
                 );
@@ -769,8 +892,20 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
               <span className="lbl">TARGET:</span>
               <span className="val">{missionTz.name}</span>
             </div>
+            {missionTz.id === 'combat_silo_inner' && (
+              <div className="ip-tutorial-hint">
+                <span className="lbl">HINTS:</span>
+                <div className="step-hints">
+                  {missionTz.steps.map((s, i) => (
+                    <div key={i} className={`step-hint ${playerProgress >= (i + 1) * (100 / missionTz.steps.length) ? 'ok' : ''}`}>
+                      {i + 1}. {s.requiredCardIds[0].replace('script_', '').toUpperCase()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="ip-mission-description">
-              {missionTz.description.slice(0, 80)}... [CLICK FOR INTEL]
+              {missionTz.description.slice(0, 60)}... [CLICK]
             </div>
           </div>
 
@@ -803,34 +938,32 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
       </div>
 
       {/* VICTORY OVERLAY */}
-      {showVictory && (
+      {showVictory && victoryResult && (
         <div className="result-overlay victory">
           <div className="result-box">
             <div className="result-title green">DEPLOYMENT_SUCCESS</div>
-            <div className="result-subtitle">SYSTEM_INTEGRITY_ESTABLISHED</div>
+            <div className="result-subtitle">{isQuestCombat ? 'OBJECTIVE_CRIT_REACHED' : 'SYSTEM_INTEGRITY_ESTABLISHED'}</div>
             <div className="result-stats">
               <div className="stat-row">
                 <span>TASK_COMPLETED:</span>
                 <span className="green">{missionTz.name}</span>
               </div>
-              {deploymentReport && (
-                <>
-                  <div className="stat-row">
-                    <span>CPU_ALLOCATED:</span>
-                    <span>{cpuMax} core</span>
-                  </div>
-                  <div className="stat-row">
-                    <span>RAM_RETAINED:</span>
-                    <span>{ramMaxMb}MB</span>
-                  </div>
-                </>
-              )}
-              <div className="stat-row total">
-                <span>REWARDS_EARNED:</span>
-                <span className="gold">{200 + tier * 100} BITS</span>
+              <div className="stat-row">
+                <span>EXPLOIT_RECORDED:</span>
+                <span className="green">TRUE</span>
               </div>
+              <div className="stat-row total">
+                <span>{isQuestCombat ? 'COMBAT_LOOT:' : 'REWARDS_EARNED:'}</span>
+                <span className="gold">{victoryResult.bits} BITS</span>
+              </div>
+              {isQuestCombat && (
+                <div className="stat-row" style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: '2px' }}>
+                  <span>PRIMARY_PAYOUT:</span>
+                  <span>AT_FIXER_NPC</span>
+                </div>
+              )}
             </div>
-            <button className="result-btn green" onClick={() => onWin(200 + tier * 100, missionTz.rank)}>
+            <button className="result-btn green" onClick={() => onWin(victoryResult.bits, missionTz.rank, victoryResult.chain, missionTz.name)}>
               [ CONTINUE_TO_CITY ]
             </button>
           </div>
@@ -879,7 +1012,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = ({
                 </>
               )}
             </div>
-            <button className="result-btn red" onClick={() => onWin(0, missionTz.rank)}>
+            <button className="result-btn red" onClick={() => onWin(0, missionTz.rank, [], missionTz.name)}>
               [ RETURN_TO_CITY_HUB ]
             </button>
           </div>

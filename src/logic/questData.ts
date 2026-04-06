@@ -8,7 +8,7 @@ export interface QuestDefinition {
   title: string;
   districtId: string;
   giverNpcId: string;
-  description: string;
+  description?: string;
   objectiveNodeId?: string;
   type: QuestType;
   difficulty: QuestDifficulty;
@@ -204,11 +204,22 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     description: 'Тьютор-бот "Индекс" вызвал тебя на учебный поединок. Победи Тренировочного Манекена, чтобы подтвердить свою квалификацию.',
     districtId: 'academy',
     giverNpcId: 'npc_academy_tutor',
-    objectiveNodeId: 'combat_tutorial_dummy',
+    objectiveNodeId: 'academy_tutorial_debug',
     type: 'combat',
     difficulty: 'quick',
     tier: 1,
     preClassOnly: true,
+  },
+  {
+    id: 'q_bibirevo_monya_intro',
+    title: '[СВЯЗЬ] Визит к Моне',
+    description: 'Варвар просил навестить Связиста Моню в Бибирево. Он выдал пару жетонов на такси для быстрого перемещения.',
+    districtId: 'bibirevo',
+    giverNpcId: 'npc_varvar',
+    objectiveNodeId: 'npc_signalman',
+    type: 'talk',
+    difficulty: 'standard',
+    tier: 1,
   },
   {
     id: 'q_maryino_qa_audit',
@@ -224,7 +235,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_maryino_scrap_raid',
     title: '[VOID] Рейд за деталями',
-    description: 'Крыса-курьер наводку на склад Federal Oversight. Нужно зайти и "приватизировать" пару модулей памяти. Ожидается сопротивление.',
+    description: 'Крыса-курьер наводку на склад Regulators. Нужно зайти и "приватизировать" пару модулей памяти. Ожидается сопротивление.',
     districtId: 'maryino',
     giverNpcId: 'npc_rat',
     objectiveNodeId: 'combat_local_lan',
@@ -431,7 +442,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     description: 'Грей хочет, чтобы вы пробрались к центральному терминалу и удалили логи посещений за последние 24 часа. Аудиторы GigaBank наступают на пятки.',
     districtId: 'vykhino',
     giverNpcId: 'npc_grey',
-    type: 'talk',
+    objectiveNodeId: 'vykhino_audit_wipe',
+    type: 'combat',
     difficulty: 'standard',
     tier: 1,
     preClassOnly: true,
@@ -658,6 +670,30 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     preClassOnly: true,
   },
   {
+    id: 'q_taganka_combat_deep_audit_bug_sweep', // Inferred ID for the combat quest defined in dialogue
+    title: '[CORP] Глубокий Аудит',
+    description: 'Великий Инквизитор требует принести Истину из глубин Бункера. SSH -> Auth -> Sudo-Patch -> SCP. Ошибка недопустима.',
+    districtId: 'taganka',
+    giverNpcId: 'npc_auditor',
+    objectiveNodeId: 'taganka_deep_audit',
+    type: 'combat',
+    difficulty: 'hard',
+    tier: 4,
+    preClassOnly: false,
+  },
+  {
+    id: 'q_punitive_squad_combat',
+    title: '[SYSTEM] Система Подавления',
+    description: 'Система Регуляторов обнаружила девиацию. Приказ 77 в действии. Порядок подавления: LS -> Auth -> Sudo-Patch -> Wash -> RM. Ошибка — смерть.',
+    districtId: 'punitive',
+    giverNpcId: 'punitive_squad',
+    objectiveNodeId: 'punitive_squad_wipe',
+    type: 'combat',
+    difficulty: 'hard',
+    tier: 5,
+    preClassOnly: false,
+  },
+  {
     id: 'q_mitino_debt',
     title: '[VOID] Долги Митино',
     description: 'Флэш задолжал Барыге Мише. Нужно либо отдать Bits, либо отработать на Свалке.',
@@ -682,8 +718,96 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DISTRICT NARRATIVE QUESTS
+// Unique quests defined in dialogue trees that need explicit entries in QUEST_LIBRARY.
+// These do not follow the auto-generated pattern and require manual registration.
+// ─────────────────────────────────────────────────────────────────────────────
+const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
+  // ── BIBIREVO ──
+  { id: 'q_bibirevo_job_jitter', title: '[ДИАГ] Джиттер в сети', districtId: 'bibirevo', giverNpcId: 'job_board_bibi', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+  { id: 'q_bibirevo_job_fix_link', title: '[РЕМОНТ] Стабилизация канала', districtId: 'bibirevo', giverNpcId: 'job_board_bibi', type: 'talk', difficulty: 'standard', tier: 1 },
+  
+  // ── CHERTANOVO ──
+  { id: 'q_chertanovo_combat_anarcho_cell_bug_sweep', title: '[БОЙ] Ячейка Анархистов', districtId: 'chertanovo', giverNpcId: 'npc_glitch', objectiveNodeId: 'combat_anarcho_cell', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_chertanovo_combat_night_scan_bug_sweep', title: '[БОЙ] Ночной Скан', districtId: 'chertanovo', giverNpcId: 'npc_glitch', objectiveNodeId: 'combat_night_scan', type: 'combat', difficulty: 'hard', tier: 1 },
+
+  // ── FILI ──
+  { id: 'q_fili_combat_satellite_crash_bug_sweep', title: '[БОЙ] Крушение Спутника', districtId: 'fili', giverNpcId: 'npc_kosmos', objectiveNodeId: 'combat_satellite_crash', type: 'combat', difficulty: 'hard', tier: 4 },
+  { id: 'q_fili_combat_launch_guard_bug_sweep', title: '[БОЙ] Охрана Запуска', districtId: 'fili', giverNpcId: 'npc_orbit_stalker', objectiveNodeId: 'combat_launch_guard', type: 'combat', difficulty: 'standard', tier: 4 },
+  { id: 'q_fili_hardware_repair', title: '[РЕМОНТ] Калибровка ретранслятора', districtId: 'fili', giverNpcId: 'npc_rocket_eng', type: 'talk', difficulty: 'standard', tier: 1 },
+
+  // ── HUB (KITAY-GOROD) ──
+  { id: 'q_hub_digital_signature', title: '[CORP] Цифровая Подпись Хаба', districtId: 'kitay_gorod', giverNpcId: 'npc_gb_agent', type: 'talk', difficulty: 'hard', tier: 2 },
+
+  // ── IZMAILOVO ──
+  { id: 'q_izmailovo_combat_job_craft_scrap_bug_sweep', title: '[БОЙ] Сбор деталей на свалке', districtId: 'izmailovo', giverNpcId: 'npc_master', objectiveNodeId: 'job_craft_scrap', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_izmailovo_old_timer_capacitor', title: '[DELIVERY] Винтажный конденсатор', districtId: 'izmailovo', giverNpcId: 'npc_old_timer', type: 'delivery', difficulty: 'standard', tier: 1 },
+  { id: 'q_izmailovo_master_verstak_parts', title: '[DELIVERY] Детали для Верстака', districtId: 'izmailovo', giverNpcId: 'npc_master', type: 'delivery', difficulty: 'standard', tier: 1 },
+
+  // ── MARYINO ──
+  { id: 'q_maryino_combat_grid_patrol_bug_sweep', title: '[БОЙ] Патруль Сетки', districtId: 'maryino', giverNpcId: 'npc_sarge', objectiveNodeId: 'combat_grid_patrol', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_maryino_npc_tanya_signal_sweep', title: '[ДИАГ] Сигнальный Прочес', districtId: 'maryino', giverNpcId: 'npc_tanya', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+
+  // ── MITINO ──
+  { id: 'q_mitino_combat_drone_hunt_bug_sweep', title: '[БОЙ] Охота на дроны', districtId: 'mitino', giverNpcId: 'npc_mitino_trader', objectiveNodeId: 'combat_drone_hunt', type: 'combat', difficulty: 'standard', tier: 2 },
+  { id: 'q_mitino_combat_freq_jam_bug_sweep', title: '[БОЙ] Частотная Глушилка', districtId: 'mitino', giverNpcId: 'npc_slick_shady', objectiveNodeId: 'combat_freq_jam', type: 'combat', difficulty: 'hard', tier: 2 },
+  { id: 'q_mitino_term_relay_stabilizer', title: '[TECH] Стабилизация реле', districtId: 'mitino', giverNpcId: 'npc_radio_ham', objectiveNodeId: 'term_radio_relay', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+
+  // ── PEROVO ──
+  { id: 'q_perovo_communitarian_distro', title: '[RED] Распределение трафика', districtId: 'perovo', giverNpcId: 'npc_commissar_byte', type: 'talk', difficulty: 'quick', tier: 3 },
+  { id: 'q_perovo_factory_strike', title: '[RED] Стачка на заводе', districtId: 'perovo', giverNpcId: 'npc_commissar_byte', objectiveNodeId: 'engine_perovo', type: 'talk', difficulty: 'hard', tier: 3 },
+  { id: 'q_perovo_engine_repair', title: '[РЕМОНТ] Калибровка турбины', districtId: 'perovo', giverNpcId: 'npc_foreman', objectiveNodeId: 'engine_perovo', type: 'talk', difficulty: 'standard', tier: 1 },
+  { id: 'q_perovo_combat_data_mining_bug_sweep', title: '[БОЙ] Осада процесс-майнером', districtId: 'perovo', giverNpcId: 'npc_marina', objectiveNodeId: 'combat_data_mining', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_perovo_marina_log_clean', title: '[ДИАГ] Очистка логов Марины', districtId: 'perovo', giverNpcId: 'npc_marina', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+  { id: 'q_perovo_combat_rat_invasion_bug_sweep', title: '[БОЙ] Истребление системных крыс', districtId: 'perovo', giverNpcId: 'npc_resident_perovo', objectiveNodeId: 'combat_rat_invasion', type: 'combat', difficulty: 'quick', tier: 1 },
+  { id: 'q_perovo_zina_delivery', title: '[DELIVERY] Ящик для Петровича', districtId: 'perovo', giverNpcId: 'npc_zina', type: 'delivery', difficulty: 'standard', tier: 1 },
+
+  // ── SOKOL ──
+  { id: 'q_sokol_sysadmin_certification', title: '[CERT] Сертификация SysAdmin', districtId: 'sokol', giverNpcId: 'npc_dean', type: 'talk', difficulty: 'hard', tier: 2 },
+  { id: 'q_sokol_qa_certification', title: '[CERT] Сертификация QA Tester', districtId: 'sokol', giverNpcId: 'npc_dean', type: 'talk', difficulty: 'hard', tier: 2 },
+  { id: 'q_sokol_combat_drone_swarm_bug_sweep', title: '[БОЙ] Рой дронов', districtId: 'sokol', giverNpcId: 'npc_retired_tester', objectiveNodeId: 'combat_drone_swarm', type: 'combat', difficulty: 'standard', tier: 2 },
+  { id: 'q_sokol_combat_server_overheat_bug_sweep', title: '[БОЙ] Перегрев серверной', districtId: 'sokol', giverNpcId: 'npc_retired_tester', objectiveNodeId: 'combat_server_overheat', type: 'combat', difficulty: 'hard', tier: 2 },
+
+  // ── SOKOLNIKI ──
+  { id: 'q_sokolniki_hardware_repair', title: '[РЕМОНТ] Стойка лесного сервера', districtId: 'sokolniki', giverNpcId: 'npc_forest_guard', type: 'talk', difficulty: 'quick', tier: 1 },
+  { id: 'q_sokolniki_combat_fox_virus_bug_sweep', title: '[БОЙ] Вирус Лис', districtId: 'sokolniki', giverNpcId: 'npc_ghost_server', objectiveNodeId: 'combat_fox_virus', type: 'combat', difficulty: 'hard', tier: 2 },
+  { id: 'q_sokolniki_combat_recursive_loop_bug_sweep', title: '[БОЙ] Рекурсивный Цикл', districtId: 'sokolniki', giverNpcId: 'npc_hermit', objectiveNodeId: 'combat_recursive_loop', type: 'combat', difficulty: 'hard', tier: 2 },
+  { id: 'q_sokolniki_term_forest_calibration', title: '[ДИАГ] Калибровка лесного терминала', districtId: 'sokolniki', giverNpcId: 'npc_druid_coder', objectiveNodeId: 'term_forest_log', type: 'diagnostics', difficulty: 'standard', tier: 1 },
+
+  // ── SOUTH WEST ──
+  { id: 'q_south_west_profiler', title: '[TECH] Профилировщик Мейнфрейма', districtId: 'south_west', giverNpcId: 'npc_compiler', objectiveNodeId: 'combat_academic_guard', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_south_west_combat_academic_guard_bug_sweep', title: '[БОЙ] Зачистка Мейнфрейма', districtId: 'south_west', giverNpcId: 'npc_compiler', objectiveNodeId: 'combat_academic_guard', type: 'combat', difficulty: 'hard', tier: 1 },
+
+  // ── TAGANKA ──
+  { id: 'q_taganka_bounty_shadow_coder', title: '[BOUNTY] Теневой Программист', districtId: 'taganka', giverNpcId: 'job_board_taganka', objectiveNodeId: 'combat_ghost_process', type: 'combat', difficulty: 'hard', tier: 4 },
+  { id: 'q_taganka_bounty_modem_ghost', title: '[BOUNTY] Призрак Модема', districtId: 'taganka', giverNpcId: 'job_board_taganka', objectiveNodeId: 'combat_ghost_process', type: 'combat', difficulty: 'hard', tier: 4 },
+  { id: 'q_taganka_core_access_granted', title: '[ACCESS] Доступ к Ядру', districtId: 'taganka', giverNpcId: 'term_central_gate', objectiveNodeId: 'term_central_gate', type: 'talk', difficulty: 'hard', tier: 4 },
+
+  // ── TEKSTILSCHIKI ──
+  { id: 'q_safety_audit', title: '[AUDIT] Аудит безопасности', districtId: 'tekstilschiki', giverNpcId: 'npc_safety_auditor', type: 'talk', difficulty: 'standard', tier: 2 },
+  { id: 'q_tekstilschiki_combat_textile_raid_bug_sweep', title: '[БОЙ] Налёт на Текстиль', districtId: 'tekstilschiki', giverNpcId: 'npc_vlad', objectiveNodeId: 'combat_textile_raid', type: 'combat', difficulty: 'standard', tier: 2 },
+  { id: 'q_tekstilschiki_delivery_pattern_kuzminki', title: '[DELIVERY] Паттерны в Кузьминки', districtId: 'tekstilschiki', giverNpcId: 'job_board_tekstil', type: 'delivery', difficulty: 'standard', tier: 2 },
+
+  // ── TEPLY STAN ──
+  { id: 'q_teply_stan_bio_scan', title: '[ДИАГ] Биосканирование леса', districtId: 'teply_stan', giverNpcId: 'npc_hermit_forest', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+  { id: 'q_teply_stan_combat_forest_hunt_bug_sweep', title: '[БОЙ] Охота в лесу', districtId: 'teply_stan', giverNpcId: 'npc_ranger', objectiveNodeId: 'combat_forest_hunt', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_teply_stan_combat_wild_node_bug_sweep', title: '[БОЙ] Дикий Узел', districtId: 'teply_stan', giverNpcId: 'npc_sre_recruit', objectiveNodeId: 'combat_wild_node', type: 'combat', difficulty: 'quick', tier: 1 },
+  { id: 'q_teply_stan_combat_router_clash_bug_sweep', title: '[БОЙ] Схватка Router', districtId: 'teply_stan', giverNpcId: 'npc_ranger', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'hard', tier: 1 },
+
+  // ── VYKHINO ──
+  { id: 'q_vykhino_combat_cargo_bug_sweep', title: '[БОЙ] Зачистка Карго', districtId: 'vykhino', giverNpcId: 'npc_grey', objectiveNodeId: 'combat_cargo', type: 'combat', difficulty: 'standard', tier: 1 },
+
+  // ── ACADEMY ──
+  { id: 'q_neon_academy_bootcamp', title: '[ТУТОРИАЛ] Учебный Лагерь Оператора', description: 'Пройди вводный инструктаж Профессора Архипова: узнай о NEURAL_RAM, SYSTEM_STRESS и структуре OPERATIONS. Завершение открывает активную деку.', districtId: 'academy', giverNpcId: 'npc_academy_tutor', type: 'talk', difficulty: 'quick', tier: 1, preClassOnly: true },
+
+  // ── ALTUFYEVO / MARYINO CHAIN ──
+  { id: 'q_petrovich_rogue_module', title: '[CHAIN] Изгнанный Модуль Петровича', description: 'Петрович потерял чип «Zero-Point». Последний сигнал зафиксирован в районе Крысы-курьера в Марьино. Разберись.', districtId: 'altufyevo', giverNpcId: 'npc_petrovich', type: 'delivery', difficulty: 'standard', tier: 1 },
+];
+
 export const QUEST_LIBRARY: QuestDefinition[] = [
   ...TUTORIAL_QUESTS,
+  ...DISTRICT_NARRATIVE_QUESTS,
   ...buildNpcQuests(), 
   ...buildCombatDistrictQuests()
 ];

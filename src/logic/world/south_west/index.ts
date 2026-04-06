@@ -1,6 +1,19 @@
 import type { WorldDistrict } from '../types';
-import { south_west_npcs } from './npcs';
-import { south_west_dialogues } from './dialogues';
+import { npc_professor_profile } from './npcs/npc_professor/profile';
+import { npc_professor_dialogues } from './npcs/npc_professor/dialogues';
+import { npc_compiler_profile } from './npcs/npc_compiler/profile';
+import { npc_compiler_dialogues } from './npcs/npc_compiler/dialogues';
+import { npc_alumini_profile } from './npcs/npc_alumini/profile';
+import { npc_alumini_dialogues } from './npcs/npc_alumini/dialogues';
+
+import { uni_moscow_dialogues } from './objects/uni_moscow/dialogues';
+import { shop_edu_addons_dialogues } from './objects/shop_edu_addons/dialogues';
+import { term_library_dialogues } from './objects/term_library/dialogues';
+import { term_main_frame_dialogues } from './objects/term_main_frame/dialogues';
+import { bar_scholar_dialogues } from './objects/bar_scholar/dialogues';
+import { combat_academic_guard_dialogues } from './objects/combat_academic_guard/dialogues';
+import { combat_virus_lab_dialogues } from './objects/combat_virus_lab/dialogues';
+import { term_taxi_south_west_dialogues } from './objects/term_taxi_south_west/dialogues';
 
 export const south_west: WorldDistrict = {
   id: 'south_west', 
@@ -19,9 +32,26 @@ export const south_west: WorldDistrict = {
         { id: 'term_main_frame', name: 'Узел: МЕЙНФРЕЙМ', type: 'terminal', description: 'Центральный вычислитель района. Слишком защищен.', x: 90, y: 50 },
         { id: 'bar_scholar', name: 'Рюмочная "Студент"', type: 'bar', description: 'Здесь пьют горький кофе и пишут диплом.', x: 15, y: 40 },
         { id: 'combat_academic_guard', name: 'Академическая Охрана', type: 'combat', description: 'Автоматические системы защиты данных.', x: 40, y: 80 },
-        { id: 'combat_virus_lab', name: 'Вирусная Лаборатория', type: 'combat', description: 'Экспериментальные инфекции софта.', x: 25, y: 90 }
+        { id: 'combat_virus_lab', name: 'Вирусная Лаборатория', type: 'combat', description: 'Экспериментальные инфекции софта.', x: 25, y: 90 },
+        { id: 'term_taxi_south_west', name: 'Такси: Юго-Западная', type: 'terminal', description: 'Вылет в город.', x: 50, y: 95 }
     ]
   },
-  npcs: south_west_npcs,
-  dialogues: south_west_dialogues
+  npcs: [
+    npc_professor_profile,
+    npc_compiler_profile,
+    npc_alumini_profile
+  ],
+  dialogues: {
+    npc_professor: npc_professor_dialogues,
+    npc_compiler: npc_compiler_dialogues,
+    npc_alumini: npc_alumini_dialogues,
+    uni_moscow: uni_moscow_dialogues,
+    shop_edu_addons: shop_edu_addons_dialogues,
+    term_library: term_library_dialogues,
+    term_main_frame: term_main_frame_dialogues,
+    bar_scholar: bar_scholar_dialogues,
+    combat_academic_guard: combat_academic_guard_dialogues,
+    combat_virus_lab: combat_virus_lab_dialogues,
+    term_taxi_south_west: term_taxi_south_west_dialogues
+  }
 };

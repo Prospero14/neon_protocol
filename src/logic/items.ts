@@ -72,6 +72,22 @@ export const ITEM_LIBRARY: GameItem[] = [
     rarity: 'uncommon',
     description: 'A rusted metal badge from a defunct government agency.',
     valueBits: 80
+  },
+  {
+    id: 'art_monya_taxi_pass',
+    name: 'Жетон на такси (Северный Поток)',
+    kind: 'token',
+    rarity: 'uncommon',
+    description: 'Старый жетон для проезда в беспилотном такси. Позволяет совершить одну поездку между Алтуфьево и Бибирево.',
+    valueBits: 0
+  },
+  {
+    id: 'itm_taxi_token',
+    name: 'Транспортный Жетон',
+    kind: 'token',
+    rarity: 'common',
+    description: 'Магнитный жетон корпорации МосТранс. Дает право на одну поездку в такси или метро.',
+    valueBits: 15
   }
 ];
 

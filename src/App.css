@@ -1938,7 +1938,7 @@ body, html, #root {
   background: #000;
   border: 2px solid var(--neon-amethyst);
   padding: 3rem;
-  width: 500px;
+  width: 540px; /* INCREASED width to prevent clipping */
   text-align: center;
   box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
   position: relative;
@@ -1956,11 +1956,11 @@ body, html, #root {
 }
 
 .result-title {
-  font-size: 2.5rem;
+  font-size: 2.2rem; /* REDUCED from 2.5rem to fit DEPLOYMENT_SUCCESS */
   font-family: var(--font-mono);
   font-weight: 900;
   margin-bottom: 0.5rem;
-  letter-spacing: 4px;
+  letter-spacing: 2px; /* REDUCED tracking slightly */
 }
 
 .result-title.green { color: var(--neon-green); text-shadow: 0 0 20px var(--neon-green-glow); }

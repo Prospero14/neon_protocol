@@ -2,16 +2,16 @@ export interface PreClassState {
   classUnlocked: boolean;
   completedQuestCount: number;
   bitsEarnedFromQuests: number;
-  tutorialCompleted?: boolean; // New: requires q_trainee_combat_validation
+  tutorialCompleted?: boolean;
+  exploitsCount?: number;
 }
 
 export const PRECLASS_UNLOCK_QUESTS = 3; // Reduced to focus on the tutorial
 export const PRECLASS_UNLOCK_BITS = 300;
 
 export function canUnlockClass(state: PreClassState): boolean {
-  // Now requires both a threshold AND the tutorial completion
-  const meetsThreshold = state.completedQuestCount >= PRECLASS_UNLOCK_QUESTS || state.bitsEarnedFromQuests >= PRECLASS_UNLOCK_BITS;
-  return meetsThreshold && !!state.tutorialCompleted;
+  const hasExploits = (state.exploitsCount ?? 0) >= 5;
+  return hasExploits && !!state.tutorialCompleted;
 }
 
 /*

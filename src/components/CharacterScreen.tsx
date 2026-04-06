@@ -24,16 +24,14 @@ interface CharacterScreenProps {
     installedImplants: Array<{ id: string, battlesLeft: number }>;
     maxImplantSlots: number;
   };
-  questStates: any[];
-  allQuests: any[];
   onBack: () => void;
   onLogout: () => void;
   onUpgradeHardware: (cores: number, ram: number) => void;
   onInstallImplant: (id: string) => void;
 }
 
-const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, allQuests, onBack, onLogout, onUpgradeHardware, onInstallImplant }) => {
-  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'REPUTATION' | 'CONTRACTS' | 'HARDWARE' | 'IMPLANTS'>('IDENTITY');
+const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, onBack, onLogout, onUpgradeHardware, onInstallImplant }) => {
+  const [activeTab, setActiveTab] = useState<'IDENTITY' | 'REPUTATION' | 'HARDWARE' | 'IMPLANTS'>('IDENTITY');
   const [showAcademy, setShowAcademy] = useState(false);
   const totalSolved = Object.values(player.solvedTaskCounts).reduce((a, b) => a + b, 0);
   // Calculate a visual "System Prowess" based on tasks (purely aesthetic replacement for level)
@@ -122,12 +120,7 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
              >
                [ РЕПУТАЦИЯ ]
              </button>
-             <button 
-               className={`tab-btn-v4 ${activeTab === 'CONTRACTS' ? 'active' : ''}`} 
-               onClick={() => setActiveTab('CONTRACTS')}
-             >
-               [ КОНТРАКТЫ ]
-             </button>
+
              <button 
                className={`tab-btn-v4 ${activeTab === 'HARDWARE' ? 'active' : ''}`} 
                onClick={() => setActiveTab('HARDWARE')}
@@ -201,34 +194,75 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
             <div className="reputation-pane neon-panel">
                <div className="pane-header-v42">
                   <Shield size={18} color="var(--neon-amber)" />
-                  <span>ГЛОБАЛЬНЫЙ_СТАТУС_ФРАКЦИЙ</span>
+                  <span>ГЛОБАЛЬНЫЙ_СТАТУС_ФРАКЦИЙ [МОНИТОРИНГ_ВЛИЯНИЯ]</span>
                </div>
                <div className="rep-list">
                   {Object.entries(player.reputation || {}).map(([faction, value]) => {
-                    const percent = Math.min(100, Math.max(0, (value + 100) / 2));
                     const status = value > 50 ? 'ALLIED' : value < -50 ? 'HOSTILE' : 'NEUTRAL';
                     const colorMap: Record<string, string> = {
-                      'GIGA_BANK': 'var(--neon-amber)',
-                      'NEO_KYOTO': 'var(--neon-cyan)',
-                      'VOSKHOD_OFFICE': 'var(--neon-magenta)',
-                      'EU_SYNTAX': 'var(--neon-amethyst)',
-                      'ANARCHO_VOID': 'var(--neon-pink)'
+                      'GIGA_BANK': '#FFD700',       // GOLD
+                      'TELECON': '#00FFFF',         // CYAN
+                      'KRYLOVO_CORP': '#FF0040',    // RUBY
+                      'REGULATORS': '#4682B4',      // STEEL
+                      'NULLPOINTERS': '#39FF14',    // NEON_GREEN
+                      'RUST_VALLEY': '#D2691E',     // RUST
+                      'SILICON_HEDGE': '#8B00FF',   // VIOLET
+                      'BIOSYNDICATE': '#CCFF00',    // LIME
+                      'REDUNDANTS': '#FF00FF',      // MAGENTA
+                      'NET_DRIVERS': '#FFBF00',     // AMBER
+                      'CYBERCOMMIS': '#DC143C'      // CRIMSON
                     };
+                    const color = colorMap[faction] || '#fff';
+                    const posWidth = Math.max(0, value);
+                    const negWidth = Math.abs(Math.min(0, value));
+
                     return (
-                      <div key={faction} className="rep-item" style={{ marginBottom: '15px' }}>
-                        <div className="rep-meta" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', marginBottom: '4px' }}>
-                          <span className="rep-name" style={{ color: colorMap[faction] || '#fff', fontWeight: 800 }}>{faction.replace('_', ' ')}</span>
-                          <span className={`rep-status ${status}`} style={{ opacity: 0.8 }}>{status} ({value})</span>
+                      <div key={faction} className="rep-graph-row" style={{ marginBottom: '20px' }}>
+                        <div className="rep-meta" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span className="rep-name" style={{ color, fontWeight: 900, fontSize: '0.75rem', letterSpacing: '0.05em' }}>{faction.replace('_', ' ')}</span>
+                          <span className={`rep-val-v4 ${status}`} style={{ fontSize: '0.65rem', opacity: 0.8, color: value < 0 ? '#ff4040' : color }}>
+                            {status} ({value > 0 ? `+${value}` : value})
+                          </span>
                         </div>
-                        <div className="rep-bar-wrap" style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div className="rep-bar-fill" style={{ width: `${percent}%`, height: '100%', background: colorMap[faction] || '#fff', boxShadow: `0 0 10px ${colorMap[faction]}` }}></div>
+                        
+                        <div className="graph-container" style={{ position: 'relative', height: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '2px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                          <div className="center-line" style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: '1px', background: 'rgba(255,255,255,0.2)', zIndex: 2 }}></div>
+                          
+                          {/* POSITIVE (RIGHT) */}
+                          <div className="bar-fill pos" style={{ 
+                            position: 'absolute', 
+                            left: '50%', 
+                            width: `${posWidth / 2}%`, 
+                            height: '100%', 
+                            background: `linear-gradient(90deg, ${color}44, ${color})`,
+                            boxShadow: `0 0 15px ${color}66`,
+                            transition: '0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                          }}></div>
+                          
+                          {/* NEGATIVE (LEFT) */}
+                          <div className="bar-fill neg" style={{ 
+                            position: 'absolute', 
+                            right: '50%', 
+                            width: `${negWidth / 2}%`, 
+                            height: '100%', 
+                            background: `linear-gradient(-90deg, #ff404044, #ff4040)`,
+                            boxShadow: `0 0 15px #ff404066`,
+                            transition: '0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                          }}></div>
+                          
+                          <div className="scanline-overlay" style={{ 
+                            position: 'absolute', 
+                            inset: 0, 
+                            background: 'repeating-linear-gradient(transparent 0px, rgba(0,0,0,0.2) 2px, transparent 4px)',
+                            pointerEvents: 'none'
+                          }}></div>
                         </div>
                       </div>
                     );
                   })}
                </div>
-               <p className="mono-text" style={{ fontSize: '0.65rem', marginTop: 'auto', opacity: 0.5, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-                 ЛОГ_РЕПУТАЦИИ: Статус является игрой с нулевой суммой для соперничающих фракций (Мегакорпорации vs Государство vs Анархисты). Ваш выбор имеет значение.
+               <p className="mono-text" style={{ fontSize: '0.6rem', marginTop: 'auto', opacity: 0.4, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                 ЛОГ_РЕПУТАЦИИ: [0] НЕЙТРАЛЬНО. [ &lt; 0 ] ВРАЖДЕБНО. [ &gt; 0 ] КИБЕР-СОЮЗ. Выбор сторон определяет доступ к терминалам и цепи квестов.
                </p>
             </div>
           ) : activeTab === 'HARDWARE' ? (
@@ -266,7 +300,7 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                   })}
                </div>
             </div>
-          ) : activeTab === 'IMPLANTS' ? (
+          ) : (
             <div className="implants-pane neon-panel">
                <div className="pane-header-v42">
                   <Microchip size={18} color="var(--neon-pink)" />
@@ -316,35 +350,6 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, questStates, 
                         })}
                      </div>
                   </div>
-               </div>
-            </div>
-          ) : (
-            <div className="contracts-pane neon-panel">
-               <div className="pane-header-v42">
-                  <Award size={18} color="var(--neon-cyan)" />
-                  <span>ИСТОРИЯ_И_ЖУРНАЛ_КОНТРАКТОВ</span>
-               </div>
-               <div className="contracts-list">
-                  {questStates.length === 0 && (
-                    <div className="no-contracts mono-text opacity-50">АКТИВНЫХ_ИЛИ_ВЫПОЛНЕННЫХ_КОНТРАКТОВ_НЕ_НАЙДЕНО</div>
-                  )}
-                  {questStates.map(state => {
-                    const quest = allQuests.find(q => q.id === state.questId);
-                    if (!quest) return null;
-                    return (
-                      <div key={state.questId} className={`contract-card ${state.status}`}>
-                         <div className="contract-h">
-                            <span className="c-title">{quest.title}</span>
-                            <span className={`c-status-tag ${state.status}`}>{state.status.toUpperCase()}</span>
-                         </div>
-                         <p className="c-desc mono-text">{quest.description}</p>
-                         <div className="c-meta mono-text">
-                            <span>ТИП: {quest.type.toUpperCase()}</span>
-                            <span>УРОВЕНЬ: {quest.tier}</span>
-                         </div>
-                      </div>
-                    );
-                  })}
                </div>
             </div>
           )}

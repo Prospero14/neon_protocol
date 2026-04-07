@@ -5,6 +5,7 @@ import type { Trait } from '../logic/traits';
 import { FACTIONS } from '../logic/factions';
 import { NPC_PRESENCE_CONFIGS } from '../logic/npcPresence';
 import { Cpu, Fingerprint } from 'lucide-react';
+import { QUEST_LIBRARY } from '../logic/questData';
 
 interface FixerBarSceneProps {
   locationId: string;
@@ -150,10 +151,11 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
       }
     });
 
-    const readyStarterQuest = readyQuestIds.find(id => id.startsWith('q_kiddo_start_'));
+    const readyStarterQuest = readyQuestIds.find(id => id.startsWith('q_kiddo_'));
     if (readyStarterQuest) {
+      const qDef = QUEST_LIBRARY.find(q => q.id === readyStarterQuest);
       finalOptions.unshift({
-        text: '[ ОТМЕТИТЬСЯ У ЛОКАЛЬНОГО КООРДИНАТОРА ]',
+        text: `[ ЗАВЕРШИТЬ: ${qDef?.title || 'ОБУЧЕНИЕ'} ]`,
         nextId: 'LEAVE',
         subtext: 'СИНХРОНИЗАЦИЯ_С_РАЙОНОМ',
         effect: 'COMPLETE_TALK_QUEST',

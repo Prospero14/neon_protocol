@@ -103,36 +103,53 @@ function buildCombatDistrictQuests() {
   return quests;
 }
 
-const STARTING_QUESTS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
-  const npc = district.subNodes?.find(s => s.type === 'npc');
-  return {
-    id: `q_kiddo_start_${district.id}`,
-    title: `[ВВОД] Опорная точка: ${district.id.toUpperCase()}`,
-    description: `Система инициализирована. Установите контакт с местным координатором (${npc?.name || 'неизвестно'}), чтобы получить доступ к локальным задачам и закрепиться в районе.`,
-    districtId: district.id,
-    giverNpcId: npc?.id || 'job_board',
-    type: 'talk',
-    objectiveNodeId: npc?.id || district.id,
-    difficulty: 'quick',
-    tier: 1,
-    preClassOnly: true,
-  } as QuestDefinition;
-});
+const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
+  const bar = district.subNodes?.find(s => s.type === 'bar');
+  const taxi = district.subNodes?.find(s => s.type === 'terminal' && s.id.includes('taxi'));
+  const firstCombat = district.subNodes?.find(s => s.type === 'combat');
+  
+  return [
+    {
+      id: `q_kiddo_start_${district.id}`,
+      title: `[ВВОД] Опорная точка: ${district.id.toUpperCase()}`,
+      description: `Система инициализирована. Установите контакт с местным барменом в заведении "${bar?.name || 'местный бар'}", чтобы получить инструкции и закрепиться в районе.`,
+      districtId: district.id,
+      giverNpcId: bar?.id || 'job_board',
+      type: 'talk' as QuestType,
+      objectiveNodeId: bar?.id || district.id,
+      difficulty: 'quick' as QuestDifficulty,
+      tier: 1,
+      preClassOnly: true,
+    },
+    {
+      id: `q_kiddo_first_bits_${district.id}`,
+      title: `[ВВОД] Первые Bits: ${district.id.toUpperCase()}`,
+      description: `Бармен не работает за спасибо. Найдите любую уязвимость в районе (например, "${firstCombat?.name || 'локальный узел'}") и закройте контракт на чистку кэша, чтобы заработать свои первые Bits.`,
+      districtId: district.id,
+      giverNpcId: bar?.id || 'job_board',
+      objectiveNodeId: firstCombat?.id || district.id,
+      type: 'combat' as QuestType,
+      difficulty: 'quick' as QuestDifficulty,
+      tier: 1,
+      preClassOnly: true,
+    },
+    {
+      id: `q_kiddo_metro_access_${district.id}`,
+      title: `[ВВОД] Путь в Центр: ${district.id.toUpperCase()}`,
+      description: `Пора выбираться из этого сектора. Соберите 100 Bits и разблокируйте доступ к транспортной системе через терминал такси ("${taxi?.name || 'Терминал Такси'}").`,
+      districtId: district.id,
+      giverNpcId: taxi?.id || 'term_taxi',
+      objectiveNodeId: taxi?.id || district.id,
+      type: 'talk' as QuestType, // Completion is handled via specific dialogue or interaction
+      difficulty: 'standard' as QuestDifficulty,
+      tier: 1,
+      preClassOnly: true,
+    }
+  ];
+}).flat();
 
 const TUTORIAL_QUESTS: QuestDefinition[] = [
-  ...STARTING_QUESTS_GENERATED,
-  {
-    id: 'q_kiddo_first_bits',
-    title: '[ВВОД] Первые Bits',
-    description: 'Петрович не работает бесплатно. Найди Доску Объявлений в Алтуфьево и заверши простейший контракт на чистку кэша.',
-    districtId: 'altufyevo',
-    giverNpcId: 'job_board_alt',
-    objectiveNodeId: 'combat_rats', // Changed to the actual combat node
-    type: 'combat',
-    difficulty: 'quick',
-    tier: 1,
-    preClassOnly: true,
-  },
+  ...TUTORIAL_CHAINS_GENERATED,
   {
     id: 'q_altufyevo_data_leak',
     title: 'Утечка пакетов L1',
@@ -168,18 +185,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     tier: 1,
     preClassOnly: true,
   },
-  {
-    id: 'q_kiddo_metro_access',
-    title: '[ВВОД] Путь в Центр',
-    description: 'Чтобы покинуть окраины, тебе нужен доступ к Такси. Собери 100 Bits и разблокируй терминал в Алтуфьево.',
-    districtId: 'altufyevo',
-    giverNpcId: 'term_taxi_alt',
-    objectiveNodeId: 'term_taxi_alt',
-    type: 'talk',
-    difficulty: 'standard',
-    tier: 1,
-    preClassOnly: true,
-  },
+
   {
     id: 'q_trainee_exam_theory',
     title: '[ЭКЗАМЕН] Теория Архитектуры',

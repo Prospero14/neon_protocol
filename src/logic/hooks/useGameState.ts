@@ -74,6 +74,10 @@ export const MISSION_STARTER_PACKS: Record<string, string[]> = {
 export const getStarterPackForQuest = (questId?: string): string[] => {
   if (!questId) return MISSION_STARTER_PACKS['default'];
   if (MISSION_STARTER_PACKS[questId]) return MISSION_STARTER_PACKS[questId];
+  
+  if (questId.startsWith('q_kiddo_start_')) return MISSION_STARTER_PACKS['q_kiddo_start'];
+  if (questId.startsWith('q_kiddo_first_bits_')) return MISSION_STARTER_PACKS['q_kiddo_first_bits'];
+  
   const match = Object.keys(MISSION_STARTER_PACKS).find(key => questId.includes(key));
   return match ? MISSION_STARTER_PACKS[match] : MISSION_STARTER_PACKS['default'];
 };
@@ -317,7 +321,19 @@ export function useGameState() {
     setQuestStates((prev) => {
       const existing = prev.find(s => s.questId === questId);
       if (existing && existing.status === 'completed') return prev;
-      return completeQuest(prev, questId);
+      
+      let nextStates = completeQuest(prev, questId);
+      
+      // AUTO-PROGRESS TUTORIAL
+      if (questId.startsWith('q_kiddo_start_')) {
+        const dist = questId.replace('q_kiddo_start_', '');
+        nextStates = acceptQuest(nextStates, `q_kiddo_first_bits_${dist}`);
+      } else if (questId.startsWith('q_kiddo_first_bits_')) {
+        const dist = questId.replace('q_kiddo_first_bits_', '');
+        nextStates = acceptQuest(nextStates, `q_kiddo_metro_access_${dist}`);
+      }
+      
+      return nextStates;
     });
     rewardForQuest(q);
   };

@@ -35,6 +35,7 @@ export const SDLC_PHASES: Record<CombatPhase, PhaseRules> = {
     description: 'Code Freeze. Исправление ошибок. Используйте DEFENSIVE и REACTION для очистки шины.',
     allowedTypes: ['DEFENSIVE', 'REACTION', 'SPECIAL'],
     nextPhaseId: 'DEPLOYMENT',
+    targetProgress: 100,
   },
   DEPLOYMENT: {
     id: 'DEPLOYMENT',

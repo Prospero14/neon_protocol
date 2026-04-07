@@ -45,7 +45,7 @@ export function useCombatLogic({
   const START_HAND_SIZE = homeDistrictId === 'tekstilschiki' ? 6 : 5;
 
   // --- CORE STATE ---
-  const [currentPhase, setCurrentPhase] = useState<CombatPhase>(skillMode === 'script-kiddie' ? 'DEVELOPMENT' : 'ARCHITECTURE');
+  const [currentPhase, setCurrentPhase] = useState<CombatPhase>('ARCHITECTURE');
   const [playerProgress, setPlayerProgress] = useState(0);
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
@@ -81,16 +81,16 @@ export function useCombatLogic({
 
   const [enemy] = useState<BugEnemy | null>(() => {
     if (missionTz.id.includes('copy_logs') || missionTz.isExecutionChain) {
-      return BUGS.find(b => b.id === 'enemy_passive') || BUGS[0];
+      return BUGS.find(b => b.id === 'enemy_sysadmin') || BUGS[0];
     }
-    const enemies = BUGS.filter(b => b.id !== 'enemy_passive');
+    const enemies = BUGS.filter(b => b.id !== 'enemy_sysadmin');
     return enemies[Math.floor(Math.random() * enemies.length)];
   });
   const [nextBugAction, setNextBugAction] = useState<BugAction | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [log, setLog] = useState<string[]>([]);
   const [canAdvancePhase, setCanAdvancePhase] = useState(false);
-  const [phaseIntro, setPhaseIntro] = useState<string | null>(skillMode === 'script-kiddie' ? 'DEVELOPMENT' : 'ARCHITECTURE');
+  const [phaseIntro, setPhaseIntro] = useState<string | null>('ARCHITECTURE');
 
   const [cardsPlayedThisTurn, setCardsPlayedThisTurn] = useState(0);
 
@@ -110,34 +110,23 @@ export function useCombatLogic({
     [activeDeck]);
 
   const filteredHand = useMemo(() => {
-    const scriptsHand = hand
-      .map((c, i) => ({ card: c, source: 'hand' as const, idx: i }))
-      .filter(item => item.card.type === 'SCRIPT');
-
+    // CODE tab: SYNTAX/FUNCTION palette + SCRIPT-type cards from hand
     if (activeHandTab === 'CODE') {
       const palette = codingPalette.map((c, i) => ({ card: c, source: 'palette' as const, idx: i }));
-      let allCode = [...palette, ...scriptsHand];
-      if (skillMode === 'script-kiddie') {
-          // Filter out Java/Kotlin for kiddo
-          allCode = allCode.filter(item => item.card.type === 'SCRIPT' || item.card.type === 'SOFT');
-      }
-      return allCode;
+      const scriptsHand = hand
+        .map((c, i) => ({ card: c, source: 'hand' as const, idx: i }))
+        .filter(item => item.card.type === 'SCRIPT');
+      return [...palette, ...scriptsHand];
     }
 
+    // AUX tab: все карты из руки кроме SCRIPT (инфра, реакции, softs, хард)
+    // Script Kiddo видит ВСЕ свои карты — ограничение грейда только в DraftPanel
     const aux = hand
       .map((c, i) => ({ card: c, source: 'hand' as const, idx: i }))
-      .filter(item => {
-        if (activeHandTab === 'AUX') {
-          return ['INFRASTRUCTURE', 'SOFT', 'REACTION', 'DEFENSIVE', 'HARD'].includes(item.card.type);
-        }
-        return true;
-      });
-      
-    if (skillMode === 'script-kiddie') {
-        return aux.filter(item => item.card.type === 'SCRIPT' || item.card.type === 'SOFT');
-    }
+      .filter(item => !['SYNTAX', 'FUNCTION', 'SCRIPT'].includes(item.card.type));
+
     return aux;
-  }, [hand, activeHandTab, codingPalette, skillMode]);
+  }, [hand, activeHandTab, codingPalette]);
 
   const addLog = useCallback((msg: string) => setLog(prev => [msg, ...prev].slice(0, 15)), []);
 
@@ -148,11 +137,20 @@ export function useCombatLogic({
     let remainingDeck = shuffled.slice(START_HAND_SIZE);
 
     if (skillMode === 'script-kiddie') {
-      const scripts = shuffled.filter(c => c.type === 'SCRIPT' || c.type === 'SOFT');
-      const rest = shuffled.filter(c => c.type !== 'SCRIPT' && c.type !== 'SOFT');
-      // Ensure kiddo has at least 3-4 scripts in hand
-      startHand = [...scripts.slice(0, 4), ...rest.slice(0, START_HAND_SIZE)].slice(0, START_HAND_SIZE + 1);
-      remainingDeck = [...scripts.slice(4), ...rest.slice(START_HAND_SIZE)];
+      // Kiddo: гарантируем хотя бы 3 скрипта в стартовой руке,
+      // НО остальные карты (реакции, инфра) тоже берём из колоды
+      const scripts = shuffled.filter(c => c.type === 'SCRIPT');
+      const others  = shuffled.filter(c => c.type !== 'SCRIPT');
+      const scriptCount = Math.min(3, scripts.length);
+      const otherCount  = Math.max(0, START_HAND_SIZE - scriptCount);
+      startHand = [
+        ...scripts.slice(0, scriptCount),
+        ...others.slice(0, otherCount)
+      ];
+      remainingDeck = [
+        ...scripts.slice(scriptCount),
+        ...others.slice(otherCount)
+      ];
     }
 
     setHand(startHand);
@@ -190,6 +188,16 @@ export function useCombatLogic({
       setPlayerProgress(Math.floor((satisfiedSteps.length / missionTz.steps.length) * 100));
     }
   }, [runtimeRail, missionTz]);
+  
+  // Evaluate advancement conditions continuously
+  useEffect(() => {
+    const rules = SDLC_PHASES[currentPhase];
+    if (rules.targetProgress && playerProgress >= rules.targetProgress) {
+      setCanAdvancePhase(true);
+    } else {
+      setCanAdvancePhase(false);
+    }
+  }, [currentPhase, playerProgress]);
 
   const drawCards = (count: number) => {
     setHand(prevHand => {
@@ -279,6 +287,7 @@ export function useCombatLogic({
       case 'infra_lb_nginx': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
       case 'infra_basic_pod': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
       case 'infra_docker': setRamMaxMb(prev => prev + 512); break;
+      case 'infra_old_hw': setRamMaxMb(prev => prev + 512); break;
       case 'infra_s3_bucket': setRamMaxMb(prev => prev + 1536); break;
       case 'infra_raid_array': setStress(prev => Math.max(0, prev - 20)); break;
       case 'infra_postgres': setCpuMax(prev => prev + 2); setCpu(cur => cur + 2); break;
@@ -426,9 +435,6 @@ export function useCombatLogic({
     setSelectedCard(null);
 
     addLog(`[EXEC] ${card.name}`);
-
-    const rules = SDLC_PHASES[currentPhase];
-    if (rules.targetProgress && playerProgress >= rules.targetProgress) setCanAdvancePhase(true);
   };
 
   const handleAiStep = () => {
@@ -490,7 +496,7 @@ export function useCombatLogic({
   };
 
   const endTurn = () => {
-    if (missionTz.isExecutionChain && playerProgress >= 100) { addLog('[SYSTEM] COMPILE... [OK]'); setIsPlayerTurn(false); runFinalDeploymentCheck(); return; }
+    if (playerProgress >= 100) { addLog('[SYSTEM] COMPILE... [OK]'); setIsPlayerTurn(false); runFinalDeploymentCheck(); return; }
     setIsPlayerTurn(false); setSelectedCard(null); setAiDeadline(prev => Math.max(0, prev - 1)); addLog('[AI] THINKING...');
     
     // Reset turn-level counters
@@ -547,7 +553,10 @@ export function useCombatLogic({
             if (clock <= 0) setShowDefeat(true); else addLog(`[WARNING] SYSTEM_CLOCK: ${clock} CYCLES_LEFT`);
             return clock;
           });
-        } else { setStress(prev => Math.min(100, prev + 5)); addLog(`[WARNING] SYSTEM_STRESS: +5%`); }
+        }
+        
+        setStress(prev => Math.min(100, prev + 5)); 
+        addLog(`[WARNING] BACKGROUND_NOISE: +5% STRESS`);
         if (currentPhase === 'ARCHITECTURE') {
           const nextTurn = planningTurn + 1;
           if (nextTurn >= 2) { setPlanningTurn(0); advancePhase(); } else setPlanningTurn(nextTurn);
@@ -579,7 +588,7 @@ export function useCombatLogic({
       showVictory, showDefeat, victoryResult, deploymentReport, cpuMax, cpu, ramMaxMb,
       planningTurn, mulliganUsed, activeHandTab, infraSlots, softSlots, hand, deck, discard,
       selectedCard, runtimeRail, enemy, nextBugAction, isPlayerTurn, log, canAdvancePhase, phaseIntro,
-      ramSlotsMax, filteredHand, codingPalette
+      ramSlotsMax, filteredHand, codingPalette, isPipelineFull: runtimeRail.slice(0, ramSlotsMax).every(s => s.type !== 'EMPTY')
     },
     actions: {
       setActiveHandTab, handleCardSelect, executeCardOnSlot, handleMulligan,

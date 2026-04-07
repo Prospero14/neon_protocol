@@ -2,7 +2,8 @@ import React from 'react';
 import type { CombatPhase } from '../../../logic/combatPhases';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { RailSlot } from '../../../logic/hooks/useCombatLogic';
-import { Database, ShieldAlert, Terminal } from 'lucide-react';
+import type { BugAction, BugEnemy } from '../../../logic/combatEnemies';
+import { Database, ShieldAlert, Terminal, Lock, ChevronRight } from 'lucide-react';
 
 interface NeuralBusProps {
   currentPhase: CombatPhase;
@@ -12,75 +13,146 @@ interface NeuralBusProps {
   runtimeRail: RailSlot[];
   ramSlotsMax: number;
   missionTzStepsCount: number;
-  enemy: any;
+  enemy: BugEnemy | null;
+  nextBugAction: BugAction | null;
+  selectedCard: { source: string; idx: number } | null;
+  playerProgress: number;
+  aiProgress: number;
+  bugPoints: number;
+  aiDeadline: number;
   onExecuteCardOnSlot: (idx: number) => void;
 }
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
-  currentPhase, skillMode, infraSlots, softSlots, runtimeRail, ramSlotsMax, missionTzStepsCount, enemy, onExecuteCardOnSlot
+  currentPhase, skillMode, infraSlots, softSlots, runtimeRail, ramSlotsMax,
+  missionTzStepsCount, enemy, nextBugAction, selectedCard, playerProgress, aiProgress,
+  bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
+  const hasSelection = selectedCard !== null;
+  const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
+
   return (
-    <main className="combat-workspace">
-      <div className="ws-enemy">
-        <div className="enemy-avatar-wrap">
-          {enemy?.visualType === 'AI' && <Database className="enemy-avatar ai animate-flicker" size={40} />}
-          {enemy?.visualType === 'ICE' && <ShieldAlert className="enemy-avatar ice pulse-red" size={40} />}
-          {enemy?.visualType === 'DEVELOPER' && <Terminal className="enemy-avatar dev glow-green" size={40} />}
+    <main className="nb2">
+      {/* ── ENEMY RAIL ── */}
+      <div className="nb2-enemy">
+        <div className="nb2-enemy-avatar">
+          {enemy?.visualType === 'AI' && <Database className="nb2-enemy-icon" size={44} />}
+          {enemy?.visualType === 'ICE' && <ShieldAlert className="nb2-enemy-icon ice" size={44} />}
+          {enemy?.visualType === 'DEVELOPER' && <Terminal className="nb2-enemy-icon dev" size={44} />}
+          {!enemy?.visualType && <Terminal className="nb2-enemy-icon" size={44} />}
+          <span className="nb2-enemy-name">{enemy?.name || 'UNKNOWN_PROCESS'}</span>
         </div>
-        <div className="enemy-rail">
-          {runtimeRail.slice(0, 5).map((slot, i) => (
-            <div key={i} className={`enemy-slot ${slot.type !== 'EMPTY' ? 'active pulse-amber' : ''}`}>
-               <span className="enemy-slot-label">0x0{i+1}</span>
-               <span className="enemy-slot-name">{slot.content?.name || '---'}</span>
-            </div>
-          ))}
+        <div className="nb2-enemy-slots">
+          {(enemy?.actions || []).slice(0, 5).map((action: BugAction, i: number) => {
+            const isActive = nextBugAction?.id === action.id;
+            return (
+              <div key={i} className={`nb2-enemy-slot ${isActive ? 'active' : ''}`}>
+                <span className="nb2-eslot-id">0x0{i + 1}</span>
+                <span className="nb2-eslot-name" style={{ color: isActive ? '#ff4060' : undefined }}>
+                  {action.name.length > 15 ? action.name.slice(0, 15) + '…' : action.name}
+                </span>
+                <div className="nb2-eslot-tooltip">
+                  <div className="tooltip-title">{action.name}</div>
+                  <div className="tooltip-desc">{action.description}</div>
+                  <div className="tooltip-stats">
+                    {action.damage > 0 && <span style={{ color: '#ff4060' }}>Stress: +{action.damage}</span>}
+                    {action.progressPoints > 0 && <span style={{ color: '#ffaa00' }}>Threat: +{action.progressPoints}%</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div className="ws-main-stage">
-        {(currentPhase === 'ARCHITECTURE' && skillMode !== 'script-kiddie') ? (
-          <div className="planning-view animate-fade-in">
-            <div className="sb-title">INFRASTRUCTURE_RESOURCES</div>
-            <div className="pipeline-track wrap">
+      {/* ── PIPELINE (CODE EDITOR) ── */}
+      <div className="nb2-pipeline-area">
+        {currentPhase === 'ARCHITECTURE' ? (
+          <div className="nb2-planning">
+            <div className="nb2-section-label">INFRA_RESOURCES</div>
+            <div className="nb2-plan-slots">
               {infraSlots.map((s, i) => (
-                <div key={i} className={`pipeline-stage infra ${s ? 'active glow-cyan' : ''}`}>
-                  <span className="stage-label">{s ? 'DEPLOYED' : 'UNDEPLOYED'}</span>
-                  <span className="stage-name">{s ? s.name : `SLOT_0${i+1}`}</span>
+                <div key={i} className={`nb2-plan-slot ${s ? 'deployed' : ''}`}>
+                  <span>{s ? s.name : `SLOT_${i + 1}`}</span>
                 </div>
               ))}
             </div>
-            <div className="sb-title" style={{ marginTop: '20px' }}>NEURAL_BUFFER_EXTENSIONS (SOFT)</div>
-            <div className="pipeline-track">
+            <div className="nb2-section-label" style={{ marginTop: 12 }}>SOFT_EXTENSIONS</div>
+            <div className="nb2-plan-slots">
               {softSlots.map((s, i) => (
-                <div key={i} className={`pipeline-stage soft ${s ? 'active glow-amber' : ''}`}>
-                  <span className="stage-label">{s ? 'ATTACHED' : 'UNAVAILABLE'}</span>
-                  <span className="stage-name">{s ? s.name : `SOCKET_0${i+1}`}</span>
+                <div key={i} className={`nb2-plan-slot soft ${s ? 'deployed' : ''}`}>
+                  <span>{s ? s.name : `SOCKET_${i + 1}`}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="coding-view animate-fade-in">
-            <div className="sb-title">NEURAL_BUS_PIPELINE</div>
-            <div className="pipeline-track datastream">
+          <div className="nb2-code-editor">
+            <div className="nb2-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>NEURAL_BUS <span className="nb2-caret">█</span></span>
+              {currentPhase === 'VERIFICATION' && (
+                <span className={`nb2-test-status ${bugPoints === 0 ? 'passed' : 'failed'}`}>
+                  {bugPoints === 0 ? '[OK] CI/CD RUNNER: TESTS PASSED' : `[FATAL] CI/CD RUNNER: ${bugPoints} BUGS DETECTED`}
+                </span>
+              )}
+            </div>
+            <div className="nb2-code-flow" style={{ position: 'relative' }}>
+              {currentPhase === 'VERIFICATION' && (
+                <div className={`nb2-scanner-line ${bugPoints === 0 ? 'passed' : 'failed'}`} />
+              )}
               {runtimeRail.map((slot, i) => {
                 const isLocked = i >= ramSlotsMax;
-                const isCriticallyLocked = isLocked && i < missionTzStepsCount;
+                const hasCard = slot.type !== 'EMPTY';
+                const isTarget = hasSelection && !isLocked && !hasCard;
                 return (
-                  <div 
-                    key={i} 
-                    className={`pipeline-stage ${isLocked ? 'locked' : ''} ${isCriticallyLocked ? 'critical-lock shadow-red' : ''} ${slot.type !== 'EMPTY' ? 'active' : ''}`}
-                    onClick={() => !isLocked && onExecuteCardOnSlot(i)}
-                  >
-                    <span className="stage-name">
-                      {isLocked ? (isCriticallyLocked ? 'INSUFFICIENT_RAM' : 'LOCKED') : (slot.type === 'EMPTY' ? `0x0${i+1}` : (slot.content as any).name)}
-                    </span>
-                  </div>
+                  <React.Fragment key={i}>
+                    {i > 0 && (
+                      <div className="nb2-flow-arrow">
+                        <ChevronRight size={24} color={hasCard ? '#00d4ff44' : '#ffffff08'} />
+                      </div>
+                    )}
+                    <div
+                      className={`nb2-code-slot ${isLocked ? 'locked' : ''} ${hasCard ? 'filled' : ''} ${isTarget ? 'target-glow' : ''}`}
+                      onClick={() => !isLocked && onExecuteCardOnSlot(i)}
+                    >
+                      {isLocked ? (
+                        <Lock size={24} className="nb2-lock-icon" />
+                      ) : hasCard ? (
+                        <span className="nb2-slot-code">{(slot.content as CombatCard).name}</span>
+                      ) : (
+                        <span className="nb2-slot-cursor">{isTarget ? '▸ _' : `0x0${i + 1}`}</span>
+                      )}
+                    </div>
+                  </React.Fragment>
                 );
               })}
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── PROGRESS BARS (inline) ── */}
+      <div className="nb2-progress-row">
+        <div className="nb2-prog-item">
+          <span className="nb2-prog-label">PROJECT</span>
+          <div className="nb2-prog-track">
+            <div className="nb2-prog-fill cyan" style={{ width: `${playerProgress}%` }} />
+          </div>
+          <span className="nb2-prog-pct" style={{ color: '#00d4ff' }}>{playerProgress}%</span>
+        </div>
+        <div className="nb2-prog-item">
+          <span className="nb2-prog-label">THREAT</span>
+          <div className="nb2-prog-track">
+            <div className="nb2-prog-fill" style={{ width: `${aiProgress}%`, background: threatColor }} />
+          </div>
+          <span className="nb2-prog-pct" style={{ color: threatColor }}>{aiProgress}%</span>
+        </div>
+        <div className="nb2-prog-stat">
+          <span>DEADLINE <strong>{aiDeadline}</strong></span>
+        </div>
+        <div className="nb2-prog-stat">
+          <span>BUGS <strong className={bugPoints > 0 ? 'red' : ''}>{bugPoints}</strong></span>
+        </div>
       </div>
     </main>
   );

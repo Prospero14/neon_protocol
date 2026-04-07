@@ -93,7 +93,16 @@ function App() {
       if (!gs.classUnlocked) {
         const tracked = getTrackedQuest(gs.questStates);
         const pack = getStarterPackForQuest(tracked?.questId);
-        combatDeck = pack.map((id: string) => CARD_LIBRARY.find((c: CombatCard) => c.id === id) || null).filter((c: CombatCard | null): c is CombatCard => c !== null);
+        const scriptCards = pack
+          .map((id: string) => CARD_LIBRARY.find((c: CombatCard) => c.id === id) || null)
+          .filter((c: CombatCard | null): c is CombatCard => c !== null);
+        
+        // Всегда добавляем REACTION карты чтобы AUX-таб не был пустым
+        const auxIds = ['react_unit_test', 'react_unit_test', 'soft_coffee', 'infra_old_hw'];
+        const auxCards = auxIds
+          .map(id => CARD_LIBRARY.find((c: CombatCard) => c.id === id))
+          .filter((c): c is CombatCard => Boolean(c));
+        combatDeck = [...scriptCards, ...auxCards];
       }
 
       return (
@@ -107,20 +116,12 @@ function App() {
           deckCores={gs.deckCores} 
           deckRamMb={gs.deckRamMb} 
           homeDistrictId={gs.homeDistrictId}
-          onDiscoverCard={gs.discoverCard} 
           isQuestCombat={(() => {
             const tracked = getTrackedQuest(gs.questStates);
             if (!tracked) return false;
             const tDef = QUEST_LIBRARY.find(q => q.id === tracked.questId);
             return !!(tDef && tDef.type === 'combat' && (!tDef.objectiveNodeId || tDef.objectiveNodeId === gs.activeBarNode));
           })()}
-          onViewChange={(v: any) => { 
-            if (typeof v === 'string') gs.setCurrentView(v as ViewType); 
-            else { 
-              gs.setCurrentView(v.view as ViewType); 
-              if (v.cardId) gs.setSelectedDocId(v.cardId); 
-            } 
-          }} 
           onWin={(earned, rank, chain, missionName) => {
             gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);
             gs.setBits((prev) => Math.max(0, prev + earned));

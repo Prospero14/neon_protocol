@@ -4,11 +4,10 @@ import type { CombatCard } from '../../logic/combatCards';
 import type { TechnicalTask } from '../../logic/combatTasks';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
 
-// UI Components
-import CombatSidebar from './combat/CombatSidebar';
+// UI Components — new layout
+import CombatHudBar from './combat/CombatHudBar';
 import NeuralBus from './combat/NeuralBus';
 import HandControls from './combat/HandControls';
-import CombatStatusPanel from './combat/CombatStatusPanel';
 import CombatOverlays from './combat/CombatOverlays';
 import DraftPanel from './combat/DraftPanel';
 
@@ -46,7 +45,6 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     missionTz
   });
 
-  // Перехватываем победу: Script Kiddo → показываем Draft, остальные → сразу onWin
   const handleCombatWin = (bits: number, rank: string, chain: string[], name: string) => {
     if (bits > 0 && props.skillMode === 'script-kiddie') {
       setPendingWin({ bits, rank, chain, name });
@@ -68,61 +66,61 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   };
 
   return (
-    <div className={`combat-bridge-root ${state.stress > 70 ? 'screen-glitch' : ''}`}>
-      <div className="combat-hud">
-        <CombatSidebar 
-          currentPhase={state.currentPhase}
-          stress={state.stress}
-          cpu={state.cpu}
-          cpuMax={state.cpuMax}
-          ramMaxMb={state.ramMaxMb}
-          log={state.log}
-          isPlayerTurn={state.isPlayerTurn}
-          canAdvancePhase={state.canAdvancePhase}
-          onAdvancePhase={actions.advancePhase}
-          onEndTurn={actions.endTurn}
-          onOverclock={actions.handleOverclock}
-          onTerminate={() => actions.setShowDefeat(true)}
-        />
+    <div className={`combat-v2 ${state.stress > 70 ? 'screen-glitch' : ''}`}>
+      {/* ── TOP HUD BAR ── */}
+      <CombatHudBar
+        currentPhase={state.currentPhase}
+        stress={state.stress}
+        cpu={state.cpu}
+        cpuMax={state.cpuMax}
+        ramMaxMb={state.ramMaxMb}
+        lastLog={state.log[0] || ''}
+        tzName={missionTz.name}
+        playerProgress={state.playerProgress}
+        aiProgress={state.aiProgress}
+        onShowTzModal={() => setShowTzModal(true)}
+      />
 
-        <NeuralBus 
-          currentPhase={state.currentPhase}
-          skillMode={props.skillMode}
-          infraSlots={state.infraSlots}
-          softSlots={state.softSlots}
-          runtimeRail={state.runtimeRail}
-          ramSlotsMax={state.ramSlotsMax}
-          missionTzStepsCount={missionTz.steps.length}
-          enemy={state.enemy}
-          onExecuteCardOnSlot={actions.executeCardOnSlot}
-        />
+      {/* ── ARENA (full width) ── */}
+      <NeuralBus 
+        currentPhase={state.currentPhase}
+        skillMode={props.skillMode}
+        infraSlots={state.infraSlots}
+        softSlots={state.softSlots}
+        runtimeRail={state.runtimeRail}
+        ramSlotsMax={state.ramSlotsMax}
+        missionTzStepsCount={missionTz.steps.length}
+        enemy={state.enemy}
+        nextBugAction={state.nextBugAction}
+        selectedCard={state.selectedCard}
+        playerProgress={state.playerProgress}
+        aiProgress={state.aiProgress}
+        bugPoints={state.bugPoints}
+        aiDeadline={state.aiDeadline}
+        onExecuteCardOnSlot={actions.executeCardOnSlot}
+      />
 
-        <CombatStatusPanel 
-          playerProgress={state.playerProgress}
-          aiProgress={state.aiProgress}
-          bugPoints={state.bugPoints}
-          aiDeadline={state.aiDeadline}
-          missionTz={missionTz}
-          deckCount={state.deck.length}
-          mulliganUsed={state.mulliganUsed}
-          currentPhase={state.currentPhase}
-          planningTurn={state.planningTurn}
-          onMulligan={actions.handleMulligan}
-          onShowTzModal={setShowTzModal}
-        />
-      </div>
-
+      {/* ── HAND + ACTIONS ── */}
       <HandControls 
         currentPhase={state.currentPhase}
         activeHandTab={state.activeHandTab}
         filteredHand={state.filteredHand}
+        fullHand={state.hand}
         selectedCard={state.selectedCard}
         isPlayerTurn={state.isPlayerTurn}
         cpu={state.cpu}
+        stress={state.stress}
+        canAdvancePhase={state.canAdvancePhase}
         onTabChange={actions.setActiveHandTab}
         onCardSelect={actions.handleCardSelect}
+        onEndTurn={actions.endTurn}
+        onOverclock={actions.handleOverclock}
+        onAdvancePhase={actions.advancePhase}
+        onTerminate={() => actions.setShowDefeat(true)}
+        isPipelineFull={state.isPipelineFull}
       />
 
+      {/* Overlays */}
       <CombatOverlays 
         phaseIntro={state.phaseIntro}
         skillMode={props.skillMode}
@@ -140,7 +138,6 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         onWin={handleCombatWin}
       />
 
-      {/* DRAFT PANEL — после победы Script Kiddo */}
       {showDraft && pendingWin && (
         <DraftPanel
           skillMode={props.skillMode}

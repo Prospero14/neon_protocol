@@ -28,9 +28,15 @@ export function initialMergedInventory(): CombatCard[] {
 
 export const buildTraineeDeck = (): CombatCard[] => {
   const starterIds = [
+    // SCRIPT — основа кодинга
     'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
     'script_ls', 'script_cat', 'script_auth',
-    'soft_coffee', 'soft_ai_ask', 'infra_old_hw'
+    // SOFT — мягкие скиллы
+    'soft_coffee', 'soft_ai_ask',
+    // INFRA — первое железо
+    'infra_old_hw',
+    // REACTION — базовая защита, чтобы AUX-таб не был пустым
+    'react_unit_test', 'react_unit_test',  // x2 чтобы было заметно
   ];
   return starterIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 };
@@ -128,6 +134,7 @@ export function useGameState() {
   
   const [isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked] = useState(false);
   const [npcPresenceMap, setNpcPresenceMap] = useState<Record<string, 'HOME' | 'AWAY'>>({});
+  const [nodeCooldowns, setNodeCooldowns] = useState<Record<string, number>>({});
 
   const inventoryUnique = useMemo(() => {
     const map = new Map<string, CombatCard>();
@@ -365,6 +372,13 @@ export function useGameState() {
     }
 
     if (type === 'combat') {
+      const cd = nodeCooldowns[nodeId] || 0;
+      if (Date.now() < cd) {
+         setLoot(prev => [{ id: 'msg_blocked', name: 'СИСТЕМА НЕДОСТУПНА', description: 'Узел временно отключился после инцидента. Ожидайте автоматической перезагрузки подсети.' } as any, ...prev]);
+         return;
+      }
+      setNodeCooldowns(prev => ({ ...prev, [nodeId]: Date.now() + 5 * 60 * 1000 }));
+
       setActiveBarNode(nodeId);
       setCurrentView('COMBAT');
       return;

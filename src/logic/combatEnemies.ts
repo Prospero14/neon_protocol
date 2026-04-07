@@ -115,18 +115,36 @@ export const BUGS: BugEnemy[] = [
     ]
   },
   {
-    id: 'enemy_passive',
-    name: 'System Routine Clock',
+    id: 'enemy_sysadmin',
+    name: 'Remote SysAdmin',
     hp: 9999, // Unkillable directly by damage
     maxHp: 9999,
     targetProgress: 999, // Unwinnable by progress for enemy
     visualType: 'DEVELOPER', // Represents the system
     actions: [
       {
-        id: 'passive_tick',
-        name: 'Clock Tick',
-        description: 'Системный таймер. Не наносит урон, но отмеряет время до тайм-аута.',
-        progressPoints: 0, // Doesn't progress anything
+        id: 'admin_scan',
+        name: 'Active Ping Scan',
+        description: 'Сканирует ваши активные порты. Наносит 10 Stress урона.',
+        progressPoints: 0,
+        bugPoints: 0,
+        damage: 10 
+      },
+      {
+        id: 'admin_alert',
+        name: 'Intrusion Alert',
+        description: 'Система зафиксировала аномалию. Загрязняет панель управления логами (добавляет статус-карту).',
+        progressPoints: 0,
+        bugPoints: 2,
+        damage: 5,
+        injectStatusId: 'status_spaghetti',
+        injectDestination: 'hand'
+      },
+      {
+        id: 'admin_trace',
+        name: 'Route Trace',
+        description: 'Попытка вычислить ваш IP. Повышает Threat системы на 15%.',
+        progressPoints: 15,
         bugPoints: 0,
         damage: 0 
       }

@@ -149,6 +149,17 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
          } as any);
       }
     });
+
+    const readyStarterQuest = readyQuestIds.find(id => id.startsWith('q_kiddo_start_'));
+    if (readyStarterQuest) {
+      finalOptions.unshift({
+        text: '[ ОТМЕТИТЬСЯ У ЛОКАЛЬНОГО КООРДИНАТОРА ]',
+        nextId: 'LEAVE',
+        subtext: 'СИНХРОНИЗАЦИЯ_С_РАЙОНОМ',
+        effect: 'COMPLETE_TALK_QUEST',
+        cardRewardId: readyStarterQuest,
+      } as unknown as DialogueOption);
+    }
   }
 
   // v0.10: Categorize for Layout

@@ -103,19 +103,24 @@ function buildCombatDistrictQuests() {
   return quests;
 }
 
-const TUTORIAL_QUESTS: QuestDefinition[] = [
-  {
-    id: 'q_kiddo_start',
-    title: '[ВВОД] Пробуждение в Altufyevo',
-    description: 'Не знаешь что делать? Поговори с Петровичем в "Синем Чипе", он направит.',
-    districtId: 'altufyevo',
-    giverNpcId: 'job_board_alt',
+const STARTING_QUESTS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
+  const npc = district.subNodes?.find(s => s.type === 'npc');
+  return {
+    id: `q_kiddo_start_${district.id}`,
+    title: `[ВВОД] Опорная точка: ${district.id.toUpperCase()}`,
+    description: `Система инициализирована. Установите контакт с местным координатором (${npc?.name || 'неизвестно'}), чтобы получить доступ к локальным задачам и закрепиться в районе.`,
+    districtId: district.id,
+    giverNpcId: npc?.id || 'job_board',
     type: 'talk',
-    objectiveNodeId: 'npc_petrovich',
+    objectiveNodeId: npc?.id || district.id,
     difficulty: 'quick',
     tier: 1,
     preClassOnly: true,
-  },
+  } as QuestDefinition;
+});
+
+const TUTORIAL_QUESTS: QuestDefinition[] = [
+  ...STARTING_QUESTS_GENERATED,
   {
     id: 'q_kiddo_first_bits',
     title: '[ВВОД] Первые Bits',

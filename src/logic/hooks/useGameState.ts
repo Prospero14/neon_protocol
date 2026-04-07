@@ -307,7 +307,7 @@ export function useGameState() {
     const starterDeck = buildTraineeDeck(); 
     setActiveDeck(starterDeck);
     starterDeck.forEach((c) => discoverCard(c.id));
-    setQuestStates(prev => acceptQuest(prev, 'q_kiddo_start'));
+    setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
     setCurrentView('HUB');
   };
 
@@ -389,7 +389,7 @@ export function useGameState() {
       setCurrentView('FIXER_BAR');
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
-      if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics')) {
+      if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics' || trackedDef.type === 'talk')) {
         if (trackedDef.objectiveNodeId === nodeId) {
           setQuestStates((prev) => markQuestReady(prev, trackedDef.id));
         }

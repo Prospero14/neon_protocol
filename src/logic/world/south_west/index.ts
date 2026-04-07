@@ -1,4 +1,4 @@
-import type { WorldDistrict } from '../types';
+﻿import type { WorldDistrict } from '../types';
 import { npc_professor_profile } from './npcs/npc_professor/profile';
 import { npc_professor_dialogues } from './npcs/npc_professor/dialogues';
 import { npc_compiler_profile } from './npcs/npc_compiler/profile';
@@ -23,7 +23,7 @@ export const south_west: WorldDistrict = {
     description: 'Район институтов и наукоградов. Здесь витает дух старой академии и нелегальных серверов.', 
     x: 15, y: 65, stability: 95, type: 'hub', tier: 1,
     subNodes: [
-        { id: 'npc_professor', name: 'Профессор Архипов', type: 'npc', description: 'Преподает фундаментальную Java. Верит в чистый код.', x: 30, y: 20 },
+        { id: 'npc_professor', name: 'Профессор Туранов', type: 'npc', description: 'Преподает фундаментальную Java. Верит в чистый код.', x: 30, y: 20 },
         { id: 'npc_compiler', name: 'Компилятор (Фанатик)', type: 'npc', description: 'Одержим оптимизацией байт-кода. Резок и точен.', x: 10, y: 60 },
         { id: 'npc_alumini', name: 'Беглый Выпускник', type: 'npc', description: 'Выжил после релиза в GIGA_BANK. Ищет убежище.', x: 60, y: 15 },
         { id: 'uni_moscow', name: 'Университет Юго-Запада', type: 'shop', description: 'Легальное обучение и библиотеки.', x: 50, y: 40 },

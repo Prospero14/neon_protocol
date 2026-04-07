@@ -1,9 +1,9 @@
-import type { NpcProfile } from '../types';
+﻿import type { NpcProfile } from '../types';
 
 export const academy_npcs: NpcProfile[] = [
   { 
     id: 'npc_professor_arkhipov', 
-    name: 'Профессор Архипов', 
+    name: 'Профессор Туранов', 
     districtId: 'academy', 
     role: 'Deus Ex Academia', 
     greeting: 'IDENTITY_VERIFIED: Поздравляю с получением лицензии.', 

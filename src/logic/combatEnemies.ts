@@ -25,6 +25,17 @@ export interface BugAction {
   injectDestination?: 'hand' | 'deck' | 'discard';
 }
 
+/**
+ * Личность ICE: определяет поведение врага и требуемый counterplay.
+ * Показывается игроку в TZ-модальнике перед боем.
+ */
+export type IcePersonality =
+  | 'TRACER'   // Штрафует за >2 карт за ход (+стресс). Коунтер: играть медленно, react_trace_jam
+  | 'AUDITOR'  // Требует REACTION первой на шине. Коунтер: react_spoof_id
+  | 'PHANTOM'  // Раз в 2 хода сдвигает карту на шине. Коунтер: react_decoy_ping
+  | 'SNIFFER'  // Считает STATUS-карты в руке → +стресс. Коунтер: react_log_mask, быстро сбрасывать STATUS
+  | 'MIME';    // Копирует последнюю сыгранную карту в BUG_ERROR. Коунтер: react_null_packet
+
 export interface BugEnemy {
   id: string;
   name: string;
@@ -35,7 +46,12 @@ export interface BugEnemy {
   /** Тип визуализации врага. */
   visualType: 'ICE' | 'DEVELOPER' | 'AI';
   actions: BugAction[];
+  /** Личность ICE — определяет активное поведение на шине. */
+  personality?: IcePersonality;
+  /** Подсказка игроку на counterplay. Показывается в TZ-модальнике. */
+  personalityHint?: string;
 }
+
 
 export const BUGS: BugEnemy[] = [
   {
@@ -174,8 +190,187 @@ export const BUGS: BugEnemy[] = [
         spawnId: 'bug_card_glitch'
       }
     ]
+  },
+  {
+    id: 'enemy_firewall',
+    name: 'Corporate Great-Wall',
+    hp: 120,
+    maxHp: 120,
+    targetProgress: 100,
+    visualType: 'ICE',
+    actions: [
+      {
+        id: 'fw_packet_inspect',
+        name: 'Deep Packet Inspection',
+        description: 'Тщательная проверка: Создает SYNTAX_ERROR в вашей колоде.',
+        progressPoints: 10,
+        bugPoints: 10,
+        damage: 5,
+        problemType: 'SYNTAX_ERROR',
+        injectStatusId: 'status_spaghetti',
+        injectDestination: 'discard'
+      },
+      {
+        id: 'fw_reset',
+        name: 'TCP_RESET',
+        description: 'Сброс соединения: Спавнит блокирующую ошибку на шине.',
+        progressPoints: 5,
+        bugPoints: 0,
+        damage: 0,
+        spawnId: 'bug_card_ice'
+      }
+    ]
+  },
+  {
+    id: 'enemy_traceback',
+    name: 'Counter-Trace Daemon',
+    hp: 50,
+    maxHp: 50,
+    targetProgress: 75,
+    visualType: 'AI',
+    actions: [
+      {
+        id: 'tr_ping_sweep',
+        name: 'Ping Sweep',
+        description: 'Сканирование: Вычисляет ваш IP. + прогресс ИИ.',
+        progressPoints: 25,
+        bugPoints: 5,
+        damage: 0
+      },
+      {
+        id: 'tr_traceback',
+        name: 'Traceback Protocol',
+        description: 'Обратная трассировка: Наносит урон за каждую карту, сыгранную вами в этот ход.',
+        progressPoints: 5,
+        bugPoints: 5,
+        damage: 10
+      }
+    ]
   }
 ];
+
+// --- НОВЫЕ ВРАГИ С ЛИЧНОСТЯМИ ICE ---
+export const PERSONALITY_ENEMIES: BugEnemy[] = [
+  {
+    id: 'enemy_tracer_v2',
+    name: 'Counter-Trace Mk.II',
+    hp: 60,
+    maxHp: 60,
+    targetProgress: 80,
+    visualType: 'ICE',
+    personality: 'TRACER',
+    personalityHint: 'TRACER: не играй больше 2 карт за ход — иначе +15% стресс. Используй TRACE_JAM.',
+    actions: [
+      {
+        id: 'tr2_sweep',
+        name: 'Signature Sweep',
+        description: 'Трассирует активные карты на шине. Отмечает разработчика.',
+        progressPoints: 20,
+        bugPoints: 5,
+        damage: 0
+      },
+      {
+        id: 'tr2_burst',
+        name: 'Trace Burst',
+        description: 'Быстрый прострел по активным слотам. Наносит урон стрессу.',
+        progressPoints: 10,
+        bugPoints: 0,
+        damage: 12
+      }
+    ]
+  },
+  {
+    id: 'enemy_auditor_ice',
+    name: 'Corp Auditor-9',
+    hp: 70,
+    maxHp: 70,
+    targetProgress: 100,
+    visualType: 'ICE',
+    personality: 'AUDITOR',
+    personalityHint: 'AUDITOR: первая карта на шине должна быть REACTION, иначе прогресс заморожен. Используй SPOOF_ID.',
+    actions: [
+      {
+        id: 'aud_block',
+        name: 'Protocol Gate',
+        description: 'Проверяет credentials первого слота. Если не REACTION — блокирует прогресс на ход.',
+        progressPoints: 15,
+        bugPoints: 5,
+        damage: 5
+      },
+      {
+        id: 'aud_inject',
+        name: 'Compliance Error',
+        description: 'Вбрасывает карту DEPRECATED в руку игрока.',
+        progressPoints: 5,
+        bugPoints: 10,
+        damage: 0,
+        injectStatusId: 'status_deprecated',
+        injectDestination: 'hand'
+      }
+    ]
+  },
+  {
+    id: 'enemy_phantom_signal',
+    name: 'Ghost Signal [PHANTOM]',
+    hp: 50,
+    maxHp: 50,
+    targetProgress: 70,
+    visualType: 'AI',
+    personality: 'PHANTOM',
+    personalityHint: 'PHANTOM: каждые 2 хода сдвигает карту на шине. Используй DECOY_PING чтобы перенаправить.',
+    actions: [
+      {
+        id: 'ph_shift',
+        name: 'Phase Shift',
+        description: 'Смещает одну карту в случайный слот на шине. Ломает цепочки.',
+        progressPoints: 10,
+        bugPoints: 5,
+        damage: 5,
+        spawnId: 'bug_card_glitch'
+      },
+      {
+        id: 'ph_echo',
+        name: 'Echo Pulse',
+        description: 'Эхо-разряд. Добавляет стресс и замедляет прогресс.',
+        progressPoints: 5,
+        bugPoints: 0,
+        damage: 8
+      }
+    ]
+  },
+  {
+    id: 'enemy_sniffer',
+    name: 'Package Sniffer-α',
+    hp: 45,
+    maxHp: 45,
+    targetProgress: 60,
+    visualType: 'AI',
+    personality: 'SNIFFER',
+    personalityHint: 'SNIFFER: видит STATUS-карты в твоей руке и карает за них. Сбрасывай мусор быстро или используй LOG_MASK.',
+    actions: [
+      {
+        id: 'sn_analyze',
+        name: 'Deep Analysis',
+        description: 'Анализирует руку. Если находит STATUS-карты — наносит урон стрессу.',
+        progressPoints: 10,
+        bugPoints: 0,
+        damage: 10
+      },
+      {
+        id: 'sn_inject_spam',
+        name: 'Spam Injection',
+        description: 'Закидывает SPAGHETTI_CODE прямо в руку.',
+        progressPoints: 5,
+        bugPoints: 5,
+        damage: 0,
+        injectStatusId: 'status_spaghetti',
+        injectDestination: 'hand'
+      }
+    ]
+  }
+];
+
+export const ALL_ENEMIES: BugEnemy[] = [...BUGS, ...PERSONALITY_ENEMIES];
 
 export const getRandomBugAction = (bug: BugEnemy): BugAction => {
   return bug.actions[Math.floor(Math.random() * bug.actions.length)];

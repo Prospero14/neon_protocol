@@ -12,7 +12,8 @@ export const npc_crawler_dialogue: DialogueTree = new DialogueBuilder('npc_crawl
 
   // === NEUTRAL POOL ===
   .addNode('intro', 'КРОУЛЕР', 'Ищу заброшенные подсети. Слышишь? Этот шум — голос потерянных пакетов. Рискнем или побоишься?', [
-    { text: 'Я помогу.', nextId: 'rank_check' },
+    { text: 'Я помогу.', nextId: 'rank_check', requireMaxLevel: 1 },
+    { text: 'Как там шум в подсетях?', nextId: 'active_status', requireActiveQuestId: 'q_bibirevo_combat_static_noise_bug_sweep' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'КРОУЛЕР', 'Намечается деликатный дамп в Северном Потоке. Твоя дека вытянет статическое напряжение? Или ты из тех, кто боится даже простых скриптов?', [
@@ -44,9 +45,9 @@ export const npc_crawler_dialogue: DialogueTree = new DialogueBuilder('npc_crawl
 
   // === REPEAT POOL ===
   .addNode('intro_repeat', 'КРОУЛЕР', 'Снова в зоне шума? Пакеты никогда не спят, парень. Ты уже знаешь многое, но Ядро знает больше. Береги свой CRC.', [
-    { text: 'Расскажи еще.', nextId: 'rank_check' },
+    { text: 'Расскажи еще.', nextId: 'rank_check', requireCompletedQuestId: 'q_bibirevo_combat_static_noise_bug_sweep' },
     { text: '[Уйти]', nextId: 'LEAVE' }
-  ], { requireCompletedQuestId: 'q_bibirevo_combat_static_noise_bug_sweep' })
+  ])
 
   // === RANK CHECK ===
   .addNode('rank_check', 'КРОУЛЕР', 'Ну-ка, дай гляну твой хеш-сумматор...', [
@@ -60,7 +61,12 @@ export const npc_crawler_dialogue: DialogueTree = new DialogueBuilder('npc_crawl
     { text: 'Я еще вернусь.', nextId: 'LEAVE' }
   ])
   .addNode('quest_accept', 'КРОУЛЕР', 'Ого, нормальный девайс. Хорошо, контракт твой. Встретимся в зоне шума.', [
-    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_static_noise_bug_sweep' }
+    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_static_noise_bug_sweep' },
+    { text: '[ НАЗАД ]', nextId: 'intro' }
+  ])
+
+  .addNode('active_status', 'КРОУЛЕР', 'Пакеты все еще вопят в Пустоте! Чего стоишь? "Восход" уже навел свои сканеры. Иди зачищай.', [
+    { text: 'Ухожу.', nextId: 'LEAVE' }
   ])
 
   .build();

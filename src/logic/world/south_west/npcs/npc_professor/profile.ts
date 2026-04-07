@@ -1,8 +1,8 @@
-import type { NpcProfile } from '../../../types';
+﻿import type { NpcProfile } from '../../../types';
 
 export const npc_professor_profile: NpcProfile = {
   id: 'npc_professor',
-  name: 'Профессор Архипов',
+  name: 'Профессор Туранов',
   districtId: 'south_west',
   role: 'Наставник',
   greeting: 'Класс начинается с main.',

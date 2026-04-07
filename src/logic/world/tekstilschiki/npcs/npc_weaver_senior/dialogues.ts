@@ -1,4 +1,4 @@
-import { DialogueBuilder } from '../../../../dialogueUtils';
+﻿import { DialogueBuilder } from '../../../../dialogueUtils';
 
 export const npc_weaver_senior_dialogues = new DialogueBuilder('npc_weaver_senior')
   .withGreetings({
@@ -28,7 +28,7 @@ export const npc_weaver_senior_dialogues = new DialogueBuilder('npc_weaver_senio
   ])
   .addLoreNode('lore', 'СТАРШИЙ_ТКАЧ', 'Паттерн — это образ мысли Ядра. Если знаешь его, предскажешь любой баг. Но истинные узоры в архивах Академии. (+Intel: Grid_Looming)', 'intro')
   .addNode('quest_pattern_start', 'СТАРШИЙ_ТКАЧ', 'Нам нужен утерянный "Grid_Optimizer_v2" из Мейнфрейма Академии. Как планируешь его достать?', [
-      { text: 'К Профессору Архипову (Standard).', nextId: 'rank_check' },
+      { text: 'К Профессору Туранову (Standard).', nextId: 'rank_check' },
       { text: 'Извлеку из локальной ткани (Technical).', nextId: 'quest_pattern_tech', requireMinLevel: 4 },
       { text: 'Связи с Voskhod (Social).', nextId: 'quest_pattern_social', requireReputation: { factionId: 'VOSKHOD', minPoints: 20 } }
   ])
@@ -46,7 +46,7 @@ export const npc_weaver_senior_dialogues = new DialogueBuilder('npc_weaver_senio
   .addNode('quest_reject', 'СТАРШИЙ_ТКАЧ', 'Нет. Узор слишком прост. Ты — шум в системе. Прикоснешься к этому коду — он поглотит твою личность.', [
     { text: 'Я вернусь.', nextId: 'LEAVE' }
   ])
-  .addNode('quest_accept', 'СТАРШИЙ_ТКАЧ', 'У тебя есть потенциал стать мастером. Контракт твой. Найди Профессора Архипова или свой путь.', [
+  .addNode('quest_accept', 'СТАРШИЙ_ТКАЧ', 'У тебя есть потенциал стать мастером. Контракт твой. Найди Профессора Туранова или свой путь.', [
     { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', awardQuestId: 'q_weaver_pattern' }
   ])
   .addNode('quest_pattern_finish', 'СТАРШИЙ_ТКАЧ', '*рассматривает данные* Тончайшая работа, юнит. С этим Текстильщики станут неприступными. Спасибо.', [

@@ -1,4 +1,4 @@
-import type { DialogueTree } from '../../../../dialogues';
+﻿import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
 export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc_lab_assistant')
@@ -37,13 +37,13 @@ export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc
   ])
 
   // === REPEAT POOL ===
-  .addNode('intro_repeat', 'ЛАБОРАНТ ИЛЬЯ', 'Архипов получил методички? Отлично. Рекурсия в обучении — залог стабильности. Готов к новым лабораторным?', [
+  .addNode('intro_repeat', 'ЛАБОРАНТ ИЛЬЯ', 'Туранов получил методички? Отлично. Рекурсия в обучении — залог стабильности. Готов к новым лабораторным?', [
     { text: 'Готов.', nextId: 'quest_start' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ], { requireCompletedQuestId: 'q_sokol_talk_lab_delivery' })
 
   // === QUESTS ===
-  .addNode('quest_start', 'ЛАБОРАНТ ИЛЬЯ', 'Нужно доставить "Методички по Ассемблеру" Профессору Архипову в Академию (Юго-Западный округ). Справишься, "Стажер"? Он ценит пунктуальность и отсутствие Null-поинтеров.', [
+  .addNode('quest_start', 'ЛАБОРАНТ ИЛЬЯ', 'Нужно доставить "Методички по Ассемблеру" Профессору Туранову в Академию (Юго-Западный округ). Справишься, "Стажер"? Он ценит пунктуальность и отсутствие Null-поинтеров.', [
     { text: '[ ПРИНЯТЬ: ДОСТАВКА МЕТОДИЧЕК ]', nextId: 'rank_check' },
     { text: 'Мне некогда.', nextId: 'intro' }
   ])
@@ -57,7 +57,7 @@ export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc
   .addNode('quest_reject', 'ЛАБОРАНТ ИЛЬЯ', 'Слушай, ты еще совсем "пустой". Твой стек не выдержит дороги в Академию. Поработай в других округах, потом приходи.', [
     { text: 'Ладно.', nextId: 'LEAVE' }
   ])
-  .addNode('quest_accept', 'ЛАБОРАНТ ИЛЬЯ', 'Сигнатура подходит. Вот тебе методички, не потеряй по дороге. Архипов ждёт их к следующему такту.', [
+  .addNode('quest_accept', 'ЛАБОРАНТ ИЛЬЯ', 'Сигнатура подходит. Вот тебе методички, не потеряй по дороге. Туранов ждёт их к следующему такту.', [
     { text: '[ ВЗЯТЬ МЕШОК ]', nextId: 'LEAVE', awardQuestId: 'q_sokol_talk_lab_delivery' }
   ])
 

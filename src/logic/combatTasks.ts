@@ -6,7 +6,21 @@
 export interface TZStep {
   id: string;
   name: string;
-  requiredCardIds: string[];
+  /** Legacy singular format — одна карта. Поддерживается для обратной совместимости. */
+  requiredCardId?: string;
+  /** Новый формат — несколько карт, любая из которых удовлетворяет шаг. */
+  requiredCardIds?: string[];
+}
+
+/**
+ * Normalizer: возвращает массив допустимых карт для шага,
+ * совместимый с обоими форматами (requiredCardId и requiredCardIds).
+ */
+export function getStepCardIds(step: TZStep): string[] {
+  const ids: string[] = [];
+  if (step.requiredCardIds) ids.push(...step.requiredCardIds);
+  if (step.requiredCardId) ids.push(step.requiredCardId);
+  return ids;
 }
 
 export interface TechnicalTask {
@@ -20,6 +34,7 @@ export interface TechnicalTask {
   minLevel?: number; // E.g. 1 (10 exploits), 2 (20 exploits) inside the grade
   resistanceType?: 'ENCRYPTED' | 'AUTH_LOCKED'; // Forces specific bypass cards
 }
+
 
 export const TZ_LIBRARY: TechnicalTask[] = [
   {

@@ -1,4 +1,4 @@
-import type { DialogueTree } from '../../../../dialogues';
+﻿import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
 export const npc_retired_tester_dialogue: DialogueTree = new DialogueBuilder('npc_retired_tester')
@@ -82,7 +82,7 @@ export const npc_retired_tester_dialogue: DialogueTree = new DialogueBuilder('np
   .addNode('quest_reject', 'СЕМЕНЫЧ', 'Эх, малец... Что-то твой стек фонит. Наберись опыта, а то авионика тебя сожрет. Вернись через пару релизов.', [
     { text: 'Я вернусь.', nextId: 'LEAVE' }
   ])
-  .addNode('quest_accept', 'СЕМЕНЫЧ', 'Неплохо. Вижу почерк Архипова. Хорошо, контракты твои. Не подвели старика.', [
+  .addNode('quest_accept', 'СЕМЕНЫЧ', 'Неплохо. Вижу почерк Туранова. Хорошо, контракты твои. Не подвели старика.', [
     { text: '[ ПРИНЯТЬ: РОЙ ДРОНОВ ]', nextId: 'LEAVE', awardQuestId: 'q_sokol_combat_drone_swarm_bug_sweep' },
     { text: '[ ПРИНЯТЬ: СЕРВЕРНАЯ ]', nextId: 'LEAVE', awardQuestId: 'q_sokol_combat_server_overheat_bug_sweep' }
   ])

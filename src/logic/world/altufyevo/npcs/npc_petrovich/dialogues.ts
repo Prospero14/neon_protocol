@@ -13,17 +13,21 @@ export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_pet
   // === NEUTRAL POOL ===
   .addNode('intro', 'ПЕТРОВИЧ', 'Здорово, племяш. Чинишься помаленьку? Тут один старый клиент из Митинского радиорынка жалуется — у него в Северных Силосах старое оборудование взбесилось. Скрипты-зомби забили всю шину, новые чипы не прошиваются. Поможешь ветерану?', [
     { text: 'Что за Скрипты-зомби?', nextId: 'lore_zombie' },
-    { text: 'Я готов зачистить драйверы.', nextId: 'quest_accept' },
+    { text: 'Я готов зачистить драйверы.', nextId: 'quest_accept', requireMaxLevel: 1 },
+    { text: 'Как успехи в Силосе 7?', nextId: 'active_quest_check', requireActiveQuestId: 'q_altufyevo_silo_clear' },
+    { text: 'Я зачистил Силос 7.', nextId: 'quest_complete', requireReadyQuestId: 'q_altufyevo_silo_clear' },
     { text: 'Бывай, дядюшка.', nextId: 'farewell' }
   ])
   .addNode('intro_v2', 'ПЕТРОВИЧ', '*паяет плату* ...Ещё один битый конденсатор. Молодёжь, всё через софт, а руками работать — религия. Ты, вижу, не из декоративных. Нужна помощь с Силосами?', [
     { text: 'Что случилось в Силосах?', nextId: 'lore_zombie' },
-    { text: 'Я готов.', nextId: 'quest_accept' },
+    { text: 'Я готов.', nextId: 'quest_accept', requireMaxLevel: 1 },
+    { text: 'Я в процессе зачистки.', nextId: 'active_quest_check', requireActiveQuestId: 'q_altufyevo_silo_clear' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v3', 'ПЕТРОВИЧ', 'Опа. Живой клиент. Не часто тут появляются деки без трещин на экране. У меня завал — Силосы фонят, железо бастует. Есть руки — есть работа.', [
     { text: 'Расскажи подробнее.', nextId: 'lore_zombie' },
-    { text: 'Давай контракт.', nextId: 'quest_accept' },
+    { text: 'Давай контракт.', nextId: 'quest_accept', requireMaxLevel: 1 },
+    { text: 'Занимаюсь Силосом 7.', nextId: 'active_quest_check', requireActiveQuestId: 'q_altufyevo_silo_clear' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
 
@@ -65,7 +69,16 @@ export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_pet
 
   // === QUEST ===
   .addNode('quest_accept', 'ПЕТРОВИЧ', 'Вот и ладно. Узел забит под завязку, так что готовь дебаггер. Как закончишь — с меня 50 Bits на охлад.', [
-    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_kiddo_start' }
+    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_silo_clear' },
+    { text: '[ НАЗАД ]', nextId: 'intro' }
+  ])
+
+  .addNode('active_quest_check', 'ПЕТРОВИЧ', 'Ну, как там в Силосе 7? Иди делом займись, нечего тут стоять. Можешь пропинговать карту, если забыл дорогу.', [
+    { text: 'Понял, Петрович.', nextId: 'LEAVE' }
+  ])
+
+  .addNode('quest_complete', 'ПЕТРОВИЧ', 'Опа. Чистые логи! Я и забыл, что железо может работать без сбоев. ДержиBits на охлад, как обещал. Приходи, если выживешь в Выхино.', [
+    { text: 'Спасибо, дедя.', nextId: 'LEAVE', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_altufyevo_silo_clear' }
   ])
 
   // === FAREWELL ===

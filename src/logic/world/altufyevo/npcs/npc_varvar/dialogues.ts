@@ -13,7 +13,8 @@ export const npc_varvar_dialogue: DialogueTree = new DialogueBuilder('npc_varvar
   // === NEUTRAL POOL ===
   .addNode('intro', 'ВАРВАР', 'Стой! Проверка контрольной суммы... Ладно, проходи. Видишь это? Магнус, мой хвостатый помощник, заперся в Уборной №4 и случайно активировал протокол "Локаут". Теперь там охранный бот VOSKHOD считает, что туалет — это секретный объект.', [
     { text: 'Кот заперся в туалете?', nextId: 'lore_cat' },
-    { text: 'Я разберусь с этим протоколом.', nextId: 'quest_start' },
+    { text: 'Я разберусь с этим протоколом.', nextId: 'quest_start', requireMaxLevel: 1 },
+    { text: 'Как там Магнус?', nextId: 'active_status', requireActiveQuestId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'ВАРВАР', '*сканирует периметр* Три! Два! Один! ...Ладно, ты чистый. Знаешь, я тут единственный, кто ещё помнит, как работают ядерные прерывания. А ночью ещё и кота спасать надо...', [
@@ -64,7 +65,12 @@ export const npc_varvar_dialogue: DialogueTree = new DialogueBuilder('npc_varvar
 
   // === QUEST ===
   .addNode('quest_start', 'ВАРВАР', 'Уборная №4 — там сейчас жарко. Взломай систему очистки, и я дам тебе одну из своих старых наработок.', [
-    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' }
+    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
+    { text: '[ НАЗАД ]', nextId: 'intro' }
+  ])
+
+  .addNode('active_status', 'ВАРВАР', 'Система очистки до сих пор в режиме "Локаут"! Магнус там совсем один. Поспеши, юнит!', [
+    { text: 'Ухожу.', nextId: 'LEAVE' }
   ])
 
   .build();

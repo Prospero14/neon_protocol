@@ -11,6 +11,7 @@
     "start": "DATABASE_URL=file:/data/dev.db npx prisma db push --accept-data-loss && node dist_server/index.js",
     "lint": "eslint .",
     "test:world": "node --max-old-space-size=4096 --loader ts-node/esm scripts/validate-dialogues.ts",
+    "test:quests": "node --max-old-space-size=2048 --loader ts-node/esm scripts/validate-quests.ts",
     "preview": "vite preview"
   },
   "dependencies": {

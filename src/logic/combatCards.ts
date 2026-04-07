@@ -497,6 +497,51 @@ export const CARD_LIBRARY: CombatCard[] = [
     cost: 1, power: 0, integrity: 50,
     description: 'Благословение Никсанны. Мгновенно восстанавливает 30 HP и очищает все баги в руке.',
     tags: ['utility'], phaseConstraint: 'TESTING'
+  },
+
+  // --- COUNTER-ICE REACTIONS (Script-Kiddo) ---
+  // Каждая карта — ответ на конкретную личность ICE или общую угрозу.
+  {
+    id: 'react_trace_jam', name: 'TRACE_JAM', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 8,
+    description: '[vs TRACER] Глушит сигнатурный анализ. Следующие 3 карты этого хода не засчитываются TRACER-режимом. Играй спокойно.',
+    language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_null_packet', name: 'NULL_PACKET', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 5, integrity: 12,
+    description: '[vs PHANTOM/MIME] Нулевой пакет — убирает один BUG_ERROR со случайного слота шины без затрат CPU.',
+    language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_spoof_id', name: 'SPOOF_ID', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 10,
+    description: '[vs AUDITOR] Подмена идентификатора. Позволяет первой картой на шине быть любого типа — AUDITOR не заметит разницы.',
+    language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_log_mask', name: 'LOG_MASK', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 6,
+    description: '[vs SNIFFER] Маскировка логов. STATUS-карты в руке становятся невидимы для SNIFFER на 2 хода. Время выдышаться.',
+    language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_decoy_ping', name: 'DECOY_PING', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 3, integrity: 8,
+    description: '[vs PHANTOM] Ложный пинг. Перенаправляет следующий PHANTOM phase-shift на пустой слот шины вместо занятого.',
+    language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_firewall_patch', name: 'FIREWALL_PATCH', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 0, integrity: 25,
+    description: '[GENERAL] Аварийный патч. +20 integrity всем картам на шине. Используй когда шина под давлением.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_emergency_flush', name: 'EMERGENCY_FLUSH', type: 'REACTION', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 5,
+    description: '[PANIC] Аварийный сброс буфера. Сброси текущую руку мгновенно — возьми 4 новые карты и сними -8 стресс. Только в крайнем случае.',
+    language: 'none', tags: ['reaction', 'script']
   }
 ];
 

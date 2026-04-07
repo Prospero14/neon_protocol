@@ -1,4 +1,4 @@
-import type { DialogueTree } from '../../../../dialogues';
+﻿import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
 export const npc_tanya_dialogue: DialogueTree = new DialogueBuilder('npc_tanya')
@@ -60,7 +60,7 @@ export const npc_tanya_dialogue: DialogueTree = new DialogueBuilder('npc_tanya')
     { text: 'Давай.', nextId: 'job_selection' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ], { requireCompletedQuestId: 'q_maryino_qa_audit' })
-  .addNode('intro_repeat_v2', 'TRACE (QA)', 'Слышала, ты и в Академии уже отметился. Профессор Архипов ценит такие "образцы". Но в Марьино всё еще грязно. Погнали?', [
+  .addNode('intro_repeat_v2', 'TRACE (QA)', 'Слышала, ты и в Академии уже отметился. Профессор Туранов ценит такие "образцы". Но в Марьино всё еще грязно. Погнали?', [
     { text: 'Погнали.', nextId: 'job_selection' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
@@ -68,7 +68,7 @@ export const npc_tanya_dialogue: DialogueTree = new DialogueBuilder('npc_tanya')
   // === LORE ===
   .addLoreNode('lore_stress', 'TRACE (QA)', 'Пропиновать реальность — значит проверить отклик каждого нейро-порта. Если задержка выше 10мс, ты уже не в Марьино, ты в кэше Ядра.', 'intro')
   .addLoreNode('lore_faction', 'TRACE (QA)', 'Мы — остатки структуры. Пока Nullpointers жгут кабели, мы их прокладываем заново. Нам нужна Стабильность.', 'intro', 'Federal Oversight')
-  .addLoreNode('lore_libraries', 'TRACE (QA)', 'Если ищешь продвинутые библиотеки (Collections/Streams), тебе прямая дорога в Академию (Юго-Запад). Там Архипов держит эталонные репозитории.', 'intro')
+  .addLoreNode('lore_libraries', 'TRACE (QA)', 'Если ищешь продвинутые библиотеки (Collections/Streams), тебе прямая дорога в Академию (Юго-Запад). Там Туранов держит эталонные репозитории.', 'intro')
 
   // === JOB SELECTION ===
   .addNode('job_selection', 'TRACE (QA)', 'В бэклоге пара задач: стресс-тест локалки или аудит безопасности терминалов. Что потянешь?', [

@@ -13,7 +13,8 @@ export const npc_signalman_dialogue: DialogueTree = new DialogueBuilder('npc_sig
   // === NEUTRAL POOL ===
   .addNode('intro', 'СВЯЗИСТ МОНЯ', 'Пинг... 500мс... Это не жизнь, это слайд-шоу. Слышь, юнит, у меня в подсети "Северный Поток" какой-то паразит жрет пакеты. Нужен нормальный прозвон. Поможешь?', [
     { text: 'Что за паразит?', nextId: 'lore_parasite' },
-    { text: 'Я прозвоню линию.', nextId: 'rank_check' },
+    { text: 'Я прозвоню линию.', nextId: 'rank_check', requireMaxLevel: 1 },
+    { text: 'Как успехи на линии?', nextId: 'active_status', requireActiveQuestId: 'q_bibirevo_combat_link_break_bug_sweep' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'СВЯЗИСТ МОНЯ', 'Опять задержка... Ты принес чистый трафик или просто пингуешь меня вхолостую? Линия "Север-12" искрит, некогда лясы точить.', [
@@ -47,11 +48,10 @@ export const npc_signalman_dialogue: DialogueTree = new DialogueBuilder('npc_sig
     { text: 'Пойду в бар.', nextId: 'LEAVE' }
   ])
 
-  // === REPEAT POOL ===
   .addNode('intro_repeat', 'СВЯЗИСТ МОНЯ', 'Цикл за циклом... Трафик не ждет. Готов к новой зачистке узла? Те узлы, что ты чистил, до сих пор держат аптайм 99.9%.', [
-    { text: 'Давай координаты.', nextId: 'rank_check' },
+    { text: 'Давай координаты.', nextId: 'rank_check', requireCompletedQuestId: 'q_bibirevo_combat_link_break_bug_sweep' },
     { text: '[Уйти]', nextId: 'LEAVE' }
-  ], { requireCompletedQuestId: 'q_bibirevo_combat_link_break_bug_sweep' })
+  ])
   .addNode('intro_repeat_v2', 'СВЯЗИСТ МОНЯ', 'Слышал, ты и Старому Админу помогал? Хорошее дело — историю надо знать. Но сейчас у нас настоящее под угрозой. Работаем?', [
     { text: 'Работаем.', nextId: 'rank_check' },
     { text: '[Уйти]', nextId: 'LEAVE' }
@@ -72,7 +72,12 @@ export const npc_signalman_dialogue: DialogueTree = new DialogueBuilder('npc_sig
     { text: 'Я еще вернусь.', nextId: 'LEAVE' }
   ])
   .addNode('quest_accept', 'СВЯЗИСТ МОНЯ', 'Неплохо. Уровень сигнала стабильный. Контракт твой. Выбей этого Бага с подстанции.', [
-    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_link_break_bug_sweep' }
+    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_bibirevo_combat_link_break_bug_sweep' },
+    { text: '[ НАЗАД ]', nextId: 'intro' }
+  ])
+
+  .addNode('active_status', 'СВЯЗИСТ МОНЯ', 'Линия до сих пор искрит! Чего стоишь? Пинг не будет ждать вечно. Иди работай.', [
+    { text: 'Понял, Моня. Ухожу.', nextId: 'LEAVE' }
   ])
 
   .build();

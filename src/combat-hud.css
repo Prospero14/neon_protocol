@@ -508,3 +508,236 @@
 .tz-req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 30px; border-top: 1px solid rgba(0,255,150,0.15); padding-top: 25px; }
 .tz-req-item .lbl { font-size: 0.7rem; color: var(--neon-green); opacity: 0.6; font-weight: 1000; }
 .tz-req-item .val { font-size: 1.4rem; color: #fff; font-weight: 1000; }
+.tz-modal-desc { font-size: 0.9rem; color: #889; line-height: 1.7; margin-bottom: 20px; }
+.tz-steps-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.tz-step-row { display: flex; gap: 12px; font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid rgba(0,255,150,0.07); }
+.step-name { color: var(--neon-green); font-weight: 900; min-width: 140px; }
+.step-options { color: #aaa; }
+.tz-req-item.full-width { grid-column: 1 / -1; }
+.tz-close-hint { font-size: 0.65rem; margin-top: 25px; text-align: center; cursor: pointer; color: #445; letter-spacing: 2px; }
+.tz-close-hint:hover { color: #778; }
+
+/* ═══════════════════════════════════════════════════════ */
+/* ICE PERSONALITY BADGE                                   */
+/* ═══════════════════════════════════════════════════════ */
+.tz-personality-block {
+  margin-bottom: 22px;
+  padding: 14px 18px;
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid #ff4060;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.4s ease;
+}
+.tz-personality-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #000;
+  border-radius: 2px;
+  text-transform: uppercase;
+  box-shadow: 0 0 18px currentColor;
+  width: fit-content;
+}
+.tz-personality-hint {
+  font-size: 0.8rem;
+  color: #ccd;
+  line-height: 1.6;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ═══════════════════════════════════════════════════════ */
+/* DRAFT PANEL — POST-COMBAT CARD SELECTION               */
+/* ═══════════════════════════════════════════════════════ */
+.draft-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.4s ease;
+}
+.draft-box {
+  width: min(92vw, 980px);
+  background: #070b10;
+  border: 1px solid rgba(0,255,255,0.3);
+  border-top: 3px solid var(--neon-cyan);
+  padding: 42px 48px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  box-shadow: 0 0 80px rgba(0,0,0,1), 0 0 40px rgba(0,255,255,0.12);
+}
+.draft-header {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(0,255,255,0.1);
+  padding-bottom: 20px;
+}
+.draft-title {
+  font-size: 1.6rem;
+  font-weight: 1000;
+  letter-spacing: 3px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 20px rgba(0,255,255,0.4);
+}
+.draft-mission {
+  font-size: 0.75rem;
+  color: #556;
+  letter-spacing: 2px;
+}
+.draft-bits {
+  margin-left: auto;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+.draft-subtitle {
+  font-size: 0.8rem;
+  color: #778;
+  letter-spacing: 2px;
+}
+
+/* Строка карт */
+.draft-cards-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.draft-empty {
+  font-size: 0.8rem;
+  padding: 30px;
+  text-align: center;
+}
+
+/* Слот карты */
+.draft-card-slot {
+  width: 220px;
+  min-height: 280px;
+  background: rgba(4, 10, 20, 0.95);
+  border: 1px solid #333;
+  border-top-width: 3px;
+  padding: 18px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.175,0.885,0.32,1.275),
+              box-shadow 0.25s ease,
+              border-color 0.2s ease;
+  font-family: var(--font-mono);
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+.draft-card-slot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top center, rgba(255,255,255,0.03) 0%, transparent 70%);
+  pointer-events: none;
+}
+.draft-card-slot:hover {
+  transform: translateY(-10px) scale(1.03);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px currentColor;
+  z-index: 10;
+}
+.draft-card-slot:hover .dc-pick-hint {
+  opacity: 1;
+}
+
+/* Тип и грейд */
+.dc-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dc-type-badge {
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  padding: 3px 8px;
+  color: #000;
+  border-radius: 2px;
+}
+.dc-grade {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: #445;
+}
+
+/* Имя карты */
+.dc-name {
+  font-size: 1.05rem;
+  font-weight: 1000;
+  letter-spacing: 1px;
+  line-height: 1.2;
+  text-shadow: 0 0 15px currentColor;
+}
+
+/* Описание */
+.dc-desc {
+  font-size: 0.72rem;
+  color: #889;
+  line-height: 1.6;
+  flex: 1;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 8px;
+}
+
+/* Статы */
+.dc-cost-row {
+  display: flex;
+  gap: 10px;
+  font-size: 0.65rem;
+  color: #556;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.dc-cost   { color: #22d3ee; }
+.dc-power  { color: #a855f7; }
+.dc-integrity { color: #4ade80; }
+
+/* Подсказка PICK */
+.dc-pick-hint {
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--neon-cyan);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0,255,255,0.15);
+}
+
+/* Skip */
+.draft-skip-btn {
+  align-self: center;
+  background: transparent;
+  border: 1px solid #334;
+  color: #445;
+  padding: 12px 32px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.draft-skip-btn:hover {
+  border-color: #556;
+  color: #778;
+}
+
+/* ml утилита */
+.ml-2 { margin-left: 8px; }

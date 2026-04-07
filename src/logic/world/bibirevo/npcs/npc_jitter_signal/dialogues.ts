@@ -13,7 +13,8 @@ export const npc_jitter_signal_dialogue: DialogueTree = new DialogueBuilder('npc
   // === NEUTRAL POOL ===
   .addNode('intro', 'ДЖИТТЕР', 'Моня стар, Моня — это вчерашний день подсети. Хочешь реальный неограниченный трафик? У меня есть доступ к "теневым" реле.', [
     { text: 'Что за "теневые" реле?', nextId: 'lore_rogue' },
-    { text: 'Нужна работа.', nextId: 'quest_pitch' },
+    { text: 'Нужна работа.', nextId: 'quest_pitch', requireMaxLevel: 1 },
+    { text: 'Как там теневой трафик?', nextId: 'active_status', requireActiveQuestId: 'q_bibirevo_job_jitter' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'ДЖИТТЕР', '*быстро печатает на пульте* Моня считает, что трафик должен быть чистым. Я считаю, что трафик должен быть СВОБОДНЫМ. Хочешь помочь?', [
@@ -45,9 +46,9 @@ export const npc_jitter_signal_dialogue: DialogueTree = new DialogueBuilder('npc
 
   // === REPEAT POOL ===
   .addNode('intro_repeat', 'ДЖИТТЕР', 'Снова в поисках теневого трафика? Моня до сих пор не понял, как мы это сделали. Есть еще пару идей по обходу аудита.', [
-    { text: 'Давай координаты.', nextId: 'quest_pitch' },
+    { text: 'Давай координаты.', nextId: 'quest_pitch', requireCompletedQuestId: 'q_bibirevo_job_jitter' },
     { text: '[Уйти]', nextId: 'LEAVE' }
-  ], { requireCompletedQuestId: 'q_bibirevo_job_jitter' })
+  ])
 
   // === LORE ===
   .addLoreNode('lore_rogue', 'ДЖИТТЕР', 'Это те линии, которые Ядро не видит. Идеально для перехвата данных без аудита. Но Моня постоянно их чинит. (+5 Репутации Redundants)', 'intro', 'Redundants')
@@ -66,7 +67,12 @@ export const npc_jitter_signal_dialogue: DialogueTree = new DialogueBuilder('npc
     { text: 'Я вернусь.', nextId: 'LEAVE' }
   ])
   .addNode('quest_accept', 'ДЖИТТЕР', 'Ладно, чист. Лови координаты. Если встретишь Моню — скажи, что он тормозит прогресс.', [
-    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', awardQuestId: 'q_bibirevo_job_jitter' }
+    { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', awardQuestId: 'q_bibirevo_job_jitter' },
+    { text: '[ НАЗАД ]', nextId: 'intro' }
+  ])
+
+  .addNode('active_status', 'ДЖИТТЕР', 'Теневые реле шумят! Кроулер говорит, ты до сих пор не в дампе. Иди работай, пока аудит не проснулся.', [
+    { text: 'Ухожу.', nextId: 'LEAVE' }
   ])
 
   .build();

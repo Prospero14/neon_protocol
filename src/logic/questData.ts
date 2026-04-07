@@ -178,7 +178,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_trainee_exam_theory',
     title: '[ЭКЗАМЕН] Теория Архитектуры',
-    description: 'Найди Профессора Архипова на Юго-Западной. Он проверит твои знания основ перед тем, как допустить к Боевому Экзамену.',
+    description: 'Найди Профессора Туранова на Юго-Западной. Он проверит твои знания основ перед тем, как допустить к Боевому Экзамену.',
     districtId: 'south_west',
     giverNpcId: 'npc_professor',
     type: 'talk',
@@ -349,7 +349,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_niksanna_recommendation',
     title: '[TALK] Рекомендация в Академию',
-    description: 'Никсанна хочет, чтобы вы пошли в Академию. Обратитесь к Профессору Архипову в Юго-Западном секторе с её "визуальным образцом".',
+    description: 'Никсанна хочет, чтобы вы пошли в Академию. Обратитесь к Профессору Туранову в Юго-Западном секторе с её "визуальным образцом".',
     districtId: 'altufyevo',
     giverNpcId: 'npc_niksanna',
     type: 'talk',
@@ -551,7 +551,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_sokol_talk_lab_delivery',
     title: '[ДОСТ] Методички по Ассемблеру',
-    description: 'Лаборант Илья просит доставить учебные материалы Профессору Архипову. Простое задание для укрепления репутации.',
+    description: 'Лаборант Илья просит доставить учебные материалы Профессору Туранову. Простое задание для укрепления репутации.',
     districtId: 'sokol',
     giverNpcId: 'npc_lab_assistant',
     type: 'delivery',
@@ -795,11 +795,23 @@ const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
   { id: 'q_teply_stan_combat_wild_node_bug_sweep', title: '[БОЙ] Дикий Узел', districtId: 'teply_stan', giverNpcId: 'npc_sre_recruit', objectiveNodeId: 'combat_wild_node', type: 'combat', difficulty: 'quick', tier: 1 },
   { id: 'q_teply_stan_combat_router_clash_bug_sweep', title: '[БОЙ] Схватка Router', districtId: 'teply_stan', giverNpcId: 'npc_ranger', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'hard', tier: 1 },
 
+  // ── TEPLY STAN: ЛУНАРИОРИ ──
+  { id: 'q_lunariori_catch_bot', title: '[ПИТОМНИК] Поймать дикого бота Δ-5', description: 'Хранительница Лунариори просит поймать молодого бота на опушке у Стыка Роутеров. Используй PING и NULL_PACKET — не навреди.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'quick', tier: 1 },
+  { id: 'q_lunariori_repair_bot', title: '[ПИТОМНИК] Починить ботёнка Ру', description: 'Малыш Ру застрял в рекурсивном цикле питания. Нужна карта UNIT_TEST_REACTION и доступ к системному терминалу питомника.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'term_lunariori_registry', type: 'diagnostics', difficulty: 'quick', tier: 1 },
+  { id: 'q_lunariori_defend', title: '[ПИТОМНИК] Отбить налёт охотников за железом', description: 'Ночные мародёры пришли за автономными ботами. Останови их до рассвета.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'combat_lunariori_defense', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_lunariori_find_alpha', title: '[ПИТОМНИК] Найти легендарного бота A-0', description: 'Первый бот питомника пропал три месяца назад. Лесной отшельник видел его следы у Митино. Найди координаты — не трогай руками.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', type: 'talk', difficulty: 'hard', tier: 2 },
+
+  // ── TEPLY STAN: KIN-T (SRE / GIGACORP) ──
+  { id: 'q_kin_t_load_test', title: '[SRE] Нагрузочный тест: Дикий Узел', description: 'Kin-T нужны данные о поведении узла под нагрузкой. Пройди бой с Диким Узлом без REACTION-карт — только SCRIPT. Выдержи 3 хода.', districtId: 'teply_stan', giverNpcId: 'npc_kin_t', objectiveNodeId: 'combat_wild_node', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_kin_t_latency_spike', title: '[SRE] Источник spike latency', description: 'P99 прыгает с 12ms до 340ms каждую ночь в 03:17. Проверь Монитор Экосистемы и зону Охоты на Баг-Тварей. Принеси логи.', districtId: 'teply_stan', giverNpcId: 'npc_kin_t', objectiveNodeId: 'term_nature_log', type: 'diagnostics', difficulty: 'standard', tier: 1 },
+  { id: 'q_kin_t_postmortem', title: '[SRE] Написать post-mortem', description: 'Данные собраны. Задокументируй инцидент по стандарту: RCA, timeline, contributing factors, action items. Kin-T читает только по шаблону.', districtId: 'teply_stan', giverNpcId: 'npc_kin_t', type: 'talk', difficulty: 'standard', tier: 1 },
+  { id: 'q_kin_t_red_team', title: '[SRE] Red Team: Стык Роутеров', description: 'Неофициальный контракт от Kin-T: провести контролируемую атаку на Стык Роутеров и принести отчёт о точках отказа.', districtId: 'teply_stan', giverNpcId: 'npc_kin_t', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'hard', tier: 2 },
+
   // ── VYKHINO ──
   { id: 'q_vykhino_combat_cargo_bug_sweep', title: '[БОЙ] Зачистка Карго', districtId: 'vykhino', giverNpcId: 'npc_grey', objectiveNodeId: 'combat_cargo', type: 'combat', difficulty: 'standard', tier: 1 },
 
   // ── ACADEMY ──
-  { id: 'q_neon_academy_bootcamp', title: '[ТУТОРИАЛ] Учебный Лагерь Оператора', description: 'Пройди вводный инструктаж Профессора Архипова: узнай о NEURAL_RAM, SYSTEM_STRESS и структуре OPERATIONS. Завершение открывает активную деку.', districtId: 'academy', giverNpcId: 'npc_academy_tutor', type: 'talk', difficulty: 'quick', tier: 1, preClassOnly: true },
+  { id: 'q_neon_academy_bootcamp', title: '[ТУТОРИАЛ] Учебный Лагерь Оператора', description: 'Пройди вводный инструктаж Профессора Туранова: узнай о NEURAL_RAM, SYSTEM_STRESS и структуре OPERATIONS. Завершение открывает активную деку.', districtId: 'academy', giverNpcId: 'npc_academy_tutor', type: 'talk', difficulty: 'quick', tier: 1, preClassOnly: true },
 
   // ── ALTUFYEVO / MARYINO CHAIN ──
   { id: 'q_petrovich_rogue_module', title: '[CHAIN] Изгнанный Модуль Петровича', description: 'Петрович потерял чип «Zero-Point». Последний сигнал зафиксирован в районе Крысы-курьера в Марьино. Разберись.', districtId: 'altufyevo', giverNpcId: 'npc_petrovich', type: 'delivery', difficulty: 'standard', tier: 1 },

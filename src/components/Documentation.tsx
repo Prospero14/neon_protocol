@@ -46,14 +46,14 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
     }
   }, [initialEntryId]);
 
-  const cardLibrary = React.useMemo(() => {
+  const cardLibrary: CombatCard[] = React.useMemo(() => {
       switch(pack) {
           case 'spring': return SPRING_CARD_LIBRARY;
           case 'infra': return CARD_LIBRARY.filter(c => c.type === 'INFRASTRUCTURE');
           case 'soft-skills': return CARD_LIBRARY.filter(c => c.type === 'SOFT');
           case 'scripting': return CARD_LIBRARY.filter(c => c.type === 'SCRIPT');
-          case 'testing': return CARD_LIBRARY.filter(c => c.type === 'REACTION' || c.type === 'DEFENSIVE');
-          case 'core': return CARD_LIBRARY.filter(c => c.type === 'SYNTAX' || c.type === 'FUNCTION');
+          case 'testing': return CARD_LIBRARY.filter((c: any) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || (c.tags && c.tags.includes('reaction')));
+          case 'core': return CARD_LIBRARY.filter((c: any) => c.type === 'SYNTAX' || c.type === 'FUNCTION');
           default: return CARD_LIBRARY;
       }
   }, [pack]);
@@ -390,7 +390,7 @@ spec: { containers: [{ image: neon-app:latest }] }`}</pre>
               <span>DISCOVERED_CONCEPTS</span>
             </div>
             <div className="entries-scroll-list">
-              {cardLibrary.map((card) => {
+              {cardLibrary.map((card: any) => {
                 const isDiscovered = discoveredCardIds.has(card.id);
                 const ref = refBook[card.id];
                 if (!ref) return null;

@@ -90,20 +90,7 @@ function App() {
       }
       
       let combatDeck = gs.activeDeck;
-      if (!gs.classUnlocked) {
-        const tracked = getTrackedQuest(gs.questStates);
-        const pack = getStarterPackForQuest(tracked?.questId);
-        const scriptCards = pack
-          .map((id: string) => CARD_LIBRARY.find((c: CombatCard) => c.id === id) || null)
-          .filter((c: CombatCard | null): c is CombatCard => c !== null);
-        
-        // Всегда добавляем REACTION карты чтобы AUX-таб не был пустым
-        const auxIds = ['react_unit_test', 'react_unit_test', 'soft_coffee', 'infra_old_hw'];
-        const auxCards = auxIds
-          .map(id => CARD_LIBRARY.find((c: CombatCard) => c.id === id))
-          .filter((c): c is CombatCard => Boolean(c));
-        combatDeck = [...scriptCards, ...auxCards];
-      }
+
 
       return (
         <CombatBridge 
@@ -122,7 +109,8 @@ function App() {
             const tDef = QUEST_LIBRARY.find(q => q.id === tracked.questId);
             return !!(tDef && tDef.type === 'combat' && (!tDef.objectiveNodeId || tDef.objectiveNodeId === gs.activeBarNode));
           })()}
-          onWin={(earned, rank, chain, missionName) => {
+          onWin={(earned, rank, chain, missionName, updatedDeck) => {
+            if (updatedDeck) gs.setActiveDeck(updatedDeck);
             gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);
             gs.setBits((prev) => Math.max(0, prev + earned));
             if (earned > 0) {
@@ -175,8 +163,9 @@ function App() {
             const q = QUEST_LIBRARY.find(item => item.id === questId); 
             if (q) gs.setQuestStates(prev => acceptQuest(prev, q.id)); 
           }} 
-          playerLevel={gs.classUnlocked ? 5 : 1} 
-          inventory={[...gs.inventory, ...gs.loot]} 
+          playerLevel={gs.playerLevel}
+          inventory={gs.inventory}
+          activeDeck={gs.activeDeck}
           onRewardBits={(amount: number) => gs.setBits(b => b + amount)} 
           onRewardItem={gs.onRewardItem}
           onRemoveItem={gs.onRemoveItem}

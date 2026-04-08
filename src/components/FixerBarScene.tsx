@@ -6,6 +6,7 @@ import { FACTIONS } from '../logic/factions';
 import { NPC_PRESENCE_CONFIGS } from '../logic/npcPresence';
 import { Cpu, Fingerprint } from 'lucide-react';
 import { QUEST_LIBRARY } from '../logic/questData';
+import type { CombatCard } from '../logic/combatCards';
 
 interface FixerBarSceneProps {
   locationId: string;
@@ -29,7 +30,8 @@ interface FixerBarSceneProps {
   onCompleteQuest?: (questId: string) => void;
   onDiscoverIntel?: (factionId: string, lore: string) => void;
   playerLevel: number;
-  inventory: any[];
+  inventory: CombatCard[];
+  activeDeck: CombatCard[];
   onTravel?: (nodeId: string, type: string, cost?: number) => void;
   onRewardItem?: (itemId: string, amount?: number) => void;
   onRemoveItem?: (itemId: string) => void;
@@ -61,6 +63,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onCompleteQuest,
   playerLevel,
   inventory,
+  activeDeck,
   onTravel,
   onRewardItem,
   onRemoveItem,
@@ -179,10 +182,43 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     if (isTyping) { setTypedText(node.text); setIsTyping(false); return; }
 
     const isAltufyevoResident = homeDistrictId === 'altufyevo';
-    const isLocalAltufyevo = locationId.includes('altufyevo') || (['npc_petrovich', 'shop_scrap', 'npc_varvar', 'npc_nixanna', 'job_board_alt', 'term_silo_7', 'bar_chips'].includes(locationId));
+    const isLocalAltufyevo = locationId.includes('altufyevo') || 
+      (['npc_petrovich', 'shop_scrap', 'npc_varvar', 'npc_nixanna', 'job_board_alt', 'term_silo_7', 'bar_chips'].includes(locationId));
     const hasDiscount = isAltufyevoResident && isLocalAltufyevo;
-    
+
+    const totalCopiesOfCard = (id?: string) => {
+      if (!id) return 0;
+      const invCount = inventory.filter((c: CombatCard) => c.id === id).length;
+      const deckCount = activeDeck.filter((c: CombatCard) => c.id === id).length;
+      return invCount + deckCount;
+    };
+
+    const isLocalThemed = (cardId: string, distId: string) => {
+      const themes: Record<string, string[]> = {
+        altufyevo: ['script_ping', 'script_ls', 'script_cat', 'script_sudo_fix', 'soft_coffee', 'infra_old_hw'],
+        maryino: ['script_grep', 'script_auth', 'script_wash_logs', 'soft_ai_ask', 'net_scanner'],
+        sokol: ['java_list_base', 'java_map_base', 'java_spring_core'],
+        chertanovo: ['script_rm_rf', 'script_ping', 'soft_energy_drink'],
+      };
+      // Simple contains check for district ID in location ID
+      const activeDist = Object.keys(themes).find(d => distId.includes(d));
+      return (activeDist && themes[activeDist]?.includes(cardId)) || false;
+    };
+
     let effectiveCost = option.cost || 0;
+    
+    // Purchase Limit Logic
+    if (option.effect === 'GIVE_CARD' && option.cardRewardId) {
+       if (totalCopiesOfCard(option.cardRewardId) >= 3) {
+          // Block purchase
+          return;
+       }
+       // Apply 20% local theme discount
+       if (isLocalThemed(option.cardRewardId, locationId)) {
+          effectiveCost = Math.floor(effectiveCost * 0.8);
+       }
+    }
+    
     if (hasDiscount && effectiveCost > 0) effectiveCost = Math.floor(effectiveCost * 0.9);
 
     if (effectiveCost > 0 && playerBits < effectiveCost) return;

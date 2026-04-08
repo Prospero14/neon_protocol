@@ -59,6 +59,7 @@ const COMBAT_QUEST_BLUEPRINTS = [
 function buildNpcQuests() {
   const quests: QuestDefinition[] = [];
   for (const district of MAP_NODES) {
+    const sector = district.name || district.id;
     const npcs = district.subNodes?.filter((s) => s.type === 'npc') ?? [];
     for (const npc of npcs) {
       NPC_QUEST_BLUEPRINTS.forEach((b, idx) => {
@@ -67,7 +68,7 @@ function buildNpcQuests() {
           title: `[${TYPE_PREFIX[b.type] || '????'}] ${b.title}: ${npc.name}`,
           districtId: district.id,
           giverNpcId: npc.id,
-          description: b.text,
+          description: `${b.text} Контекст: ${sector}.`,
           type: b.type,
           difficulty: b.difficulty,
           tier: district.tier,
@@ -82,6 +83,7 @@ function buildNpcQuests() {
 function buildCombatDistrictQuests() {
   const quests: QuestDefinition[] = [];
   for (const district of MAP_NODES) {
+    const sector = district.name || district.id;
     const combats = district.subNodes?.filter((s) => s.type === 'combat') ?? [];
     for (const node of combats) {
       COMBAT_QUEST_BLUEPRINTS.forEach((b, idx) => {
@@ -91,7 +93,7 @@ function buildCombatDistrictQuests() {
           districtId: district.id,
           giverNpcId: (district.subNodes?.find((s) => s.type === 'npc')?.id ?? node.id),
           objectiveNodeId: node.id,
-          description: b.text,
+          description: `${b.text} Точка: «${node.name}», ${sector}.`,
           type: b.type,
           difficulty: b.difficulty,
           tier: district.tier,
@@ -112,7 +114,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_start_${district.id}`,
       title: `[ВВОД] Опорная точка: ${district.id.toUpperCase()}`,
-      description: `Система инициализирована. Установите контакт с местным барменом в заведении "${bar?.name || 'местный бар'}", чтобы получить инструкции и закрепиться в районе.`,
+      description: `Шаг 1/3 стартовой цепочки. Система инициализирована: поговори с барменом в «${bar?.name || 'местный бар'}» — без контакта с сетью района дальше не пустят. После разговора бери контракт «Первые Bits» у того же узла.`,
       districtId: district.id,
       giverNpcId: bar?.id || 'job_board',
       type: 'talk' as QuestType,
@@ -124,7 +126,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_first_bits_${district.id}`,
       title: `[ВВОД] Первые Bits: ${district.id.toUpperCase()}`,
-      description: `Бармен не работает за спасибо. Найдите любую уязвимость в районе (например, "${firstCombat?.name || 'локальный узел'}") и закройте контракт на чистку кэша, чтобы заработать свои первые Bits.`,
+      description: `Шаг 2/3. Бармен не кормит за красивые глаза: открой боевой узел «${firstCombat?.name || 'локальный узел'}», выиграй встречу и получи Bits. Когда накопишь минимум на проезд, переходи к такси (шаг 3).`,
       districtId: district.id,
       giverNpcId: bar?.id || 'job_board',
       objectiveNodeId: firstCombat?.id || district.id,
@@ -136,7 +138,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_metro_access_${district.id}`,
       title: `[ВВОД] Путь в Центр: ${district.id.toUpperCase()}`,
-      description: `Пора выбираться из этого сектора. Соберите 100 Bits и разблокируйте доступ к транспортной системе через терминал такси ("${taxi?.name || 'Терминал Такси'}").`,
+      description: `Шаг 3/3. Накопи 100 Bits (бои и мелкие контракты в секторе), затем оплати доступ на терминале «${taxi?.name || 'Такси'}» — без этого Центр остаётся read-only.`,
       districtId: district.id,
       giverNpcId: taxi?.id || 'term_taxi',
       objectiveNodeId: taxi?.id || district.id,
@@ -150,6 +152,19 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
 
 const TUTORIAL_QUESTS: QuestDefinition[] = [
   ...TUTORIAL_CHAINS_GENERATED,
+  {
+    id: 'q_petrovich_intro_altufyevo',
+    title: '[ВВОД] Петрович и провода',
+    description:
+      'Старый Петрович в Алтуфьево — живой ориентир по железу. Открой его маркер на карте и поговори: дальше цепочки «Силос 7» и доставок логичнее стыкуются с его квестами.',
+    districtId: 'altufyevo',
+    giverNpcId: 'npc_petrovich',
+    objectiveNodeId: 'npc_petrovich',
+    type: 'talk',
+    difficulty: 'quick',
+    tier: 1,
+    preClassOnly: true,
+  },
   {
     id: 'q_altufyevo_data_leak',
     title: 'Утечка пакетов L1',
@@ -176,10 +191,11 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_altufyevo_scrap_hunt',
     title: 'Охота за Восходом',
-    description: 'Серый просит добыть процессоры с ботов "Восход" на Свалке.',
+    description:
+      'Серый заказывает платы с «Восхода»: по слухам, фрагменты всплывают у ритуального узла Никсанны (зона рендеринга), а не у крыс в кабельных каналах.',
     districtId: 'altufyevo',
     giverNpcId: 'shop_scrap',
-    objectiveNodeId: 'combat_nixanna_ritual', // Let's pretend they spawn near the Ritual node
+    objectiveNodeId: 'combat_nixanna_ritual',
     type: 'combat',
     difficulty: 'standard',
     tier: 1,
@@ -369,12 +385,14 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     preClassOnly: true,
   },
   {
-    id: 'q_altufyevo_data_leak',
-    title: '[REPAIR] Утечка в распредщите',
-    description: 'Узел связи в Алтуфьево коротит на массу. Нужно найти распредщит и принудительно патчить изоляцию протокола.',
+    id: 'q_altufyevo_fuseboard_isolation',
+    title: '[ДИАГ] Утечка в распредщите',
+    description:
+      'Узел связи коротит на массу: изоляцию протокола чинят на инженерной панели глубокого залегания (Силос №7), иначе «распредщит» останется красивым словом в тикете.',
     districtId: 'altufyevo',
     giverNpcId: 'job_board_alt',
-    type: 'talk',
+    objectiveNodeId: 'term_silo_7',
+    type: 'diagnostics',
     difficulty: 'quick',
     tier: 1,
     preClassOnly: true,
@@ -392,7 +410,7 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
     preClassOnly: true,
   },
   {
-    id: 'q_altufyevo_scrap_hunt',
+    id: 'q_altufyevo_scrap_rats',
     title: '[COMBAT] Охота за хламом',
     description: 'Скупщику нужны запчасти от ботов "Восход". Отправься в зону Свалки и добудь пару рабочих процессоров.',
     districtId: 'altufyevo',
@@ -672,9 +690,11 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_hub_signature',
     title: '[TALK] Подпись Петровича',
-    description: 'Для обхода системы в Таганке нужна цифровая подпись Петровича из Хаба.',
-    districtId: 'hub',
+    description:
+      'Таганка или Хаб запрашивают валидную подпись: её выдаёт не терминал в Китай-Городе, а Петрович в Алтуфьево — сходи к нему на карте северных силосов.',
+    districtId: 'altufyevo',
     giverNpcId: 'npc_petrovich',
+    objectiveNodeId: 'npc_petrovich',
     type: 'talk',
     difficulty: 'quick',
     tier: 2,

@@ -3,10 +3,13 @@ import type { CombatPhase } from '../../../logic/combatPhases';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { RailSlot } from '../../../logic/hooks/useCombatLogic';
 import type { BugAction, BugEnemy } from '../../../logic/combatEnemies';
+import { problemTypeLabelRu } from '../../../logic/combatCounterplay';
 import { Database, ShieldAlert, Terminal, Lock, ChevronRight } from 'lucide-react';
 
 interface NeuralBusProps {
   currentPhase: CombatPhase;
+  /** Софт-скиллы кладутся только в фазе стабилизации (после кода). */
+  softSocketsLocked: boolean;
   skillMode: string;
   infraSlots: (CombatCard | null)[];
   softSlots: (CombatCard | null)[];
@@ -15,7 +18,7 @@ interface NeuralBusProps {
   missionTzStepsCount: number;
   enemy: BugEnemy | null;
   nextBugAction: BugAction | null;
-  selectedCard: { source: string; idx: number } | null;
+  selectedCard: { source: string; idx: number; card: CombatCard } | null;
   playerProgress: number;
   aiProgress: number;
   bugPoints: number;
@@ -24,8 +27,8 @@ interface NeuralBusProps {
 }
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
-  currentPhase, skillMode, infraSlots, softSlots, runtimeRail, ramSlotsMax,
-  missionTzStepsCount, enemy, nextBugAction, selectedCard, playerProgress, aiProgress,
+  currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
+  enemy, nextBugAction, selectedCard, playerProgress, aiProgress,
   bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
   const hasSelection = selectedCard !== null;
@@ -77,11 +80,21 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                 </div>
               ))}
             </div>
-            <div className="nb2-section-label" style={{ marginTop: 12 }}>SOFT_EXTENSIONS</div>
+            <div className="nb2-section-label" style={{ marginTop: 12 }}>
+              SOFT_SOCKETS
+              {softSocketsLocked && (
+                <span className="nb2-soft-locked mono-text"> [фаза 3: стабилизация]</span>
+              )}
+            </div>
             <div className="nb2-plan-slots">
               {softSlots.map((s, i) => (
-                <div key={i} className={`nb2-plan-slot soft ${s ? 'deployed' : ''}`}>
-                  <span>{s ? s.name : `SOCKET_${i + 1}`}</span>
+                <div
+                  key={i}
+                  className={`nb2-plan-slot soft ${s ? 'deployed' : ''} ${softSocketsLocked && !s ? 'locked-preview' : ''}`}
+                >
+                  <span>
+                    {s ? s.name : softSocketsLocked ? `LOCKED_${i + 1}` : `SOCKET_${i + 1}`}
+                  </span>
                 </div>
               ))}
             </div>
@@ -103,7 +116,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
               {runtimeRail.map((slot, i) => {
                 const isLocked = i >= ramSlotsMax;
                 const hasCard = slot.type !== 'EMPTY';
-                const isTarget = hasSelection && !isLocked && !hasCard;
+                const canPatch = hasCard && slot.type === 'PLAYER_CODE' && currentPhase === 'VERIFICATION' && 
+                                (selectedCard?.card.type === 'REACTION' || selectedCard?.card.type === 'DEFENSIVE');
+                const isTarget = hasSelection && !isLocked && (!hasCard || canPatch);
                 return (
                   <React.Fragment key={i}>
                     {i > 0 && (
@@ -118,7 +133,21 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                       {isLocked ? (
                         <Lock size={24} className="nb2-lock-icon" />
                       ) : hasCard ? (
-                        <span className="nb2-slot-code">{(slot.content as CombatCard).name}</span>
+                        <>
+                          {isTarget && <span className="nb2-slot-cursor patch">▸</span>}
+                          {slot.type === 'BUG_ERROR' ? (
+                            <div className="nb2-bug-slot-inner">
+                              <span className="nb2-slot-code">{(slot.content as BugAction)?.name || 'BUG'}</span>
+                              {(slot.content as BugAction)?.problemType && (
+                                <span className="nb2-bug-type mono-text">
+                                  {problemTypeLabelRu((slot.content as BugAction).problemType!)}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="nb2-slot-code">{(slot.content as CombatCard)?.name || 'UNVERIFIED_GAP'}</span>
+                          )}
+                        </>
                       ) : (
                         <span className="nb2-slot-cursor">{isTarget ? '▸ _' : `0x0${i + 1}`}</span>
                       )}

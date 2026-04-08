@@ -20,7 +20,7 @@ interface CombatBridgeProps {
   activeDeck: CombatCard[];
   taskLibrary: TechnicalTask[];
   initialTaskIndex?: number;
-  onWin: (bitsEarned: number, taskRank: string, finalChain: string[], missionName: string) => void;
+  onWin: (bitsEarned: number, taskRank: string, finalChain: string[], missionName: string, updatedDeck?: CombatCard[]) => void;
   isQuestCombat?: boolean;
   tier: number;
   deckCores: number;
@@ -57,12 +57,12 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   const handleDraftPick = (card: CombatCard) => {
     setDraftDeck(prev => [...prev, card]);
     setShowDraft(false);
-    if (pendingWin) props.onWin(pendingWin.bits, pendingWin.rank, pendingWin.chain, pendingWin.name);
+    if (pendingWin) props.onWin(pendingWin.bits, pendingWin.rank, pendingWin.chain, pendingWin.name, [...draftDeck, card]);
   };
 
   const handleDraftSkip = () => {
     setShowDraft(false);
-    if (pendingWin) props.onWin(pendingWin.bits, pendingWin.rank, pendingWin.chain, pendingWin.name);
+    if (pendingWin) props.onWin(pendingWin.bits, pendingWin.rank, pendingWin.chain, pendingWin.name, draftDeck);
   };
 
   return (
@@ -84,6 +84,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       {/* ── ARENA (full width) ── */}
       <NeuralBus 
         currentPhase={state.currentPhase}
+        softSocketsLocked={state.currentPhase !== 'VERIFICATION'}
         skillMode={props.skillMode}
         infraSlots={state.infraSlots}
         softSlots={state.softSlots}
@@ -103,7 +104,6 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       {/* ── HAND + ACTIONS ── */}
       <HandControls 
         currentPhase={state.currentPhase}
-        activeHandTab={state.activeHandTab}
         filteredHand={state.filteredHand}
         fullHand={state.hand}
         selectedCard={state.selectedCard}
@@ -111,12 +111,14 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         cpu={state.cpu}
         stress={state.stress}
         canAdvancePhase={state.canAdvancePhase}
-        onTabChange={actions.setActiveHandTab}
+        getEffectiveCost={actions.getEffectiveCost}
         onCardSelect={actions.handleCardSelect}
         onEndTurn={actions.endTurn}
         onOverclock={actions.handleOverclock}
         onAdvancePhase={actions.advancePhase}
         onTerminate={() => actions.setShowDefeat(true)}
+        onMulligan={actions.handleMulligan}
+        mulliganUsed={state.mulliganUsed}
         isPipelineFull={state.isPipelineFull}
       />
 

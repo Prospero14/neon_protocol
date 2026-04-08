@@ -17,19 +17,28 @@ const PORT = Number(process.env.PORT) || 8080; // Total sync with Amvera Ingress
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
 // 1. Database Initialization Logic
 const isAmvera = fs.existsSync('/data');
-const dbPath = isAmvera ? '/data/dev.db' : './dev.db';
+const defaultDbPath = isAmvera ? '/data/dev.db' : path.join(process.cwd(), 'dev.db');
+const defaultDbUrl = `file:${defaultDbPath}`;
+if (!process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = defaultDbUrl;
+}
+console.log(`[NEON_BOOT] RESOLVED_DATABASE_URL: ${process.env.DATABASE_URL}`);
+console.log(`[NEON_BOOT] RESOLVED_FILE_PATH: ${defaultDbPath}`);
 const adapter = new PrismaBetterSqlite3({
-    url: `file:${dbPath}`
+    url: `file:${defaultDbPath}`
 });
 const prisma = new PrismaClient({ adapter });
+let isDbReady = false;
 async function initDB() {
-    console.log(`[NEON_CORE] PERSISTENCE_PATH: ${dbPath}`);
+    console.log(`[NEON_CORE] PERSISTENCE_PATH: ${process.env.DATABASE_URL}`);
     console.log(`[NEON_CORE] AMVERA_DETECTED: ${isAmvera}`);
     console.log('[NEON_CORE] Background DB Init Started...');
     try {
         await prisma.$connect();
         console.log('[NEON_CORE] Database connected successfully.');
         await seedAdmin();
+        isDbReady = true;
+        console.log('[NEON_CORE] INIT_COMPLETE: SYSTEM_READY');
     }
     catch (e) {
         console.error('[NEON_CORE] DB Connection Error:', e);
@@ -75,9 +84,9 @@ app.use(express.json());
 // Health check
 app.get('/neon_v1/health', (req, res) => {
     res.json({
-        status: 'active',
+        status: isDbReady ? 'active' : 'initializing',
         port: PORT,
-        dbPath,
+        dbPath: process.env.DATABASE_URL,
         isAmvera
     });
 });
@@ -182,9 +191,12 @@ app.get(/.*/, (req, res) => {
 });
 app.listen(PORT, '0.0.0.0', () => {
     console.log('=========================================');
-    console.log(`[NEON_CORE] SERVER_STABILIZED_V32_2`);
+    console.log(`[NEON_CORE] SERVER_STABILIZED_V32_3`);
     console.log(`[NEON_CORE] PORT: ${PORT}`);
     console.log('=========================================');
-    initDB();
+    // Decouple DB init from listener startup to avoid 502 Bad Gateway
+    initDB().catch(err => {
+        console.error('[NEON_CORE] CRITICAL_INIT_FAILED:', err);
+    });
 });
 //# sourceMappingURL=index.js.map

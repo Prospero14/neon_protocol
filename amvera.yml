@@ -5,7 +5,7 @@ meta:
     version: 20
 
 build:
-  additionalCommands: "npm ci && export DATABASE_URL=file:/data/dev.db && npm run build:full"
+  additionalCommands: "npm ci && export DATABASE_URL=file:./build-temp.db && npm run build:full"
 
 run:
   persistenceMount: /data

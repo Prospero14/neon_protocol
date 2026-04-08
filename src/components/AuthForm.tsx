@@ -21,9 +21,17 @@ export const AuthForm: React.FC = () => {
                 body: JSON.stringify({ username, password })
             });
             
-            const data = await response.json();
+            const contentType = response.headers.get('content-type');
+            let data;
             
-            if (!response.ok) throw new Error(data.error);
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                throw new Error(`Server returned non-JSON: ${text.slice(0, 50)}... [Status ${response.status}]`);
+            }
+            
+            if (!response.ok) throw new Error(data.error || 'Identity initialization failed.');
             
             if (isLogin) {
                 login(data.token, data.user);
@@ -32,6 +40,7 @@ export const AuthForm: React.FC = () => {
                 alert('Регистрация успешна! Теперь войдите.');
             }
         } catch (err: any) {
+            console.error('Auth Submit Error:', err);
             setError(err.message);
         }
     };

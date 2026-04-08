@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
+import { DEFAULT_DISTRICT_BLUEPRINT, DEFAULT_DISTRICT_BOUNDARY } from '../logic/mapVisualDefaults';
 import { Search, MousePointer2 } from 'lucide-react';
 import { type QuestState } from '../logic/questEngine';
 import '../blueprints.css';
@@ -62,6 +63,8 @@ const MapView: React.FC<MapViewProps> = ({
   const activeDistrictBase = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
   const activeDistrict = {
     ...activeDistrictBase,
+    boundary: activeDistrictBase.boundary ?? DEFAULT_DISTRICT_BOUNDARY,
+    imageSubstrate: activeDistrictBase.imageSubstrate ?? DEFAULT_DISTRICT_BLUEPRINT,
     subNodes: customSubNodes || activeDistrictBase.subNodes
   };
   const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
@@ -187,11 +190,6 @@ const MapView: React.FC<MapViewProps> = ({
                     />
                   )}
 
-                  {/* GENERATIVE CITY BLOCKS LAYER (Fallback/Detail) */}
-                  {!activeDistrict.imageSubstrate && (
-                    <rect x="0" y="0" width="100" height="100" fill="url(#cityBlocks)" mask="url(#districtMask)" opacity="0.4" />
-                  )}
-
                   {/* Grid Numbers Layer */}
                   <g className="blueprint-grid-labels" opacity="0.3" fontSize="1.0" fill="var(--neon-cyan)" style={{ fontFamily: 'monospace', fontWeight: 300 }}>
                     {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(val => (
@@ -285,6 +283,9 @@ const MapView: React.FC<MapViewProps> = ({
                           <circle cx={sn.x} cy={sn.y} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
                           
                           <g transform={`translate(${sn.x}, ${sn.y + 4.5})`}>
+                            <text y="-0.8" fontSize="0.55" fill={NODE_COLORS[sn.type] || '#889'} textAnchor="middle" style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '2px' }}>
+                              {sn.type}
+                            </text>
                             <text fontSize="1.1" fill={isSelected ? "var(--neon-cyan)" : "rgba(255,255,255,0.7)"} textAnchor="middle" style={{fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px'}}>
                               {sn.name.toUpperCase()}
                             </text>

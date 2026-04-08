@@ -1165,3 +1165,4 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     bullets: ['Legendary: Доступно только высшим Архитекторам Ядра.']
   }
 };
+

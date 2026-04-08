@@ -16,24 +16,27 @@ export interface PhaseRules {
 export const SDLC_PHASES: Record<CombatPhase, PhaseRules> = {
   ARCHITECTURE: {
     id: 'ARCHITECTURE',
-    name: 'ФАЗА 1: АРХИТЕКТУРА',
-    description: 'Развертывание ресурсов. Установите INFRASTRUCTURE и SOFT-модули для обеспечения CPU/RAM.',
-    allowedTypes: ['INFRASTRUCTURE', 'SOFT', 'SPECIAL', 'SCRIPT'],
+    name: 'ФАЗА 1: СНАБЖЕНИЕ',
+    description:
+      'Карточный дро: только инфраструктура из колоды. Разверните CPU/RAM; софт и реакции — на следующих этапах.',
+    allowedTypes: ['INFRASTRUCTURE', 'SPECIAL'],
     nextPhaseId: 'DEVELOPMENT',
   },
   DEVELOPMENT: {
     id: 'DEVELOPMENT',
-    name: 'ФАЗА 2: РАЗРАБОТКА',
-    description: 'Написание кода. Выкладывайте SYNTAX и FUNCTION на шину. Остерегайтесь атак ИИ.',
-    allowedTypes: ['SYNTAX', 'FUNCTION', 'HARD', 'NETWORK', 'COLLECTIONS', 'SPRING', 'SPECIAL', 'REACTION', 'SCRIPT'],
+    name: 'ФАЗА 2: ПАЗЗЛ КОДА',
+    description:
+      'Палитра языка и библиотек (всегда доступна) + одноразовые SCRIPT из колоды. Соберите шину; новых карт с колоды не приходит.',
+    allowedTypes: ['SYNTAX', 'FUNCTION', 'HARD', 'NETWORK', 'COLLECTIONS', 'SPRING', 'SPECIAL', 'SCRIPT'],
     nextPhaseId: 'VERIFICATION',
     targetProgress: 70,
   },
   VERIFICATION: {
     id: 'VERIFICATION',
-    name: 'ФАЗА 3: ТЕСТИРОВАНИЕ',
-    description: 'Code Freeze. Исправление ошибок. Используйте DEFENSIVE и REACTION для очистки шины.',
-    allowedTypes: ['DEFENSIVE', 'REACTION', 'SPECIAL'],
+    name: 'ФАЗА 3: СТАБИЛИЗАЦИЯ',
+    description:
+      'Снова дро с колоды: реакции, защита, софт-скиллы, статусы. Патчи на шине, снятие багов, буферы.',
+    allowedTypes: ['DEFENSIVE', 'REACTION', 'SOFT', 'STATUS', 'SPECIAL'],
     nextPhaseId: 'DEPLOYMENT',
     targetProgress: 100,
   },

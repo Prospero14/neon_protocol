@@ -4,6 +4,8 @@ import type { CombatPhase } from '../../../logic/combatPhases';
 import type { TechnicalTask } from '../../../logic/combatTasks';
 import { getStepCardIds } from '../../../logic/combatTasks';
 import type { BugEnemy, IcePersonality } from '../../../logic/combatEnemies';
+import { getOpponentPipelineNarrative } from '../../../logic/combatNarrative';
+import type { SkillMode } from '../../../logic/skillMode';
 
 const PERSONALITY_COLORS: Record<IcePersonality, string> = {
   TRACER:  '#ff4060',
@@ -24,7 +26,7 @@ const PERSONALITY_LABELS: Record<IcePersonality, string> = {
 
 interface CombatOverlaysProps {
   phaseIntro: string | null;
-  skillMode: string;
+  skillMode: SkillMode;
   cpuMax: number;
   ramMaxMb: number;
   showTzModal: boolean;
@@ -40,8 +42,21 @@ interface CombatOverlaysProps {
 }
 
 const CombatOverlays: React.FC<CombatOverlaysProps> = ({
-  phaseIntro, showTzModal, missionTz, enemy, showVictory, showDefeat, victoryResult, deploymentReport, stress, onCloseTzModal, onWin
+  phaseIntro,
+  skillMode,
+  showTzModal,
+  missionTz,
+  enemy,
+  showVictory,
+  showDefeat,
+  victoryResult,
+  deploymentReport,
+  stress,
+  onCloseTzModal,
+  onWin,
 }) => {
+  const opponentStory = showTzModal ? getOpponentPipelineNarrative(skillMode, enemy) : null;
+
   return (
     <>
       {/* PHASE INTRO OVERLAY */}
@@ -67,13 +82,22 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
                   className="tz-personality-badge"
                   style={{ background: PERSONALITY_COLORS[enemy.personality] }}
                 >
-                  ICE_TYPE: {PERSONALITY_LABELS[enemy.personality]}
+                  ПОВЕДЕНИЕ: {PERSONALITY_LABELS[enemy.personality]}
                 </span>
                 {enemy.personalityHint && (
                   <div className="tz-personality-hint font-terminal">
                     {enemy.personalityHint}
                   </div>
                 )}
+              </div>
+            )}
+
+            {opponentStory && (
+              <div className="tz-pipeline-narrative font-terminal">
+                <div className="tz-pipeline-title">{opponentStory.headline}</div>
+                <p className="tz-pipeline-spectrum">{opponentStory.spectrum}</p>
+                <p className="tz-pipeline-body">{opponentStory.body}</p>
+                <p className="tz-pipeline-encounter mono-text opacity-90">{opponentStory.encounter}</p>
               </div>
             )}
 

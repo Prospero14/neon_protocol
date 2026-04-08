@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { parseSkillMode, SKILL_MODE_STORAGE_KEY, type SkillMode } from '../skillMode';
 import { NPC_PRESENCE_CONFIGS } from '../npcPresence';
 import type { Trait } from '../traits';
@@ -35,8 +35,13 @@ export const buildTraineeDeck = (): CombatCard[] => {
     'soft_coffee', 'soft_ai_ask',
     // INFRA — первое железо
     'infra_old_hw',
-    // REACTION — базовая защита, чтобы AUX-таб не был пустым
-    'react_unit_test', 'react_unit_test',  // x2 чтобы было заметно
+    // REACTION / DEF — покрывают типы сбоя в combatCounterplay (тест, рефакторинг, flush, трасса)
+    'react_unit_test',
+    'react_emergency_flush',
+    'react_trace_jam',
+    'react_firewall_patch',
+    'react_refactoring',
+    'def_validator',
   ];
   return starterIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 };
@@ -86,6 +91,7 @@ export function useGameState() {
   const { user, isLoading, syncGameState, logout } = useAuth();
   const [skillMode, setSkillMode] = useState<SkillMode>(() => parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY)));
   const [userIp, setUserIp] = useState<string>('ОПРЕДЕЛЕНИЕ...');
+  const hasLoadedInitialState = useRef(false);
 
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
@@ -212,26 +218,79 @@ export function useGameState() {
       inventory: inventoryUnique.map(c => ({ id: c.id })),
       completedQuests: questStates,
       ramPool: ramPool,
-      homeDistrictId: homeDistrictId
+      homeDistrictId: homeDistrictId,
+      activeBarNode: activeBarNode,
+      viewMode: viewMode,
+      traits: traits,
+      installedImplants: installedImplants,
+      reputation: reputation,
+      playerName: playerName,
+      isCityMapUnlocked: isCityMapUnlocked,
+      isPetrovichHomeUnlocked: isPetrovichHomeUnlocked,
+      professionId: profession.id,
+      classUnlocked: classUnlocked,
+      deckCores: deckCores,
+      deckRamMb: deckRamMb,
+      discoveredCardIds: Array.from(discoveredCardIds)
     };
     await syncGameState(state);
   };
 
   useEffect(() => {
-    if (user && user.gameState) {
+    if (user && user.gameState && !hasLoadedInitialState.current) {
       const gs = user.gameState;
+      hasLoadedInitialState.current = true;
       if (gs.stress !== undefined) setStress(gs.stress);
       if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
       if (gs.bits !== undefined) setBits(gs.bits);
       if (gs.solvedTaskCounts !== undefined) setSolvedTaskCounts(gs.solvedTaskCounts);
       if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
       if (gs.homeDistrictId !== undefined) setHomeDistrictId(gs.homeDistrictId);
+      
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);
         if (gs.completedQuests.length > 0 && currentView === 'CREATION') {
           setCurrentView('HUB');
         }
       }
+
+      if (gs.activeDistrictId) {
+        setActiveDistrictId(gs.activeDistrictId);
+      } else if (gs.homeDistrictId) {
+        setActiveDistrictId(gs.homeDistrictId);
+      }
+
+      if (gs.activeDeck) {
+        const fullDeck = gs.activeDeck.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
+        if (fullDeck.length > 0) setActiveDeck(fullDeck);
+      }
+      if (gs.inventory) {
+        const fullInv = gs.inventory.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
+        if (fullInv.length > 0) setInventory(fullInv);
+      }
+
+      if (gs.activeBarNode) setActiveBarNode(gs.activeBarNode);
+      if (gs.viewMode) setViewMode(gs.viewMode);
+      if (gs.currentView && gs.currentView !== 'CREATION') {
+        setCurrentView(gs.currentView);
+      } else if (gs.homeDistrictId) {
+        setCurrentView('HUB');
+      }
+
+      if (gs.traits) setTraits(gs.traits);
+      if (gs.installedImplants) setInstalledImplants(gs.installedImplants);
+      if (gs.reputation) setReputation(gs.reputation);
+      if (gs.playerName && gs.playerName !== 'ID_НЕИЗВЕСТЕН') setPlayerName(gs.playerName);
+      if (gs.isCityMapUnlocked !== undefined) setIsCityMapUnlocked(gs.isCityMapUnlocked);
+      if (gs.isPetrovichHomeUnlocked !== undefined) setIsPetrovichHomeUnlocked(gs.isPetrovichHomeUnlocked);
+      if (gs.classUnlocked !== undefined) setClassUnlocked(gs.classUnlocked);
+      if (gs.professionId) {
+        const prof = getProfessionById(gs.professionId);
+        if (prof) setProfession(prof);
+      }
+      if (gs.deckCores !== undefined) setDeckCores(gs.deckCores);
+      if (gs.deckRamMb !== undefined) setDeckRamMb(gs.deckRamMb);
+      if (gs.discoveredCardIds) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
       // Load exploits
       const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
       if (saved) setSolvedChains(JSON.parse(saved));
@@ -245,6 +304,14 @@ export function useGameState() {
   useEffect(() => {
     localStorage.setItem(SKILL_MODE_STORAGE_KEY, skillMode);
   }, [skillMode]);
+
+  // AUTO-SYNC ON CRITICAL CHANGES
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentView !== 'CREATION') syncGame();
+    }, 1500); // 1.5s debounce to prevent spamming
+    return () => clearTimeout(timer);
+  }, [bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId, isCityMapUnlocked]);
 
   const rewardForQuest = (q: QuestDefinition) => {
     const base = baseQuestBits(q.tier, q.difficulty);
@@ -313,6 +380,7 @@ export function useGameState() {
     starterDeck.forEach((c) => discoverCard(c.id));
     setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
     setCurrentView('HUB');
+    syncGame();
   };
 
   const handleCompleteTalkQuest = (questId: string) => {
@@ -376,6 +444,7 @@ export function useGameState() {
       setActiveCombatPack(targetDistrict.combatPack ?? 'java_core');
       return;
     }
+
 
     const nodeOwnerDistrict = targetDistrict || MAP_NODES.find(n => n.id === currentDistrictId);
     if (['npc', 'shop', 'terminal', 'bar', 'story', 'combat'].includes(type) && nodeOwnerDistrict?.dominantFactionId) {

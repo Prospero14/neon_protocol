@@ -2,11 +2,11 @@ import React from 'react';
 import CyberCard from '../../CyberCard';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { CardSource } from '../../../logic/hooks/useCombatLogic';
+import type { CombatPhase } from '../../../logic/combatPhases';
 import { Play, Zap, Power, TrendingUp } from 'lucide-react';
 
 interface HandControlsProps {
-  currentPhase: string;
-  activeHandTab: 'AUX' | 'CODE';
+  currentPhase: CombatPhase;
   filteredHand: { card: CombatCard; source: CardSource; idx: number }[];
   fullHand: CombatCard[];
   selectedCard: { source: CardSource; idx: number } | null;
@@ -14,41 +14,60 @@ interface HandControlsProps {
   cpu: number;
   stress: number;
   canAdvancePhase: boolean;
-  onTabChange: (tab: 'AUX' | 'CODE') => void;
+  getEffectiveCost: (card: CombatCard) => number;
   onCardSelect: (source: CardSource, idx: number) => void;
   onEndTurn: () => void;
   onOverclock: () => void;
   onAdvancePhase: () => void;
   onTerminate: () => void;
+  onMulligan: () => void;
+  mulliganUsed: boolean;
   isPipelineFull: boolean;
 }
 
 const HandControls: React.FC<HandControlsProps> = ({
-  currentPhase, activeHandTab, filteredHand, fullHand, selectedCard, isPlayerTurn, cpu,
-  stress, canAdvancePhase, onTabChange, onCardSelect, onEndTurn, onOverclock, onAdvancePhase, onTerminate, isPipelineFull
+  currentPhase, filteredHand, fullHand, selectedCard, isPlayerTurn, cpu,
+  stress, canAdvancePhase, getEffectiveCost, onCardSelect, onEndTurn, onOverclock, onAdvancePhase, onTerminate, onMulligan, mulliganUsed, isPipelineFull
 }) => {
-  const codeCount = fullHand.filter(c => c.type === 'SCRIPT').length;
-  const auxCount  = fullHand.filter(c => !['SYNTAX', 'FUNCTION', 'SCRIPT'].includes(c.type)).length;
+  const auxCount = fullHand.length;
+  const isCodePuzzle = currentPhase === 'DEVELOPMENT';
+  const isSupply = currentPhase === 'ARCHITECTURE';
+  const isStabilize = currentPhase === 'VERIFICATION';
 
   return (
     <div className="hc2">
       {/* ── TAB BAR ── */}
       <div className="hc2-tabs">
-        <span className="hc2-label">PAYLOAD_BUFFER</span>
+        <span className="hc2-label">
+          {isSupply && 'SUPPLY_DRAW'}
+          {isCodePuzzle && 'CODE_PUZZLE'}
+          {isStabilize && 'STABILIZE_DRAW'}
+          {currentPhase === 'DEPLOYMENT' && 'DEPLOY'}
+        </span>
         <span className="hc2-phase-tag">[{currentPhase}]</span>
+        {!isCodePuzzle && currentPhase !== 'DEPLOYMENT' && (
+          <span className="hc2-total-count">STACK: {fullHand.length}</span>
+        )}
+        {isCodePuzzle && (
+          <span className="hc2-total-count mono-text opacity-70" style={{ fontSize: 11 }}>
+            палитра + script (без дро с колоды)
+          </span>
+        )}
         <div className="hc2-spacer" />
-        <button
-          className={`hc2-tab ${activeHandTab === 'CODE' ? 'active code' : ''}`}
-          onClick={() => onTabChange('CODE')}
-        >
-          CODE <span className="hc2-tab-count">{codeCount}</span>
-        </button>
-        <button
-          className={`hc2-tab ${activeHandTab === 'AUX' ? 'active aux' : ''}`}
-          onClick={() => onTabChange('AUX')}
-        >
-          AUX <span className="hc2-tab-count">{auxCount}</span>
-        </button>
+        {isCodePuzzle ? (
+          <button type="button" className="hc2-tab active code" disabled>
+            CODE <span className="hc2-tab-count">{filteredHand.length}</span>
+          </button>
+        ) : currentPhase === 'DEPLOYMENT' ? null : (
+          <button type="button" className="hc2-tab active aux" disabled>
+            {isSupply ? 'INFRA' : 'STACK'} <span className="hc2-tab-count">{auxCount}</span>
+          </button>
+        )}
+        {isSupply && !mulliganUsed && (
+          <button type="button" className="hc2-mulligan-btn" onClick={onMulligan}>
+            RE-DRAW
+          </button>
+        )}
       </div>
 
       {/* ── HAND + ACTIONS ── */}
@@ -65,7 +84,7 @@ const HandControls: React.FC<HandControlsProps> = ({
                 <CyberCard
                   card={item.card}
                   onClick={() => onCardSelect(item.source, item.idx)}
-                  disabled={!isPlayerTurn || cpu < (item.card.cost ?? 0)}
+                  disabled={!isPlayerTurn || cpu < getEffectiveCost(item.card)}
                 />
                 {isSelected && <div className="hc2-selected-indicator">▲ SELECTED</div>}
               </div>
@@ -73,10 +92,10 @@ const HandControls: React.FC<HandControlsProps> = ({
           })}
           {filteredHand.length === 0 && (
             <div className="hc2-empty">
-              {activeHandTab === 'CODE'
-                ? 'NO_SCRIPTS — добавь через драфт после боя'
-                : 'NO_AUX_CARDS — реакции доступны через Draft'
-              }
+              {isCodePuzzle && 'Нет карт кода в колоде — собери деку в конструкторе'}
+              {isSupply && 'Нет INFRA в колоде — добавь железо в деку'}
+              {isStabilize && 'Нет реакций/софта в колоде'}
+              {currentPhase === 'DEPLOYMENT' && '—'}
             </div>
           )}
         </div>

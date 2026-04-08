@@ -16,45 +16,51 @@ export function getCardLibs(card: CombatCard): CardLibTag[] {
 
 export function cardMatchesJavaStack(
   card: CombatCard,
-  opts: { includeVanilla: boolean; enabledLibs: Set<CardLibTag>; enabledCats: Set<string> }
+  opts: { 
+    includeVanilla: boolean; 
+    enabledLibs: Set<CardLibTag>; 
+    enabledCats: Set<string>;
+    selectedLanguage: 'java' | 'script' | null;
+  }
 ): boolean {
   if (card.type === 'STATUS') return false;
-  if (getCardLanguage(card) !== 'java') return false;
+
+  const isScript = card.id.startsWith('script_') || card.language === 'none' || card.type === 'SCRIPT';
+  const isJava = card.language === 'java';
+
+  // 1. Language Filter Logic
+  if (opts.selectedLanguage === 'java' && !isJava) return false;
+  if (opts.selectedLanguage === 'script' && !isScript) return false;
 
   const libs = getCardLibs(card);
   const isVanilla = libs.length === 0;
 
-  const isInfra = card.type === 'INFRASTRUCTURE';
+  const isInfra = card.type === 'INFRASTRUCTURE' || card.type === 'HARD';
   const isSoft = card.type === 'SOFT';
   const isTest = card.type === 'REACTION' || card.type === 'DEFENSIVE';
-  const isSyntax = card.type === 'SYNTAX' || card.type === 'FUNCTION';
+  const isSyntax = card.type === 'SYNTAX' || card.type === 'FUNCTION' || card.type === 'NETWORK' || card.type === 'SCRIPT';
 
   // --- ADDITIVE FILTERING (OR) ---
   const anyCatActive = opts.enabledCats.size > 0;
 
-  // 1. If it's a vanilla card and the 'JAVA_CORE' filter is on, show it by default
-  // but only if it's a Language-specific card (Syntax/Function).
-  // Meta-cards like Soft, Infra, Tests only show if specifically checked.
-  if (isVanilla && opts.includeVanilla) {
-    if (!anyCatActive) {
-      if (isSyntax) return true;
-      return false;
-    }
-    if (opts.enabledCats.has('syntax') && isSyntax) return true;
+  // 1. Category-specific override: If any category is enabled, check it strictly
+  if (anyCatActive) {
     if (opts.enabledCats.has('infra') && isInfra) return true;
     if (opts.enabledCats.has('soft') && isSoft) return true;
     if (opts.enabledCats.has('tests') && isTest) return true;
+    if (opts.enabledCats.has('syntax') && isSyntax) return true;
+    return false;
   }
 
-  // 2. If it's a library card and its library is enabled, show it.
+  // 2. If no categories enabled, show based on Language + Vanilla/Lib:
+  // If it's a library card and its library is enabled, show it.
   if (libs.some(l => opts.enabledLibs.has(l))) return true;
 
-  // 3. If there are no vanilla/lib matches yet, but specific category filters are on,
-  // we might still want to show them (though libs usually handle their own categorization).
-  if (opts.enabledCats.has('syntax') && isSyntax) return true;
-  if (opts.enabledCats.has('infra') && isInfra) return true;
-  if (opts.enabledCats.has('soft') && isSoft) return true;
-  if (opts.enabledCats.has('tests') && isTest) return true;
+  // If it's vanilla/base card, show if 'JAVA_CORE' is active (for Java) or if it's a Script card (for SH)
+  if (isVanilla) {
+    if (isJava && opts.includeVanilla && isSyntax) return true;
+    if (isScript && isSyntax) return true;
+  }
 
   return false;
 }

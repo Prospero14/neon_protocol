@@ -206,7 +206,11 @@ export const HubView: React.FC<HubViewProps> = ({
            </div>
         </div>
 
-        <div className="hub-col intel">
+      </div>
+
+      <aside className="right-rail">
+        <div className="right-rail-col">
+          <div className="col-header mono-text"><Award size={14} /> CONTRACT_CHANNEL</div>
           <div className="active-quest-preview neon-panel">
             <div className="intel-header">
               <div className="intel-title">CONTRACT_BACKLOG</div>
@@ -229,77 +233,80 @@ export const HubView: React.FC<HubViewProps> = ({
             </div>
           </div>
         </div>
-      </div>
 
-      <aside className="messenger-dock neon-panel">
-        <div className="intel-header">
-          <div className="intel-title">MESSENGER_LINK</div>
-          <div className="intel-count gold">{channelFeed.length}</div>
-        </div>
-        <div className="mono-text messenger-meta-row">
-          Активный канал: {formatChannelName(activeMessengerChannel)} · Контакты: {trustedNpcContacts.length}
-        </div>
-        <div className="messenger-channel-list">
-          {knownDistrictChannels.map((districtId) => {
-            const unlocked = unlockedDistrictChannels.includes(districtId);
-            return (
-              <button
-                key={districtId}
-                className={`messenger-channel-chip ${districtId === activeMessengerChannel ? 'active' : ''} ${unlocked ? 'unlocked' : 'locked'}`}
-                onClick={() => onSelectMessengerChannel(districtId)}
-              >
-                {formatChannelName(districtId)} {unlocked ? '' : '[LOCK]'}
-              </button>
-            );
-          })}
-        </div>
-        {!isActiveChannelUnlocked && (
-          <div className="messenger-unlock-box">
-            <div className="mono-text messenger-unlock-note">
-              {channelVisitedBar
-                ? 'Бармен района готов открыть доступ: покупка или квест.'
-                : 'Сначала посетите бар этого района и поговорите с барменом.'}
+        <div className="right-rail-col">
+          <div className="col-header mono-text"><Zap size={14} /> MESSENGER_CHANNEL</div>
+          <div className="messenger-dock neon-panel">
+            <div className="intel-header">
+              <div className="intel-title">MESSENGER_LINK</div>
+              <div className="intel-count gold">{channelFeed.length}</div>
             </div>
-            <div className="messenger-unlock-actions">
+            <div className="mono-text messenger-meta-row">
+              Активный канал: {formatChannelName(activeMessengerChannel)} · Контакты: {trustedNpcContacts.length}
+            </div>
+            <div className="messenger-channel-list">
+              {knownDistrictChannels.map((districtId) => {
+                const unlocked = unlockedDistrictChannels.includes(districtId);
+                return (
+                  <button
+                    key={districtId}
+                    className={`messenger-channel-chip ${districtId === activeMessengerChannel ? 'active' : ''} ${unlocked ? 'unlocked' : 'locked'}`}
+                    onClick={() => onSelectMessengerChannel(districtId)}
+                  >
+                    {formatChannelName(districtId)} {unlocked ? '' : '[LOCK]'}
+                  </button>
+                );
+              })}
+            </div>
+            {!isActiveChannelUnlocked && (
+              <div className="messenger-unlock-box">
+                <div className="mono-text messenger-unlock-note">
+                  {channelVisitedBar
+                    ? 'Бармен района готов открыть доступ: покупка или квест.'
+                    : 'Сначала посетите бар этого района и поговорите с барменом.'}
+                </div>
+                <div className="messenger-unlock-actions">
+                  <button
+                    className="neon-border-btn glow-cyan"
+                    disabled={!channelVisitedBar || bits < 120}
+                    onClick={() => onUnlockChannelByBits(activeMessengerChannel)}
+                  >
+                    BUY ACCESS [120 ƀ]
+                  </button>
+                  <button
+                    className="neon-border-btn glow-green"
+                    disabled={!channelVisitedBar || !canUnlockChannelByQuest(activeMessengerChannel)}
+                    onClick={() => onUnlockChannelByQuest(activeMessengerChannel)}
+                  >
+                    QUEST ACCESS
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="messenger-input-row">
+              <input
+                value={messageDraft}
+                onChange={(e) => setMessageDraft(e.target.value)}
+                placeholder="написать в районный канал..."
+                className="messenger-input"
+                disabled={!isActiveChannelUnlocked}
+              />
               <button
                 className="neon-border-btn glow-cyan"
-                disabled={!channelVisitedBar || bits < 120}
-                onClick={() => onUnlockChannelByBits(activeMessengerChannel)}
+                onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
+                disabled={!isActiveChannelUnlocked}
               >
-                BUY ACCESS [120 ƀ]
+                SEND
               </button>
-              <button
-                className="neon-border-btn glow-green"
-                disabled={!channelVisitedBar || !canUnlockChannelByQuest(activeMessengerChannel)}
-                onClick={() => onUnlockChannelByQuest(activeMessengerChannel)}
-              >
-                QUEST ACCESS
-              </button>
+            </div>
+            <div className="messenger-feed">
+              {channelFeed.slice(0, 160).map((m) => (
+                <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
+                  <span className="messenger-from">[{m.from}]</span> {m.text}
+                </div>
+              ))}
             </div>
           </div>
-        )}
-        <div className="messenger-input-row">
-          <input
-            value={messageDraft}
-            onChange={(e) => setMessageDraft(e.target.value)}
-            placeholder="написать в районный канал..."
-            className="messenger-input"
-            disabled={!isActiveChannelUnlocked}
-          />
-          <button
-            className="neon-border-btn glow-cyan"
-            onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
-            disabled={!isActiveChannelUnlocked}
-          >
-            SEND
-          </button>
-        </div>
-        <div className="messenger-feed">
-          {channelFeed.slice(0, 160).map((m) => (
-            <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
-              <span className="messenger-from">[{m.from}]</span> {m.text}
-            </div>
-          ))}
         </div>
       </aside>
     </div>

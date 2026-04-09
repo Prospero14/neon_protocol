@@ -7,11 +7,14 @@ export const bar_chips_dialogue: DialogueTree = new DialogueBuilder('bar_chips')
   })
   .addNode('intro', 'СИНИЙ ЧИП', 'Запах дешевого озона и перегретого пластика. Можешь охладить нейроны без риска подцепить вирус.', [
     { text: 'Заказать охладитель (25 Bits)', nextId: 'intro', cost: 25, effect: 'RESTORE_HP', amount: 30 },
+    { text: 'Нейро-мазь "Холодный шов" (40 Bits)', nextId: 'intro', cost: 40, effect: 'GIVE_ITEM', cardRewardId: 'itm_neural_salve' },
+    { text: 'Модуль EDGE_CACHE_BOX (85 Bits)', nextId: 'intro', cost: 85, effect: 'GIVE_CARD', cardRewardId: 'infra_edge_cache' },
     { text: 'Послушать сплетни (5 Bits)', nextId: 'lore_bar', cost: 5 },
     { text: '[УЙТИ]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'СИНИЙ ЧИП', 'Тихий вечер в Силосах. Редкость. Садись, пока генератор не моргнул. Чем остудить процессор?', [
     { text: 'Заказать охладитель (25 Bits)', nextId: 'intro', cost: 25, effect: 'RESTORE_HP', amount: 30 },
+    { text: 'Синт-кофе "Дедлайн" (20 Bits)', nextId: 'intro', cost: 20, effect: 'GIVE_ITEM', cardRewardId: 'itm_synth_coffee' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addLoreNode('lore_bar', 'БАРМЕН', 'Слышал шёпот: в двенадцатом силосе кто-то из верхних этажей шарился по старым бэкапам — не турист, а человек с допуском. Такое не для сплетен, такое для чужих логов.', 'intro')

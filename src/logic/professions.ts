@@ -80,6 +80,46 @@ export const PROFESSIONS: Profession[] = [
     grade: 'Junior',
     isUnlocked: false
   },
+  {
+    id: 'ts_jun',
+    name: 'TypeScript Developer',
+    category: 'HARD',
+    path: 'Development',
+    specialization: 'Typed Front-end / Node',
+    description: 'Строгие контракты типов и предсказуемый рантайм. Профессия-заглушка для будущей ветки.',
+    grade: 'Junior',
+    isUnlocked: false
+  },
+  {
+    id: 'csharp_jun',
+    name: 'C# Developer',
+    category: 'HARD',
+    path: 'Development',
+    specialization: '.NET Services',
+    description: 'Инженер экосистемы .NET. Профессия-заглушка для будущего контента.',
+    grade: 'Junior',
+    isUnlocked: false
+  },
+  {
+    id: 'cpp_jun',
+    name: 'C++ Developer',
+    category: 'HARD',
+    path: 'Development',
+    specialization: 'Low-level / Engine',
+    description: 'Низкоуровневая оптимизация и контроль памяти. Профессия-заглушка.',
+    grade: 'Junior',
+    isUnlocked: false
+  },
+  {
+    id: 'rust_jun',
+    name: 'Rust Developer',
+    category: 'HARD',
+    path: 'Development',
+    specialization: 'Safe Systems',
+    description: 'Безопасные системные сервисы без гонок данных. Профессия-заглушка.',
+    grade: 'Junior',
+    isUnlocked: false
+  },
 
   // --- ROLES (INFRA & MANAGEMENT) ---
   {

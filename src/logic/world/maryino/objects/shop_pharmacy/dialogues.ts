@@ -8,6 +8,8 @@ export const shop_pharmacy_dialogue: DialogueTree = new DialogueBuilder('shop_ph
   .addNode('intro', 'ДАТА_АПТЕКА', 'Ампулы с жидким кодом. Патчи для оболочек. Очистка кэша и стабилизация сигнала.', [
     { text: 'Патч "Стабильность" (40 Bits)', nextId: 'intro', cost: 40, effect: 'GIVE_CARD', cardRewardId: 'def_stability_patch', subtext: 'Увеличивает защиту деки.' },
     { text: 'Сборка "Анти-фриз" (60 Bits)', nextId: 'intro', cost: 60, effect: 'GIVE_CARD', cardRewardId: 'reac_antifreeze', subtext: 'Снимает дебаффы скорости.' },
+    { text: 'Tactical Breath (36 Bits)', nextId: 'intro', cost: 36, effect: 'GIVE_CARD', cardRewardId: 'soft_tactical_breath', subtext: 'Мгновенно снимает стресс.' },
+    { text: 'Patch Drill (72 Bits)', nextId: 'intro', cost: 72, effect: 'GIVE_CARD', cardRewardId: 'soft_patch_drill', subtext: 'Поднимает mitigation перед ходом ИИ.' },
     { text: 'Нейро-мазь «Холодный шов» (35)', nextId: 'intro', cost: 35, awardItemId: 'itm_neural_salve', subtext: 'Чуть дешевле, чем на свалке.' },
     { text: 'Синт-кофе «Дедлайн» (14)', nextId: 'intro', cost: 14, awardItemId: 'itm_synth_coffee', subtext: 'Лёгкий буст стресса.' },
     { text: '[USE] Debug Tea (из добычи)', nextId: 'intro', requireLootItemId: 'itm_cons_2', effect: 'USE_GAME_ITEM', cardRewardId: 'itm_cons_2', subtext: 'Применить расходник из рюкзака.' },

@@ -9,6 +9,8 @@ import { npc_barman_profile } from './npcs/npc_barman/profile';
 import { npc_barman_dialogues } from './npcs/npc_barman/dialogues';
 import { npc_deck_ai_profile } from './npcs/npc_deck_ai/profile';
 import { npc_deck_ai_dialogues } from './npcs/npc_deck_ai/dialogues';
+import { npc_midnight_runner_profile } from './npcs/npc_midnight_runner/profile';
+import { npc_midnight_runner_dialogues } from './npcs/npc_midnight_runner/dialogues';
 
 import { term_taxi_hub_dialogues } from './objects/term_taxi_hub/dialogues';
 import { job_board_hub_dialogues } from './objects/job_board_hub/dialogues';
@@ -36,7 +38,8 @@ export const hub: WorldDistrict = {
     npc_mira_profile,
     npc_gb_agent_profile,
     npc_barman_profile,
-    npc_deck_ai_profile
+    npc_deck_ai_profile,
+    npc_midnight_runner_profile
   ],
   dialogues: {
     npc_spider: npc_spider_dialogues,
@@ -44,6 +47,7 @@ export const hub: WorldDistrict = {
     npc_gb_agent: npc_gb_agent_dialogues,
     npc_barman: npc_barman_dialogues,
     npc_deck_ai: npc_deck_ai_dialogues,
+    npc_midnight_runner: npc_midnight_runner_dialogues,
     term_taxi_hub: term_taxi_hub_dialogues,
     job_board_hub: job_board_hub_dialogues,
     GENERIC_STUB: generic_stub_dialogues

@@ -130,6 +130,18 @@ export const CARD_LIBRARY: CombatCard[] = [
     description: 'Проверенный временем хлам. Дает +512MB RAM (1 слот) до конца боя.',
     language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
   },
+  {
+    id: 'infra_edge_cache', name: 'EDGE_CACHE_BOX', type: 'INFRASTRUCTURE', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 9,
+    description: 'Локальный кэш на краю сети. Стабилизирует первые ходы и снижает риск перегрева.',
+    language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_safe_proxy', name: 'SAFE_PROXY_NODE', type: 'INFRASTRUCTURE', grade: 'Script-Kiddo',
+    cost: 0, power: 3, integrity: 10,
+    description: 'Прокси-узел для безопасного транзита. Смягчает входящий стресс и помогает держать темп.',
+    language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
 
   // --- DESIGN PHASE (BASE JAVA) ---
   {
@@ -496,6 +508,54 @@ export const CARD_LIBRARY: CombatCard[] = [
     id: 'reward_divine_debug', name: 'DIVINE_DEBUG', type: 'SOFT', grade: 'Senior',
     cost: 1, power: 0, integrity: 50,
     description: 'Благословение Никсанны. Мгновенно восстанавливает 30 HP и очищает все баги в руке.',
+    tags: ['utility'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'infra_mesh_relay', name: 'MESH_RELAY_GRID', type: 'INFRASTRUCTURE', grade: 'Junior',
+    cost: 1, power: 0, integrity: 18,
+    description: 'Сетка ретрансляторов метро. +1 CPU и +512MB RAM, стабильный базис для ранних контрактов.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_quarantine_vm', name: 'QUARANTINE_VM', type: 'INFRASTRUCTURE', grade: 'Middle',
+    cost: 1, power: 0, integrity: 26,
+    description: 'Песочница для сомнительного кода. Снимает 8 стресса при деплое и повышает выживаемость шины.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_street_fusion', name: 'STREET_FUSION_CORE', type: 'INFRASTRUCTURE', grade: 'Middle',
+    cost: 2, power: 0, integrity: 30,
+    description: 'Гибридный модуль из скрапа и корп-железа. +2 CPU, но добавляет немного фонового стресса.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_orbital_uplink', name: 'ORBITAL_UPLINK', type: 'INFRASTRUCTURE', grade: 'Senior',
+    cost: 3, power: 0, integrity: 35,
+    description: 'Спутниковый uplink из Филей. +1 CPU и +2GB RAM, открывает ресурс под длинные цепочки.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'soft_tactical_breath', name: 'TACTICAL_BREATH', type: 'SOFT', grade: 'Junior',
+    cost: 0, power: 0, integrity: 14,
+    description: 'Короткая нейро-пауза. Мгновенно снимает стресс и даёт контроль темпа.',
+    tags: ['utility'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'soft_patch_drill', name: 'PATCH_DRILL', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 20,
+    description: 'Тренировочный протокол патчей. Поднимает mitigation и помогает пережить ответ ИИ.',
+    tags: ['utility'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'soft_signal_prediction', name: 'SIGNAL_PREDICTION', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 18,
+    description: 'Предиктивный анализ линии угроз. Ослабляет накопленные баги и сбивает темп противника.',
+    tags: ['utility'], phaseConstraint: 'TESTING'
+  },
+  {
+    id: 'soft_deadline_trance', name: 'DEADLINE_TRANCE', type: 'SOFT', grade: 'Senior',
+    cost: 2, power: 0, integrity: 28,
+    description: 'Боевой режим дедлайна. +1 CPU в этот ход и добор карты ценой небольшого стресса.',
     tags: ['utility'], phaseConstraint: 'TESTING'
   },
 

@@ -25,9 +25,29 @@ import type { ViewType } from './logic/hooks/useGameState';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
 import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
+import { NPC_PRESENCE_CONFIGS, isNpcHomeAccessible } from './logic/npcPresence';
+import type { Profession } from './logic/professions';
 
 function App() {
   const gs = useGameState();
+
+  const grantProfessionCards = (prof: Profession) => {
+    const byProfession: Record<string, string[]> = {
+      java_jun: ['syntax_class_decl', 'syntax_main_method', 'syntax_list_init', 'syntax_try_catch', 'mid_stream_init'],
+      kotlin_jun: ['script_auth', 'script_ssh'],
+      python_jun: ['script_grep', 'script_scp'],
+      js_jun: ['script_curl', 'script_auth'],
+      go_jun: ['script_ping', 'script_sudo_fix'],
+    };
+    const ids = byProfession[prof.id] ?? [];
+    ids.forEach((id) => {
+      const card = getCardById(id);
+      if (!card) return;
+      gs.setInventory((inv) => (inv.some((c) => c.id === id) ? inv : [...inv, card]));
+      gs.setActiveDeck((deck) => (deck.length < 30 && !deck.some((c) => c.id === id) ? [...deck, card] : deck));
+      gs.discoverCard(id);
+    });
+  };
 
   const renderAppView = () => {
     if (gs.currentView === 'CREATION') {
@@ -46,6 +66,8 @@ function App() {
       const district = MAP_NODES.find((n) => n.id === gs.activeDistrictId) ?? MAP_NODES[0];
       const filteredNodes = district.subNodes.filter(node => {
         if (node.id === 'npc_petrovich' && !gs.isPetrovichHomeUnlocked) return false;
+        const presenceCfg = Object.values(NPC_PRESENCE_CONFIGS).find((cfg) => cfg.homeNodeId === node.id);
+        if (presenceCfg && !isNpcHomeAccessible(presenceCfg, gs.dayPhase, gs.npcPresenceMap)) return false;
         return true;
       });
 
@@ -122,6 +144,7 @@ function App() {
             if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === gs.activeBarNode) && earned > 0) { 
               gs.setQuestStates((prev) => markQuestReady(prev, trackedDef.id)); 
             }
+            gs.advanceTime(2);
             gs.setCurrentView('MAP'); 
             gs.setViewMode('DISTRICT');
           }} 
@@ -171,6 +194,8 @@ function App() {
           onRemoveItem={gs.onRemoveItem}
           playerLoot={gs.loot}
           onUseLootItem={gs.onUseLootItem}
+          currentDay={gs.worldDay}
+          dayPhase={gs.dayPhase}
           activeQuestIds={activeQuests} 
           readyQuestIds={readyQuests}
           completedQuestIds={completedQuests}
@@ -178,7 +203,11 @@ function App() {
           onUnlockCity={() => { gs.setIsCityMapUnlocked(true); gs.setViewMode('CITY'); gs.setCurrentView('MAP'); }} 
           onSetProfession={(profId: string) => { 
             const prof = getProfessionById(profId); 
-            if (prof) { gs.setProfession(prof); gs.setClassUnlocked(true); } 
+            if (prof) {
+              gs.setProfession(prof);
+              gs.setClassUnlocked(true);
+              grantProfessionCards(prof);
+            } 
           }} 
           onStartCombat={(combatId: string) => { gs.setActiveBarNode(combatId); gs.setCurrentView('COMBAT'); }} 
           onTravel={gs.handleTravel} 
@@ -297,6 +326,11 @@ function App() {
         questStates={gs.questStates}
         exploitCount={gs.solvedChains.length}
         tutorialCompleted={gs.questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')}
+        worldDay={gs.worldDay}
+        dayPhase={gs.dayPhase}
+        trustedNpcContacts={gs.trustedNpcContacts}
+        messengerFeed={gs.messengerFeed}
+        onSendMessengerPing={gs.sendMessengerPing}
         onNavigateToView={(view: string) => gs.setCurrentView(view as ViewType)}
         onNavigateToBarNode={(nodeId: string) => { gs.setActiveBarNode(nodeId); gs.setCurrentView('FIXER_BAR'); }}
       />

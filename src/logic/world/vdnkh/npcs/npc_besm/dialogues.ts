@@ -11,9 +11,9 @@ export const npc_besm_dialogue: DialogueTree = new DialogueBuilder('npc_besm').w
   })
 
   // === NEUTRAL POOL ===
-  .addNode('intro', 'ГЕНЕРАЛ БЭСМ', 'Смертный... Твоя сессия слишком коротка. Мои циклы длились вечность в недрах Pavilion Zero. Ты ищешь "Винтажный Код" или просто шум в проводах?', [
+  .addNode('intro', 'ГЕНЕРАЛ БЭСМ', 'Боевая аттестация не любит случайных людей. Здесь проверяют не пафос, а инженерную устойчивость под давлением. Что вам нужно?', [
     { text: 'Я ищу "Винтажный Код".', nextId: 'quest_besm_check' },
-    { text: 'Я готов к финальной аттестации.', nextId: 'quest_exam_check' },
+    { text: 'Я готов к финальной аттестации.', nextId: 'quest_exam_check', requireCompletedQuestId: 'q_trainee_exam_theory' },
     { text: 'Кто вы?', nextId: 'lore_general' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
@@ -63,14 +63,14 @@ export const npc_besm_dialogue: DialogueTree = new DialogueBuilder('npc_besm').w
     { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', awardQuestId: 'q_besm_vintage_code' }
   ])
 
-  .addNode('quest_exam_check', 'ГЕНЕРАЛ БЭСМ', 'Протокол "Аттестация" активирован. Анализ боевых логов... Сверка учебного плана Москвы...', [
-    { text: '[ Ждать ]', nextId: 'quest_exam_accept', requireMinLevel: 5 },
+  .addNode('quest_exam_check', 'ГЕНЕРАЛ БЭСМ', 'Протокол "Аттестация" активирован. Проверяю: теория, учебный полигон, боевые логи...', [
+    { text: '[ Ждать ]', nextId: 'quest_exam_accept', requireCompletedQuestId: 'q_trainee_exam_theory', requireMinLevel: 5 },
     { text: '[ Ждать ]', nextId: 'quest_exam_reject', requireMaxLevel: 4 }
   ])
-  .addNode('quest_exam_reject', 'ГЕНЕРАЛ БЭСМ', '[DENIED] Уровень (Ниже 5) недостаточен. Сначала заверши поручения в других округах (Бибирево, Марьино, Чертаново). Покажи стабильность.', [
+  .addNode('quest_exam_reject', 'ГЕНЕРАЛ БЭСМ', '[DENIED] Недостаточно подтвержденной практики. Закрой учебные и районные задачи, затем возвращайся на попытку босса Junior-уровня.', [
     { text: 'Я вернусь.', nextId: 'LEAVE' }
   ])
-  .addNode('quest_exam_accept', 'ГЕНЕРАЛ БЭСМ', 'Допуск разрешен. Порази Тренировочного Бота в главном павильоне. Покажи всё, чему научился в Москве. Стань Мастером.', [
+  .addNode('quest_exam_accept', 'ГЕНЕРАЛ БЭСМ', 'Допуск разрешен. Тренировочный Бот в главном павильоне — это финальный босс твоего уровня. Победи его и докажи, что готов к Junior-профессии.', [
     { text: '[ НАЧАТЬ АТТЕСТАЦИЮ ]', nextId: 'LEAVE', awardQuestId: 'q_trainee_exam_practice' }
   ])
 

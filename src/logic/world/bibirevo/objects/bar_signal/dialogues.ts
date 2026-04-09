@@ -8,6 +8,8 @@ export const bar_signal_dialogue: DialogueTree = new DialogueBuilder('bar_signal
   .addNode('intro', 'БАР "СИГНАЛ"', 'Здесь не гасят шум, здесь его создают. Лучший спирт для промывки плат. Идеальный охлад для перегретых кодеров.', [
     { text: 'Рюмка "Белого Шума" (12 Bits)', nextId: 'intro', cost: 12, effect: 'RESTORE_HP', amount: 20 },
     { text: 'Двойной охладитель (25 Bits)', nextId: 'intro', cost: 25, effect: 'RESTORE_HP', amount: 50 },
+    { text: 'Транспортный жетон (18 Bits)', nextId: 'intro', cost: 18, effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token' },
+    { text: 'Скрипт SCP_EXPORT (95 Bits)', nextId: 'intro', cost: 95, effect: 'GIVE_CARD', cardRewardId: 'script_scp' },
     { text: '[Выход]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'БАР "СИГНАЛ"', 'Садись, юнит. Генератор сегодня не моргает, так что охлад холодный. Что льем в деку?', [

@@ -11,6 +11,7 @@ export const shop_scrap_dialogue: DialogueTree = new DialogueBuilder('shop_scrap
     { text: 'LS_DIR (15 Bits)', nextId: 'intro', cost: 15, effect: 'GIVE_CARD', cardRewardId: 'script_ls', subtext: 'Локальная утилита [SH]. Листинг файлов.' },
     { text: 'CAT_FILE (20 Bits)', nextId: 'intro', cost: 20, effect: 'GIVE_CARD', cardRewardId: 'script_cat', subtext: 'Локальная утилита [SH]. Чтение данных.' },
     { text: 'Old HW: Fan (25 Bits)', nextId: 'intro', cost: 25, effect: 'GIVE_CARD', cardRewardId: 'infra_old_hw', subtext: 'Немного снижает Stress.' },
+    { text: 'Mesh Relay Grid (48 Bits)', nextId: 'intro', cost: 48, effect: 'GIVE_CARD', cardRewardId: 'infra_mesh_relay', subtext: 'Стабильная сетка: +CPU/+RAM.' },
     { text: 'Синт-кофе «Дедлайн» (16)', nextId: 'intro', cost: 16, awardItemId: 'itm_synth_coffee', subtext: 'Расходник: −стресс, +к потолку (см. эффект в инвентаре).' },
     { text: 'Нейро-мазь «Холодный шов» (38)', nextId: 'intro', cost: 38, awardItemId: 'itm_neural_salve', subtext: 'Сильное снятие стресса при использовании.' },
     { text: 'USB «Кэш битов» (95)', nextId: 'intro', cost: 95, awardItemId: 'itm_bit_cache_usb', subtext: 'Одноразовый приток битов при активации.' },

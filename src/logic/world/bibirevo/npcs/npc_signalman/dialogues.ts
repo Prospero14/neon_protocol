@@ -15,6 +15,8 @@ export const npc_signalman_dialogue: DialogueTree = new DialogueBuilder('npc_sig
     { text: 'Что за паразит?', nextId: 'lore_parasite' },
     { text: 'Я прозвоню линию.', nextId: 'rank_check', requireMaxLevel: 1 },
     { text: 'Как успехи на линии?', nextId: 'active_status', requireActiveQuestId: 'q_bibirevo_combat_link_break_bug_sweep' },
+    { text: 'Петрович отправил меня. Есть межрайонный заказ?', nextId: 'petrovich_handoff' },
+    { text: 'Где искать путь к Junior?', nextId: 'prof_route' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'СВЯЗИСТ МОНЯ', 'Опять задержка... Ты принес чистый трафик или просто пингуешь меня вхолостую? Линия "Север-12" искрит, некогда лясы точить.', [
@@ -78,6 +80,12 @@ export const npc_signalman_dialogue: DialogueTree = new DialogueBuilder('npc_sig
 
   .addNode('active_status', 'СВЯЗИСТ МОНЯ', 'Линия до сих пор искрит! Чего стоишь? Пинг не будет ждать вечно. Иди работай.', [
     { text: 'Понял, Моня. Ухожу.', nextId: 'LEAVE' }
+  ])
+  .addNode('petrovich_handoff', 'СВЯЗИСТ МОНЯ', 'От Петровича? Тогда без очереди. Есть мост в Марьино: передай Крысе-курьеру метку канала и забери обратный лог. Держи жетон.', [
+    { text: '[ПРИНЯТЬ МАРШРУТ]', nextId: 'intro', effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token', awardQuestId: 'q_bib_to_maryino_signal_chain' }
+  ])
+  .addNode('prof_route', 'СВЯЗИСТ МОНЯ', 'Профессор Туранов ведет теорию на Юго-Западной. Но он любит цифры, а не обещания: сперва подними третий уровень в Exploit-DB. Потом уже идешь на экзамен.', [
+    { text: 'Ясно, спасибо.', nextId: 'intro' }
   ])
 
   .build();

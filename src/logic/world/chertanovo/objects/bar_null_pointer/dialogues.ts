@@ -8,6 +8,8 @@ export const bar_null_pointer_dialogue: DialogueTree = new DialogueBuilder('bar_
   .addNode('intro', 'БАР_NULL_POINTER', 'Здесь не спрашивают твой IP и не логируют твои мысли. Тень Чертаново — твой дом. Чем залить кэш, чтобы не дрожал интерфейс?', [
     { text: 'Забыть всё (15 Bits)', nextId: 'intro', cost: 15, effect: 'RESTORE_HP', amount: 35 },
     { text: 'Полный дамп (55 Bits)', nextId: 'intro', cost: 55, effect: 'RESTORE_HP', amount: 100 },
+    { text: 'USB "Кэш битов" (70 Bits)', nextId: 'intro', cost: 70, effect: 'GIVE_ITEM', cardRewardId: 'itm_bit_cache_usb' },
+    { text: 'Модуль SAFE_PROXY_NODE (110 Bits)', nextId: 'intro', cost: 110, effect: 'GIVE_CARD', cardRewardId: 'infra_safe_proxy' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'БАР_NULL_POINTER', 'Лучшее место для тех, кто хочет стать просто Null. Садись. Сегодня акция: при разрыве соединения — вторая кружка бесплатно.', [

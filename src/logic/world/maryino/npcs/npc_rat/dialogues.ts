@@ -16,6 +16,7 @@ export const npc_rat_dialogue: DialogueTree = new DialogueBuilder('npc_rat').wit
     { text: 'Кто такие Nullpointers?', nextId: 'lore_faction' },
     { text: 'Мне нужен хладагент для Мастера Верстака.', nextId: 'quest_cooling_finish', requireQuestId: 'q_verstak_cooling' },
     { text: 'Петрович просил вернуть "Zero-Point" чип...', nextId: 'quest_rogue_module_rat', requireQuestId: 'q_petrovich_rogue_module' },
+    { text: 'Моня из Бибирево дал маршрутный хэнд-офф.', nextId: 'bib_handoff', requireQuestId: 'q_bib_to_maryino_signal_chain' },
     { text: 'Нужны Bits. Есть работа?', nextId: 'job_selection' },
     { text: 'Я "приватизировал" детали для склада.', nextId: 'quest_scrap_raid_finish', requireQuestId: 'q_maryino_scrap_raid' },
     { text: 'Я готов помочь с проходом через шлюзы.', nextId: 'passage_lead', requireQuestId: 'q_maryino_passage' },
@@ -137,6 +138,9 @@ export const npc_rat_dialogue: DialogueTree = new DialogueBuilder('npc_rat').wit
   ])
   .addNode('quest_rogue_module_bribe', 'КРЫСА_КУРЬЕР', 'Bits! Это я люблю. Куплю новые процессоры. Держи раритет.', [
     { text: 'Сделка.', nextId: 'LEAVE', effect: 'GIVE_ITEM', cardRewardId: 'item_zero_point_chip' }
+  ])
+  .addNode('bib_handoff', 'КРЫСА_КУРЬЕР', 'Пи! Моня живой, значит линия еще держится. Держи обратный лог и жетон на обратный прыжок. Передай, что маршрут чист.', [
+    { text: '[ЗАВЕРШИТЬ ПЕРЕНОС]', nextId: 'intro', effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token', completeQuestId: 'q_bib_to_maryino_signal_chain' }
   ])
 
   .build();

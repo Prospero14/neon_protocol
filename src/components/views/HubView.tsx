@@ -6,6 +6,7 @@ import { QUEST_LIBRARY } from '../../logic/questData';
 import type { QuestState } from '../../logic/questEngine';
 import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
+import type { MessengerMessage } from '../../logic/hooks/useGameState';
 
 interface HubViewProps {
   playerName: string;
@@ -27,6 +28,11 @@ interface HubViewProps {
   /** Число завершённых цепочек (эксплойтов) — порог разблокировки класса. */
   exploitCount: number;
   tutorialCompleted: boolean;
+  worldDay: number;
+  dayPhase: string;
+  trustedNpcContacts: string[];
+  messengerFeed: MessengerMessage[];
+  onSendMessengerPing: (text: string) => void;
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
 }
@@ -50,9 +56,15 @@ export const HubView: React.FC<HubViewProps> = ({
   questStates,
   exploitCount,
   tutorialCompleted,
+  worldDay,
+  dayPhase,
+  trustedNpcContacts,
+  messengerFeed,
+  onSendMessengerPing,
   onNavigateToView,
   onNavigateToBarNode
 }) => {
+  const [messageDraft, setMessageDraft] = React.useState('');
   return (
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
@@ -62,6 +74,8 @@ export const HubView: React.FC<HubViewProps> = ({
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>
             <span className="meta-item"><User size={12} /> {playerName}</span>
+            <span className="meta-divider">|</span>
+            <span className="meta-item">DAY {worldDay} / {dayPhase.toUpperCase()}</span>
           </div>
         </div>
         <div className="hub-top-stats">
@@ -196,6 +210,36 @@ export const HubView: React.FC<HubViewProps> = ({
                       );
                    })()
                  )}
+              </div>
+           </div>
+           <div className="neon-panel" style={{ marginTop: '15px', padding: '12px' }}>
+              <div className="intel-header">
+                 <div className="intel-title">MESSENGER_LINK</div>
+                 <div className="intel-count gold">{trustedNpcContacts.length}</div>
+              </div>
+              <div className="mono-text" style={{ fontSize: '0.62rem', opacity: 0.85, marginBottom: '8px' }}>
+                Контакты: {trustedNpcContacts.length > 0 ? trustedNpcContacts.join(', ') : 'нет доверенных NPC'}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                <input
+                  value={messageDraft}
+                  onChange={(e) => setMessageDraft(e.target.value)}
+                  placeholder="написать в канал..."
+                  style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#d7f7ff', padding: '6px', fontFamily: 'var(--font-mono)' }}
+                />
+                <button
+                  className="neon-border-btn glow-cyan"
+                  onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
+                >
+                  SEND
+                </button>
+              </div>
+              <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {messengerFeed.slice(0, 6).map((m) => (
+                  <div key={m.id} className="mono-text" style={{ fontSize: '0.6rem', color: m.isSpam ? '#ff6f6f' : '#9ae8ff' }}>
+                    [{m.from}] {m.text}
+                  </div>
+                ))}
               </div>
            </div>
            <div className="neon-panel interactive intel-card" style={{ marginTop: '15px' }} onClick={() => onNavigateToView('REFERENCE')}>

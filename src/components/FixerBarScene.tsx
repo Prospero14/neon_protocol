@@ -3,11 +3,12 @@ import { DIALOGUE_TREES } from '../logic/dialogues';
 import type { DialogueNode, DialogueOption } from '../logic/dialogues';
 import type { Trait } from '../logic/traits';
 import { FACTIONS } from '../logic/factions';
-import { NPC_PRESENCE_CONFIGS } from '../logic/npcPresence';
+import { NPC_PRESENCE_CONFIGS, isNpcAvailableInPhase, type NpcDayPhase } from '../logic/npcPresence';
 import { Cpu, Fingerprint } from 'lucide-react';
 import { QUEST_LIBRARY } from '../logic/questData';
 import type { CombatCard } from '../logic/combatCards';
 import type { GameItem } from '../logic/items';
+import { MAP_NODES } from '../logic/mapData';
 
 interface FixerBarSceneProps {
   locationId: string;
@@ -39,6 +40,8 @@ interface FixerBarSceneProps {
   /** Предметы с квестов / лута (не карты колоды). */
   playerLoot?: GameItem[];
   onUseLootItem?: (itemId: string) => void;
+  currentDay?: number;
+  dayPhase?: NpcDayPhase;
   onLeave: () => void;
   homeDistrictId?: string;
   npcPresenceMap: Record<string, 'HOME' | 'AWAY'>;
@@ -73,6 +76,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onRemoveItem,
   playerLoot = [],
   onUseLootItem,
+  currentDay = 1,
+  dayPhase = 'day',
   onLeave,
   homeDistrictId,
   npcPresenceMap,
@@ -102,12 +107,19 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   const [currentNodeId, setCurrentNodeId] = useState<string>(tree.startNodeId);
   const [typedText, setTypedText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
 
   // v0.10: Handle Presence Overrides (Note on door)
   useEffect(() => {
     const config = Object.values(NPC_PRESENCE_CONFIGS).find(c => c.homeNodeId === locationId);
-    if (config && npcPresenceMap[config.npcId] === 'AWAY') {
+    if (config && !isNpcAvailableInPhase(config, dayPhase)) {
+      if (tree.nodes['intro_note']) {
+        setCurrentNodeId('intro_note');
+      } else {
+        setTypedText(config.unavailableNote || 'Записка на двери: приём в эту фазу суток отключён.');
+      }
+    } else if (config && npcPresenceMap[config.npcId] === 'AWAY') {
        // Check if there is an intro_note node in this tree (to be added in next phase)
        if (tree.nodes['intro_note']) {
          setCurrentNodeId('intro_note');
@@ -120,7 +132,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     }
     setTypedText('');
     setIsTyping(true);
-  }, [locationId, tree.startNodeId, npcPresenceMap]);
+  }, [locationId, tree.startNodeId, npcPresenceMap, dayPhase]);
 
   const node: DialogueNode = tree.nodes[currentNodeId] || tree.nodes[tree.startNodeId];
 
@@ -144,20 +156,41 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     return true;
   });
 
+  const detectDistrictFromLocation = (id: string): string => {
+    const byDistrictId = MAP_NODES.find((d) => d.id === id)?.id;
+    if (byDistrictId) return byDistrictId;
+    for (const d of MAP_NODES) {
+      if (d.subNodes?.some((s) => s.id === id)) return d.id;
+    }
+    const known = [
+      'altufyevo', 'bibirevo', 'chertanovo', 'fili', 'izmailovo', 'maryino', 'mitino',
+      'perovo', 'sokol', 'sokolniki', 'south_west', 'taganka', 'tekstilschiki',
+      'teply_stan', 'vdnkh', 'vykhino', 'kitay_gorod', 'academy'
+    ];
+    const hit = known.find((d) => id.includes(d));
+    return hit || 'unknown';
+  };
+
+  const locationDistrict = detectDistrictFromLocation(locationId);
+
   // v0.10: Inject Guest NPCs if they are present at this location
   const finalOptions = [...visibleOptions];
   if (currentNodeId === tree.startNodeId) {
     Object.values(NPC_PRESENCE_CONFIGS).forEach(config => {
+      if (!isNpcAvailableInPhase(config, dayPhase)) return;
+      const inConfiguredNode = config.awayNodeId === locationId;
+      const inConfiguredDistrict = config.awayDistrictId === locationDistrict;
+      if (!inConfiguredNode && !inConfiguredDistrict) return;
       // Show Petrovich in bar if he's not unlocked OR rolled as AWAY at bar
       const isPetrovichSpecial = config.npcId === 'npc_petrovich' && !isPetrovichHomeUnlocked;
-      if (config.awayNodeId === locationId && (npcPresenceMap[config.npcId] === 'AWAY' || isPetrovichSpecial)) {
-         finalOptions.push({
-           text: `ПОГОВОРИТЬ: ${config.name.toUpperCase()}`,
-           nextId: 'TRAVEL_GUEST',
-           cardRewardId: config.npcId, // Use as target nodeId
-           subtext: 'ПРИСУТСТВУЕТ_В_ЛОКАЦИИ',
-           isNpcInteraction: true
-         } as any);
+      if (npcPresenceMap[config.npcId] === 'AWAY' || isPetrovichSpecial) {
+        finalOptions.push({
+          text: `ПОГОВОРИТЬ: ${config.name.toUpperCase()}`,
+          nextId: 'TRAVEL_GUEST',
+          cardRewardId: config.npcId, // Use as target nodeId
+          subtext: 'ПРИСУТСТВУЕТ_В_ЛОКАЦИИ',
+          isNpcInteraction: true
+        } as any);
       }
     });
 
@@ -175,44 +208,93 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   }
 
   // v0.10: Categorize for Layout
-  const serviceOptions = finalOptions.filter(o => (o.cost || 0) > 0);
+  const hashSeed = (s: string) => {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return Math.abs(h >>> 0);
+  };
+  const serviceOptionsRaw = finalOptions.filter(o => (o.cost || 0) > 0);
+  const serviceOptions = (() => {
+    if (serviceOptionsRaw.length <= 4) return serviceOptionsRaw;
+    const scored = serviceOptionsRaw.map((opt, idx) => ({
+      opt,
+      idx,
+      score: hashSeed(`${locationId}_${currentDay}_${opt.cardRewardId || opt.text}_${idx}`),
+    }));
+    scored.sort((a, b) => a.score - b.score);
+    return scored.slice(0, 4).map((x) => x.opt);
+  })();
   const primaryOptions = finalOptions.filter(o => !((o.cost || 0) > 0));
+
+  const regionalMultiplier = (() => {
+    if (!homeDistrictId || homeDistrictId === 'unknown') return 1;
+    if (homeDistrictId === locationDistrict) return 0.88;
+    if (locationDistrict === 'taganka' || locationDistrict === 'vykhino') return 1.16;
+    if (locationDistrict === 'south_west' || locationDistrict === 'sokol') return 1.04;
+    return 1.0;
+  })();
+  const vendorMultiplier = (() => {
+    if (locationId.includes('black_market') || locationId.includes('state_secret')) return 1.12;
+    if (locationId.includes('pharmacy')) return 0.96;
+    if (locationId.includes('scrap') || locationId.includes('north_link')) return 0.98;
+    return 1.0;
+  })();
+  const reputationMultiplier = (() => {
+    if (currentRep >= 40) return 0.9;
+    if (currentRep >= 20) return 0.95;
+    if (currentRep <= -40) return 1.2;
+    if (currentRep <= -20) return 1.1;
+    return 1.0;
+  })();
+
+  const totalCopiesOfCard = (id?: string) => {
+    if (!id) return 0;
+    const invCount = inventory.filter((c: CombatCard) => c.id === id).length;
+    const deckCount = activeDeck.filter((c: CombatCard) => c.id === id).length;
+    return invCount + deckCount;
+  };
+
+  const isLocalThemed = (cardId: string, distId: string) => {
+    const themes: Record<string, string[]> = {
+      altufyevo: ['script_ping', 'script_ls', 'script_cat', 'script_sudo_fix', 'soft_coffee', 'infra_old_hw', 'infra_mesh_relay'],
+      maryino: ['script_grep', 'script_auth', 'script_wash_logs', 'soft_ai_ask', 'soft_tactical_breath', 'soft_patch_drill'],
+      bibirevo: ['fn_ping_flood', 'infra_hub', 'soft_signal_prediction', 'infra_quarantine_vm'],
+      fili: ['infra_street_fusion', 'infra_orbital_uplink', 'soft_deadline_trance'],
+      chertanovo: ['fn_grep_recursive', 'fn_sudo_fix', 'script_rm'],
+    };
+    const activeDist = Object.keys(themes).find(d => distId.includes(d));
+    return (activeDist && themes[activeDist]?.includes(cardId)) || false;
+  };
+
+  const getEffectiveCost = (option: DialogueOption): number => {
+    let effectiveCost = option.cost || 0;
+    if (effectiveCost <= 0) return 0;
+    if (option.effect === 'GIVE_CARD' && option.cardRewardId && isLocalThemed(option.cardRewardId, locationId)) {
+      effectiveCost = Math.floor(effectiveCost * 0.85);
+    }
+    const combined = regionalMultiplier * vendorMultiplier * reputationMultiplier;
+    return Math.max(1, Math.floor(effectiveCost * combined));
+  };
 
   useEffect(() => {
     if (node && node.text) {
-      setTypedText(node.text);
-      setIsTyping(false);
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setTypedText(node.text);
+        setIsTyping(false);
+        setIsTransitioning(false);
+      }, 140);
+      return () => clearTimeout(timer);
     }
   }, [currentNodeId, node]);
 
   const handleOptionClick = (option: DialogueOption) => {
     if (isTyping) { setTypedText(node.text); setIsTyping(false); return; }
 
-    const isAltufyevoResident = homeDistrictId === 'altufyevo';
-    const isLocalAltufyevo = locationId.includes('altufyevo') || 
-      (['npc_petrovich', 'shop_scrap', 'npc_varvar', 'npc_nixanna', 'job_board_alt', 'term_silo_7', 'bar_chips'].includes(locationId));
-    const hasDiscount = isAltufyevoResident && isLocalAltufyevo;
-
-    const totalCopiesOfCard = (id?: string) => {
-      if (!id) return 0;
-      const invCount = inventory.filter((c: CombatCard) => c.id === id).length;
-      const deckCount = activeDeck.filter((c: CombatCard) => c.id === id).length;
-      return invCount + deckCount;
-    };
-
-    const isLocalThemed = (cardId: string, distId: string) => {
-      const themes: Record<string, string[]> = {
-        altufyevo: ['script_ping', 'script_ls', 'script_cat', 'script_sudo_fix', 'soft_coffee', 'infra_old_hw'],
-        maryino: ['script_grep', 'script_auth', 'script_wash_logs', 'soft_ai_ask', 'net_scanner'],
-        sokol: ['java_list_base', 'java_map_base', 'java_spring_core'],
-        chertanovo: ['script_rm_rf', 'script_ping', 'soft_energy_drink'],
-      };
-      // Simple contains check for district ID in location ID
-      const activeDist = Object.keys(themes).find(d => distId.includes(d));
-      return (activeDist && themes[activeDist]?.includes(cardId)) || false;
-    };
-
-    let effectiveCost = option.cost || 0;
+    let effectiveCost = getEffectiveCost(option);
     
     // Purchase Limit Logic
     if (option.effect === 'GIVE_CARD' && option.cardRewardId) {
@@ -220,13 +302,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           // Block purchase
           return;
        }
-       // Apply 20% local theme discount
-       if (isLocalThemed(option.cardRewardId, locationId)) {
-          effectiveCost = Math.floor(effectiveCost * 0.8);
-       }
+       // already baked into getEffectiveCost
     }
-    
-    if (hasDiscount && effectiveCost > 0) effectiveCost = Math.floor(effectiveCost * 0.9);
 
     if (effectiveCost > 0 && playerBits < effectiveCost) return;
     if (effectiveCost > 0) onPay(effectiveCost);
@@ -269,7 +346,11 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     if (option.nextId === 'LEAVE') {
       if (!effectFired) onLeave();
     } else {
-      setCurrentNodeId(option.nextId);
+      setIsTyping(true);
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentNodeId(option.nextId);
+      }, 110);
     }
   };
 
@@ -306,7 +387,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
         {/* RIGHT: CONTENT & ACTION CENTER */}
         <section className="action-center">
           <div className="story-area neon-panel arctic-monolith">
-            <div className="text-scroll">
+            <div className={`text-scroll ${isTransitioning ? 'is-transitioning' : ''}`}>
               <span className="prompt-v4">{">_"}</span> {typedText}
             </div>
           </div>
@@ -320,7 +401,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
                   {serviceOptions.map((opt, idx) => (
                     <button key={idx} className="service-tile interactive" onClick={() => handleOptionClick(opt)}>
                        <div className="tile-text">{opt.text}</div>
-                       <div className="tile-price">ƀ{opt.cost}</div>
+                       <div className="tile-price">ƀ{getEffectiveCost(opt)}</div>
                     </button>
                   ))}
                 </div>
@@ -425,7 +506,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           display: flex;
           align-items: center;
         }
-        .text-scroll { font-size: 1.1rem; line-height: 1.5; color: #d0d0d0; }
+        .text-scroll { font-size: 1.1rem; line-height: 1.5; color: #d0d0d0; transition: opacity 140ms ease, transform 140ms ease; opacity: 1; transform: translateY(0); }
+        .text-scroll.is-transitioning { opacity: 0.35; transform: translateY(2px); }
         .prompt-v4 { color: var(--neon-cyan); font-weight: bold; margin-right: 10px; }
 
         .interaction-matrix {

@@ -297,6 +297,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     isExecutionChain: true,
     description: 'Система очистки Умной Уборной №4 перешла в режим самоликвидации. Нужно прокинуть исключение, перехватить поток управления и принудительно завершить процесс смыва. Кот Магнус рассчитывает на тебя.',
     steps: [
+      { id: '0', name: 'STABILIZE_INFRA', requiredCardIds: ['infra_old_hw', 'infra_edge_cache', 'infra_safe_proxy'] },
       { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
       { id: '2', name: 'PROCESS_FILTER', requiredCardIds: ['script_grep'] },
       { id: '3', name: 'FORCE_TERMINATE', requiredCardIds: ['script_sudo_fix'] }
@@ -321,6 +322,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     isExecutionChain: true,
     description: 'Нам нужны доказательства. Сначала найди нужный лог среди файлов. Затем отфильтруй только строки с ошибками. Наконец, выгрузи эти логи ко мне на безопасный сервер. Порядок действий критически важен, иначе мы скачаем тонну бесполезного мусора.',
     steps: [
+      { id: '0', name: 'PREP_PROXY', requiredCardIds: ['infra_safe_proxy', 'infra_edge_cache'] },
       { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
       { id: '2', name: 'FILTER_DATA', requiredCardIds: ['script_grep'] },
       { id: '3', name: 'SECURE_COPY_EXPORT', requiredCardIds: ['script_scp'] }
@@ -342,6 +344,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     rank: 'script-kiddie',
     description: 'Тетя Таня из Марьино подозревает, что в локалке завелись крысы. Проверь периметр, просканируй порты и закрой сокеты.',
     steps: [
+      { id: '0', name: 'DEPLOY_EDGE', requiredCardIds: ['infra_old_hw', 'infra_edge_cache'] },
       { id: 'SCAN', name: 'PORT_SCAN', requiredCardIds: ['script_grep'] },
       { id: 'CLOSE', name: 'SOCKET_CLOSE', requiredCardIds: ['script_sudo_fix'] }
     ]
@@ -410,7 +413,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     rank: 'script-kiddie',
     isExecutionChain: true,
     description:
-      'Сухой контракт: ssh (туннель) → auth (логин) → ls (инвентарь на стороне) → cat (считать файл). Без лирики — либо цепочка закрыта, либо сессия рвётся.',
+      'Удаленный узел держит многослойный контроль доступа. Нужно пройти его спокойно и без шума: закрепиться в канале, подтвердить право входа и извлечь нужный артефакт без тревоги.',
     steps: [
       { id: 'TUNNEL', name: 'SSH', requiredCardIds: ['script_ssh'] },
       { id: 'LOGIN', name: 'AUTH', requiredCardIds: ['script_auth'] },
@@ -423,7 +426,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'PROJECT: PERSISTENT_BACKDOOR',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Нам нужно закрепиться на этом узле. Загрузи бинарник, дай ему права на исполнение и повесь в крон. И не забудь открыть бэкдор для прямого доступа. Грязная работа, но кто-то должен её делать.',
+    description: 'Операция на удержание точки: подготовь контур, обеспечь автономный запуск и открой скрытый сервисный доступ. Ошибка в последовательности сорвет весь цикл закрепления.',
     steps: [
       { id: 'FETCH', name: 'CURL_DROPPER', requiredCardIds: ['script_curl'] },
       { id: 'CHMOD', name: 'MAKE_EXEC', requiredCardIds: ['script_chmod'] },
@@ -437,7 +440,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     rank: 'script-kiddie',
     isExecutionChain: true,
     description:
-      'Ночной сценарий без геройства: ls → grep по логам → cat нужного файла → wash_logs, чтобы не оставить жирный след. Торопись — чужой cron не спит.',
+      'Ночной сбор проходит под давлением патрулей: сначала разведка, затем точечный отбор данных, верификация и аккуратное скрытие следов. Работа тонкая, времени мало.',
     steps: [
       { id: 'DISCOVERY', name: 'LS', requiredCardIds: ['script_ls'] },
       { id: 'FIND_ID', name: 'GREP', requiredCardIds: ['script_grep'] },
@@ -451,7 +454,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     rank: 'script-kiddie',
     isExecutionChain: true,
     description:
-      'Учебный стенд: два шага, как в консоли — сначала ls (оглянуться по дереву), потом cat (прочитать выбранный кусок). Нарушишь порядок — манекен не засчитает.',
+      'Учебный стенд проверяет дисциплину инженера: сначала разведка контекста, затем чтение ключевого фрагмента. Если перепутаешь логику действий, тренажер обрывает сессию.',
     steps: [
       { id: '1', name: 'LS', requiredCardIds: ['script_ls'] },
       { id: '2', name: 'CAT', requiredCardIds: ['script_cat'] }
@@ -463,7 +466,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     rank: 'script-kiddie',
     isExecutionChain: true,
     description:
-      'Петрович скидывает тикет без философии: в шине шумят остатки старых прошивок. На шине по порядку: ls (что лежит в каталоге), grep (выцепить строки по сигнатуре), cat (снять дамп статуса). Иначе узел так и останется «красным» в мониторинге.',
+      'Силосный тикет критический: в шине застряли хвосты старых прошивок. Нужна строгая операционная последовательность — разведка, фильтрация и фиксация состояния — иначе узел останется в красной зоне.',
     steps: [
       { id: '1', name: 'LS_LIST', requiredCardIds: ['script_ls'] },
       { id: '2', name: 'GREP_FILTER', requiredCardIds: ['script_grep'] },
@@ -595,7 +598,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     minLevel: 1,
     districtId: 'bibirevo',
     resistanceType: 'AUTH_LOCKED',
-    description: 'Камеры в Бибирево зациклены на одном кадре. Нужно авторизоваться и подменить видеопоток. Это даст нам окно в 30 секунд.',
+    description: 'Камеры Бибирево застряли в ложном кадре. Перехвати доступ и аккуратно внедри отвлекающий поток, чтобы открыть короткое окно для прохода.',
     steps: [
       { id: '1', name: 'AUTH', requiredCardIds: ['script_auth'] },
       { id: '2', name: 'DECOY_INJECT', requiredCardIds: ['script_ls', 'script_cat'] }
@@ -608,7 +611,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     minLevel: 2,
     districtId: 'tekstilschiki',
     resistanceType: 'ENCRYPTED',
-    description: 'Станки на Текстильщиках работают по зашифрованным протоколам. Пробей туннель и останови конвейер.',
+    description: 'Производственный контур шифрует управляющие сигналы. Выведи безопасный канал и мягко останови линию, не разрушив цеховой цикл.',
     steps: [
       { id: '1', name: 'TUNNEL', requiredCardIds: ['script_ssh'] },
       { id: '2', name: 'STOP_SIGNAL', requiredCardIds: ['script_sudo_fix'] }
@@ -621,7 +624,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     minLevel: 3,
     districtId: 'altufyevo',
     resistanceType: 'AUTH_LOCKED',
-    description: 'Клапан сброса в Силосе №7 заблокирован администратором. Повысь права и открой шлюз, пока давление не критическое.',
+    description: 'Аварийный клапан Силоса №7 заблокирован регламентом. Подними допуск и восстанови контроль до критического порога давления.',
     steps: [
       { id: '1', name: 'AUTH', requiredCardIds: ['script_auth'] },
       { id: '2', name: 'SUDO_OPEN', requiredCardIds: ['script_sudo_fix'] },
@@ -636,7 +639,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     districtId: 'perovo',
     resistanceType: 'ENCRYPTED',
     isExecutionChain: true,
-    description: 'Подстанция Перово. Самый сложный узел в округе. Нужно зашифровать свой пульс, получить права и перенаправить ток на север.',
+    description: 'Подстанция Перово работает на грани. Пройди защищенный контур, получи расширенный доступ и перенаправь нагрузку в северную ветку без каскадного сбоя.',
     steps: [
       { id: '1', name: 'SSH', requiredCardIds: ['script_ssh'] },
       { id: '2', name: 'AUTH', requiredCardIds: ['script_auth'] },

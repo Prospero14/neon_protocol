@@ -93,6 +93,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         missionTzStepsCount={missionTz.steps.length}
         enemy={state.enemy}
         nextBugAction={state.nextBugAction}
+        lastAiAction={state.lastAiAction}
+        isPlayerTurn={state.isPlayerTurn}
+        isAiResolving={state.isAiResolving}
+        lastAiImpact={state.lastAiImpact}
         selectedCard={state.selectedCard}
         playerProgress={state.playerProgress}
         aiProgress={state.aiProgress}

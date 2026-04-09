@@ -1137,6 +1137,96 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     purpose: 'Защита от отказа узла (Single Point of Failure).',
     bullets: ['Durability: Обеспечивает отказоустойчивость хранения.']
   },
+  'infra_mesh_relay': {
+    id: 'infra_mesh_relay',
+    title: 'Сетка Ретрансляторов',
+    concept: 'Mesh Relay Infrastructure',
+    explanation: 'Децентрализованная сеть узлов связи, где каждый ретранслятор поддерживает соседние сегменты при деградации канала.',
+    example: 'relay_A -> relay_B -> relay_C (auto-reroute)',
+    purpose: 'Стабильный базовый прирост CPU/RAM без перегрузки контура.',
+    bullets: ['Resilience: Сохраняет связность даже при частичных отказах.']
+  },
+  'infra_quarantine_vm': {
+    id: 'infra_quarantine_vm',
+    title: 'Карантинная ВМ',
+    concept: 'Sandbox Isolation',
+    explanation: 'Изолированная виртуальная среда для исполнения подозрительных модулей без заражения боевой шины.',
+    example: 'vm --isolate unknown_payload.bin',
+    purpose: 'Снижение риска и давления стресса в критических фазах.',
+    bullets: ['Containment: Ошибка локализуется внутри VM и не расползается по pipeline.']
+  },
+  'infra_street_fusion': {
+    id: 'infra_street_fusion',
+    title: 'Гибридный Фьюжн-Ядро',
+    concept: 'Scrap + Corp Hybrid Core',
+    explanation: 'Собранный на коленке гибрид корпоративных шин и уличных модов: мощный, но шумный.',
+    example: 'dual bus fused with black-market regulator',
+    purpose: 'Сильный прирост CPU ценой контролируемого побочного стресса.',
+    bullets: ['Risk/Reward: Отличный темп-рывок, если команда готова к перегреву.']
+  },
+  'infra_orbital_uplink': {
+    id: 'infra_orbital_uplink',
+    title: 'Орбитальный Uplink',
+    concept: 'Satellite Backbone',
+    explanation: 'Канал верхнего уровня через орбитальные реле Филей; добавляет широкий ресурсный потолок для длинных цепочек.',
+    example: 'uplink.init("--orbit", "--low-latency")',
+    purpose: 'Разгон RAM под сложные техкарты и длинные этапы деплоя.',
+    bullets: ['Bandwidth: Критичен для high-load сценариев senior-контрактов.']
+  },
+  'soft_tactical_breath': {
+    id: 'soft_tactical_breath',
+    title: 'Тактическая Пауза',
+    concept: 'Micro Recovery Routine',
+    explanation: 'Короткий протокол стабилизации дыхания и нейро-ритма перед ответом ИИ.',
+    example: 'inhale(4) -> hold(2) -> execute()',
+    purpose: 'Быстрый сброс стресса и возвращение контроля темпа.',
+    bullets: ['Tempo: Особенно ценен в затяжных verification-боях.']
+  },
+  'soft_patch_drill': {
+    id: 'soft_patch_drill',
+    title: 'Протокол Patch Drill',
+    concept: 'Mitigation Training',
+    explanation: 'Имитация аварийных патчей в ускоренном цикле, формирующая запас защиты перед входящим уроном.',
+    example: 'drill.patch("--stress-shield", 8)',
+    purpose: 'Поднять mitigation-буфер и пережить вражеский burst.',
+    bullets: ['Defense: Отлично сочетается с outplay-очисткой багов.']
+  },
+  'soft_signal_prediction': {
+    id: 'soft_signal_prediction',
+    title: 'Предиктор Сигнала',
+    concept: 'Threat Forecast',
+    explanation: 'Предиктивная модель по телеметрии оппонента: заранее подрезает опасные пики угрозы и шумы.',
+    example: 'predict(signal).reduce(threat, bugs)',
+    purpose: 'Сбить ритм противника и выровнять кривую давления.',
+    bullets: ['Control: Сильная карта для mid-control архетипов.']
+  },
+  'soft_deadline_trance': {
+    id: 'soft_deadline_trance',
+    title: 'Транс Дедлайна',
+    concept: 'Overfocus Spike',
+    explanation: 'Режим гиперфокуса под жесткий дедлайн: даёт резкий буст темпа, но с умеренной ценой по стрессу.',
+    example: 'focus.lock(); draw++; cpu++;',
+    purpose: 'Темповый рывок в критический момент цикла.',
+    bullets: ['Clutch: Хорош для добивания задачи в окно перед DEployment.']
+  },
+  'infra_edge_cache': {
+    id: 'infra_edge_cache',
+    title: 'Пограничный Кэш',
+    concept: 'Edge Caching Node',
+    explanation: 'Локальный буфер на границе района, который принимает первичный всплеск трафика и сглаживает пиковую нагрузку.',
+    example: 'cache.edge("--warmup", "--district=local")',
+    purpose: 'Стабилизировать старт боя и снизить риск раннего перегрева.',
+    bullets: ['Tempo: Сильная стартовая инфраструктура для Script-Kiddo миссий.']
+  },
+  'infra_safe_proxy': {
+    id: 'infra_safe_proxy',
+    title: 'Безопасный Прокси-Узел',
+    concept: 'Controlled Transit Layer',
+    explanation: 'Промежуточный сервисный узел, который фильтрует шум и защищает от прямых ответных ударов в канал.',
+    example: 'proxy.safe("--sanitize", "--fallback=on")',
+    purpose: 'Повысить живучесть и устойчивость при длинной последовательной задаче.',
+    bullets: ['Control: Помогает держать ритм в сложных многошаговых ТЗ.']
+  },
   'soft_throw_ex': {
     id: 'soft_throw_ex',
     title: 'Выбросить исключение',

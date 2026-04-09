@@ -16,7 +16,10 @@ import { fili } from './fili/index';
 import { taganka } from './taganka/index';
 import { mitino } from './mitino/index';
 import { academy } from './academy/index';
+import { metro_stub } from './metro_stub/index';
 import { punitive_dialogues } from './punitive/dialogues';
+import { NIGHT_CONTACT_DIALOGUES, NIGHT_CONTACT_PROFILES } from '../nightContacts';
+import { DAY_CONTACT_DIALOGUES, DAY_CONTACT_PROFILES } from '../dayContacts';
 
 import type { WorldDistrict } from './types';
 import type { MapNode } from '../mapData';
@@ -41,14 +44,21 @@ const ALL_DISTRICTS: WorldDistrict[] = [
   fili,
   taganka,
   mitino,
-  academy
+  academy,
+  metro_stub
 ];
 
 export const MAP_NODES: MapNode[] = ALL_DISTRICTS.map(d => d.node);
 
-export const NPC_LIBRARY: NpcProfile[] = ALL_DISTRICTS.flatMap(d => d.npcs);
+export const NPC_LIBRARY: NpcProfile[] = [
+  ...ALL_DISTRICTS.flatMap(d => d.npcs),
+  ...DAY_CONTACT_PROFILES,
+  ...NIGHT_CONTACT_PROFILES
+];
 
 export const DIALOGUE_TREES: Record<string, DialogueTree> = {
   ...ALL_DISTRICTS.reduce((acc, d) => ({ ...acc, ...d.dialogues }), {}),
+  ...DAY_CONTACT_DIALOGUES,
+  ...NIGHT_CONTACT_DIALOGUES,
   ...punitive_dialogues
 };

@@ -380,26 +380,46 @@
 }
 .nb2-enemy-slots {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 .nb2-enemy-slot {
-  padding: 10px 16px;
+  padding: 11px 14px;
   border: 1px solid rgba(255,45,109,0.12);
   background: rgba(255,45,109,0.03);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 120px;
+  min-width: 140px;
   position: relative;
   cursor: help;
 }
 .nb2-enemy-slot.active {
   border-color: rgba(255,45,109,0.4);
   background: rgba(255,45,109,0.08);
+  box-shadow: 0 0 14px rgba(255, 64, 96, 0.2);
+}
+.nb2-enemy-slot.executing {
+  animation: enemy-exec-pulse 0.8s ease-in-out infinite;
+}
+.nb2-enemy-slot.masked {
+  border-style: dashed;
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(100, 116, 139, 0.05);
+  cursor: default;
+}
+.nb2-enemy-slot.masked .nb2-eslot-name {
+  color: rgba(148, 163, 184, 0.75);
 }
 .nb2-eslot-id { font-size: 0.6rem; color: rgba(255,45,109,0.3); font-weight: 900; }
 .nb2-eslot-name { font-size: 0.8rem; color: #aab; font-weight: 900; }
+@keyframes enemy-exec-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 64, 96, 0.2); transform: translateY(0); }
+  50% { box-shadow: 0 0 22px rgba(255, 64, 96, 0.45); transform: translateY(-2px); }
+}
 
 .nb2-eslot-tooltip {
   display: none;
@@ -429,8 +449,43 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px 40px;
+  padding: 14px 20px;
 }
+.nb2-ai-banner {
+  margin: 0 32px;
+  border: 1px solid rgba(255, 64, 96, 0.2);
+  background: rgba(127, 29, 29, 0.1);
+  color: #fda4af;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  font-weight: 900;
+  padding: 8px 14px;
+  text-transform: uppercase;
+}
+.nb2-ai-banner.live {
+  border-color: rgba(255, 64, 96, 0.55);
+  background: rgba(127, 29, 29, 0.24);
+  color: #fecdd3;
+  box-shadow: 0 0 14px rgba(255, 64, 96, 0.25);
+}
+.nb2-ai-impact-strip {
+  margin: 6px 32px 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nb2-ai-impact-strip .chip {
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  font-weight: 900;
+  padding: 4px 8px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+.nb2-ai-impact-strip .chip.threat { color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.08); }
+.nb2-ai-impact-strip .chip.bug { color: #fb7185; border-color: rgba(251, 113, 133, 0.45); background: rgba(251, 113, 133, 0.08); }
+.nb2-ai-impact-strip .chip.stress { color: #f43f5e; border-color: rgba(244, 63, 94, 0.45); background: rgba(244, 63, 94, 0.08); }
+.nb2-ai-impact-strip .chip.inject { color: #a5b4fc; border-color: rgba(165, 180, 252, 0.45); background: rgba(165, 180, 252, 0.08); }
 
 /* Code editor pipeline */
 .nb2-code-editor {
@@ -498,8 +553,8 @@
   padding: 0 4px;
 }
 .nb2-code-slot {
-  width: 180px;
-  height: 120px;
+  width: 150px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -532,7 +587,7 @@
   50%      { box-shadow: 0 0 28px rgba(0,212,255,0.35), inset 0 0 20px rgba(0,212,255,0.08); }
 }
 .nb2-slot-code {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 900;
   color: #00d4ff;
   text-transform: uppercase;
@@ -580,8 +635,8 @@
   padding: 12px 0;
 }
 .nb2-plan-slot {
-  width: 180px;
-  height: 90px;
+  width: 150px;
+  height: 82px;
   display: flex;
   align-items: center;
   justify-content: center;

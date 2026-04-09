@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { parseSkillMode, SKILL_MODE_STORAGE_KEY, type SkillMode } from '../skillMode';
-import { NPC_PRESENCE_CONFIGS } from '../npcPresence';
+import { NPC_PRESENCE_CONFIGS, isNpcAvailableInPhase } from '../npcPresence';
 import type { Trait } from '../traits';
 import { MAP_NODES, type CombatPack, type MapNodeData } from '../mapData';
 import { PROFESSIONS, getProfessionById, type Profession } from '../professions';
@@ -15,15 +15,26 @@ import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
 import { rollLoot } from '../lootTables';
 import { ITEM_LIBRARY, getItemById, type GameItem } from '../items';
+import type { NpcDayPhase } from '../npcPresence';
 
 
 export type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
+export interface MessengerMessage {
+  id: string;
+  from: string;
+  text: string;
+  isSpam?: boolean;
+}
 
 export function initialMergedInventory(): CombatCard[] {
-  const byId = new Map<string, CombatCard>();
-  CARD_LIBRARY.forEach((c) => byId.set(c.id, c));
-  SPRING_CARD_LIBRARY.forEach((c) => byId.set(c.id, c));
-  return [...byId.values()];
+  const starterInventoryIds = [
+    'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
+    'script_ls', 'script_cat', 'script_auth', 'script_rm',
+    'soft_coffee', 'soft_ai_ask',
+    'infra_old_hw', 'infra_edge_cache',
+    'react_unit_test', 'react_emergency_flush', 'react_trace_jam', 'react_firewall_patch', 'def_validator'
+  ];
+  return starterInventoryIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 }
 
 export const buildTraineeDeck = (): CombatCard[] => {
@@ -34,7 +45,7 @@ export const buildTraineeDeck = (): CombatCard[] => {
     // SOFT — мягкие скиллы
     'soft_coffee', 'soft_ai_ask',
     // INFRA — первое железо
-    'infra_old_hw',
+    'infra_old_hw', 'infra_edge_cache',
     // REACTION / DEF — покрывают типы сбоя в combatCounterplay (тест, рефакторинг, flush, трасса)
     'react_unit_test',
     'react_emergency_flush',
@@ -46,18 +57,22 @@ export const buildTraineeDeck = (): CombatCard[] => {
   return starterIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 };
 
+const BASELINE_SCRIPT_IDS = [
+  'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
+  'script_ls', 'script_cat', 'script_auth', 'script_rm',
+  'soft_coffee', 'soft_ai_ask', 'infra_old_hw', 'infra_edge_cache'
+];
+
 export const MISSION_STARTER_PACKS: Record<string, string[]> = {
   'default': [
     'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs', 
-    'script_sudo_fix', 'script_auth', 'script_rm', 'script_ssh', 'script_curl'
+    'script_sudo_fix', 'script_auth', 'script_rm', 'script_scp', 'infra_old_hw'
   ],
   'q_kiddo_start': [
-    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs',
-    'script_auth', 'script_rm'
+    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs', 'script_auth', 'script_rm', 'infra_old_hw'
   ],
   'q_kiddo_first_bits': [
-    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs',
-    'script_sudo_fix', 'script_rm'
+    'script_ls', 'script_cat', 'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix', 'script_scp', 'infra_edge_cache'
   ],
   'local_lan': [
     'script_ls', 'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
@@ -141,10 +156,14 @@ export function useGameState() {
   const [questStates, setQuestStates] = useState<QuestState[]>([]);
   const [completedQuestCount, setCompletedQuestCount] = useState(0);
   const [bitsFromQuests, setBitsFromQuests] = useState(0);
+  const [worldDay, setWorldDay] = useState(1);
+  const [dayTick, setDayTick] = useState(0);
   
   const [isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked] = useState(false);
   const [npcPresenceMap, setNpcPresenceMap] = useState<Record<string, 'HOME' | 'AWAY'>>({});
   const [nodeCooldowns, setNodeCooldowns] = useState<Record<string, number>>({});
+  const [trustedNpcContacts, setTrustedNpcContacts] = useState<string[]>([]);
+  const [messengerFeed, setMessengerFeed] = useState<MessengerMessage[]>([]);
 
   const inventoryUnique = useMemo(() => {
     const map = new Map<string, CombatCard>();
@@ -154,6 +173,23 @@ export function useGameState() {
 
   const [discoveredCardIds, setDiscoveredCardIds] = useState<Set<string>>(new Set(activeDeck.map((c) => c.id)));
   const discoverCard = (id: string) => setDiscoveredCardIds((prev) => new Set(prev).add(id));
+  const dayPhase = useMemo<NpcDayPhase>(() => {
+    if (dayTick <= 1) return 'morning';
+    if (dayTick <= 3) return 'day';
+    if (dayTick <= 5) return 'evening';
+    return 'night';
+  }, [dayTick]);
+
+  const advanceTime = useCallback((steps: number = 1) => {
+    if (steps <= 0) return;
+    setDayTick((prevTick) => {
+      const total = prevTick + steps;
+      const daysPassed = Math.floor(total / 8);
+      const nextTick = total % 8;
+      if (daysPassed > 0) setWorldDay((d) => d + daysPassed);
+      return nextTick;
+    });
+  }, []);
 
   // --- PROGRESSION LOGIC ---
   const playerLevel = useMemo(() => {
@@ -222,13 +258,29 @@ export function useGameState() {
     });
   };
 
-  const rollNpcPresence = () => {
+  const grantCardById = (cardId: string) => {
+    const card = getCardById(cardId);
+    if (!card) return;
+    setInventory((prev) => (prev.some((c) => c.id === cardId) ? prev : [...prev, card]));
+    setActiveDeck((prev) => (prev.length < 30 && !prev.some((c) => c.id === cardId) ? [...prev, card] : prev));
+    discoverCard(cardId);
+  };
+
+  const rollNpcPresence = useCallback(() => {
     const newMap: Record<string, 'HOME' | 'AWAY'> = {};
     Object.values(NPC_PRESENCE_CONFIGS).forEach(config => {
+      if (!isNpcAvailableInPhase(config, dayPhase)) {
+        newMap[config.npcId] = 'HOME';
+        return;
+      }
       newMap[config.npcId] = Math.random() < config.awayChance ? 'AWAY' : 'HOME';
     });
     setNpcPresenceMap(newMap);
-  };
+  }, [dayPhase]);
+
+  useEffect(() => {
+    rollNpcPresence();
+  }, [rollNpcPresence]);
 
   const syncGame = async () => {
     if (!user) return;
@@ -251,7 +303,9 @@ export function useGameState() {
       classUnlocked: classUnlocked,
       deckCores: deckCores,
       deckRamMb: deckRamMb,
-      discoveredCardIds: Array.from(discoveredCardIds)
+      discoveredCardIds: Array.from(discoveredCardIds),
+      worldDay,
+      dayTick
     };
     await syncGameState(state);
   };
@@ -286,7 +340,18 @@ export function useGameState() {
       }
       if (gs.inventory) {
         const fullInv = gs.inventory.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
-        if (fullInv.length > 0) setInventory(fullInv);
+        if (fullInv.length > 0) {
+          const migrated = [...fullInv];
+          const has = new Set(migrated.map((c) => c.id));
+          // Save migration: old profiles may contain only 2-3 script cards.
+          BASELINE_SCRIPT_IDS.forEach((id) => {
+            if (!has.has(id)) {
+              const card = getCardById(id);
+              if (card) migrated.push(card);
+            }
+          });
+          setInventory(migrated);
+        }
       }
 
       if (gs.activeBarNode) setActiveBarNode(gs.activeBarNode);
@@ -311,6 +376,8 @@ export function useGameState() {
       if (gs.deckCores !== undefined) setDeckCores(gs.deckCores);
       if (gs.deckRamMb !== undefined) setDeckRamMb(gs.deckRamMb);
       if (gs.discoveredCardIds) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
+      if (gs.worldDay !== undefined) setWorldDay(gs.worldDay);
+      if (gs.dayTick !== undefined) setDayTick(gs.dayTick);
       // Load exploits
       const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
       if (saved) setSolvedChains(JSON.parse(saved));
@@ -331,7 +398,7 @@ export function useGameState() {
       if (currentView !== 'CREATION') syncGame();
     }, 1500); // 1.5s debounce to prevent spamming
     return () => clearTimeout(timer);
-  }, [bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId, isCityMapUnlocked]);
+  }, [bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId, isCityMapUnlocked, worldDay, dayTick]);
 
   const rewardForQuest = (q: QuestDefinition) => {
     const base = baseQuestBits(q.tier, q.difficulty);
@@ -399,6 +466,8 @@ export function useGameState() {
     setActiveDeck(starterDeck);
     starterDeck.forEach((c) => discoverCard(c.id));
     setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
+    setWorldDay(1);
+    setDayTick(0);
     setCurrentView('HUB');
     syncGame();
   };
@@ -424,6 +493,19 @@ export function useGameState() {
       return nextStates;
     });
     rewardForQuest(q);
+    if (questId.startsWith('q_kiddo_start_')) {
+      grantCardById('script_scp');
+      grantCardById('infra_safe_proxy');
+    }
+    if (questId.startsWith('q_kiddo_first_bits_')) {
+      grantCardById('script_ssh');
+      grantCardById('infra_edge_cache');
+    }
+    if (questId.startsWith('q_kiddo_metro_access_')) {
+      grantCardById('script_curl');
+      grantCardById('script_chmod');
+    }
+    advanceTime(1);
   };
 
   const handleTravel = (nodeId: string, type: string, cost?: number) => {
@@ -462,6 +544,7 @@ export function useGameState() {
       setActiveDistrictId(nodeId);
       setViewMode('DISTRICT');
       setActiveCombatPack(targetDistrict.combatPack ?? 'java_core');
+      advanceTime(1);
       return;
     }
 
@@ -486,12 +569,25 @@ export function useGameState() {
 
       setActiveBarNode(nodeId);
       setCurrentView('COMBAT');
+      advanceTime(1);
       return;
     }
 
     if (['npc', 'shop', 'terminal', 'bar', 'story'].includes(type)) {
+      if (type === 'npc') {
+        const district = MAP_NODES.find((d) => d.id === activeDistrictId);
+        const rep = district?.dominantFactionId ? (reputation[district.dominantFactionId] || 0) : 0;
+        if (rep >= 15) {
+          setTrustedNpcContacts((prev) => (prev.includes(nodeId) ? prev : [...prev, nodeId]));
+          setMessengerFeed((prev) => [
+            { id: `msg_contact_${Date.now()}`, from: nodeId, text: 'Канал закреплен. Можешь писать в мессенджер.', isSpam: false },
+            ...prev,
+          ].slice(0, 80));
+        }
+      }
       setActiveBarNode(nodeId);
       setCurrentView('FIXER_BAR');
+      advanceTime(1);
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
       if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics' || trackedDef.type === 'talk')) {
@@ -510,6 +606,38 @@ export function useGameState() {
     tutorialCompleted: questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed'),
   };
   const canUnlockNow = canUnlockClass(preClassState);
+
+  const sendMessengerPing = (text: string) => {
+    const clean = text.trim();
+    if (!clean) return;
+    const now = Date.now();
+    const next: MessengerMessage[] = [
+      { id: `msg_out_${now}`, from: 'YOU', text: clean, isSpam: false },
+    ];
+    if (trustedNpcContacts.length > 0) {
+      const contact = trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)];
+      next.push({
+        id: `msg_in_${now + 1}`,
+        from: contact,
+        text: 'Принял. Канал живой, держи синхронизацию и не теряй ритм.',
+        isSpam: false,
+      });
+    }
+    if (Math.random() < 0.8) {
+      const spamPool = [
+        '[SPAM] BUY_FAST_CERT: junior in 24h',
+        '[SPAM] crypto-airdrop://void_wallet_sync',
+        '[SPAM] HOTFIX_MARKET: дешевые импланты без гарантии',
+      ];
+      next.push({
+        id: `msg_spam_${now + 2}`,
+        from: 'SPAM_BOT',
+        text: spamPool[Math.floor(Math.random() * spamPool.length)],
+        isSpam: true,
+      });
+    }
+    setMessengerFeed((prev) => [...next, ...prev].slice(0, 80));
+  };
 
   const trackedState = getTrackedQuest(questStates);
   const trackedQuest = QUEST_LIBRARY.find((q) => q.id === trackedState?.questId);
@@ -536,6 +664,7 @@ export function useGameState() {
     ramPool, setRamPool,
     stress, setStress,
     bits, setBits,
+    worldDay, dayTick, dayPhase, advanceTime,
     solvedTaskCounts, setSolvedTaskCounts,
     solvedChains, saveSolvedChain,
     deckCores, setDeckCores,
@@ -552,6 +681,7 @@ export function useGameState() {
     discoveredCardIds, setDiscoveredCardIds,
     isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked,
     npcPresenceMap, setNpcPresenceMap,
+    trustedNpcContacts, messengerFeed, sendMessengerPing,
     playerLevel, playerGrade,
     handleCreationComplete, handleTravel, handleCompleteTalkQuest,
     discoverCard, canUnlockNow, objectiveNodeId,

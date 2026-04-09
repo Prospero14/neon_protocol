@@ -15,6 +15,7 @@ export const npc_varvar_dialogue: DialogueTree = new DialogueBuilder('npc_varvar
     { text: 'Кот заперся в туалете?', nextId: 'lore_cat' },
     { text: 'Я разберусь с этим протоколом.', nextId: 'quest_start', requireMaxLevel: 1 },
     { text: 'Как там Магнус?', nextId: 'active_status', requireActiveQuestId: 'q_altufyevo_combat_magnus_toilet_bug_sweep' },
+    { text: 'Кого знаешь за пределами района?', nextId: 'neighbor_links' },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
   .addNode('intro_v2', 'ВАРВАР', '*сканирует периметр* Три! Два! Один! ...Ладно, ты чистый. Знаешь, я тут единственный, кто ещё помнит, как работают ядерные прерывания. А ночью ещё и кота спасать надо...', [
@@ -71,6 +72,9 @@ export const npc_varvar_dialogue: DialogueTree = new DialogueBuilder('npc_varvar
 
   .addNode('active_status', 'ВАРВАР', 'Система очистки до сих пор в режиме "Локаут"! Магнус там совсем один. Поспеши, юнит!', [
     { text: 'Ухожу.', nextId: 'LEAVE' }
+  ])
+  .addNode('neighbor_links', 'ВАРВАР', 'В Марьино есть Крыса-курьер — мутный, но полезный. В Бибирево Связист Моня, у него линия на весь север. Держи токен: прокатишься без лишних вопросов.', [
+    { text: '[ВЗЯТЬ ТОКЕН]', nextId: 'intro', effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token', awardQuestId: 'q_varvar_neighbor_route' }
   ])
 
   .build();

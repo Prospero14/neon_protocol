@@ -399,12 +399,17 @@ export const getRandomBugAction = (bug: BugEnemy): BugAction => {
 };
 
 export type AiRecentEntry = { id: string; problemType?: BugProblemType };
+export type AiSelectionContext = {
+  phase?: 'ARCHITECTURE' | 'DEVELOPMENT' | 'VERIFICATION' | 'DEPLOYMENT';
+  bugPressure?: number;
+  playerProgress?: number;
+};
 
 /**
  * Выбор следующего действия ИИ: реже повторяет тот же id и тот же класс сбоя подряд,
  * чтобы колода с разными контрприёмами имела смысл, а «одна золотая карта» — нет.
  */
-export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[]): BugAction {
+export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[], ctx?: AiSelectionContext): BugAction {
   const actions = bug.actions;
   if (actions.length === 0) throw new Error(`Enemy ${bug.id} has no actions`);
   if (actions.length === 1) return actions[0];
@@ -426,6 +431,10 @@ export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[]): BugAc
     if (lastPt !== undefined && a.problemType === lastPt) {
       w *= streakSamePt >= 2 ? 0.22 : 0.55;
     }
+    if (ctx?.phase === 'DEVELOPMENT' && a.spawnId) w *= 1.25;
+    if (ctx?.phase === 'VERIFICATION' && a.injectStatusId) w *= 1.22;
+    if ((ctx?.bugPressure ?? 0) >= 3 && a.bugPoints > 0) w *= 0.72;
+    if ((ctx?.playerProgress ?? 0) >= 85 && a.damage > 0) w *= 1.2;
     return Math.max(0.06, w);
   });
 

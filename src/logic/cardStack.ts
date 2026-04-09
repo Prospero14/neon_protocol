@@ -39,6 +39,7 @@ export function cardMatchesJavaStack(
   const isSoft = card.type === 'SOFT';
   const isTest = card.type === 'REACTION' || card.type === 'DEFENSIVE';
   const isSyntax = card.type === 'SYNTAX' || card.type === 'FUNCTION' || card.type === 'NETWORK' || card.type === 'SCRIPT';
+  const isScriptFamily = isSyntax || isInfra || isSoft || isTest;
 
   // --- ADDITIVE FILTERING (OR) ---
   const anyCatActive = opts.enabledCats.size > 0;
@@ -59,7 +60,7 @@ export function cardMatchesJavaStack(
   // If it's vanilla/base card, show if 'JAVA_CORE' is active (for Java) or if it's a Script card (for SH)
   if (isVanilla) {
     if (isJava && opts.includeVanilla && isSyntax) return true;
-    if (isScript && isSyntax) return true;
+    if (isScript && isScriptFamily) return true;
   }
 
   return false;

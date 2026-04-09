@@ -16,6 +16,8 @@ export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_pet
     { text: 'Я готов зачистить драйверы.', nextId: 'quest_accept', requireMaxLevel: 1 },
     { text: 'Как успехи в Силосе 7?', nextId: 'active_quest_check', requireActiveQuestId: 'q_altufyevo_silo_clear' },
     { text: 'Я зачистил Силос 7.', nextId: 'quest_complete', requireReadyQuestId: 'q_altufyevo_silo_clear' },
+    { text: 'Есть контакт в Бибирево?', nextId: 'neighbor_monya' },
+    { text: 'Как вообще выйти на профессию?', nextId: 'prof_hint' },
     { text: 'Бывай, дядюшка.', nextId: 'farewell' }
   ])
   .addNode('intro_v2', 'ПЕТРОВИЧ', '*паяет плату* ...Ещё один битый конденсатор. Молодёжь, всё через софт, а руками работать — религия. Ты, вижу, не из декоративных. Нужна помощь с Силосами?', [
@@ -79,6 +81,12 @@ export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_pet
 
   .addNode('quest_complete', 'ПЕТРОВИЧ', 'Опа. Чистые логи! Я и забыл, что железо может работать без сбоев. ДержиBits на охлад, как обещал. Приходи, если выживешь в Выхино.', [
     { text: 'Спасибо, дедя.', nextId: 'LEAVE', effect: 'COMPLETE_TALK_QUEST', cardRewardId: 'q_altufyevo_silo_clear' }
+  ])
+  .addNode('neighbor_monya', 'ПЕТРОВИЧ', 'Есть. Связист Моня в Бибирево. Скажешь, что от Петровича - даст приоритет по каналу. Держи жетон на пересадку.', [
+    { text: '[ВЗЯТЬ ЖЕТОН И НАВОДКУ]', nextId: 'intro', effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token', awardQuestId: 'q_alt_to_bib_signal_handoff' }
+  ])
+  .addNode('prof_hint', 'ПЕТРОВИЧ', 'Хочешь в Junior — не спеши. Сначала набери третий уровень по Exploit-базе, потом иди к Туранову на Юго-Западной. Скажи, что от меня. Держи жетон на дорогу.', [
+    { text: '[ВЗЯТЬ ЖЕТОН]', nextId: 'intro', effect: 'GIVE_ITEM', cardRewardId: 'itm_taxi_token' }
   ])
 
   // === FAREWELL ===

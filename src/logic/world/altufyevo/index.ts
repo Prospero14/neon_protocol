@@ -6,11 +6,13 @@ import type { NpcProfile } from '../types';
 import { npc_petrovich_profile } from './npcs/npc_petrovich/profile';
 import { npc_varvar_profile } from './npcs/npc_varvar/profile';
 import { npc_nixanna_profile } from './npcs/npc_nixanna/profile';
+import { npc_lumen_profile } from './npcs/npc_lumen/profile';
 
 // === NPC Dialogues ===
 import { npc_petrovich_dialogue } from './npcs/npc_petrovich/dialogues';
 import { npc_varvar_dialogue } from './npcs/npc_varvar/dialogues';
 import { npc_nixanna_dialogue } from './npcs/npc_nixanna/dialogues';
+import { npc_lumen_dialogues } from './npcs/npc_lumen/dialogues';
 
 // === Object Dialogues ===
 import { shop_scrap_dialogue } from './objects/shop_scrap/dialogues';
@@ -25,6 +27,7 @@ const altufyevo_npcs: NpcProfile[] = [
   npc_petrovich_profile,
   npc_varvar_profile,
   npc_nixanna_profile,
+  npc_lumen_profile,
   { id: 'job_board_alt', name: 'Доска Объявлений', districtId: 'altufyevo', role: 'Контракт-хаб', greeting: 'Северные Силосы: Список активных прерываний.', shortLore: 'Быстрые pre-class задачи.', factionId: 'INDEPENDENT' },
   { id: 'shop_scrap', name: 'Серый', districtId: 'altufyevo', role: 'Скупщик', greeting: 'Свалка ошибок и забытых данных.', shortLore: 'Торговец запчастями.', factionId: 'INDEPENDENT' },
 ];
@@ -34,6 +37,7 @@ const altufyevo_dialogues: Record<string, DialogueTree> = {
   npc_petrovich: npc_petrovich_dialogue,
   npc_varvar: npc_varvar_dialogue,
   npc_nixanna: npc_nixanna_dialogue,
+  npc_lumen: npc_lumen_dialogues,
   shop_scrap: shop_scrap_dialogue,
   bar_chips: bar_chips_dialogue,
   job_board_alt: job_board_alt_dialogue,

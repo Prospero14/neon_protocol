@@ -18,6 +18,10 @@ interface NeuralBusProps {
   missionTzStepsCount: number;
   enemy: BugEnemy | null;
   nextBugAction: BugAction | null;
+  lastAiAction: BugAction | null;
+  isPlayerTurn: boolean;
+  isAiResolving: boolean;
+  lastAiImpact: { stressDelta: number; threatDelta: number; bugDelta: number; statusInjected: string | null; ts: number } | null;
   selectedCard: { source: string; idx: number; card: CombatCard } | null;
   playerProgress: number;
   aiProgress: number;
@@ -28,11 +32,13 @@ interface NeuralBusProps {
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
-  enemy, nextBugAction, selectedCard, playerProgress, aiProgress,
+  enemy, nextBugAction, lastAiAction, isPlayerTurn, isAiResolving, lastAiImpact, selectedCard, playerProgress, aiProgress,
   bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
+  const ENEMY_VISIBLE_SLOTS = 7;
+  const maskedCount = Math.max(0, ENEMY_VISIBLE_SLOTS - 1);
 
   return (
     <main className="nb2">
@@ -46,29 +52,41 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
           <span className="nb2-enemy-name">{enemy?.name || 'UNKNOWN_PROCESS'}</span>
         </div>
         <div className="nb2-enemy-slots">
-          {(enemy?.actions || []).slice(0, 5).map((action: BugAction, i: number) => {
-            const isActive = nextBugAction?.id === action.id;
-            return (
-              <div key={i} className={`nb2-enemy-slot ${isActive ? 'active' : ''}`}>
-                <span className="nb2-eslot-id">0x0{i + 1}</span>
-                <span className="nb2-eslot-name" style={{ color: isActive ? '#ff4060' : undefined }}>
-                  {action.name.length > 15 ? action.name.slice(0, 15) + '…' : action.name}
-                </span>
-                <div className="nb2-eslot-tooltip">
-                  <div className="tooltip-title">{action.name}</div>
-                  <div className="tooltip-desc">{action.description}</div>
-                  <div className="tooltip-stats">
-                    {action.problemType && (
-                      <span style={{ color: '#7ad7ff' }}>Класс: {problemTypeLabelRu(action.problemType)}</span>
-                    )}
-                    {action.damage > 0 && <span style={{ color: '#ff4060' }}>Stress: +{action.damage}</span>}
-                    {action.progressPoints > 0 && <span style={{ color: '#ffaa00' }}>Threat: +{action.progressPoints}%</span>}
-                  </div>
+          {nextBugAction && (
+            <div className={`nb2-enemy-slot active ${!isPlayerTurn ? 'executing' : ''}`}>
+              <span className="nb2-eslot-id">NEXT_INTENT</span>
+              <span className="nb2-eslot-name" style={{ color: '#ff4060' }}>
+                {nextBugAction.name.length > 18 ? nextBugAction.name.slice(0, 18) + '…' : nextBugAction.name}
+              </span>
+              <div className="nb2-eslot-tooltip">
+                <div className="tooltip-title">{nextBugAction.name}</div>
+                <div className="tooltip-desc">{nextBugAction.description}</div>
+                <div className="tooltip-stats">
+                  {nextBugAction.problemType && (
+                    <span style={{ color: '#7ad7ff' }}>Класс: {problemTypeLabelRu(nextBugAction.problemType)}</span>
+                  )}
+                  {nextBugAction.damage > 0 && <span style={{ color: '#ff4060' }}>Stress: +{nextBugAction.damage}</span>}
+                  {nextBugAction.progressPoints > 0 && <span style={{ color: '#ffaa00' }}>Threat: +{nextBugAction.progressPoints}%</span>}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          )}
+          {Array(maskedCount).fill(0).map((_, i) => (
+            <div key={`mask_${i}`} className="nb2-enemy-slot masked">
+              <span className="nb2-eslot-id">0x1{i + 1}</span>
+              <span className="nb2-eslot-name">SIGNAL_OBFUSCATED</span>
+            </div>
+          ))}
         </div>
+      </div>
+      <div className={`nb2-ai-banner ${!isPlayerTurn || isAiResolving ? 'live' : ''}`}>
+        {!isPlayerTurn && nextBugAction ? `AI EXECUTING: ${nextBugAction.name}` : `LAST AI ACTION: ${lastAiAction?.name || '—'}`}
+      </div>
+      <div className="nb2-ai-impact-strip">
+        <span className="chip threat">THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
+        <span className="chip bug">BUG +{lastAiImpact?.bugDelta ?? 0}</span>
+        <span className="chip stress">STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
+        <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
       </div>
 
       {/* ── PIPELINE (CODE EDITOR) ── */}

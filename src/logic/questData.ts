@@ -1,5 +1,7 @@
 import { MAP_NODES } from './mapData';
 import { literaryEchoQuest } from './world/literaryEchoes';
+import { NIGHT_QUEST_SEEDS } from './nightContacts';
+import { DAY_QUEST_SEEDS } from './dayContacts';
 
 export type QuestType = 'talk' | 'combat' | 'delivery' | 'diagnostics';
 export type QuestDifficulty = 'quick' | 'standard' | 'hard';
@@ -106,6 +108,63 @@ function buildCombatDistrictQuests() {
   return quests;
 }
 
+function buildNightDistrictQuests() {
+  const quests: QuestDefinition[] = [];
+  for (const seed of NIGHT_QUEST_SEEDS) {
+    quests.push({
+      id: seed.signalQuestId,
+      title: seed.signalTitle,
+      districtId: seed.districtId,
+      giverNpcId: seed.giverNpcId,
+      objectiveNodeId: seed.objectiveNodeId,
+      description: seed.signalText,
+      type: 'diagnostics',
+      difficulty: 'standard',
+      tier: seed.tier,
+    });
+    quests.push({
+      id: seed.sweepQuestId,
+      title: seed.sweepTitle,
+      districtId: seed.districtId,
+      giverNpcId: seed.giverNpcId,
+      objectiveNodeId: seed.objectiveNodeId,
+      description: seed.sweepText,
+      type: seed.objectiveNodeId ? 'combat' : 'talk',
+      difficulty: 'hard',
+      tier: seed.tier,
+    });
+  }
+  return quests;
+}
+
+function buildDayDistrictQuests() {
+  const quests: QuestDefinition[] = [];
+  for (const seed of DAY_QUEST_SEEDS) {
+    quests.push({
+      id: seed.questId,
+      title: seed.title,
+      districtId: seed.districtId,
+      giverNpcId: seed.giverNpcId,
+      description: seed.description,
+      type: 'talk',
+      difficulty: 'standard',
+      tier: seed.tier,
+    });
+    quests.push({
+      id: seed.routeQuestId,
+      title: `[ROUTE] Соседний канал: ${seed.districtId.toUpperCase()}`,
+      districtId: seed.districtId,
+      giverNpcId: seed.giverNpcId,
+      description: seed.routeDescription,
+      objectiveNodeId: seed.routeObjectiveNodeId,
+      type: 'delivery',
+      difficulty: 'quick',
+      tier: seed.tier,
+    });
+  }
+  return quests;
+}
+
 const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
   const bar = district.subNodes?.find(s => s.type === 'bar');
   const taxi = district.subNodes?.find(s => s.type === 'terminal' && s.id.includes('taxi'));
@@ -115,7 +174,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_start_${district.id}`,
       title: `[ВВОД] Опорная точка: ${district.id.toUpperCase()}`,
-      description: `Шаг 1/3 стартовой цепочки. Система инициализирована: поговори с барменом в «${bar?.name || 'местный бар'}» — без контакта с сетью района дальше не пустят. После разговора бери контракт «Первые Bits» у того же узла.`,
+      description: `Первый шаг адаптации в ${district.name || district.id}: зайди в «${bar?.name || 'местный бар'}», познакомься с местной сетью и получи направление на первый оплачиваемый контракт.`,
       districtId: district.id,
       giverNpcId: bar?.id || 'job_board',
       type: 'talk' as QuestType,
@@ -127,7 +186,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_first_bits_${district.id}`,
       title: `[ВВОД] Первые Bits: ${district.id.toUpperCase()}`,
-      description: `Шаг 2/3. Бармен не кормит за красивые глаза: открой боевой узел «${firstCombat?.name || 'локальный узел'}», выиграй встречу и получи Bits. Когда накопишь минимум на проезд, переходи к такси (шаг 3).`,
+      description: `Тебе доверяют первый серьезный инцидент на узле «${firstCombat?.name || 'локальный узел'}». Закрой его чисто и заработай достаточно Bits, чтобы открыть стабильный маршрут в город.`,
       districtId: district.id,
       giverNpcId: bar?.id || 'job_board',
       objectiveNodeId: firstCombat?.id || district.id,
@@ -139,7 +198,7 @@ const TUTORIAL_CHAINS_GENERATED: QuestDefinition[] = MAP_NODES.map(district => {
     {
       id: `q_kiddo_metro_access_${district.id}`,
       title: `[ВВОД] Путь в Центр: ${district.id.toUpperCase()}`,
-      description: `Шаг 3/3. Накопи 100 Bits (бои и мелкие контракты в секторе), затем оплати доступ на терминале «${taxi?.name || 'Такси'}» — без этого Центр остаётся read-only.`,
+      description: `Финальный этап входа в профессию: собери минимальный транспортный капитал и активируй доступ через «${taxi?.name || 'Такси'}», чтобы район перестал быть твоей единственной зоной.`,
       districtId: district.id,
       giverNpcId: taxi?.id || 'term_taxi',
       objectiveNodeId: taxi?.id || district.id,
@@ -853,6 +912,14 @@ const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
 
   // ── ALTUFYEVO / MARYINO CHAIN ──
   { id: 'q_petrovich_rogue_module', title: '[CHAIN] Изгнанный Модуль Петровича', description: 'Петрович потерял чип «Zero-Point». Последний сигнал зафиксирован в районе Крысы-курьера в Марьино. Разберись.', districtId: 'altufyevo', giverNpcId: 'npc_petrovich', type: 'delivery', difficulty: 'standard', tier: 1 },
+  { id: 'q_alt_lumen_neon_audit', title: '[NIGHT] Неоновый аудит Силосов', description: 'Люмен просит проверить пульс трех вывесок в Алтуфьево и снять следы подмены логов до рассвета.', districtId: 'altufyevo', giverNpcId: 'npc_lumen', objectiveNodeId: 'bar_chips', type: 'diagnostics', difficulty: 'standard', tier: 1 },
+  { id: 'q_alt_lumen_rooftop_scrim', title: '[NIGHT] Шум на крышах', description: 'На крышах вокруг Синего Чипа закрепился чужой ретранслятор. Отключи узел и верни Люмену стабильный канал.', districtId: 'altufyevo', giverNpcId: 'npc_lumen', objectiveNodeId: 'combat_client_proxy', type: 'combat', difficulty: 'hard', tier: 2 },
+  { id: 'q_kg_midnight_drop', title: '[NIGHT] Полуночный дроп', description: 'Миднайт Раннер передает зашифрованный пакет. Доставь его через центральный терминал, не потеряв трек.', districtId: 'kitay_gorod', giverNpcId: 'npc_midnight_runner', objectiveNodeId: 'term_taxi_hub', type: 'delivery', difficulty: 'standard', tier: 2 },
+  { id: 'q_kg_false_trail', title: '[NIGHT] Ложный след для Регуляторов', description: 'Раннеру нужен фальшивый маршрут в логах. Пробей отвлекающий контур в узле Хаба и закрой следы.', districtId: 'kitay_gorod', giverNpcId: 'npc_midnight_runner', objectiveNodeId: 'job_board_hub', type: 'talk', difficulty: 'hard', tier: 2 },
+  { id: 'q_alt_to_bib_signal_handoff', title: '[ROUTE] Сигнальный хэнд-офф: Алтуфьево -> Бибирево', description: 'Петрович просит добраться до Связиста Мони в Бибирево и передать сигнатуру канала Северных Силосов.', districtId: 'altufyevo', giverNpcId: 'npc_petrovich', objectiveNodeId: 'npc_signalman', type: 'delivery', difficulty: 'standard', tier: 1 },
+  { id: 'q_varvar_neighbor_route', title: '[ROUTE] Карта соседей ВАРВАР', description: 'ВАРВАР выдает маршрутный токен и просит проверить контакты в соседних районах: Бибирево и Марьино.', districtId: 'altufyevo', giverNpcId: 'npc_varvar', type: 'talk', difficulty: 'quick', tier: 1 },
+  { id: 'q_bib_to_maryino_signal_chain', title: '[CHAIN] Северный Поток: Бибирево -> Марьино', description: 'Моня отправляет тебя к Крысе-курьеру в Марьино за обратным логом межрайонного канала.', districtId: 'bibirevo', giverNpcId: 'npc_signalman', objectiveNodeId: 'npc_rat', type: 'delivery', difficulty: 'standard', tier: 1 },
+  { id: 'q_metro_transfer_check', title: '[METRO] Тест пересадочного контура', description: 'Диспетчер метро просит провести контрольный цикл пересадки и проверить, что турникет корректно принимает жетоны.', districtId: 'metro_stub', giverNpcId: 'metro_dispatch', objectiveNodeId: 'metro_gate', type: 'diagnostics', difficulty: 'quick', tier: 1 },
 ];
 
 function attachQuestLiteraryEcho(q: QuestDefinition): QuestDefinition {
@@ -866,6 +933,8 @@ function attachQuestLiteraryEcho(q: QuestDefinition): QuestDefinition {
 const RAW_QUEST_LIBRARY: QuestDefinition[] = [
   ...TUTORIAL_QUESTS,
   ...DISTRICT_NARRATIVE_QUESTS,
+  ...buildDayDistrictQuests(),
+  ...buildNightDistrictQuests(),
   ...buildNpcQuests(),
   ...buildCombatDistrictQuests(),
 ];

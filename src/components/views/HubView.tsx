@@ -92,7 +92,7 @@ export const HubView: React.FC<HubViewProps> = ({
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
         <div className="brand-box">
-          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.10 | BUILD_0FBAE7E]</span></h1>
+          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.11 | BUILD_7A_LAYOUT]</span></h1>
           <div className="meta-line mono-text">
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>
@@ -206,29 +206,30 @@ export const HubView: React.FC<HubViewProps> = ({
            </div>
         </div>
 
-      </div>
-
-      <aside className="backlog-dock neon-panel">
-        <div className="intel-header">
-           <div className="intel-title">CONTRACT_BACKLOG</div>
-           <Award size={14} color="var(--neon-amber)" />
-        </div>
-        <div className="hub-backlog-list mono-text">
-           {questStates.length === 0 && <div className="q-none opacity-50">NO_DATA_FOUND</div>}
-           {questStates.filter(s => s.status !== 'completed').slice(-2).reverse().map(s => {
-             const q = QUEST_LIBRARY.find(x => x.id === s.questId);
-             return (
-               <div key={s.questId} className="backlog-entry active">
-                  <div className="b-header">
-                     <span className="b-status pulse-cyan">[АКТИВЕН]</span>
-                     <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
+        <div className="hub-col intel">
+          <div className="active-quest-preview neon-panel">
+            <div className="intel-header">
+              <div className="intel-title">CONTRACT_BACKLOG</div>
+              <Award size={14} color="var(--neon-amber)" />
+            </div>
+            <div className="hub-backlog-list mono-text">
+              {questStates.length === 0 && <div className="q-none opacity-50">NO_DATA_FOUND</div>}
+              {questStates.filter(s => s.status !== 'completed').slice(-2).reverse().map(s => {
+                const q = QUEST_LIBRARY.find(x => x.id === s.questId);
+                return (
+                  <div key={s.questId} className="backlog-entry active">
+                    <div className="b-header">
+                      <span className="b-status pulse-cyan">[АКТИВЕН]</span>
+                      <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
+                    </div>
+                    <div className="b-body">{q?.description}</div>
                   </div>
-                  <div className="b-body">{q?.description}</div>
-               </div>
-             );
-           })}
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </aside>
+      </div>
 
       <aside className="messenger-dock neon-panel">
         <div className="intel-header">

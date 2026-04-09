@@ -3,7 +3,7 @@ import { parseSkillMode, SKILL_MODE_STORAGE_KEY, type SkillMode } from '../skill
 import { NPC_PRESENCE_CONFIGS, isNpcAvailableInPhase } from '../npcPresence';
 import type { Trait } from '../traits';
 import { MAP_NODES, type CombatPack, type MapNodeData } from '../mapData';
-import { publicChatNickForSeed, randomPublicChatNick } from '../messengerDisplay';
+import { publicChatNickForSeed, randomPublicChatNick, sanitizeMessengerFeed } from '../messengerDisplay';
 import { PROFESSIONS, getProfessionById, type Profession } from '../professions';
 import type { CombatCard } from '../combatCards';
 import { CARD_LIBRARY, getCardById } from '../combatCards';
@@ -196,7 +196,7 @@ export function useGameState() {
 
   const postMessengerMessages = useCallback((messages: MessengerMessage[]) => {
     if (!messages.length) return;
-    setMessengerFeed((prev) => [...messages, ...prev].slice(0, 240));
+    setMessengerFeed((prev) => sanitizeMessengerFeed([...messages, ...prev]).slice(0, 240));
   }, []);
 
   const postSystemMessage = useCallback((channelId: string, text: string) => {
@@ -558,7 +558,7 @@ export function useGameState() {
       if (gs.worldDay !== undefined) setWorldDay(gs.worldDay);
       if (gs.dayTick !== undefined) setDayTick(gs.dayTick);
       if (gs.trustedNpcContacts) setTrustedNpcContacts(gs.trustedNpcContacts);
-      if (gs.messengerFeed) setMessengerFeed(gs.messengerFeed);
+      if (gs.messengerFeed) setMessengerFeed(sanitizeMessengerFeed(gs.messengerFeed as MessengerMessage[]));
       if (gs.barContactDistricts) setBarContactDistricts(gs.barContactDistricts);
 
       // Self-heal: older/corrupted saves may keep fallback district.
@@ -859,10 +859,12 @@ export function useGameState() {
         const rep = district?.dominantFactionId ? (reputation[district.dominantFactionId] || 0) : 0;
         if (rep >= 15) {
           setTrustedNpcContacts((prev) => (prev.includes(nodeId) ? prev : [...prev, nodeId]));
-          setMessengerFeed((prev) => [
-            { id: `msg_contact_${Date.now()}`, from: nodeId, text: 'Канал закреплен. Можешь писать в мессенджер.', channelId: districtId, isSpam: false },
-            ...prev,
-          ].slice(0, 80));
+          setMessengerFeed((prev) =>
+            sanitizeMessengerFeed([
+              { id: `msg_contact_${Date.now()}`, from: nodeId, text: 'Канал закреплен. Можешь писать в мессенджер.', channelId: districtId, isSpam: false },
+              ...prev,
+            ]).slice(0, 80)
+          );
         }
       } else if (type === 'bar') {
         setBarContactDistricts((prev) => (prev.includes(districtId) ? prev : [...prev, districtId]));
@@ -987,7 +989,7 @@ export function useGameState() {
         isSpam: true,
       });
     }
-    setMessengerFeed((prev) => [...next, ...prev].slice(0, 240));
+    setMessengerFeed((prev) => sanitizeMessengerFeed([...next, ...prev]).slice(0, 240));
     tryAutopostNpcChatter(channelId);
   };
 

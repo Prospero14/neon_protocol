@@ -68,3 +68,27 @@ export function publicChatNickForSeed(seed: string): string {
 export function randomPublicChatNick(): string {
   return CYBER_NICKS[Math.floor(Math.random() * CYBER_NICKS.length)];
 }
+
+/** Старые сохранения и кэш: npc_*, [RARE], «Тихий слух» — убираем при показе и в стейте. */
+export function sanitizeLegacyMessengerMessage<T extends { id: string; from: string; text: string }>(m: T): T {
+  let from = m.from;
+  if (from === 'YOU' || from === 'SYSTEM') {
+    // без изменений
+  } else if (from === 'SPAM_BOT' || from.startsWith('npc_') || from === 'npc_unknown') {
+    from = publicChatNickForSeed(`${from}_${m.id}`);
+  }
+
+  let text = m.text
+    .replace(/\[RARE\]\s*/gi, '')
+    .replace(/\[FACTION\]\s*/gi, '')
+    .replace(/\[SPAM\]\s*/gi, '')
+    .replace(/^Тихий слух:\s*/i, '')
+    .replace(/^Тихий слух\s+/i, '')
+    .trim();
+
+  return { ...m, from, text };
+}
+
+export function sanitizeMessengerFeed<T extends { id: string; from: string; text: string }>(feed: T[]): T[] {
+  return feed.map(sanitizeLegacyMessengerMessage);
+}

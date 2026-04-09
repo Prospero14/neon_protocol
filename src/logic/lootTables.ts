@@ -13,7 +13,7 @@ const rarityWeightsBySource: Record<LootSource, Record<ItemRarity, number>> = {
 };
 
 function rarityPool(rarity: ItemRarity): GameItem[] {
-  return ITEM_LIBRARY.filter((i) => i.rarity === rarity);
+  return ITEM_LIBRARY.filter((i) => i.rarity === rarity && !i.lootExclude);
 }
 
 export function rollLoot(source: LootSource, tier: number, traits: Trait[] = []): GameItem {

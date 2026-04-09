@@ -3,7 +3,7 @@ import type { Trait } from '../logic/traits';
 import { PROFESSIONS } from '../logic/professions';
 import type { Profession } from '../logic/professions';
 import { User, Shield, Zap, Award, Briefcase, MapPin, Code, ChevronRight, Lock, Cpu, Microchip } from 'lucide-react';
-import { HARDWARE_CATALOG, IMPLANT_CATALOG } from '../logic/hardware';
+import { HARDWARE_CATALOG, IMPLANT_CATALOG, type DeckHardware } from '../logic/hardware';
 import './CharacterScreen.css';
 
 interface CharacterScreenProps {
@@ -26,7 +26,7 @@ interface CharacterScreenProps {
   };
   onBack: () => void;
   onLogout: () => void;
-  onUpgradeHardware: (cores: number, ram: number) => void;
+  onUpgradeHardware: (hw: DeckHardware) => void;
   onInstallImplant: (id: string) => void;
 }
 
@@ -273,7 +273,11 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, onBack, onLog
                </div>
                <div className="hw-grid">
                   {HARDWARE_CATALOG.map(hw => {
-                    const isEquipped = (hw.type === 'CPU' && hw.baseCores === player.deckCores) || (hw.type === 'RAM' && hw.baseRamMb === player.deckRamMb);
+                    const effC = (hw.baseCores ?? 0) + (hw.bonusCores ?? 0);
+                    const effR = (hw.baseRamMb ?? 0) + (hw.bonusRamMb ?? 0);
+                    const isEquipped =
+                      (hw.type === 'CPU' && Math.abs(effC - player.deckCores) < 0.001) ||
+                      (hw.type === 'RAM' && effR === player.deckRamMb);
                     return (
                       <div key={hw.id} className={`hw-card ${isEquipped ? 'equipped' : ''}`}>
                          <div className="hw-meta">
@@ -289,7 +293,7 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, onBack, onLog
                               <button 
                                 className="buy-btn" 
                                 disabled={player.bits < hw.cost}
-                                onClick={() => onUpgradeHardware(hw.baseCores || player.deckCores, hw.baseRamMb || player.deckRamMb)}
+                                onClick={() => onUpgradeHardware(hw)}
                               >
                                 КУПИТЬ_И_ПОСТАВИТЬ
                               </button>

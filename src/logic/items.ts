@@ -1,6 +1,12 @@
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'epic';
 export type ItemKind = 'consumable' | 'component' | 'token' | 'booster' | 'key';
 
+/** Одноразовый эффект при «использовании» предмета (диалог аптеки / будущий инвентарь). */
+export type ItemUseEffect =
+  | { kind: 'stress_relief'; amount: number }
+  | { kind: 'grant_bits'; amount: number }
+  | { kind: 'raise_max_stress'; amount: number };
+
 export interface GameItem {
   id: string;
   name: string;
@@ -8,6 +14,10 @@ export interface GameItem {
   rarity: ItemRarity;
   description: string;
   valueBits: number;
+  /** Не попадает в rollLoot (только квесты / покупки). */
+  lootExclude?: boolean;
+  /** Срабатывает при USE_GAME_ITEM: снимает 1 экземпляр из loot и применяет эффекты. */
+  onUse?: ItemUseEffect[];
 }
 
 const baseNames = {
@@ -24,13 +34,28 @@ function makeItems(kind: ItemKind, prefix: string): GameItem[] {
   return baseNames[kind].map((name, idx) => {
     const rarity = rarityCycle[idx % rarityCycle.length];
     const valueBase = rarity === 'common' ? 10 : rarity === 'uncommon' ? 24 : rarity === 'rare' ? 55 : 120;
+    let onUse: ItemUseEffect[] | undefined;
+    if (kind === 'consumable') {
+      onUse = [{ kind: 'stress_relief', amount: 6 + (idx % 5) * 2 }];
+    } else if (kind === 'booster') {
+      onUse = [
+        { kind: 'stress_relief', amount: 4 + (idx % 3) },
+        { kind: 'grant_bits', amount: 4 + (idx % 4) * 2 },
+      ];
+    }
     return {
       id: `${prefix}_${idx + 1}`,
       name,
       kind,
       rarity,
-      description: `${name}: ${kind} item for contracts and survival.`,
+      description:
+        kind === 'consumable'
+          ? `${name}: снимает стресс при применении (инвентарь / аптека).`
+          : kind === 'booster'
+            ? `${name}: бустер — стресс + немного битов при активации.`
+            : `${name}: ${kind} — можно сдать или обменять по контракту.`,
       valueBits: valueBase,
+      onUse,
     };
   });
 }
@@ -87,8 +112,70 @@ export const ITEM_LIBRARY: GameItem[] = [
     kind: 'token',
     rarity: 'common',
     description: 'Магнитный жетон корпорации МосТранс. Дает право на одну поездку в такси или метро.',
-    valueBits: 15
-  }
+    valueBits: 15,
+    lootExclude: true,
+  },
+  {
+    id: 'item_zero_point_chip',
+    name: 'Чип «Нулевая точка»',
+    kind: 'component',
+    rarity: 'rare',
+    description: 'Квестовый модуль Марыино. Ценится скупщиками; можно сдать за биты.',
+    valueBits: 140,
+    lootExclude: true,
+  },
+  {
+    id: 'item_strizh_chip',
+    name: 'Чип Стриж-линка',
+    kind: 'component',
+    rarity: 'uncommon',
+    description: 'Авиационный идентификатор с Сокола. Обмен и репутация.',
+    valueBits: 95,
+    lootExclude: true,
+  },
+  {
+    id: 'itm_neural_salve',
+    name: 'Нейро-мазь «Холодный шов»',
+    kind: 'consumable',
+    rarity: 'uncommon',
+    description: 'Снимает воспаление оболочки после оверклока. Сильное снятие стресса.',
+    valueBits: 32,
+    onUse: [{ kind: 'stress_relief', amount: 22 }],
+    lootExclude: true,
+  },
+  {
+    id: 'itm_bit_cache_usb',
+    name: 'USB «Кэш битов»',
+    kind: 'booster',
+    rarity: 'rare',
+    description: 'Подделка под корпоративный кошелёк. Одноразовый всплеск ликвидности.',
+    valueBits: 90,
+    onUse: [{ kind: 'grant_bits', amount: 35 }],
+    lootExclude: true,
+  },
+  {
+    id: 'itm_synth_coffee',
+    name: 'Синт-кофе «Дедлайн»',
+    kind: 'consumable',
+    rarity: 'common',
+    description: 'Горький, как legacy. Чуть поднимает потолок стресса до следующего отдыха.',
+    valueBits: 14,
+    onUse: [
+      { kind: 'stress_relief', amount: 8 },
+      { kind: 'raise_max_stress', amount: 5 },
+    ],
+    lootExclude: true,
+  },
+  {
+    id: 'itm_oc_shunt',
+    name: 'Шунт разгона ОЦ',
+    kind: 'component',
+    rarity: 'epic',
+    description: 'Редкий мод — снимает перегрев нервной шины. Дорого продаётся.',
+    valueBits: 200,
+    onUse: [{ kind: 'stress_relief', amount: 35 }],
+    lootExclude: true,
+  },
 ];
 
 export const getItemById = (id: string) => ITEM_LIBRARY.find((i) => i.id === id);

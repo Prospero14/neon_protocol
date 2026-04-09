@@ -28,6 +28,7 @@ export interface DialogueOption {
   awardItemId?: string; // New: For giving a quest item
   removeItemId?: string; // New: For consuming a quest item
   requireItemId?: string; // New: For requirement items like TZ
+  requireLootItemId?: string; // Предмет из loot (см. items.ts), не карта инвентаря
   requireMinLevel?: number; // New: Level-gating
   requireMaxLevel?: number; // New: For 'low rank' specific lines
   isProOnly?: boolean; // New: Requires class unlock

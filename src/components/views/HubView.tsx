@@ -5,6 +5,7 @@ import type { Profession } from '../../logic/professions';
 import { QUEST_LIBRARY } from '../../logic/questData';
 import type { QuestState } from '../../logic/questEngine';
 import type { CombatCard } from '../../logic/combatCards';
+import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 
 interface HubViewProps {
   playerName: string;
@@ -23,12 +24,12 @@ interface HubViewProps {
   activeDeck: CombatCard[];
   inventoryUnique: CombatCard[];
   questStates: QuestState[];
+  /** Число завершённых цепочек (эксплойтов) — порог разблокировки класса. */
+  exploitCount: number;
+  tutorialCompleted: boolean;
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
 }
-
-const PRECLASS_UNLOCK_QUESTS = 2;
-const PRECLASS_UNLOCK_BITS = 100;
 
 export const HubView: React.FC<HubViewProps> = ({
   playerName,
@@ -47,6 +48,8 @@ export const HubView: React.FC<HubViewProps> = ({
   activeDeck,
   inventoryUnique,
   questStates,
+  exploitCount,
+  tutorialCompleted,
   onNavigateToView,
   onNavigateToBarNode
 }) => {
@@ -120,8 +123,9 @@ export const HubView: React.FC<HubViewProps> = ({
             <div className="progression-gate neon-panel">
               <div className="gate-label">ТРЕБОВАНИЯ_КЛАССА:</div>
               <div className="gate-stats">
-                <span>MISSIONS: {completedQuestCount}/{PRECLASS_UNLOCK_QUESTS}</span>
-                <span>BITS_EARNED: {bitsFromQuests}/{PRECLASS_UNLOCK_BITS}</span>
+                <span>EXPLOITS: {exploitCount}/5</span>
+                <span>TUTORIAL: {tutorialCompleted ? 'OK' : '⋯'}</span>
+                <span>BITS (квесты): {bitsFromQuests}/{PRECLASS_UNLOCK_BITS}</span>
               </div>
               {canUnlockNow && (
                  <button className="neon-border-btn glow-cyan pulse" onClick={() => onNavigateToBarNode('npc_professor')}>SET_SPECIALIZATION</button>

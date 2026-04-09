@@ -169,6 +169,8 @@ function App() {
           onRewardBits={(amount: number) => gs.setBits(b => b + amount)} 
           onRewardItem={gs.onRewardItem}
           onRemoveItem={gs.onRemoveItem}
+          playerLoot={gs.loot}
+          onUseLootItem={gs.onUseLootItem}
           activeQuestIds={activeQuests} 
           readyQuestIds={readyQuests}
           completedQuestIds={completedQuests}
@@ -209,13 +211,14 @@ function App() {
           }} 
           onBack={() => gs.setCurrentView('HUB')} 
           onLogout={gs.logout} 
-          onUpgradeHardware={(cores: number, ram: number) => { 
-            if (gs.bits >= 500) { 
-              gs.setDeckCores(cores); 
-              gs.setDeckRamMb(ram);
-              gs.setBits(b => b - 500);
-            }
-          }} 
+          onUpgradeHardware={(hw) => {
+            if (gs.bits < hw.cost) return;
+            const cores = (hw.baseCores ?? 0) + (hw.bonusCores ?? 0);
+            const ramMb = (hw.baseRamMb ?? 0) + (hw.bonusRamMb ?? 0);
+            if (hw.type === 'CPU') gs.setDeckCores(cores);
+            if (hw.type === 'RAM') gs.setDeckRamMb(ramMb);
+            gs.setBits((b) => b - hw.cost);
+          }}
           onInstallImplant={(id: string) => { 
             const imp = IMPLANT_CATALOG.find(i => i.id === id);
             if (imp && gs.bits >= imp.cost && gs.installedImplants.length < gs.maxImplantSlots) {
@@ -292,6 +295,8 @@ function App() {
         activeDeck={gs.activeDeck}
         inventoryUnique={gs.inventoryUnique}
         questStates={gs.questStates}
+        exploitCount={gs.solvedChains.length}
+        tutorialCompleted={gs.questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')}
         onNavigateToView={(view: string) => gs.setCurrentView(view as ViewType)}
         onNavigateToBarNode={(nodeId: string) => { gs.setActiveBarNode(nodeId); gs.setCurrentView('FIXER_BAR'); }}
       />

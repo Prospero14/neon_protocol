@@ -16,6 +16,8 @@ export const shop_shady_dialogue: DialogueTree = new DialogueBuilder('shop_shady
   .addNode('trade', 'ЛАВКА_ШРАМА', 'Только Bits, никакого кредита. Выбирай, кодер. Эти файлы спасут твой IP.', [
     { text: 'Grep Recursion (45 Bits)', nextId: 'intro', cost: 45, effect: 'GIVE_CARD', cardRewardId: 'fn_grep_recursive', subtext: 'Глубокий поиск ошибок врага.' },
     { text: 'Sudo Overload (70 Bits)', nextId: 'intro', cost: 70, effect: 'GIVE_CARD', cardRewardId: 'fn_sudo_fix', subtext: 'Принудительное выполнение команд.' },
+    { text: 'Чёрный кэш USB (90)', nextId: 'intro', cost: 90, awardItemId: 'itm_bit_cache_usb', subtext: 'Грязный одноразовый приток ƀ.' },
+    { text: 'Нейро-мазь контрабанда (36)', nextId: 'intro', cost: 36, awardItemId: 'itm_neural_salve', subtext: 'Без накладной.' },
     { text: '[Назад]', nextId: 'intro' }
   ])
   .build();

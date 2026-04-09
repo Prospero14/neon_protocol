@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { parseSkillMode, SKILL_MODE_STORAGE_KEY, type SkillMode } from '../skillMode';
 import { NPC_PRESENCE_CONFIGS } from '../npcPresence';
 import type { Trait } from '../traits';
@@ -14,7 +14,7 @@ import { canUnlockClass } from '../preClassProgression';
 import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
 import { rollLoot } from '../lootTables';
-import { ITEM_LIBRARY, type GameItem } from '../items';
+import { ITEM_LIBRARY, getItemById, type GameItem } from '../items';
 
 
 export type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
@@ -190,6 +190,26 @@ export function useGameState() {
       return next;
     });
   };
+
+  const onUseLootItem = useCallback((itemId: string) => {
+    const def = getItemById(itemId);
+    if (!def?.onUse?.length) return;
+    let removed = false;
+    setLoot((prev) => {
+      const idx = prev.findIndex((i) => i.id === itemId);
+      if (idx === -1) return prev;
+      removed = true;
+      const next = [...prev];
+      next.splice(idx, 1);
+      return next;
+    });
+    if (!removed) return;
+    for (const e of def.onUse) {
+      if (e.kind === 'stress_relief') setStress((s) => Math.max(0, s - e.amount));
+      if (e.kind === 'grant_bits') setBits((b) => b + e.amount);
+      if (e.kind === 'raise_max_stress') setMaxStress((m) => m + e.amount);
+    }
+  }, []);
 
   const saveSolvedChain = (taskId: string, name: string, chain: string[]) => {
     setSolvedChains(prev => {
@@ -482,10 +502,12 @@ export function useGameState() {
     }
   };
 
-  const preClassState = { 
-    classUnlocked, completedQuestCount, bitsEarnedFromQuests: bitsFromQuests,
-    exploitsCount: playerLevel,
-    tutorialCompleted: questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')
+  const preClassState = {
+    classUnlocked,
+    completedQuestCount,
+    bitsEarnedFromQuests: bitsFromQuests,
+    exploitsCount: solvedChains.length,
+    tutorialCompleted: questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed'),
   };
   const canUnlockNow = canUnlockClass(preClassState);
 
@@ -533,6 +555,6 @@ export function useGameState() {
     playerLevel, playerGrade,
     handleCreationComplete, handleTravel, handleCompleteTalkQuest,
     discoverCard, canUnlockNow, objectiveNodeId,
-    onRewardItem, onRemoveItem
+    onRewardItem, onRemoveItem, onUseLootItem
   };
 }

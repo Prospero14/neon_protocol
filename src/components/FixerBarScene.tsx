@@ -7,6 +7,7 @@ import { NPC_PRESENCE_CONFIGS } from '../logic/npcPresence';
 import { Cpu, Fingerprint } from 'lucide-react';
 import { QUEST_LIBRARY } from '../logic/questData';
 import type { CombatCard } from '../logic/combatCards';
+import type { GameItem } from '../logic/items';
 
 interface FixerBarSceneProps {
   locationId: string;
@@ -35,6 +36,9 @@ interface FixerBarSceneProps {
   onTravel?: (nodeId: string, type: string, cost?: number) => void;
   onRewardItem?: (itemId: string, amount?: number) => void;
   onRemoveItem?: (itemId: string) => void;
+  /** Предметы с квестов / лута (не карты колоды). */
+  playerLoot?: GameItem[];
+  onUseLootItem?: (itemId: string) => void;
   onLeave: () => void;
   homeDistrictId?: string;
   npcPresenceMap: Record<string, 'HOME' | 'AWAY'>;
@@ -67,6 +71,8 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
   onTravel,
   onRewardItem,
   onRemoveItem,
+  playerLoot = [],
+  onUseLootItem,
   onLeave,
   homeDistrictId,
   npcPresenceMap,
@@ -127,6 +133,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     if (opt.requireReadyQuestId && !readyQuestIds.includes(opt.requireReadyQuestId)) return false;
     if (opt.requireCompletedQuestId && !completedQuestIds.includes(opt.requireCompletedQuestId)) return false;
     if (opt.requireItemId && !inventory.some(i => i.id === opt.requireItemId)) return false;
+    if (opt.requireLootItemId && !playerLoot.some(i => i.id === opt.requireLootItemId)) return false;
     if (opt.requireMinLevel && playerLevel < opt.requireMinLevel) return false;
     if (opt.requireMaxLevel && playerLevel > opt.requireMaxLevel) return false;
     if (opt.isProOnly && !canUnlockNow) return false; 
@@ -236,6 +243,12 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
        if (option.cardRewardIds && option.cardRewardIds.length > 0) {
            option.cardRewardIds.forEach(id => onRewardCard(id));
        }
+    }
+    else if (option.effect === 'GIVE_ITEM' && option.cardRewardId && onRewardItem) {
+       onRewardItem(option.cardRewardId, 1);
+    }
+    else if (option.effect === 'USE_GAME_ITEM' && option.cardRewardId && onUseLootItem) {
+       onUseLootItem(option.cardRewardId);
     }
     else if (option.effect === 'GIVE_TRAIT' && option.cardRewardId) onRewardTrait(option.cardRewardId);
     else if (option.effect === 'GIVE_BITS' && option.amount) onRewardBits(option.amount);

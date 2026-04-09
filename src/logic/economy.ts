@@ -11,6 +11,6 @@ export function applyBitModifiers(base: number, traits: Trait[], preClass: boole
   let result = base;
   if (traits.some((t) => t.id === 'hobby_retro_gaming')) result += Math.floor(base * 0.15);
   if (traits.some((t) => t.id === 'hobby_crypto')) result += 20;
-  if (preClass) result = Math.floor(result * 0.85); // reduced scaling before class unlock
+  if (preClass) result = Math.floor(result * 0.9); // чуть мягче ранней экономики до класса
   return Math.max(5, result);
 }

@@ -4,6 +4,7 @@ import { NPC_PRESENCE_CONFIGS, isNpcAvailableInPhase } from '../npcPresence';
 import type { Trait } from '../traits';
 import { MAP_NODES, type CombatPack, type MapNodeData } from '../mapData';
 import { publicChatNickForSeed, randomPublicChatNick, sanitizeMessengerFeed } from '../messengerDisplay';
+import { getDistrictChatterPools } from '../messengerChatterPools';
 import { PROFESSIONS, getProfessionById, type Profession } from '../professions';
 import type { CombatCard } from '../combatCards';
 import { CARD_LIBRARY, getCardById } from '../combatCards';
@@ -109,6 +110,8 @@ export function useGameState() {
   const [skillMode, setSkillMode] = useState<SkillMode>(() => parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY)));
   const [userIp, setUserIp] = useState<string>('ОПРЕДЕЛЕНИЕ...');
   const hasLoadedInitialState = useRef(false);
+  /** Анти-повтор для автосообщений публичного чата (последние тексты). */
+  const recentPublicChatterTextsRef = useRef<string[]>([]);
 
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
@@ -253,35 +256,24 @@ export function useGameState() {
 
   const tryAutopostNpcChatter = useCallback((channelId: string) => {
     if (!unlockedDistrictChannels.includes(channelId)) return;
-    if (Math.random() > 0.7) return;
+    if (Math.random() > 0.78) return;
     const districtMeta = MAP_NODES.find((d) => d.id === channelId);
     const factionName = (districtMeta?.dominantFactionId || 'LOCAL_NET').replaceAll('_', ' ');
     const tag = `#${channelId.replaceAll('_', '-').toUpperCase()}`;
-    const localPool = [
-      'Канал шуршит, маршруты сегодня кривые. Кто держит зеркало логов?',
-      'Смена фаз в сети, ночные узлы опять дёргаются.',
-      'Слышал, у бармена свежий намёк по локальному маршруту — кому надо, тот найдёт.',
-      'На районе не будет тихо, держите запасной туннель.',
-      'В чат зашёл новый ник. Кто-нибудь его знает?',
-      `Опять всплывают разговоры про ${factionName} и кто тут главный по трафику ${tag}.`,
-      `${factionName} вроде ужесточили контроль маршрутов — не светите лишнего.`,
-      'Кто продаёт пустой слот на прокси? Напишите в лс, срочно.',
-      'Объявление: сниму комнату у узла с нормальным пингом, бюджет смешной.',
-      'Предупреждаю: на выходе в центр сегодня подняли плату за пакет.',
-      'Кто-нибудь ловил дроп у старого терминала у перехода?',
-      'Ищу напарника на ночную смену, пишите если не боитесь ICE.',
-    ];
-    const vendorRumors = [
-      'Говорят, у «крысиного короля» сегодня странный прайс — если пароль угадаешь, скидку дают.',
-      'В соседнем квартале у бармена лежит железо без витрины, только по знакомству.',
-      'Ночью на точке всплывает тип с картами ответа — только после полуночи, не зевайте.',
-      'Кто-то слил, что у ремесленника у терминала можно выкупить сервисный ключ без очереди.',
-      'Реклама: чиним импланты за биты, гарантия «как получится». Писать сюда не надо, мы сами найдём.',
-      'Нужен человек на разовую доставку пакета через два района — оплата сразу.',
-    ];
-    const text = Math.random() < 0.12
-      ? vendorRumors[Math.floor(Math.random() * vendorRumors.length)]
-      : localPool[Math.floor(Math.random() * localPool.length)];
+    const { casual, vendor } = getDistrictChatterPools(factionName, tag);
+    const recent = recentPublicChatterTextsRef.current;
+    const recentWindow = recent.slice(-14);
+    let text = casual[0];
+    for (let attempt = 0; attempt < 24; attempt++) {
+      const useVendor = Math.random() < 0.11;
+      const pool = useVendor ? vendor : casual;
+      const candidate = pool[Math.floor(Math.random() * pool.length)];
+      if (!recentWindow.includes(candidate) || attempt >= 20) {
+        text = candidate;
+        break;
+      }
+    }
+    recentPublicChatterTextsRef.current = [...recent.slice(-48), text];
     postMessengerMessages([
       {
         id: `msg_chatter_${Date.now()}_${Math.random()}`,
@@ -997,7 +989,7 @@ export function useGameState() {
     if (!activeMessengerChannel || !unlockedDistrictChannels.includes(activeMessengerChannel)) return;
     const timer = setInterval(() => {
       tryAutopostNpcChatter(activeMessengerChannel);
-    }, 22000);
+    }, 32000);
     return () => clearInterval(timer);
   }, [activeMessengerChannel, unlockedDistrictChannels, tryAutopostNpcChatter]);
 

@@ -71,11 +71,12 @@ export function randomPublicChatNick(): string {
 
 /** Старые сохранения и кэш: npc_*, [RARE], «Тихий слух» — убираем при показе и в стейте. */
 export function sanitizeLegacyMessengerMessage<T extends { id: string; from: string; text: string }>(m: T): T {
+  const fromRaw = m.from.trim();
   let from = m.from;
-  if (from === 'YOU' || from === 'SYSTEM') {
+  if (fromRaw === 'YOU' || fromRaw === 'SYSTEM') {
     // без изменений
-  } else if (from === 'SPAM_BOT' || from.startsWith('npc_') || from === 'npc_unknown') {
-    from = publicChatNickForSeed(`${from}_${m.id}`);
+  } else if (/^spam_bot$/i.test(fromRaw) || /^npc_unknown$/i.test(fromRaw) || /^npc_/i.test(fromRaw)) {
+    from = publicChatNickForSeed(`${fromRaw}_${m.id}`);
   }
 
   let text = m.text
@@ -84,6 +85,16 @@ export function sanitizeLegacyMessengerMessage<T extends { id: string; from: str
     .replace(/\[SPAM\]\s*/gi, '')
     .replace(/^Тихий слух:\s*/i, '')
     .replace(/^Тихий слух\s+/i, '')
+    .replace(/Тихий слух:\s*/gi, '')
+    .replace(/\bTEPLY_STAN\b/gi, 'Тёплый Стан')
+    .replace(/INFRA-?модуль/gi, 'модуль железа')
+    .replace(/COUNTER-карт/gi, 'карт ответа')
+    .replace(/\bnpc_rat\b/gi, 'перегонщика')
+    .replace(/Кто его верифицировал\?/g, 'Кто-нибудь его знает?')
+    .replace(/маршруты нестабильны/gi, 'маршруты сегодня кривые')
+    .replace(/На районе тихо не будет\.\s*Держите резервный туннель\./gi, 'На районе не будет тихо — держите запасной туннель.')
+    .replace(/Смена фаз в сети\.\s*Ночные узлы снова пульсируют\./gi, 'Смена фаз в сети, ночные узлы опять дёргаются.')
+    .replace(/Канал шуршит,\s*маршруты нестабильны/gi, 'Канал шуршит — маршруты сегодня кривые')
     .trim();
 
   return { ...m, from, text };

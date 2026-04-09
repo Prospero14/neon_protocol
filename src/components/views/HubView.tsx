@@ -6,6 +6,7 @@ import type { QuestState } from '../../logic/questEngine';
 import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 import type { MessengerMessage } from '../../logic/hooks/useGameState';
+import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
 
 interface HubViewProps {
   playerName: string;
@@ -81,6 +82,10 @@ export const HubView: React.FC<HubViewProps> = ({
   const channelFeed = React.useMemo(
     () => messengerFeed.filter((m) => !m.channelId || m.channelId === activeMessengerChannel),
     [messengerFeed, activeMessengerChannel]
+  );
+  const displayChannelFeed = React.useMemo(
+    () => sanitizeMessengerFeed(channelFeed),
+    [channelFeed]
   );
   const isActiveChannelUnlocked = unlockedDistrictChannels.includes(activeMessengerChannel);
   const channelVisitedBar = barContactDistricts.includes(activeMessengerChannel);
@@ -211,7 +216,7 @@ export const HubView: React.FC<HubViewProps> = ({
             <div className="messenger-body-scroll">
             <div className="intel-header">
               <div className="intel-title">MESSENGER_LINK</div>
-              <div className="intel-count gold">{channelFeed.length}</div>
+              <div className="intel-count gold">{displayChannelFeed.length}</div>
             </div>
             <div className="mono-text messenger-meta-row">
               Активный канал: {formatChannelName(activeMessengerChannel)} · Контакты: {trustedNpcContacts.length}
@@ -256,7 +261,7 @@ export const HubView: React.FC<HubViewProps> = ({
               </div>
             )}
             <div className="messenger-feed">
-              {channelFeed.slice(0, 160).map((m) => (
+              {displayChannelFeed.slice(0, 160).map((m) => (
                 <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
                   <span className="messenger-from">[{m.from}]</span> {m.text}
                 </div>

@@ -3,6 +3,7 @@ import { parseSkillMode, SKILL_MODE_STORAGE_KEY, type SkillMode } from '../skill
 import { NPC_PRESENCE_CONFIGS, isNpcAvailableInPhase } from '../npcPresence';
 import type { Trait } from '../traits';
 import { MAP_NODES, type CombatPack, type MapNodeData } from '../mapData';
+import { publicChatNickForSeed, randomPublicChatNick } from '../messengerDisplay';
 import { PROFESSIONS, getProfessionById, type Profession } from '../professions';
 import type { CombatCard } from '../combatCards';
 import { CARD_LIBRARY, getCardById } from '../combatCards';
@@ -217,25 +218,26 @@ export function useGameState() {
     const localKnown = trustedNpcContacts.length > 0;
     const playerAlias = localKnown ? playerName : 'кто-то';
     const byKnownNpc = localKnown && Math.random() < 0.7;
-    const from = byKnownNpc
+    const contactId = byKnownNpc
       ? trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)]
-      : 'npc_unknown';
+      : '';
+    const from = contactId ? publicChatNickForSeed(contactId) : randomPublicChatNick();
 
     const rumorPools: Record<'quest_completed' | 'combat_win' | 'combat_fail', string[]> = {
       quest_completed: [
-        `Слух по району: ${playerAlias} закрыл контракт "${params.subject || 'локальный заказ'}".`,
-        `${playerAlias} дожал задачу "${params.subject || 'контракт'}" и не словил шум в логах.`,
-        `В канале шепчут, что ${playerAlias} аккуратно закрыл районную работу.`,
+        `Кто-то писал, что ${playerAlias} закрыл "${params.subject || 'местный заказ'}" без шума.`,
+        `${playerAlias} вроде дожал "${params.subject || 'эту работу'}" — логи чистые, говорят.`,
+        `В ленте мелькало: ${playerAlias} аккуратно сдал "${params.subject || 'контракт'}".`,
       ],
       combat_win: [
-        `Говорят, ${playerAlias} вышел сухим из боя "${params.subject || 'узел'}".`,
-        `${playerAlias} разложил вражеский пайплайн в "${params.subject || 'миссия'}".`,
-        `По району разлетелось: ${playerAlias} продавил схватку и вернулся в сеть.`,
+        `Пишут, ${playerAlias} вышел из "${params.subject || 'стычки'}" целым.`,
+        `${playerAlias} разобрался в "${params.subject || 'этой миссии'}" — кому-то не повезло.`,
+        `Кто-то видел, как ${playerAlias} после "${params.subject || 'боя'}" снова в сети.`,
       ],
       combat_fail: [
-        `Слух: ${playerAlias} не вывез "${params.subject || 'миссию'}" и откатился.`,
-        `Кто-то видел, как ${playerAlias} сорвал "${params.subject || 'узел'}" и ушел с линии.`,
-        `В чате пишут, что ${playerAlias} то ли провалил, то ли вышел из "${params.subject || 'операция'}".`,
+        `Говорят, ${playerAlias} не вывез "${params.subject || 'эту попытку'}" и откатился.`,
+        `Кто-то видел, как ${playerAlias} сорвал "${params.subject || 'узел'}" и смылся.`,
+        `В чате шутят, что ${playerAlias} то ли провалил "${params.subject || 'операцию'}", то ли сам отвалился.`,
       ],
     };
 
@@ -254,29 +256,36 @@ export function useGameState() {
     if (Math.random() > 0.7) return;
     const districtMeta = MAP_NODES.find((d) => d.id === channelId);
     const factionName = (districtMeta?.dominantFactionId || 'LOCAL_NET').replaceAll('_', ' ');
+    const tag = `#${channelId.replaceAll('_', '-').toUpperCase()}`;
     const localPool = [
-      'Канал шуршит, маршруты нестабильны. Кто держит зеркало логов?',
-      'Смена фаз в сети. Ночные узлы снова пульсируют.',
-      'Слышал, бармен слил новый хинт по локальному маршруту.',
-      'На районе тихо не будет. Держите резервный туннель.',
-      'В чат зашел новый ник. Кто его верифицировал?',
-      `[FACTION] На ${channelId.toUpperCase()} снова спорят о влиянии ${factionName}.`,
-      `[FACTION] ${factionName} усиливает контроль маршрутов, будьте аккуратнее с трафиком.`,
+      'Канал шуршит, маршруты сегодня кривые. Кто держит зеркало логов?',
+      'Смена фаз в сети, ночные узлы опять дёргаются.',
+      'Слышал, у бармена свежий намёк по локальному маршруту — кому надо, тот найдёт.',
+      'На районе не будет тихо, держите запасной туннель.',
+      'В чат зашёл новый ник. Кто-нибудь его знает?',
+      `Опять всплывают разговоры про ${factionName} и кто тут главный по трафику ${tag}.`,
+      `${factionName} вроде ужесточили контроль маршрутов — не светите лишнего.`,
+      'Кто продаёт пустой слот на прокси? Напишите в лс, срочно.',
+      'Объявление: сниму комнату у узла с нормальным пингом, бюджет смешной.',
+      'Предупреждаю: на выходе в центр сегодня подняли плату за пакет.',
+      'Кто-нибудь ловил дроп у старого терминала у перехода?',
+      'Ищу напарника на ночную смену, пишите если не боитесь ICE.',
     ];
     const vendorRumors = [
-      '[RARE] Говорят, у npc_rat сегодня можно выцепить редкий токен, если правильно спросить.',
-      '[RARE] Тихий слух: у бармена в соседнем районе лежит INFRA-модуль вне витрины.',
-      '[RARE] На black-market-точке всплыл продавец COUNTER-карт, но только ночью.',
-      '[RARE] Кто-то слил, что у терминала-ремесленника можно выкупить сервисный ключ.',
+      'Говорят, у «крысиного короля» сегодня странный прайс — если пароль угадаешь, скидку дают.',
+      'В соседнем квартале у бармена лежит железо без витрины, только по знакомству.',
+      'Ночью на точке всплывает тип с картами ответа — только после полуночи, не зевайте.',
+      'Кто-то слил, что у ремесленника у терминала можно выкупить сервисный ключ без очереди.',
+      'Реклама: чиним импланты за биты, гарантия «как получится». Писать сюда не надо, мы сами найдём.',
+      'Нужен человек на разовую доставку пакета через два района — оплата сразу.',
     ];
-    const senders = ['npc_local_runner', 'npc_dispatch', 'npc_barfly', 'npc_watcher'];
     const text = Math.random() < 0.12
       ? vendorRumors[Math.floor(Math.random() * vendorRumors.length)]
       : localPool[Math.floor(Math.random() * localPool.length)];
     postMessengerMessages([
       {
         id: `msg_chatter_${Date.now()}_${Math.random()}`,
-        from: senders[Math.floor(Math.random() * senders.length)],
+        from: randomPublicChatNick(),
         text,
         channelId,
       }
@@ -319,16 +328,22 @@ export function useGameState() {
 
   useEffect(() => {
     if (!homeDistrictId) return;
-    if (knownDistrictChannels.length === 0) {
-      setKnownDistrictChannels([homeDistrictId]);
-    }
-    if (unlockedDistrictChannels.length === 0) {
-      setUnlockedDistrictChannels([homeDistrictId]);
-    }
-    if (!activeMessengerChannel) {
-      setActiveMessengerChannel(homeDistrictId);
-    }
-  }, [homeDistrictId, knownDistrictChannels.length, unlockedDistrictChannels.length, activeMessengerChannel]);
+    setKnownDistrictChannels((prev) => {
+      if (prev.length === 0) return [homeDistrictId];
+      if (!prev.includes(homeDistrictId)) return [homeDistrictId, ...prev];
+      if (prev[0] === homeDistrictId) return prev;
+      return [homeDistrictId, ...prev.filter((id) => id !== homeDistrictId)];
+    });
+    setUnlockedDistrictChannels((prev) => {
+      if (prev.length === 0) return [homeDistrictId];
+      if (!prev.includes(homeDistrictId)) return [homeDistrictId, ...prev];
+      return prev;
+    });
+    setActiveMessengerChannel((prev) => {
+      if (!prev || !MAP_NODES.some((n) => n.id === prev)) return homeDistrictId;
+      return prev;
+    });
+  }, [homeDistrictId]);
 
   const advanceTime = useCallback((steps: number = 1) => {
     if (steps <= 0) return;
@@ -544,9 +559,6 @@ export function useGameState() {
       if (gs.dayTick !== undefined) setDayTick(gs.dayTick);
       if (gs.trustedNpcContacts) setTrustedNpcContacts(gs.trustedNpcContacts);
       if (gs.messengerFeed) setMessengerFeed(gs.messengerFeed);
-      if (gs.knownDistrictChannels) setKnownDistrictChannels(gs.knownDistrictChannels);
-      if (gs.unlockedDistrictChannels) setUnlockedDistrictChannels(gs.unlockedDistrictChannels);
-      if (gs.activeMessengerChannel) setActiveMessengerChannel(gs.activeMessengerChannel);
       if (gs.barContactDistricts) setBarContactDistricts(gs.barContactDistricts);
 
       // Self-heal: older/corrupted saves may keep fallback district.
@@ -562,6 +574,46 @@ export function useGameState() {
       if (healedHome && (!gs.activeDistrictId || !MAP_NODES.some((n) => n.id === gs.activeDistrictId))) {
         setActiveDistrictId(healedHome);
       }
+
+      const isValidDistrictId = (id: unknown): id is string =>
+        typeof id === 'string' && MAP_NODES.some((n) => n.id === id);
+      const homeForMessenger = isValidDistrictId(gs.homeDistrictId)
+        ? gs.homeDistrictId
+        : isValidDistrictId(gs.activeDistrictId)
+          ? gs.activeDistrictId
+          : healedHome;
+      const knownRaw = Array.isArray(gs.knownDistrictChannels)
+        ? (gs.knownDistrictChannels as unknown[]).filter(isValidDistrictId)
+        : [];
+      const known =
+        knownRaw.length === 0
+          ? [homeForMessenger]
+          : knownRaw.includes(homeForMessenger)
+            ? [homeForMessenger, ...knownRaw.filter((id) => id !== homeForMessenger)]
+            : [homeForMessenger, ...knownRaw];
+      const unlockedRaw = Array.isArray(gs.unlockedDistrictChannels)
+        ? (gs.unlockedDistrictChannels as unknown[]).filter(isValidDistrictId)
+        : [];
+      const unlocked =
+        unlockedRaw.length === 0
+          ? [homeForMessenger]
+          : unlockedRaw.includes(homeForMessenger)
+            ? unlockedRaw
+            : [homeForMessenger, ...unlockedRaw];
+      let nextActive: string = homeForMessenger;
+      if (
+        isValidDistrictId(gs.activeMessengerChannel) &&
+        unlocked.includes(gs.activeMessengerChannel) &&
+        knownRaw.includes(homeForMessenger)
+      ) {
+        nextActive = gs.activeMessengerChannel;
+      }
+      if (!knownRaw.includes(homeForMessenger)) {
+        nextActive = homeForMessenger;
+      }
+      setKnownDistrictChannels(known);
+      setUnlockedDistrictChannels(unlocked);
+      setActiveMessengerChannel(nextActive);
       // Load exploits
       const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
       if (saved) setSolvedChains(JSON.parse(saved));
@@ -864,11 +916,11 @@ export function useGameState() {
       { key: 'hi', line: 'Hi. Channel sync is stable.' },
       { key: 'квест', line: 'Если ищешь контракт — загляни к бармену и проверь local backlog.' },
       { key: 'бит', line: 'Bits любят тишину. Меньше шума в канале — выше шансы на жирный заказ.' },
-      { key: 'ice', line: 'ICE не прощает лобовых. Держи COUNTER-карты под AUDITOR/PHANTOM.' },
+      { key: 'ice', line: 'ICE не прощает лобовых — держи запасной ответ в колоде, не лезь в лоб.' },
       { key: 'метро', line: 'По метро сегодня нестабильно. Если есть токен — лучше не трать зря.' },
       { key: 'баг', line: 'Логи не врут: сначала локализуй, потом фикси. Не наоборот.' },
       { key: 'работа', line: 'Работа есть. Вопрос — какую цену заплатишь за быстрый вход?' },
-      { key: 'купить', line: 'По покупкам: спроси в баре про закрытую витрину, иногда там редкие лоты.' },
+      { key: 'купить', line: 'По покупкам спроси в баре про закрытую витрину — иногда там нормальные лоты.' },
       { key: 'продать', line: 'Если хочешь продать лишнее — не неси всё в открытую, используй знакомые каналы.' },
       { key: 'магаз', line: 'Магазины ротируют ассортимент по дням. Проверяй утром и ночью.' },
       { key: 'торг', line: 'Торг уместен, но только если тебя знают на районе.' }
@@ -882,7 +934,7 @@ export function useGameState() {
         const knownNpc = knownByMention || trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)];
         next.push({
           id: `msg_friend_dm_${now + 1}`,
-          from: knownNpc,
+          from: publicChatNickForSeed(knownNpc),
           text: 'Вижу обращение. Если тема не публичная — пиши в личку, тут слишком шумно.',
           channelId,
         });
@@ -895,7 +947,7 @@ export function useGameState() {
         ];
         next.push({
           id: `msg_stranger_addr_${now + 1}`,
-          from: 'npc_unknown',
+          from: randomPublicChatNick(),
           text: strangerReplies[Math.floor(Math.random() * strangerReplies.length)],
           channelId,
         });
@@ -905,7 +957,7 @@ export function useGameState() {
     if (keywordHit) {
       next.push({
         id: `msg_stranger_kw_${now + 2}`,
-        from: 'npc_unknown',
+        from: randomPublicChatNick(),
         text: keywordHit.line,
         channelId,
       });
@@ -914,7 +966,7 @@ export function useGameState() {
       const contact = trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)];
       next.push({
         id: `msg_in_${now + 3}`,
-        from: contact,
+        from: publicChatNickForSeed(contact),
         text: 'Принял. Канал живой, держи синхронизацию и не теряй ритм.',
         channelId,
         isSpam: false,
@@ -922,13 +974,14 @@ export function useGameState() {
     }
     if (Math.random() < 0.8) {
       const spamPool = [
-        '[SPAM] BUY_FAST_CERT: junior in 24h',
-        '[SPAM] crypto-airdrop://void_wallet_sync',
-        '[SPAM] HOTFIX_MARKET: дешевые импланты без гарантии',
+        'КУПИ СЕРТ ДЖУНА ЗА СУТКИ — 100% ГАРАНТИЯ!!! писать в /dev/null',
+        'AIRDROP КРИПТЫ НА ПУСТОЙ КОШЕЛЁК — жми пока не забанили',
+        'Импланты без гарантии, зато дёшево. Самовывоз из подвала.',
+        'Набор в команду: нужен человек с чистыми логами. Оплата битами.',
       ];
       next.push({
         id: `msg_spam_${now + 4}`,
-        from: 'SPAM_BOT',
+        from: randomPublicChatNick(),
         text: spamPool[Math.floor(Math.random() * spamPool.length)],
         channelId,
         isSpam: true,

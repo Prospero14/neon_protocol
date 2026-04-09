@@ -1,8 +1,7 @@
 import React from 'react';
-import { Shield, Zap, Layout, ChevronRight, Award, Database, Globe, MapPin, User } from 'lucide-react';
+import { Shield, Zap, Layout, ChevronRight, Database, Globe, MapPin, User } from 'lucide-react';
 import type { MapNodeData } from '../../logic/mapData';
 import type { Profession } from '../../logic/professions';
-import { QUEST_LIBRARY } from '../../logic/questData';
 import type { QuestState } from '../../logic/questEngine';
 import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
@@ -56,12 +55,10 @@ export const HubView: React.FC<HubViewProps> = ({
   classUnlocked,
   profession,
   solvedTaskCounts,
-  completedQuestCount,
   bitsFromQuests,
   canUnlockNow,
   activeDeck,
   inventoryUnique,
-  questStates,
   exploitCount,
   tutorialCompleted,
   worldDay,
@@ -210,33 +207,8 @@ export const HubView: React.FC<HubViewProps> = ({
 
       <aside className="right-rail">
         <div className="right-rail-col">
-          <div className="col-header mono-text"><Award size={14} /> CONTRACT_CHANNEL</div>
-          <div className="active-quest-preview neon-panel">
-            <div className="intel-header">
-              <div className="intel-title">CONTRACT_BACKLOG</div>
-              <Award size={14} color="var(--neon-amber)" />
-            </div>
-            <div className="hub-backlog-list mono-text">
-              {questStates.length === 0 && <div className="q-none opacity-50">NO_DATA_FOUND</div>}
-              {questStates.filter(s => s.status !== 'completed').slice(-2).reverse().map(s => {
-                const q = QUEST_LIBRARY.find(x => x.id === s.questId);
-                return (
-                  <div key={s.questId} className="backlog-entry active">
-                    <div className="b-header">
-                      <span className="b-status pulse-cyan">[АКТИВЕН]</span>
-                      <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
-                    </div>
-                    <div className="b-body">{q?.description}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="right-rail-col">
-          <div className="col-header mono-text"><Zap size={14} /> MESSENGER_CHANNEL</div>
           <div className="messenger-dock neon-panel">
+            <div className="messenger-body-scroll">
             <div className="intel-header">
               <div className="intel-title">MESSENGER_LINK</div>
               <div className="intel-count gold">{channelFeed.length}</div>
@@ -283,28 +255,32 @@ export const HubView: React.FC<HubViewProps> = ({
                 </div>
               </div>
             )}
-            <div className="messenger-input-row">
-              <input
-                value={messageDraft}
-                onChange={(e) => setMessageDraft(e.target.value)}
-                placeholder="написать в районный канал..."
-                className="messenger-input"
-                disabled={!isActiveChannelUnlocked}
-              />
-              <button
-                className="neon-border-btn glow-cyan"
-                onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
-                disabled={!isActiveChannelUnlocked}
-              >
-                SEND
-              </button>
-            </div>
             <div className="messenger-feed">
               {channelFeed.slice(0, 160).map((m) => (
                 <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
                   <span className="messenger-from">[{m.from}]</span> {m.text}
                 </div>
               ))}
+            </div>
+            </div>
+            <div className="messenger-composer">
+              <div className="messenger-input-row">
+                <input
+                  value={messageDraft}
+                  onChange={(e) => setMessageDraft(e.target.value)}
+                  placeholder="написать в районный канал..."
+                  className="messenger-input"
+                  disabled={!isActiveChannelUnlocked}
+                />
+                <button
+                  type="button"
+                  className="neon-border-btn glow-cyan messenger-send-btn"
+                  onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
+                  disabled={!isActiveChannelUnlocked}
+                >
+                  SEND
+                </button>
+              </div>
             </div>
           </div>
         </div>

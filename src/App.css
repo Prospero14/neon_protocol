@@ -204,11 +204,35 @@ body, html, #root {
 .map-quest-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* HUB V4 REDESIGN */
+/* HUB quick tuning legend:
+ * 1) .hub-v4-view --right-rail-top: вертикальный сдвиг правого дока (MESSENGER)
+ * 2) .hub-v4-view --hub-messenger-rail-width: ширина дока (= бывшие backlog+messenger)
+ * 3) .hub-v4-view --hub-messenger-rail-bottom: отступ дока от низа экрана
+ * 4) .hub-v4-view padding-right: резерв справа = rail width + отступ
+ * 5) .hub-header-v4 grid-template-columns: ширина колонок [brand | top stats]
+ * 6) .hub-grid-v4 grid-template-columns: ширина колонок [identity | operations]
+ * 7) .top-stat width/padding/gap: размер и плотность верхней телеметрии
+ * 8) .right-rail top/bottom/right/width: якорь дока к верху и низу вьюпорта
+ * 9) @media <=1880 / <=1660 / <=1440 / <=980: ширина rail и padding-right
+ *
+ * Recommended ranges (practical):
+ * --right-rail-top: 0px..96px
+ * .hub-v4-view padding-right: ~rail width + боковой отступ (см. --hub-messenger-rail-width)
+ * .top-stat horizontal padding: 8px..40px
+ * .top-stat gap: 4px..12px
+ * .right-rail width: --hub-messenger-rail-width (бывшие backlog+messenger в одной колонке)
+ */
 .hub-v4-view {
+  /* Главная ручка вертикального положения правой док-колонки */
+  --right-rail-top: 2rem;
+  /* Ширина правого дока = бывшие две колонки (330 + gap + 330) */
+  --hub-messenger-rail-width: 672px;
+  --hub-messenger-rail-bottom: 2rem;
   display: flex;
   flex-direction: column;
   padding: 2rem;
-  padding-right: 700px;
+  /* Резерв под широкий MESSENGER-док */
+  padding-right: calc(var(--hub-messenger-rail-width) + 2rem);
   height: 100vh;
   background: radial-gradient(circle at top right, rgba(0,255,255,0.05), transparent 40%),
               radial-gradient(circle at bottom left, rgba(255,45,109,0.05), transparent 40%);
@@ -233,6 +257,10 @@ body, html, #root {
   text-shadow: 0 0 20px var(--neon-cyan-glow);
 }
 
+.brand-box {
+  padding-left: 16px;
+}
+
 .mvp-tag {
   font-size: 0.8rem;
   opacity: 0.4;
@@ -248,6 +276,7 @@ body, html, #root {
 }
 
 .hub-top-stats {
+  /* Верхняя полоса телеметрии */
   display: flex;
   align-items: center;
   width: 100%;
@@ -255,16 +284,22 @@ body, html, #root {
 }
 
 .top-stat {
+  /* Растягивается вместе с правой колонкой шапки (1fr), не шире ячейки */
   width: 100%;
-  padding: 8px 16px;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+  padding: 6px clamp(12px, 2.5vw, 40px);
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: clamp(4px, 1vw, 8px);
+  flex-wrap: wrap;
   background: rgba(0, 20, 20, 0.4);
   border: 1px solid rgba(0, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 .top-stat .val { 
@@ -277,6 +312,7 @@ body, html, #root {
 }
 
 .hub-grid-v4 {
+  /* Основная рабочая область: IDENTITY + OPERATIONS */
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 2rem;
@@ -387,20 +423,26 @@ body, html, #root {
 }
 
 .right-rail {
+  /* Правая док-колонка: один широкий MESSENGER на всю бывшую пару колонок, высота до низа вьюпорта */
   position: absolute;
-  top: 9.8rem;
+  top: var(--right-rail-top);
+  bottom: var(--hub-messenger-rail-bottom);
   right: 1rem;
-  display: grid;
-  grid-template-columns: 330px 330px;
-  gap: 12px;
-  align-items: start;
+  width: var(--hub-messenger-rail-width);
+  max-width: min(var(--hub-messenger-rail-width), calc(100vw - 2rem));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   z-index: 1200;
 }
 
 .right-rail-col {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .right-rail-label {
@@ -410,45 +452,79 @@ body, html, #root {
 }
 
 .messenger-dock {
-  width: 330px;
-  min-height: 420px;
-  max-height: calc(100vh - 8.2rem);
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-height: none;
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  gap: 0;
+}
+
+.messenger-body-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   gap: 0.65rem;
+  padding-bottom: 4px;
+}
+
+.messenger-composer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 255, 255, 0.12);
 }
 
 /* HUB responsiveness */
 @media (max-width: 1880px) {
-  .hub-v4-view { padding-right: 676px; }
-  .right-rail { grid-template-columns: 320px 320px; }
-  .messenger-dock { width: 320px; }
+  .hub-v4-view { --hub-messenger-rail-width: 652px; }
+  .hub-v4-view { padding-right: calc(var(--hub-messenger-rail-width) + 2rem); }
 }
 
 @media (max-width: 1660px) {
-  .hub-v4-view { padding-right: 636px; }
-  .hub-header-v4, .hub-grid-v4 { grid-template-columns: 300px 1fr; gap: 1.4rem; }
-  .right-rail { top: 9.2rem; right: 0.75rem; grid-template-columns: 300px 300px; gap: 10px; }
-  .messenger-dock { width: 300px; max-height: calc(100vh - 7.7rem); }
+  .hub-v4-view { --hub-messenger-rail-width: 612px; }
+  .hub-v4-view { padding-right: calc(var(--hub-messenger-rail-width) + 1.5rem); }
+  .hub-header-v4, .hub-grid-v4 { grid-template-columns: 320px 1fr; gap: 1.4rem; }
+  .right-rail { top: var(--right-rail-top); right: 0.75rem; bottom: var(--hub-messenger-rail-bottom); }
 }
 
 @media (max-width: 1440px) {
-  .hub-v4-view { padding: 1.4rem; padding-right: 1.4rem; overflow-y: auto; }
+  .hub-v4-view {
+    --hub-messenger-rail-width: min(612px, calc(100vw - 2.8rem));
+    padding: 1.4rem;
+    padding-right: calc(var(--hub-messenger-rail-width) + 1.4rem);
+    overflow-y: auto;
+  }
   .hub-header-v4, .hub-grid-v4 { grid-template-columns: 1fr; gap: 1rem; }
   .hub-top-stats .top-stat { width: 100%; }
+  .brand-box { padding-left: 16px; }
   .right-rail {
-    position: static;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 0.8rem;
+    position: absolute;
+    top: var(--right-rail-top);
+    right: 1.4rem;
+    bottom: 1.4rem;
+    width: var(--hub-messenger-rail-width);
+    max-width: min(var(--hub-messenger-rail-width), calc(100vw - 2.8rem));
+    margin-top: 0;
+    z-index: 1200;
   }
   .right-rail-col, .messenger-dock { width: 100%; max-height: none; min-height: 0; }
 }
 
 @media (max-width: 980px) {
-  .right-rail { grid-template-columns: 1fr; }
+  .hub-v4-view { padding-right: 1.4rem; }
+  .right-rail {
+    position: static;
+    top: auto;
+    bottom: auto;
+    width: 100%;
+    max-width: 100%;
+    margin-top: 0.8rem;
+  }
   .top-stat { flex-wrap: wrap; row-gap: 8px; }
   .top-stat .val { margin-left: 0; }
 }
@@ -508,6 +584,7 @@ body, html, #root {
 .messenger-input-row {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .messenger-input {
@@ -522,18 +599,30 @@ body, html, #root {
 
 .messenger-feed {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  min-height: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding-right: 4px;
 }
 
+.messenger-send-btn {
+  flex-shrink: 0;
+  padding: 6px 14px !important;
+  font-size: 0.62rem !important;
+  font-weight: 800;
+  min-height: 0;
+  line-height: 1.2;
+}
+
 .messenger-line {
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   color: #9ae8ff;
   line-height: 1.45;
+}
+
+.messenger-line .messenger-from {
+  font-size: 0.68rem;
 }
 
 .messenger-line.spam {
@@ -544,11 +633,7 @@ body, html, #root {
   color: var(--neon-amber);
 }
 
-.active-quest-preview {
-  padding: 1.2rem;
-  margin-top: auto;
-  border-left: 4px solid var(--neon-amber);
-}
+
 
 .quest-mini-info .q-name { font-size: 0.85rem; color: #fff; margin: 10px 0; }
 .q-goto-btn {
@@ -2622,7 +2707,7 @@ body, html, #root {
 .v007-creation-context .cc-side-panel {
   position: fixed;
   right: 20px;
-  top: 60px;
+  top: 40px;
   bottom: 60px;
   width: 100px;
   border: 1px solid rgba(255, 184, 0, 0.1);

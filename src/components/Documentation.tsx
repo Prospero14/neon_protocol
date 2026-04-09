@@ -113,7 +113,7 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
         <div className="ref-brand">
           <Book size={20} color="var(--neon-cyan)" />
           <div>
-            <h3>NEON_PROTOCOL_DOCS [V6.4]</h3>
+            <h3>OCTOBERLINE_DOCS [V6.4]</h3>
             <div className="ref-pack-tabs mono-text">
               <button className={`ref-pack-tab ${pack === 'mechanics' ? 'active' : ''}`} onClick={() => setPack('mechanics')}>GAME_SYSTEMS</button>
               <button className={`ref-pack-tab core ${pack === 'core' ? 'active' : ''}`} onClick={() => setPack('core')}>JAVA_CORE</button>

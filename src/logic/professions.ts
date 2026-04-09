@@ -1,5 +1,5 @@
 /**
- * Система профессий (Классов) в Neon Protocol.
+ * Система профессий (Классов) в OctoberLine.
  */
 
 export type ProfessionCategory = 'HARD' | 'SOFT';

@@ -1,5 +1,5 @@
 /**
- * Factions of Neon Protocol v0.095
+ * Factions of OctoberLine v0.095
  * Defines the sociopolitical landscape and conflict matrix.
  */
 

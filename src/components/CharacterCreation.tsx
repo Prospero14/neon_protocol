@@ -79,7 +79,7 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
 
   useEffect(() => {
     const logs = [
-      "SYSTEM_BOOT_SEQUENCE: NEURAL_PROTO_0.09",
+      "SYSTEM_BOOT_SEQUENCE: OCTOBERLINE_0.09",
       "CHECKING_MOSCOW_SERVER_STATUS... [ONLINE]",
       "DECRYPTING_USER_IDENTITY_STREAMS...",
       "AWAITING_INPUT: NEURAL_ID_REQUIRED"

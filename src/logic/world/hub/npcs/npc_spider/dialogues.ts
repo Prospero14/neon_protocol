@@ -32,7 +32,7 @@ export const npc_spider_dialogues = new DialogueBuilder('npc_spider').withDistri
     { text: 'Смотрим, что есть.', nextId: 'trade' }
   ])
   .addLoreNode('lore_faction', 'SPIDER', 'Мы — те, кто выпал из реестров. Код принадлежит всем, а не High-Tier Сити. Мы — ошибка, которую невозможно исправить. (+Intel: Nullpointers)', 'intro', 'Nullpointers')
-  .addLoreNode('lore_world', 'SPIDER', 'В 2024-м Ядро Октября лишилось контроля над Moscow Zero. Пакеты всё равно теряются. Мы — те самые пакеты, обретшие волю.', 'intro')
+  .addLoreNode('lore_world', 'SPIDER', 'В 2024-м Ядро Октября лишилось контроля над OctoberLine. Пакеты всё равно теряются. Мы — те самые пакеты, обретшие волю.', 'intro')
   .addNode('trade', 'SPIDER', 'Быстро. Выбирай и уходи.', [
     { text: 'fn_shadow_copy: Призрак в системе (150 Bits)', nextId: 'intro', cost: 150, effect: 'GIVE_CARD', cardRewardId: 'fn_shadow_copy' },
     { text: 'fn_void_packet: Невидимый пакет (200 Bits)', nextId: 'intro', cost: 200, effect: 'GIVE_CARD', cardRewardId: 'fn_void_packet' },

@@ -44,7 +44,7 @@ export const SPRING_JAVA_REFERENCE: Record<string, JavaConcept> = {
     title: 'Чтение: @GetMapping (Заглушка)',
     concept: 'HTTP GET Endpoint Stub',
     explanation:
-      'Помечает метод для обработки GET-запросов. В Neon Protocol используется как быстрая заглушка, возвращающая статические данные до подключения реальной БД.',
+      'Помечает метод для обработки GET-запросов. В OctoberLine используется как быстрая заглушка, возвращающая статические данные до подключения реальной БД.',
     example:
       '@GetMapping("/api/status")\npublic String getStatus() {\n  return "SYSTEM_STABLE";\n}',
     purpose: 'Быстрая фиксация API-контракта для фронтенда и тестов.',
@@ -236,7 +236,7 @@ export const SPRING_JAVA_REFERENCE: Record<string, JavaConcept> = {
     concept: 'Declarative HTTP Client',
     explanation: 'Самый простой способ заставить один микросервис "говорить" с другим. Вы просто описываете интерфейс, а Spring сам делает HTTP-запросы под капотом.',
     example: '@FeignClient(name = "auth-service")\npublic interface AuthClient {\n  @GetMapping("/validate") Token check();\n}',
-    purpose: 'Межсервисное взаимодействие в распределенной сети Neon Protocol.',
+    purpose: 'Межсервисное взаимодействие в распределенной сети OctoberLine.',
     bullets: [
       'Interface only: Не нужно писать реализацию клиента вручную.',
       'Load Balancing: Автоматически интегрируется с Ribbon/Spring Cloud LoadBalancer.',
@@ -254,7 +254,7 @@ export const SPRING_JAVA_REFERENCE: Record<string, JavaConcept> = {
     bullets: [
       'Reactive: Основан на Project Reactor (Mono/Flux).',
       'Non-blocking: Один поток может обрабатывать тысячи параллельных запросов одновременно.',
-      'Performance: Идеально для высоконагруженных систем "Moscow Zero".',
+      'Performance: Идеально для высоконагруженных систем "OctoberLine".',
       'Timeout: Очень гибкая настройка задержек и повторных попыток (Retry).'
     ]
   },
@@ -267,7 +267,7 @@ export const SPRING_JAVA_REFERENCE: Record<string, JavaConcept> = {
     purpose: 'Обеспечение безопасности узлов и предотвращение несанкционированного доступа.',
     bullets: [
       'Chain: Запрос проходит через много фильтров (Authentication, Authorization, CSRF).',
-      'JWT: Основной способ передачи личности хакера в Neon Protocol.',
+      'JWT: Основной способ передачи личности хакера в OctoberLine.',
       'Deny All: По умолчанию в правильной системе всё запрещено.',
       'Interception: Позволяет выкинуть 403 Forbidden еще до того, как запрос дойдет до контроллера.'
     ]

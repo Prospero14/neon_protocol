@@ -66,7 +66,7 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     title: 'Вывод в консоль',
     concept: 'Standard Output (stdout)',
     explanation:
-      'Метод для вывода текстовых данных в стандартный поток (stdout). В Neon Protocol используется для логов отладки и визуализации состояния Neural Bus в реальном времени.',
+      'Метод для вывода текстовых данных в стандартный поток (stdout). В OctoberLine используется для логов отладки и визуализации состояния Neural Bus в реальном времени.',
     example: 'System.out.println("PWR=" + currentPower);',
     purpose: 'Трассировка переменных и мониторинг состояния системы без отладчика.',
     bullets: [
@@ -640,7 +640,7 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     id: 'infra_s3_bucket',
     title: 'Хранилище S3',
     concept: 'Massive Object Store',
-    explanation: 'Бесконечное облако для файлов любого размера. В Neon Protocol выступает как огромный расширитель виртуальной памяти.',
+    explanation: 'Бесконечное облако для файлов любого размера. В OctoberLine выступает как огромный расширитель виртуальной памяти.',
     example: 's3.upload("large_binary_exploit.db");',
     purpose: 'Хранение огромных объемов данных без нагрузки на локальный сервер.',
     bullets: [
@@ -814,7 +814,7 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     bullets: [
       'ThreadPool: Экономит ресурсы на создании новых потоков (Reuse).',
       'Future: Позволяет получить результат работы потока позже ("завтра").',
-      'Async Loop: Идеально для фоновых сетевых операций в Neon Protocol.',
+      'Async Loop: Идеально для фоновых сетевых операций в OctoberLine.',
       'Termination: Требует явного завершения (shutdown) для освобождения ресурсов.'
     ]
   },
@@ -870,7 +870,7 @@ export const JAVA_REFERENCE: Record<string, JavaConcept> = {
     bullets: [
       'Focus: Помогает взглянуть на баг под другим углом.',
       'Recovery: Восстанавливает HP системы за счет отдыха.',
-      'Ritual: Часть культуры разработчиков Neon Protocol.',
+      'Ritual: Часть культуры разработчиков OctoberLine.',
       'Balance: Работа без перерывов ведет к накоплению тех.долга.'
     ]
   },

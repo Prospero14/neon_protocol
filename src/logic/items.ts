@@ -79,7 +79,7 @@ export const ITEM_LIBRARY: GameItem[] = [
     name: 'Encrypted Archive Core',
     kind: 'token',
     rarity: 'rare',
-    description: 'A data packet recovered from Moscow Zero. Contains fragments of history.',
+    description: 'A data packet recovered from OctoberLine archives. Contains fragments of history.',
     valueBits: 200
   },
   {

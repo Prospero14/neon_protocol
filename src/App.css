@@ -388,7 +388,7 @@ body, html, #root {
 
 .right-rail {
   position: absolute;
-  top: 6.9rem;
+  top: 9.8rem;
   right: 1rem;
   display: grid;
   grid-template-columns: 330px 330px;
@@ -429,7 +429,7 @@ body, html, #root {
 @media (max-width: 1660px) {
   .hub-v4-view { padding-right: 636px; }
   .hub-header-v4, .hub-grid-v4 { grid-template-columns: 300px 1fr; gap: 1.4rem; }
-  .right-rail { top: 6.5rem; right: 0.75rem; grid-template-columns: 300px 300px; gap: 10px; }
+  .right-rail { top: 9.2rem; right: 0.75rem; grid-template-columns: 300px 300px; gap: 10px; }
   .messenger-dock { width: 300px; max-height: calc(100vh - 7.7rem); }
 }
 

@@ -25,12 +25,9 @@ export function cardMatchesJavaStack(
 ): boolean {
   if (card.type === 'STATUS') return false;
 
-  const isScript = card.id.startsWith('script_') || card.language === 'none' || card.type === 'SCRIPT';
+  // Shell selector must only expose real script cards, not generic "language: none" cards.
+  const isScript = card.id.startsWith('script_') || card.type === 'SCRIPT';
   const isJava = card.language === 'java';
-
-  // 1. Language Filter Logic
-  if (opts.selectedLanguage === 'java' && !isJava) return false;
-  if (opts.selectedLanguage === 'script' && !isScript) return false;
 
   const libs = getCardLibs(card);
   const isVanilla = libs.length === 0;
@@ -44,16 +41,25 @@ export function cardMatchesJavaStack(
   // --- ADDITIVE FILTERING (OR) ---
   const anyCatActive = opts.enabledCats.size > 0;
 
-  // 1. Category-specific override: If any category is enabled, check it strictly
+  // 1. Category-specific override: category chips have priority over language chips.
+  //    Keep one explicit exception: Shell mode should never expose INFRA cards.
   if (anyCatActive) {
-    if (opts.enabledCats.has('infra') && isInfra) return true;
+    if (opts.enabledCats.has('infra') && isInfra && opts.selectedLanguage !== 'script') return true;
     if (opts.enabledCats.has('soft') && isSoft) return true;
     if (opts.enabledCats.has('tests') && isTest) return true;
-    if (opts.enabledCats.has('syntax') && isSyntax) return true;
+    if (opts.enabledCats.has('syntax') && isSyntax) {
+      if (opts.selectedLanguage === 'java') return isJava;
+      if (opts.selectedLanguage === 'script') return isScript;
+      return true;
+    }
     return false;
   }
 
-  // 2. If no categories enabled, show based on Language + Vanilla/Lib:
+  // 2. Language Filter Logic (when category chips are not active)
+  if (opts.selectedLanguage === 'java' && !isJava) return false;
+  if (opts.selectedLanguage === 'script' && !isScript) return false;
+
+  // 3. If no categories enabled, show based on Language + Vanilla/Lib:
   // If it's a library card and its library is enabled, show it.
   if (libs.some(l => opts.enabledLibs.has(l))) return true;
 

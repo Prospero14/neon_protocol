@@ -189,7 +189,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
               className={`lib-chip tests ${enabledCats.has('tests') ? 'on' : ''}`} 
               onClick={() => toggleCat('tests')}
             >
-              REACTION
+              COUNTER
             </button>
           </div>
         </div>

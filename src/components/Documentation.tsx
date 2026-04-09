@@ -121,7 +121,7 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
               <button className={`ref-pack-tab spring ${pack === 'spring' ? 'active' : ''}`} onClick={() => setPack('spring')}>SPRING_BOOT</button>
               <button className={`ref-pack-tab infra ${pack === 'infra' ? 'active' : ''}`} onClick={() => setPack('infra')}>INFRA</button>
               <button className={`ref-pack-tab soft ${pack === 'soft-skills' ? 'active' : ''}`} onClick={() => setPack('soft-skills')}>SOFT_SKILLS</button>
-              <button className={`ref-pack-tab testing ${pack === 'testing' ? 'active' : ''}`} onClick={() => setPack('testing')}>TESTS & REACTIONS</button>
+              <button className={`ref-pack-tab testing ${pack === 'testing' ? 'active' : ''}`} onClick={() => setPack('testing')}>TESTS & COUNTERS</button>
               <button className={`ref-pack-tab cookbook ${pack === 'cookbook' ? 'active' : ''}`} onClick={() => setPack('cookbook')}>DEV_COOKBOOK</button>
               <button className={`ref-pack-tab sandbox ${pack === 'sandbox' ? 'active' : ''}`} onClick={() => setPack('sandbox')}>SANDBOX</button>
               <button className={`ref-pack-tab exploits ${pack === 'exploits' ? 'active' : ''}`} onClick={() => setPack('exploits')}>EXPLOITS_DB</button>

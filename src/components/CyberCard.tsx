@@ -49,7 +49,7 @@ const CyberCard: React.FC<CyberCardProps> = ({ card, onClick, disabled, isSmall,
       case 'FUNCTION': return 'FUNC';
       case 'SYNTAX': return 'CODE';
       case 'DEFENSIVE': return 'DEF';
-      case 'REACTION': return 'REACT';
+      case 'REACTION': return 'COUNTER';
       default: return card.type;
     }
   }, [card.type]);

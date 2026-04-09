@@ -135,6 +135,7 @@ function App() {
             if (updatedDeck) gs.setActiveDeck(updatedDeck);
             gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);
             gs.setBits((prev) => Math.max(0, prev + earned));
+            gs.reportCombatRumor(missionName, earned > 0);
             if (earned > 0) {
               gs.setSolvedTaskCounts(prev => ({ ...prev, [rank]: (prev[rank] || 0) + 1 }));
               gs.setInstalledImplants(prev => prev.map(imp => ({ ...imp, battlesLeft: Math.max(0, imp.battlesLeft - 1) })));
@@ -330,7 +331,15 @@ function App() {
         dayPhase={gs.dayPhase}
         trustedNpcContacts={gs.trustedNpcContacts}
         messengerFeed={gs.messengerFeed}
+        knownDistrictChannels={gs.knownDistrictChannels}
+        unlockedDistrictChannels={gs.unlockedDistrictChannels}
+        activeMessengerChannel={gs.activeMessengerChannel}
+        barContactDistricts={gs.barContactDistricts}
         onSendMessengerPing={gs.sendMessengerPing}
+        onSelectMessengerChannel={gs.setActiveMessengerChannel}
+        onUnlockChannelByBits={(districtId: string) => { gs.unlockDistrictChannel(districtId, 'buy'); }}
+        onUnlockChannelByQuest={(districtId: string) => { gs.unlockDistrictChannel(districtId, 'quest'); }}
+        canUnlockChannelByQuest={gs.canUnlockDistrictChannelByQuest}
         onNavigateToView={(view: string) => gs.setCurrentView(view as ViewType)}
         onNavigateToBarNode={(nodeId: string) => { gs.setActiveBarNode(nodeId); gs.setCurrentView('FIXER_BAR'); }}
       />

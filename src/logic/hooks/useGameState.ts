@@ -23,6 +23,7 @@ export interface MessengerMessage {
   id: string;
   from: string;
   text: string;
+  channelId?: string;
   isSpam?: boolean;
 }
 
@@ -164,6 +165,10 @@ export function useGameState() {
   const [nodeCooldowns, setNodeCooldowns] = useState<Record<string, number>>({});
   const [trustedNpcContacts, setTrustedNpcContacts] = useState<string[]>([]);
   const [messengerFeed, setMessengerFeed] = useState<MessengerMessage[]>([]);
+  const [knownDistrictChannels, setKnownDistrictChannels] = useState<string[]>([]);
+  const [unlockedDistrictChannels, setUnlockedDistrictChannels] = useState<string[]>([]);
+  const [activeMessengerChannel, setActiveMessengerChannel] = useState<string>('altufyevo');
+  const [barContactDistricts, setBarContactDistricts] = useState<string[]>([]);
 
   const inventoryUnique = useMemo(() => {
     const map = new Map<string, CombatCard>();
@@ -173,12 +178,157 @@ export function useGameState() {
 
   const [discoveredCardIds, setDiscoveredCardIds] = useState<Set<string>>(new Set(activeDeck.map((c) => c.id)));
   const discoverCard = (id: string) => setDiscoveredCardIds((prev) => new Set(prev).add(id));
+
+  const getDistrictByNodeId = useCallback((nodeId: string): string | null => {
+    const district = MAP_NODES.find((d) => d.id === nodeId);
+    if (district) return district.id;
+    for (const d of MAP_NODES) {
+      if (d.subNodes?.some((s) => s.id === nodeId)) return d.id;
+    }
+    return null;
+  }, []);
+
+  const ensureKnownDistrictChannel = useCallback((districtId: string) => {
+    if (!districtId) return;
+    setKnownDistrictChannels((prev) => (prev.includes(districtId) ? prev : [...prev, districtId]));
+  }, []);
+
+  const postMessengerMessages = useCallback((messages: MessengerMessage[]) => {
+    if (!messages.length) return;
+    setMessengerFeed((prev) => [...messages, ...prev].slice(0, 240));
+  }, []);
+
+  const postSystemMessage = useCallback((channelId: string, text: string) => {
+    postMessengerMessages([
+      { id: `msg_sys_${Date.now()}_${Math.random()}`, from: 'SYSTEM', text, channelId, isSpam: false }
+    ]);
+  }, [postMessengerMessages]);
+
+  const postDistrictRumor = useCallback((params: {
+    districtId?: string;
+    outcome: 'quest_completed' | 'combat_win' | 'combat_fail';
+    subject?: string;
+  }) => {
+    const districtId = params.districtId && unlockedDistrictChannels.includes(params.districtId)
+      ? params.districtId
+      : (unlockedDistrictChannels[0] || homeDistrictId);
+    if (!districtId) return;
+
+    const localKnown = trustedNpcContacts.length > 0;
+    const playerAlias = localKnown ? playerName : 'кто-то';
+    const byKnownNpc = localKnown && Math.random() < 0.7;
+    const from = byKnownNpc
+      ? trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)]
+      : 'npc_unknown';
+
+    const rumorPools: Record<'quest_completed' | 'combat_win' | 'combat_fail', string[]> = {
+      quest_completed: [
+        `Слух по району: ${playerAlias} закрыл контракт "${params.subject || 'локальный заказ'}".`,
+        `${playerAlias} дожал задачу "${params.subject || 'контракт'}" и не словил шум в логах.`,
+        `В канале шепчут, что ${playerAlias} аккуратно закрыл районную работу.`,
+      ],
+      combat_win: [
+        `Говорят, ${playerAlias} вышел сухим из боя "${params.subject || 'узел'}".`,
+        `${playerAlias} разложил вражеский пайплайн в "${params.subject || 'миссия'}".`,
+        `По району разлетелось: ${playerAlias} продавил схватку и вернулся в сеть.`,
+      ],
+      combat_fail: [
+        `Слух: ${playerAlias} не вывез "${params.subject || 'миссию'}" и откатился.`,
+        `Кто-то видел, как ${playerAlias} сорвал "${params.subject || 'узел'}" и ушел с линии.`,
+        `В чате пишут, что ${playerAlias} то ли провалил, то ли вышел из "${params.subject || 'операция'}".`,
+      ],
+    };
+
+    const text = rumorPools[params.outcome][Math.floor(Math.random() * rumorPools[params.outcome].length)];
+    postMessengerMessages([{
+      id: `msg_rumor_${Date.now()}_${Math.random()}`,
+      from,
+      text,
+      channelId: districtId,
+      isSpam: false,
+    }]);
+  }, [unlockedDistrictChannels, homeDistrictId, trustedNpcContacts, playerName, postMessengerMessages]);
+
+  const tryAutopostNpcChatter = useCallback((channelId: string) => {
+    if (!unlockedDistrictChannels.includes(channelId)) return;
+    if (Math.random() > 0.7) return;
+    const districtMeta = MAP_NODES.find((d) => d.id === channelId);
+    const factionName = (districtMeta?.dominantFactionId || 'LOCAL_NET').replaceAll('_', ' ');
+    const localPool = [
+      'Канал шуршит, маршруты нестабильны. Кто держит зеркало логов?',
+      'Смена фаз в сети. Ночные узлы снова пульсируют.',
+      'Слышал, бармен слил новый хинт по локальному маршруту.',
+      'На районе тихо не будет. Держите резервный туннель.',
+      'В чат зашел новый ник. Кто его верифицировал?',
+      `[FACTION] На ${channelId.toUpperCase()} снова спорят о влиянии ${factionName}.`,
+      `[FACTION] ${factionName} усиливает контроль маршрутов, будьте аккуратнее с трафиком.`,
+    ];
+    const vendorRumors = [
+      '[RARE] Говорят, у npc_rat сегодня можно выцепить редкий токен, если правильно спросить.',
+      '[RARE] Тихий слух: у бармена в соседнем районе лежит INFRA-модуль вне витрины.',
+      '[RARE] На black-market-точке всплыл продавец COUNTER-карт, но только ночью.',
+      '[RARE] Кто-то слил, что у терминала-ремесленника можно выкупить сервисный ключ.',
+    ];
+    const senders = ['npc_local_runner', 'npc_dispatch', 'npc_barfly', 'npc_watcher'];
+    const text = Math.random() < 0.12
+      ? vendorRumors[Math.floor(Math.random() * vendorRumors.length)]
+      : localPool[Math.floor(Math.random() * localPool.length)];
+    postMessengerMessages([
+      {
+        id: `msg_chatter_${Date.now()}_${Math.random()}`,
+        from: senders[Math.floor(Math.random() * senders.length)],
+        text,
+        channelId,
+      }
+    ]);
+  }, [postMessengerMessages, unlockedDistrictChannels]);
+
+  const canUnlockDistrictChannelByQuest = useCallback((districtId: string) => {
+    return questStates.some((qs) => {
+      if (qs.status !== 'completed') return false;
+      const q = QUEST_LIBRARY.find((def) => def.id === qs.questId);
+      return q?.districtId === districtId;
+    });
+  }, [questStates]);
+
+  const unlockDistrictChannel = useCallback((districtId: string, source: 'buy' | 'quest') => {
+    if (!districtId) return false;
+    if (!barContactDistricts.includes(districtId)) return false;
+    if (unlockedDistrictChannels.includes(districtId)) return true;
+    if (source === 'buy') {
+      const unlockCost = 120;
+      if (bits < unlockCost) return false;
+      setBits((prev) => prev - unlockCost);
+    } else if (!canUnlockDistrictChannelByQuest(districtId)) {
+      return false;
+    }
+    setUnlockedDistrictChannels((prev) => [...prev, districtId]);
+    setActiveMessengerChannel(districtId);
+    postSystemMessage(districtId, source === 'buy'
+      ? 'BARMAN: доступ к районному каналу активирован через платный шлюз.'
+      : 'BARMAN: доступ к районному каналу активирован за локальный контракт.');
+    tryAutopostNpcChatter(districtId);
+    return true;
+  }, [barContactDistricts, unlockedDistrictChannels, bits, canUnlockDistrictChannelByQuest, postSystemMessage, tryAutopostNpcChatter]);
   const dayPhase = useMemo<NpcDayPhase>(() => {
     if (dayTick <= 1) return 'morning';
     if (dayTick <= 3) return 'day';
     if (dayTick <= 5) return 'evening';
     return 'night';
   }, [dayTick]);
+
+  useEffect(() => {
+    if (!homeDistrictId) return;
+    if (knownDistrictChannels.length === 0) {
+      setKnownDistrictChannels([homeDistrictId]);
+    }
+    if (unlockedDistrictChannels.length === 0) {
+      setUnlockedDistrictChannels([homeDistrictId]);
+    }
+    if (!activeMessengerChannel) {
+      setActiveMessengerChannel(homeDistrictId);
+    }
+  }, [homeDistrictId, knownDistrictChannels.length, unlockedDistrictChannels.length, activeMessengerChannel]);
 
   const advanceTime = useCallback((steps: number = 1) => {
     if (steps <= 0) return;
@@ -282,7 +432,7 @@ export function useGameState() {
     rollNpcPresence();
   }, [rollNpcPresence]);
 
-  const syncGame = async () => {
+  const syncGame = async (overrides: Record<string, unknown> = {}) => {
     if (!user) return;
     const state = {
       stress, maxStress, bits, solvedTaskCounts,
@@ -291,6 +441,7 @@ export function useGameState() {
       completedQuests: questStates,
       ramPool: ramPool,
       homeDistrictId: homeDistrictId,
+      activeDistrictId: activeDistrictId,
       activeBarNode: activeBarNode,
       viewMode: viewMode,
       traits: traits,
@@ -305,7 +456,14 @@ export function useGameState() {
       deckRamMb: deckRamMb,
       discoveredCardIds: Array.from(discoveredCardIds),
       worldDay,
-      dayTick
+      dayTick,
+      trustedNpcContacts,
+      messengerFeed,
+      knownDistrictChannels,
+      unlockedDistrictChannels,
+      activeMessengerChannel,
+      barContactDistricts,
+      ...overrides
     };
     await syncGameState(state);
   };
@@ -319,7 +477,13 @@ export function useGameState() {
       if (gs.bits !== undefined) setBits(gs.bits);
       if (gs.solvedTaskCounts !== undefined) setSolvedTaskCounts(gs.solvedTaskCounts);
       if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
-      if (gs.homeDistrictId !== undefined) setHomeDistrictId(gs.homeDistrictId);
+      if (gs.homeDistrictId !== undefined) {
+        const validHome = MAP_NODES.find((n) => n.id === gs.homeDistrictId)?.id;
+        if (validHome) {
+          setHomeDistrictId(validHome);
+          setHomeDistrict(MAP_NODES.find((n) => n.id === validHome) ?? null);
+        }
+      }
       
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);
@@ -328,9 +492,9 @@ export function useGameState() {
         }
       }
 
-      if (gs.activeDistrictId) {
+      if (gs.activeDistrictId && MAP_NODES.some((n) => n.id === gs.activeDistrictId)) {
         setActiveDistrictId(gs.activeDistrictId);
-      } else if (gs.homeDistrictId) {
+      } else if (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId)) {
         setActiveDistrictId(gs.homeDistrictId);
       }
 
@@ -358,7 +522,7 @@ export function useGameState() {
       if (gs.viewMode) setViewMode(gs.viewMode);
       if (gs.currentView && gs.currentView !== 'CREATION') {
         setCurrentView(gs.currentView);
-      } else if (gs.homeDistrictId) {
+      } else if (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId)) {
         setCurrentView('HUB');
       }
 
@@ -378,6 +542,26 @@ export function useGameState() {
       if (gs.discoveredCardIds) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
       if (gs.worldDay !== undefined) setWorldDay(gs.worldDay);
       if (gs.dayTick !== undefined) setDayTick(gs.dayTick);
+      if (gs.trustedNpcContacts) setTrustedNpcContacts(gs.trustedNpcContacts);
+      if (gs.messengerFeed) setMessengerFeed(gs.messengerFeed);
+      if (gs.knownDistrictChannels) setKnownDistrictChannels(gs.knownDistrictChannels);
+      if (gs.unlockedDistrictChannels) setUnlockedDistrictChannels(gs.unlockedDistrictChannels);
+      if (gs.activeMessengerChannel) setActiveMessengerChannel(gs.activeMessengerChannel);
+      if (gs.barContactDistricts) setBarContactDistricts(gs.barContactDistricts);
+
+      // Self-heal: older/corrupted saves may keep fallback district.
+      const healedHome = (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId))
+        ? gs.homeDistrictId
+        : (gs.activeDistrictId && MAP_NODES.some((n) => n.id === gs.activeDistrictId))
+          ? gs.activeDistrictId
+          : homeDistrictId;
+      if (healedHome && healedHome !== homeDistrictId) {
+        setHomeDistrictId(healedHome);
+        setHomeDistrict(MAP_NODES.find((n) => n.id === healedHome) ?? null);
+      }
+      if (healedHome && (!gs.activeDistrictId || !MAP_NODES.some((n) => n.id === gs.activeDistrictId))) {
+        setActiveDistrictId(healedHome);
+      }
       // Load exploits
       const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
       if (saved) setSolvedChains(JSON.parse(saved));
@@ -398,7 +582,11 @@ export function useGameState() {
       if (currentView !== 'CREATION') syncGame();
     }, 1500); // 1.5s debounce to prevent spamming
     return () => clearTimeout(timer);
-  }, [bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId, isCityMapUnlocked, worldDay, dayTick]);
+  }, [
+    bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId,
+    isCityMapUnlocked, worldDay, dayTick, trustedNpcContacts, messengerFeed, knownDistrictChannels,
+    unlockedDistrictChannels, activeMessengerChannel, barContactDistricts
+  ]);
 
   const rewardForQuest = (q: QuestDefinition) => {
     const base = baseQuestBits(q.tier, q.difficulty);
@@ -466,10 +654,30 @@ export function useGameState() {
     setActiveDeck(starterDeck);
     starterDeck.forEach((c) => discoverCard(c.id));
     setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
+    setKnownDistrictChannels([data.district.id]);
+    setUnlockedDistrictChannels([data.district.id]);
+    setActiveMessengerChannel(data.district.id);
+    setBarContactDistricts([]);
+    setMessengerFeed([
+      {
+        id: `msg_boot_${Date.now()}`,
+        from: 'SYSTEM',
+        text: `Канал #${data.district.id.toUpperCase()} подключен. Это ваш домашний район.`,
+        channelId: data.district.id
+      }
+    ]);
     setWorldDay(1);
     setDayTick(0);
     setCurrentView('HUB');
-    syncGame();
+    // Force-write canonical district state to backend to avoid race with async setState.
+    syncGame({
+      homeDistrictId: data.district.id,
+      activeDistrictId: data.district.id,
+      currentView: 'HUB',
+      viewMode: 'DISTRICT',
+      worldDay: 1,
+      dayTick: 0
+    });
   };
 
   const handleCompleteTalkQuest = (questId: string) => {
@@ -505,8 +713,21 @@ export function useGameState() {
       grantCardById('script_curl');
       grantCardById('script_chmod');
     }
+    postDistrictRumor({
+      districtId: q.districtId || activeDistrictId,
+      outcome: 'quest_completed',
+      subject: q.title,
+    });
     advanceTime(1);
   };
+
+  const reportCombatRumor = useCallback((missionName: string, success: boolean) => {
+    postDistrictRumor({
+      districtId: activeDistrictId,
+      outcome: success ? 'combat_win' : 'combat_fail',
+      subject: missionName,
+    });
+  }, [postDistrictRumor, activeDistrictId]);
 
   const handleTravel = (nodeId: string, type: string, cost?: number) => {
     rollNpcPresence();
@@ -542,8 +763,13 @@ export function useGameState() {
         return;
       }
       setActiveDistrictId(nodeId);
+      ensureKnownDistrictChannel(nodeId);
       setViewMode('DISTRICT');
       setActiveCombatPack(targetDistrict.combatPack ?? 'java_core');
+      if (unlockedDistrictChannels.includes(nodeId)) {
+        setActiveMessengerChannel(nodeId);
+        tryAutopostNpcChatter(nodeId);
+      }
       advanceTime(1);
       return;
     }
@@ -574,15 +800,24 @@ export function useGameState() {
     }
 
     if (['npc', 'shop', 'terminal', 'bar', 'story'].includes(type)) {
+      const districtId = getDistrictByNodeId(nodeId) || activeDistrictId;
+      ensureKnownDistrictChannel(districtId);
       if (type === 'npc') {
         const district = MAP_NODES.find((d) => d.id === activeDistrictId);
         const rep = district?.dominantFactionId ? (reputation[district.dominantFactionId] || 0) : 0;
         if (rep >= 15) {
           setTrustedNpcContacts((prev) => (prev.includes(nodeId) ? prev : [...prev, nodeId]));
           setMessengerFeed((prev) => [
-            { id: `msg_contact_${Date.now()}`, from: nodeId, text: 'Канал закреплен. Можешь писать в мессенджер.', isSpam: false },
+            { id: `msg_contact_${Date.now()}`, from: nodeId, text: 'Канал закреплен. Можешь писать в мессенджер.', channelId: districtId, isSpam: false },
             ...prev,
           ].slice(0, 80));
+        }
+      } else if (type === 'bar') {
+        setBarContactDistricts((prev) => (prev.includes(districtId) ? prev : [...prev, districtId]));
+        if (!unlockedDistrictChannels.includes(districtId)) {
+          postSystemMessage(districtId, 'BARMAN: могу открыть районный чат. Либо 120 ƀ, либо закрой местный контракт.');
+        } else {
+          tryAutopostNpcChatter(districtId);
         }
       }
       setActiveBarNode(nodeId);
@@ -610,16 +845,78 @@ export function useGameState() {
   const sendMessengerPing = (text: string) => {
     const clean = text.trim();
     if (!clean) return;
+    const channelId = activeMessengerChannel;
+    if (!unlockedDistrictChannels.includes(channelId)) {
+      postSystemMessage(channelId, 'Сначала подключите канал у бармена этого района.');
+      return;
+    }
     const now = Date.now();
     const next: MessengerMessage[] = [
-      { id: `msg_out_${now}`, from: 'YOU', text: clean, isSpam: false },
+      { id: `msg_out_${now}`, from: 'YOU', text: clean, channelId, isSpam: false },
     ];
+    const lower = clean.toLowerCase();
+    const keywordReactions: Array<{ key: string; line: string }> = [
+      { key: 'привет', line: 'Канал видит тебя. Не шуми и держи линию чистой.' },
+      { key: 'прив', line: 'Йо. Канал живой, сигнал принят.' },
+      { key: 'здар', line: 'Здарова. Что по делу?' },
+      { key: 'здрав', line: 'Приветствую. Сеть слушает.' },
+      { key: 'hello', line: 'Hello accepted. Keep your packets tidy.' },
+      { key: 'hi', line: 'Hi. Channel sync is stable.' },
+      { key: 'квест', line: 'Если ищешь контракт — загляни к бармену и проверь local backlog.' },
+      { key: 'бит', line: 'Bits любят тишину. Меньше шума в канале — выше шансы на жирный заказ.' },
+      { key: 'ice', line: 'ICE не прощает лобовых. Держи COUNTER-карты под AUDITOR/PHANTOM.' },
+      { key: 'метро', line: 'По метро сегодня нестабильно. Если есть токен — лучше не трать зря.' },
+      { key: 'баг', line: 'Логи не врут: сначала локализуй, потом фикси. Не наоборот.' },
+      { key: 'работа', line: 'Работа есть. Вопрос — какую цену заплатишь за быстрый вход?' },
+      { key: 'купить', line: 'По покупкам: спроси в баре про закрытую витрину, иногда там редкие лоты.' },
+      { key: 'продать', line: 'Если хочешь продать лишнее — не неси всё в открытую, используй знакомые каналы.' },
+      { key: 'магаз', line: 'Магазины ротируют ассортимент по дням. Проверяй утром и ночью.' },
+      { key: 'торг', line: 'Торг уместен, но только если тебя знают на районе.' }
+    ];
+    const looksLikeDirectAddress = /(^|\s)@([a-zA-Z0-9_]+)/.test(clean) || lower.includes('эй ') || lower.includes('слышь');
+    const mentionMatch = clean.match(/@([a-zA-Z0-9_]+)/);
+    const mentionedNick = mentionMatch?.[1] || '';
+    const knownByMention = trustedNpcContacts.find((c) => c.toLowerCase().includes(mentionedNick.toLowerCase()));
+    if (looksLikeDirectAddress) {
+      if (knownByMention || trustedNpcContacts.length > 0) {
+        const knownNpc = knownByMention || trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)];
+        next.push({
+          id: `msg_friend_dm_${now + 1}`,
+          from: knownNpc,
+          text: 'Вижу обращение. Если тема не публичная — пиши в личку, тут слишком шумно.',
+          channelId,
+        });
+      } else {
+        const strangerReplies = [
+          'Кому ты тут машешь? Канал общий, не личка.',
+          'Ха, смелый заход. Незнакомцев тут обычно сначала проверяют.',
+          'Эй-эй, полегче. Либо по делу, либо мимо.',
+          'Весело зашел, но доверия пока ноль.',
+        ];
+        next.push({
+          id: `msg_stranger_addr_${now + 1}`,
+          from: 'npc_unknown',
+          text: strangerReplies[Math.floor(Math.random() * strangerReplies.length)],
+          channelId,
+        });
+      }
+    }
+    const keywordHit = keywordReactions.find((r) => lower.includes(r.key));
+    if (keywordHit) {
+      next.push({
+        id: `msg_stranger_kw_${now + 2}`,
+        from: 'npc_unknown',
+        text: keywordHit.line,
+        channelId,
+      });
+    }
     if (trustedNpcContacts.length > 0) {
       const contact = trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)];
       next.push({
-        id: `msg_in_${now + 1}`,
+        id: `msg_in_${now + 3}`,
         from: contact,
         text: 'Принял. Канал живой, держи синхронизацию и не теряй ритм.',
+        channelId,
         isSpam: false,
       });
     }
@@ -630,14 +927,24 @@ export function useGameState() {
         '[SPAM] HOTFIX_MARKET: дешевые импланты без гарантии',
       ];
       next.push({
-        id: `msg_spam_${now + 2}`,
+        id: `msg_spam_${now + 4}`,
         from: 'SPAM_BOT',
         text: spamPool[Math.floor(Math.random() * spamPool.length)],
+        channelId,
         isSpam: true,
       });
     }
-    setMessengerFeed((prev) => [...next, ...prev].slice(0, 80));
+    setMessengerFeed((prev) => [...next, ...prev].slice(0, 240));
+    tryAutopostNpcChatter(channelId);
   };
+
+  useEffect(() => {
+    if (!activeMessengerChannel || !unlockedDistrictChannels.includes(activeMessengerChannel)) return;
+    const timer = setInterval(() => {
+      tryAutopostNpcChatter(activeMessengerChannel);
+    }, 22000);
+    return () => clearInterval(timer);
+  }, [activeMessengerChannel, unlockedDistrictChannels, tryAutopostNpcChatter]);
 
   const trackedState = getTrackedQuest(questStates);
   const trackedQuest = QUEST_LIBRARY.find((q) => q.id === trackedState?.questId);
@@ -682,6 +989,9 @@ export function useGameState() {
     isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked,
     npcPresenceMap, setNpcPresenceMap,
     trustedNpcContacts, messengerFeed, sendMessengerPing,
+    knownDistrictChannels, unlockedDistrictChannels, activeMessengerChannel, barContactDistricts,
+    setActiveMessengerChannel, unlockDistrictChannel, canUnlockDistrictChannelByQuest,
+    reportCombatRumor,
     playerLevel, playerGrade,
     handleCreationComplete, handleTravel, handleCompleteTalkQuest,
     discoverCard, canUnlockNow, objectiveNodeId,

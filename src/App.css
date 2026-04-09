@@ -284,6 +284,10 @@ body, html, #root {
   gap: 1.5rem;
 }
 
+.hub-col.intel {
+  min-height: 0;
+}
+
 .col-header {
   font-size: 0.65rem;
   opacity: 0.5;
@@ -366,6 +370,106 @@ body, html, #root {
 .intel-title { font-size: 0.85rem; font-weight: 800; font-family: var(--font-mono); }
 .intel-count { font-size: 1.2rem; color: var(--neon-cyan); }
 .intel-desc { font-size: 0.65rem; opacity: 0.5; line-height: 1.4; }
+
+.messenger-panel {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.messenger-meta-row {
+  font-size: 0.62rem;
+  opacity: 0.82;
+}
+
+.messenger-channel-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.messenger-channel-chip {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  color: #ccefff;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.messenger-channel-chip.active {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 12px var(--neon-cyan-glow);
+}
+
+.messenger-channel-chip.locked {
+  opacity: 0.7;
+}
+
+.messenger-unlock-box {
+  border: 1px dashed rgba(255, 184, 0, 0.4);
+  background: rgba(255, 184, 0, 0.05);
+  padding: 8px;
+}
+
+.messenger-unlock-note {
+  font-size: 0.58rem;
+  opacity: 0.85;
+}
+
+.messenger-unlock-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.messenger-unlock-actions .neon-border-btn {
+  padding: 8px 10px;
+  font-size: 0.58rem;
+}
+
+.messenger-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.messenger-input {
+  flex: 1;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #d7f7ff;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.messenger-feed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.messenger-line {
+  font-size: 0.62rem;
+  color: #9ae8ff;
+  line-height: 1.45;
+}
+
+.messenger-line.spam {
+  color: #ff7f7f;
+}
+
+.messenger-from {
+  color: var(--neon-amber);
+}
 
 .active-quest-preview {
   padding: 1.2rem;

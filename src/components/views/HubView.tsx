@@ -32,7 +32,15 @@ interface HubViewProps {
   dayPhase: string;
   trustedNpcContacts: string[];
   messengerFeed: MessengerMessage[];
+  knownDistrictChannels: string[];
+  unlockedDistrictChannels: string[];
+  activeMessengerChannel: string;
+  barContactDistricts: string[];
   onSendMessengerPing: (text: string) => void;
+  onSelectMessengerChannel: (districtId: string) => void;
+  onUnlockChannelByBits: (districtId: string) => void;
+  onUnlockChannelByQuest: (districtId: string) => void;
+  canUnlockChannelByQuest: (districtId: string) => boolean;
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
 }
@@ -60,11 +68,26 @@ export const HubView: React.FC<HubViewProps> = ({
   dayPhase,
   trustedNpcContacts,
   messengerFeed,
+  knownDistrictChannels,
+  unlockedDistrictChannels,
+  activeMessengerChannel,
+  barContactDistricts,
   onSendMessengerPing,
+  onSelectMessengerChannel,
+  onUnlockChannelByBits,
+  onUnlockChannelByQuest,
+  canUnlockChannelByQuest,
   onNavigateToView,
   onNavigateToBarNode
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
+  const channelFeed = React.useMemo(
+    () => messengerFeed.filter((m) => !m.channelId || m.channelId === activeMessengerChannel),
+    [messengerFeed, activeMessengerChannel]
+  );
+  const isActiveChannelUnlocked = unlockedDistrictChannels.includes(activeMessengerChannel);
+  const channelVisitedBar = barContactDistricts.includes(activeMessengerChannel);
+  const formatChannelName = (districtId: string) => `#${districtId.replaceAll('_', '-').toUpperCase()}`;
   return (
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
@@ -174,9 +197,6 @@ export const HubView: React.FC<HubViewProps> = ({
               </div>
               <ChevronRight className="op-arrow" />
            </div>
-        </div>
-
-        <div className="hub-col intel">
            <div className="active-quest-preview neon-panel">
               <div className="intel-header">
                  <div className="intel-title">CONTRACT_BACKLOG</div>
@@ -196,58 +216,88 @@ export const HubView: React.FC<HubViewProps> = ({
                      </div>
                    );
                  })}
-                 {questStates.filter(s => s.status === 'completed').length > 0 && questStates.filter(s => s.status === 'active').length === 0 && (
-                   (() => {
-                      const s = questStates.filter(s => s.status === 'completed').slice(-1)[0];
-                      const q = QUEST_LIBRARY.find(x => x.id === s.questId);
-                      return (
-                        <div className="backlog-entry completed">
-                           <div className="b-header">
-                              <span className="b-status">[ГОТОВО]</span>
-                              <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
-                           </div>
-                        </div>
-                      );
-                   })()
-                 )}
               </div>
            </div>
-           <div className="neon-panel" style={{ marginTop: '15px', padding: '12px' }}>
-              <div className="intel-header">
-                 <div className="intel-title">MESSENGER_LINK</div>
-                 <div className="intel-count gold">{trustedNpcContacts.length}</div>
-              </div>
-              <div className="mono-text" style={{ fontSize: '0.62rem', opacity: 0.85, marginBottom: '8px' }}>
-                Контакты: {trustedNpcContacts.length > 0 ? trustedNpcContacts.join(', ') : 'нет доверенных NPC'}
-              </div>
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
-                <input
-                  value={messageDraft}
-                  onChange={(e) => setMessageDraft(e.target.value)}
-                  placeholder="написать в канал..."
-                  style={{ flex: 1, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.15)', color: '#d7f7ff', padding: '6px', fontFamily: 'var(--font-mono)' }}
-                />
-                <button
-                  className="neon-border-btn glow-cyan"
-                  onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
-                >
-                  SEND
-                </button>
-              </div>
-              <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {messengerFeed.slice(0, 6).map((m) => (
-                  <div key={m.id} className="mono-text" style={{ fontSize: '0.6rem', color: m.isSpam ? '#ff6f6f' : '#9ae8ff' }}>
-                    [{m.from}] {m.text}
-                  </div>
-                ))}
-              </div>
-           </div>
-           <div className="neon-panel interactive intel-card" style={{ marginTop: '15px' }} onClick={() => onNavigateToView('REFERENCE')}>
+           <div className="neon-panel interactive intel-card" onClick={() => onNavigateToView('REFERENCE')}>
               <div className="intel-header">
                  <div className="intel-title">DOCUMENTATION</div>
                  <div className="intel-count gold">{inventoryUnique.length}</div>
               </div>
               <p className="intel-desc mono-text">LIBRARIES_OPENED / ARCHED_CONCEPTS</p>
+           </div>
+        </div>
+
+        <div className="hub-col intel">
+           <div className="neon-panel messenger-panel">
+              <div className="intel-header">
+                 <div className="intel-title">MESSENGER_LINK</div>
+                 <div className="intel-count gold">{channelFeed.length}</div>
+              </div>
+              <div className="mono-text messenger-meta-row">
+                Активный канал: {formatChannelName(activeMessengerChannel)} · Контакты: {trustedNpcContacts.length}
+              </div>
+              <div className="messenger-channel-list">
+                {knownDistrictChannels.map((districtId) => {
+                  const unlocked = unlockedDistrictChannels.includes(districtId);
+                  return (
+                    <button
+                      key={districtId}
+                      className={`messenger-channel-chip ${districtId === activeMessengerChannel ? 'active' : ''} ${unlocked ? 'unlocked' : 'locked'}`}
+                      onClick={() => onSelectMessengerChannel(districtId)}
+                    >
+                      {formatChannelName(districtId)} {unlocked ? '' : '[LOCK]'}
+                    </button>
+                  );
+                })}
+              </div>
+              {!isActiveChannelUnlocked && (
+                <div className="messenger-unlock-box">
+                  <div className="mono-text messenger-unlock-note">
+                    {channelVisitedBar
+                      ? 'Бармен района готов открыть доступ: покупка или квест.'
+                      : 'Сначала посетите бар этого района и поговорите с барменом.'}
+                  </div>
+                  <div className="messenger-unlock-actions">
+                    <button
+                      className="neon-border-btn glow-cyan"
+                      disabled={!channelVisitedBar || bits < 120}
+                      onClick={() => onUnlockChannelByBits(activeMessengerChannel)}
+                    >
+                      BUY ACCESS [120 ƀ]
+                    </button>
+                    <button
+                      className="neon-border-btn glow-green"
+                      disabled={!channelVisitedBar || !canUnlockChannelByQuest(activeMessengerChannel)}
+                      onClick={() => onUnlockChannelByQuest(activeMessengerChannel)}
+                    >
+                      QUEST ACCESS
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="messenger-input-row">
+                <input
+                  value={messageDraft}
+                  onChange={(e) => setMessageDraft(e.target.value)}
+                  placeholder="написать в районный канал..."
+                  className="messenger-input"
+                  disabled={!isActiveChannelUnlocked}
+                />
+                <button
+                  className="neon-border-btn glow-cyan"
+                  onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
+                  disabled={!isActiveChannelUnlocked}
+                >
+                  SEND
+                </button>
+              </div>
+              <div className="messenger-feed">
+                {channelFeed.slice(0, 80).map((m) => (
+                  <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
+                    <span className="messenger-from">[{m.from}]</span> {m.text}
+                  </div>
+                ))}
+              </div>
            </div>
         </div>
       </div>

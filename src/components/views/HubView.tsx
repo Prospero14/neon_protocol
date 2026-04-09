@@ -206,30 +206,29 @@ export const HubView: React.FC<HubViewProps> = ({
            </div>
         </div>
 
-        <div className="hub-col intel">
-           <div className="active-quest-preview neon-panel">
-              <div className="intel-header">
-                 <div className="intel-title">CONTRACT_BACKLOG</div>
-                 <Award size={14} color="var(--neon-amber)" />
-              </div>
-              <div className="hub-backlog-list mono-text">
-                 {questStates.length === 0 && <div className="q-none opacity-50">NO_DATA_FOUND</div>}
-                 {questStates.filter(s => s.status !== 'completed').slice(-2).reverse().map(s => {
-                   const q = QUEST_LIBRARY.find(x => x.id === s.questId);
-                   return (
-                     <div key={s.questId} className="backlog-entry active">
-                        <div className="b-header">
-                           <span className="b-status pulse-cyan">[АКТИВЕН]</span>
-                           <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
-                        </div>
-                        <div className="b-body">{q?.description}</div>
-                     </div>
-                   );
-                 })}
-              </div>
-           </div>
-        </div>
       </div>
+
+      <aside className="backlog-dock neon-panel">
+        <div className="intel-header">
+           <div className="intel-title">CONTRACT_BACKLOG</div>
+           <Award size={14} color="var(--neon-amber)" />
+        </div>
+        <div className="hub-backlog-list mono-text">
+           {questStates.length === 0 && <div className="q-none opacity-50">NO_DATA_FOUND</div>}
+           {questStates.filter(s => s.status !== 'completed').slice(-2).reverse().map(s => {
+             const q = QUEST_LIBRARY.find(x => x.id === s.questId);
+             return (
+               <div key={s.questId} className="backlog-entry active">
+                  <div className="b-header">
+                     <span className="b-status pulse-cyan">[АКТИВЕН]</span>
+                     <span className="b-title">{q?.title.split(']')[1] || q?.title}</span>
+                  </div>
+                  <div className="b-body">{q?.description}</div>
+               </div>
+             );
+           })}
+        </div>
+      </aside>
 
       <aside className="messenger-dock neon-panel">
         <div className="intel-header">

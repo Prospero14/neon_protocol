@@ -208,11 +208,12 @@ body, html, #root {
   display: flex;
   flex-direction: column;
   padding: 2rem;
-  padding-right: 360px;
+  padding-right: 700px;
   height: 100vh;
   background: radial-gradient(circle at top right, rgba(0,255,255,0.05), transparent 40%),
               radial-gradient(circle at bottom left, rgba(255,45,109,0.05), transparent 40%);
   overflow: hidden;
+  position: relative;
 }
 
 .hub-header-v4 {
@@ -273,7 +274,7 @@ body, html, #root {
 
 .hub-grid-v4 {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
+  grid-template-columns: 320px 1fr;
   gap: 2rem;
   flex: 1;
   min-height: 0;
@@ -383,8 +384,8 @@ body, html, #root {
 
 .messenger-dock {
   position: absolute;
-  top: 1.5rem;
-  right: 1.25rem;
+  top: 1.25rem;
+  right: 1rem;
   bottom: 1.25rem;
   width: 330px;
   padding: 1rem;
@@ -392,6 +393,17 @@ body, html, #root {
   flex-direction: column;
   gap: 0.65rem;
   z-index: 8;
+}
+
+.backlog-dock {
+  position: absolute;
+  top: 6.9rem;
+  right: 352px;
+  width: 330px;
+  min-height: 160px;
+  padding: 1rem;
+  z-index: 8;
+  border-right: 1px solid rgba(0, 255, 255, 0.18);
 }
 
 .messenger-meta-row {

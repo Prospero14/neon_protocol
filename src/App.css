@@ -217,9 +217,10 @@ body, html, #root {
 }
 
 .hub-header-v4 {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2rem;
+  align-items: start;
   margin-bottom: 2rem;
   border-bottom: 1px solid var(--glass-border);
   padding-bottom: 1.5rem;
@@ -248,16 +249,18 @@ body, html, #root {
 
 .hub-top-stats {
   display: flex;
-  gap: 1rem;
   align-items: center;
+  width: 100%;
 }
 
 .top-stat {
+  width: 100%;
   padding: 8px 16px;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 12px;
   background: rgba(0, 20, 20, 0.4);
   border: 1px solid rgba(0, 255, 255, 0.1);
   border-radius: 4px;

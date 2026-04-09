@@ -251,6 +251,7 @@ body, html, #root {
   display: flex;
   align-items: center;
   width: 100%;
+  margin-top: 12px;
 }
 
 .top-stat {
@@ -260,7 +261,7 @@ body, html, #root {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   background: rgba(0, 20, 20, 0.4);
   border: 1px solid rgba(0, 255, 255, 0.1);
   border-radius: 4px;
@@ -272,7 +273,7 @@ body, html, #root {
   font-family: var(--font-mono); 
   color: var(--neon-amber);
   text-shadow: 0 0 10px var(--neon-amber-glow);
-  margin-left: 20px;
+  margin-left: 8px;
 }
 
 .hub-grid-v4 {

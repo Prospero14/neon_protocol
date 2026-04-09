@@ -128,6 +128,19 @@ const IntelView: React.FC<IntelViewProps> = ({ reputation, discoveredIntel, onBa
         .penalty-alert { margin-top: 15px; background: rgba(255,0,0,0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 10px; font-size: 0.7rem; text-align: center; }
         
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 1280px) {
+          .intel-view-v4 { padding: 20px; }
+          .intel-content-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+        }
+
+        @media (max-width: 860px) {
+          .intel-view-v4 { padding: 14px; }
+          .intel-view-header { flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding-bottom: 12px; }
+          .intel-content-grid { grid-template-columns: 1fr; gap: 12px; }
+          .faction-card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+          .detail-row { flex-direction: column; gap: 2px; }
+        }
       `}</style>
     </div>
   );

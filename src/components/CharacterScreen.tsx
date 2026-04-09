@@ -649,6 +649,18 @@ const CharacterScreen: React.FC<CharacterScreenProps> = ({ player, onBack, onLog
 .install-btn:disabled { opacity: 0.3; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1100px) {
+  .implants-layout { grid-template-columns: 1fr; overflow-y: auto; }
+  .reputation-pane, .hardware-pane, .implants-pane, .traits-pane-v42 { padding: 1rem; }
+}
+
+@media (max-width: 820px) {
+  .academy-modal-overlay { padding: 1rem; }
+  .academy-modal { max-height: 90vh; padding: 1rem; }
+  .academy-grid { grid-template-columns: 1fr; gap: 1rem; padding-right: 0; }
+  .tab-btn-v4 { flex: 1 1 calc(50% - 8px); text-align: center; }
+}
            `}</style>
         </div>
       )}

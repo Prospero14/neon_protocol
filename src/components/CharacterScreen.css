@@ -278,3 +278,27 @@
   color: #777;
   line-height: 1.4;
 }
+
+@media (max-width: 1280px) {
+  .character-v4-view { padding: 1rem; }
+  .char-layout { grid-template-columns: 280px 1fr; gap: 1rem; }
+  .player-id-text { font-size: 1.25rem; }
+}
+
+@media (max-width: 1024px) {
+  .char-header { flex-wrap: wrap; gap: 10px; }
+  .char-layout { grid-template-columns: 1fr; overflow-y: auto; }
+  .stats-pane { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  .stats-main-card { margin-bottom: 0; }
+  .identity-details { overflow: visible; }
+}
+
+@media (max-width: 760px) {
+  .character-v4-view { height: auto; min-height: 100%; overflow-y: auto; }
+  .stats-pane { grid-template-columns: 1fr; }
+  .stats-grid.v42 { grid-template-columns: 1fr; }
+  .header-actions { width: 100%; }
+  .back-btn-v4, .logout-btn-v4 { flex: 1; text-align: center; }
+  .pane-header-v42 { flex-wrap: wrap; row-gap: 6px; }
+  .prof-path { flex-wrap: wrap; row-gap: 6px; }
+}

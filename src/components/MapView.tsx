@@ -423,6 +423,24 @@ const MapView: React.FC<MapViewProps> = ({
         .no-selection { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; color: #333; }
         .animate-slide-in { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media (max-width: 1280px) {
+          .map-hdr-v5 { grid-template-columns: 1fr 280px; }
+          .map-body { grid-template-columns: 1fr 280px; }
+          .hdr-main-area { justify-content: flex-start; padding-left: 20px; }
+          .hdr-micro-label.side-fixed { position: static; transform: none; margin-right: 14px; }
+          .hdr-headline { font-size: 1.35rem; }
+        }
+
+        @media (max-width: 960px) {
+          .map-hdr-v5 { height: auto; grid-template-columns: 1fr; gap: 8px; padding: 10px 12px; }
+          .hdr-main-area { justify-content: space-between; }
+          .hdr-actions-area { justify-content: flex-start; padding-right: 0; }
+          .hdr-status-row { flex-wrap: wrap; gap: 8px; }
+          .map-body { grid-template-columns: 1fr; }
+          .map-info-panel { border-left: none; border-top: 1px solid rgba(188,19,254,0.1); max-height: 42vh; overflow-y: auto; }
+          .node-title { font-size: 1.4rem; margin-bottom: 12px; }
+        }
       `}</style>
     </div>
   );

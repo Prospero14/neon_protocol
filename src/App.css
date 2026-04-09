@@ -220,7 +220,7 @@ body, html, #root {
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 2rem;
-  align-items: start;
+  align-items: end;
   margin-bottom: 2rem;
   border-bottom: 1px solid var(--glass-border);
   padding-bottom: 1.5rem;
@@ -251,7 +251,7 @@ body, html, #root {
   display: flex;
   align-items: center;
   width: 100%;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .top-stat {
@@ -417,6 +417,40 @@ body, html, #root {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+/* HUB responsiveness */
+@media (max-width: 1880px) {
+  .hub-v4-view { padding-right: 676px; }
+  .right-rail { grid-template-columns: 320px 320px; }
+  .messenger-dock { width: 320px; }
+}
+
+@media (max-width: 1660px) {
+  .hub-v4-view { padding-right: 636px; }
+  .hub-header-v4, .hub-grid-v4 { grid-template-columns: 300px 1fr; gap: 1.4rem; }
+  .right-rail { top: 6.5rem; right: 0.75rem; grid-template-columns: 300px 300px; gap: 10px; }
+  .messenger-dock { width: 300px; max-height: calc(100vh - 7.7rem); }
+}
+
+@media (max-width: 1440px) {
+  .hub-v4-view { padding: 1.4rem; padding-right: 1.4rem; overflow-y: auto; }
+  .hub-header-v4, .hub-grid-v4 { grid-template-columns: 1fr; gap: 1rem; }
+  .hub-top-stats .top-stat { width: 100%; }
+  .right-rail {
+    position: static;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 0.8rem;
+  }
+  .right-rail-col, .messenger-dock { width: 100%; max-height: none; min-height: 0; }
+}
+
+@media (max-width: 980px) {
+  .right-rail { grid-template-columns: 1fr; }
+  .top-stat { flex-wrap: wrap; row-gap: 8px; }
+  .top-stat .val { margin-left: 0; }
 }
 
 .messenger-meta-row {

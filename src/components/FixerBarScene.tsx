@@ -575,6 +575,23 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
 
         @keyframes scan { from { top: 0%; } to { top: 100%; } }
         .gold { color: var(--neon-amber); }
+
+        @media (max-width: 1280px) {
+          .fixer-bar-view { padding: 1rem 1.2rem; }
+          .bar-main-grid { grid-template-columns: 220px 1fr; gap: 1.2rem; }
+          .service-grid { grid-template-columns: 1fr; }
+          .btn-t { font-size: 0.9rem; }
+        }
+
+        @media (max-width: 920px) {
+          .fixer-bar-view { height: auto; min-height: 100vh; overflow-y: auto; }
+          .bar-header { margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+          .bar-main-grid { grid-template-columns: 1fr; overflow: visible; }
+          .bar-aside { order: 2; height: auto; }
+          .action-center { order: 1; overflow: visible; padding-right: 0; }
+          .interaction-matrix { gap: 1rem; }
+          .primary-action-v4:hover { transform: none; }
+        }
       `}</style>
     </div>
   );

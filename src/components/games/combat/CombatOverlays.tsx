@@ -95,7 +95,9 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
             {opponentStory && (
               <div className="tz-pipeline-narrative font-terminal">
                 <div className="tz-pipeline-title">{opponentStory.headline}</div>
-                <p className="tz-pipeline-spectrum">{opponentStory.spectrum}</p>
+                {opponentStory.spectrum ? (
+                  <p className="tz-pipeline-spectrum">{opponentStory.spectrum}</p>
+                ) : null}
                 <p className="tz-pipeline-body">{opponentStory.body}</p>
                 <p className="tz-pipeline-encounter mono-text opacity-90">{opponentStory.encounter}</p>
               </div>

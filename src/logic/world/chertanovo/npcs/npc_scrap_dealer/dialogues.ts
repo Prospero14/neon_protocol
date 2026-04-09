@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_scrap_dealer_dialogue: DialogueTree = new DialogueBuilder('npc_scrap_dealer')
+export const npc_scrap_dealer_dialogue: DialogueTree = new DialogueBuilder('npc_scrap_dealer').withDistrict('chertanovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

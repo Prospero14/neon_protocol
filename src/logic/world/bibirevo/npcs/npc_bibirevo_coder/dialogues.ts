@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_bibirevo_coder_dialogue: DialogueTree = new DialogueBuilder('npc_bibirevo_coder')
+export const npc_bibirevo_coder_dialogue: DialogueTree = new DialogueBuilder('npc_bibirevo_coder').withDistrict('bibirevo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

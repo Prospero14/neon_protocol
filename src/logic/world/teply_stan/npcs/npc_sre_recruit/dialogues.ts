@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_sre_recruit_dialogues = new DialogueBuilder('npc_sre_recruit')
+export const npc_sre_recruit_dialogues = new DialogueBuilder('npc_sre_recruit').withDistrict('teply_stan')
   .addNode('intro', 'РЕКРУТ_ПАТРУЛЯ', 'Егерь говорит, я не готов. А я хочу в бой с химерами! Поможешь мне с тренировкой?', [
       { text: 'Я помогу тебе. Проверь мою деку.', nextId: 'rank_check' },
       { text: 'Слушай Егеря, стажер.', nextId: 'LEAVE' }

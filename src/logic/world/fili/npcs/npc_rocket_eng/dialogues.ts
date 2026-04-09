@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_rocket_eng_dialogues = new DialogueBuilder('npc_rocket_eng')
+export const npc_rocket_eng_dialogues = new DialogueBuilder('npc_rocket_eng').withDistrict('fili')
   .addNode('intro', 'СТЕПАНЫЧ', 'Чего застыл? Здесь не музей, здесь колыбель русского космоса... ну, того, что от него осталось в битах. Я Степаныч, слежу, чтобы старые движки не пошли вразнос от корпоративных вирусов.', [
     { text: 'Расскажи про Хруничев.', nextId: 'lore_khrunichev' },
     { text: 'Нужна помощь с железом.', nextId: 'quest_explain' },

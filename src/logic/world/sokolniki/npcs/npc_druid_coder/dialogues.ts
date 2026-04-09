@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_druid_coder_dialogues = new DialogueBuilder('npc_druid_coder')
+export const npc_druid_coder_dialogues = new DialogueBuilder('npc_druid_coder').withDistrict('sokolniki')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

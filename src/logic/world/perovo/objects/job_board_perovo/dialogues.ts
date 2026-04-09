@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const job_board_perovo_dialogues = new DialogueBuilder('job_board_perovo')
+export const job_board_perovo_dialogues = new DialogueBuilder('job_board_perovo').withDistrict('perovo')
   .addNode('intro', 'ДОСКА ФРИЛАНСА ПЕРОВО', 'Мертвый экран. Чистка системных тупиков и борьба с крысами.', [
       { text: 'Чистка системных тупиков (Level 1+)', nextId: 'quest_accept', requireMinLevel: 1 },
       { text: '[Уйти]', nextId: 'LEAVE' }

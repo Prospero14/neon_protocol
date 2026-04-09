@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_bunker_guard_dialogues = new DialogueBuilder('npc_bunker_guard')
+export const npc_bunker_guard_dialogues = new DialogueBuilder('npc_bunker_guard').withDistrict('taganka')
   .addNode('intro', 'СЕРЖАНТ ГЛУХОВ', 'Гражданским вход в нижние уровни запрещен. Предъявите жетон Federal Oversight или покиньте зону шлюза. У меня приказ на немедленное обнуление нарушителей.', [
     { text: 'Я здесь по делу Инквизитора.', nextId: 'check_auditor' },
     { text: '[Уйти]', nextId: 'LEAVE' }

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_hardware_modder_dialogues = new DialogueBuilder('npc_hardware_modder')
+export const npc_hardware_modder_dialogues = new DialogueBuilder('npc_hardware_modder').withDistrict('mitino')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

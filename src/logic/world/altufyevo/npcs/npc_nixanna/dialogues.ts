@@ -1,7 +1,7 @@
 ﻿import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_nixanna_dialogue: DialogueTree = new DialogueBuilder('npc_nixanna')
+export const npc_nixanna_dialogue: DialogueTree = new DialogueBuilder('npc_nixanna').withDistrict('altufyevo')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],
@@ -11,14 +11,14 @@ export const npc_nixanna_dialogue: DialogueTree = new DialogueBuilder('npc_nixan
   })
 
   // === NEUTRAL POOL ===
-  .addNode('intro', 'НИКСАННА', 'Внимание: обнаружена утечка в пайплайне рендеринга! Ты выглядишь как человек, который может поправить шейдеры реальности. Команда "Reality Engine" в панике — узел Визуализации начал выдавать артефакты в 4-м измерении.', [
+  .addNode('intro', 'НИКСАННА', 'Утечка в пайплайне: реальность кривит шов без сглаживания. Ты похож на того, кто умеет не оправдываться, а чинить. Узел «Ритуал» выдаёт артефакты — Ядру это не понравится, зрителям ещё меньше.', [
     { text: 'Что за артефакты?', nextId: 'lore_render' },
     { text: 'Нужен "Патч Визуализации".', nextId: 'quest_start', requireMaxLevel: 1 },
     { text: 'Как там "Ритуал"?', nextId: 'active_status', requireActiveQuestId: 'q_altufyevo_combat_nixanna_ritual_bug_sweep' },
     { text: 'Мне нужна рекомендация в Академию...', nextId: 'quest_recommendation', requireMaxLevel: 1 },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
-  .addNode('intro_v2', 'НИКСАННА', '*рисует на планшете* Фреймрейт Октября — 24 кадра. По-хорошему надо 60. По моему — надо 144 и RTX. Ты пришёл баланс чинить или глазеть?', [
+  .addNode('intro_v2', 'НИКСАННА', '*рисует на планшете* Город идёт в двадцать с чем-то кадров — как старая вывеска. По-хорошему нужен стабильный поток; по-моему — нужен человек, который не ссыт ломать чужой билд. Ты чинить пришёл или на сеанс?', [
     { text: 'Чинить. Что сломалось?', nextId: 'quest_start' },
     { text: 'Расскажи про рендеринг.', nextId: 'lore_render' },
     { text: '[Уйти]', nextId: 'LEAVE' }
@@ -65,7 +65,7 @@ export const npc_nixanna_dialogue: DialogueTree = new DialogueBuilder('npc_nixan
   .addLoreNode('lore_render', 'НИКСАННА', 'Это визуальный шум. Реальность рендерится с ошибками в буфере глубины. Это не баг, это просто... жизнь без оптимизации. Но Ядро этого не любит. (+Intel: Reality_Glitch)', 'intro')
 
   // === QUESTS ===
-  .addNode('quest_recommendation', 'НИКСАННА', 'Академия? Профессор Туранов всё еще там сидит? Ха! Ладно, я дам тебе "Визуальный Образец" — это скомпилированный лог одной из моих лучших сцен. Покажи его ему, он оценит уровень оптимизации.', [
+  .addNode('quest_recommendation', 'НИКСАННА', 'Туранов? Он всё ещё в Юго-Западе читает лекции, как завещание? Возьми пакет — слепок лога с моего лучшего куска сцены. Не «вдохновение», а доказательство, что я умею укладываться в бюджет кадра. Покажи — пусть оценит, не морщась.', [
     { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_niksanna_recommendation' },
     { text: '[ НАЗАД ]', nextId: 'intro' }
   ])

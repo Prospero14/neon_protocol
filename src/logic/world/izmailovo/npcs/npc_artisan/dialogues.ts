@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_artisan_dialogues = new DialogueBuilder('npc_artisan')
+export const npc_artisan_dialogues = new DialogueBuilder('npc_artisan').withDistrict('izmailovo')
   .addNode('intro', 'РЕМЕСЛЕННИК_ЛИ', 'Код должен быть не только быстрым, но и красивым. Раньше у хакеров был почерк.', [
       { text: 'Рассказать об искусстве.', nextId: 'lore' },
       { text: '[Уйти]', nextId: 'LEAVE' }

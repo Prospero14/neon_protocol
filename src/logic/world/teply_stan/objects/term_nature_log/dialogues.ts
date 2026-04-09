@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_nature_log_dialogues = new DialogueBuilder('term_nature_log')
+export const term_nature_log_dialogues = new DialogueBuilder('term_nature_log').withDistrict('teply_stan')
   .addNode('intro', 'МОНИТОР_ЭКОСИСТЕМЫ', '[DATA_STREAM] Заражение леса: 45%. Рекомендуется зачистка сектора 5.', [
       { text: 'Запустить диагностику узла.', nextId: 'rank_check' },
       { text: '[Выход]', nextId: 'LEAVE' }

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_hermit_forest_dialogues = new DialogueBuilder('npc_hermit_forest')
+export const npc_hermit_forest_dialogues = new DialogueBuilder('npc_hermit_forest').withDistrict('teply_stan')
   .addNode('intro', 'ЛЕСНОЙ_ОТШЕЛЬНИК', 'Город... шум... Здесь, под корой, слышны байты, которые еще не приручили. Чего ищешь?', [
       { text: 'Я ищу тайные тропы.', nextId: 'lore' },
       { text: 'Как услышать шепот Биосинхронизации?', nextId: 'quest_bio_explain' },

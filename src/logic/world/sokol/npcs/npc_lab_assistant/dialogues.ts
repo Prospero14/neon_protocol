@@ -1,7 +1,7 @@
 ﻿import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc_lab_assistant')
+export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc_lab_assistant').withDistrict('sokol')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],
@@ -43,7 +43,7 @@ export const npc_lab_assistant_dialogue: DialogueTree = new DialogueBuilder('npc
   ], { requireCompletedQuestId: 'q_sokol_talk_lab_delivery' })
 
   // === QUESTS ===
-  .addNode('quest_start', 'ЛАБОРАНТ ИЛЬЯ', 'Нужно доставить "Методички по Ассемблеру" Профессору Туранову в Академию (Юго-Западный округ). Справишься, "Стажер"? Он ценит пунктуальность и отсутствие Null-поинтеров.', [
+  .addNode('quest_start', 'ЛАБОРАНТ ИЛЬЯ', 'Пакет для Туранова — Юго-Запад, EU Syntax. Тот же маршрут болтается на досках в северных силосах: не удивляйся, если кто-то уже видел очередь. Главное — не вскрывать по дороге и не приносить Туранову пустой рукой — он ненавидит null в жизни и в шутках.', [
     { text: '[ ПРИНЯТЬ: ДОСТАВКА МЕТОДИЧЕК ]', nextId: 'rank_check' },
     { text: 'Мне некогда.', nextId: 'intro' }
   ])

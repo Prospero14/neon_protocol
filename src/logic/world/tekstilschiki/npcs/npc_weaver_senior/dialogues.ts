@@ -1,6 +1,6 @@
 ﻿import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_weaver_senior_dialogues = new DialogueBuilder('npc_weaver_senior')
+export const npc_weaver_senior_dialogues = new DialogueBuilder('npc_weaver_senior').withDistrict('tekstilschiki')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

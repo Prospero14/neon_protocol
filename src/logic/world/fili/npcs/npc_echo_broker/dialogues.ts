@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_echo_broker_dialogues = new DialogueBuilder('npc_echo_broker')
+export const npc_echo_broker_dialogues = new DialogueBuilder('npc_echo_broker').withDistrict('fili')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

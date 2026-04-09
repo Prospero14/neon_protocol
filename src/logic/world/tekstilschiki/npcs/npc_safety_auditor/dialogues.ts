@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_safety_auditor_dialogues = new DialogueBuilder('npc_safety_auditor')
+export const npc_safety_auditor_dialogues = new DialogueBuilder('npc_safety_auditor').withDistrict('tekstilschiki')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

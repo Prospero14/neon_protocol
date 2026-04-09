@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_grey_dialogues = new DialogueBuilder('npc_grey')
+export const npc_grey_dialogues = new DialogueBuilder('npc_grey').withDistrict('vykhino')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2', 'intro_friendly_v3'],

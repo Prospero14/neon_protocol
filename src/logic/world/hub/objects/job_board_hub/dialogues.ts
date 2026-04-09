@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const job_board_hub_dialogues = new DialogueBuilder('job_board_hub')
+export const job_board_hub_dialogues = new DialogueBuilder('job_board_hub').withDistrict('kitay_gorod')
   .addNode('intro', 'ДОСКА ЗАКАЗОВ: THE SOCKET', 'Высокоуровневые контракты. Только для верифицированных операторов.', [
     { text: 'Цифровая подпись Хаба (Level 3+)', nextId: 'quest_sig', requireMinLevel: 3 },
     { text: '[Уйти]', nextId: 'LEAVE' }

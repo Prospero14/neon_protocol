@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_gb_agent_dialogues = new DialogueBuilder('npc_gb_agent')
+export const npc_gb_agent_dialogues = new DialogueBuilder('npc_gb_agent').withDistrict('kitay_gorod')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

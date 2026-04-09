@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_spider_dialogues = new DialogueBuilder('npc_spider')
+export const npc_spider_dialogues = new DialogueBuilder('npc_spider').withDistrict('kitay_gorod')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

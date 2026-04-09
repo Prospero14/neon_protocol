@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_zina_dialogues = new DialogueBuilder('npc_zina')
+export const npc_zina_dialogues = new DialogueBuilder('npc_zina').withDistrict('perovo')
   .addNode('intro', 'ЗИНА', 'О, свежее лицо. Тебе "Канифоль" со льдом или дело есть?', [
       { text: 'Работа по доставке?', nextId: 'quest_zina_accept' },
       { text: '[Уйти]', nextId: 'LEAVE' }

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_south_west_dialogues = new DialogueBuilder('term_taxi_south_west')
+export const term_taxi_south_west_dialogues = new DialogueBuilder('term_taxi_south_west').withDistrict('south_west')
   .addNode('intro', 'ТАКСИ: ЮГО-ЗАПАДНАЯ', 'СИСТЕМА_ТАКСИ: Узел Юго-Запад (Академия). Глобальная навигация: 100 Bits. ДОСТУП: СВОБОДНЫЙ.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[МИТИНО]', nextId: 'TRAVEL_MITINO', cost: 15 },

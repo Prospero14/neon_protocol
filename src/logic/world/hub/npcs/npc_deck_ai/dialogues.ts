@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_deck_ai_dialogues = new DialogueBuilder('npc_deck_ai', 'boot_0')
+export const npc_deck_ai_dialogues = new DialogueBuilder('npc_deck_ai', 'boot_0').withDistrict('kitay_gorod')
   .addNode('boot_0', 'AIDA-01', '>>> Инициализация... биометрия [OK]\n>>> РЕГИСТРАЦИЯ: ОПЕРАТОР_0. Я — ассистент AIDA-01. Твоё сознание синхронизировано с сетью Октября. Каков запрос?', [
     { text: 'Где я? [ LOCALHOST? ]', nextId: 'lore_1' },
     { text: 'Твой профиль? [ ASISTANT ]', nextId: 'career_intro' }

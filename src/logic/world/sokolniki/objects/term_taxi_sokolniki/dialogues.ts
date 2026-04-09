@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_sokolniki_dialogues = new DialogueBuilder('term_taxi_sokolniki')
+export const term_taxi_sokolniki_dialogues = new DialogueBuilder('term_taxi_sokolniki').withDistrict('sokolniki')
   .addNode('intro', 'ТАКСИ: СОКОЛЬНИКИ', 'СИСТЕМА_ТАКСИ: Узел Сокольники. Глобальная навигация: 100 Bits. ДОСТУП: СРЕДНИЙ.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[ПРЕОБРАЖЕНКА]', nextId: 'TRAVEL_PREOBR', cost: 15 },

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_auditor_dialogues = new DialogueBuilder('npc_auditor')
+export const npc_auditor_dialogues = new DialogueBuilder('npc_auditor').withDistrict('taganka')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

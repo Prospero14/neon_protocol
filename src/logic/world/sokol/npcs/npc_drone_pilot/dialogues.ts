@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_drone_pilot_dialogue: DialogueTree = new DialogueBuilder('npc_drone_pilot')
+export const npc_drone_pilot_dialogue: DialogueTree = new DialogueBuilder('npc_drone_pilot').withDistrict('sokol')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

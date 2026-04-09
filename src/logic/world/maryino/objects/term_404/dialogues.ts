@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_404_dialogue: DialogueTree = new DialogueBuilder('term_404')
+export const term_404_dialogue: DialogueTree = new DialogueBuilder('term_404').withDistrict('maryino')
   .addNode('intro', 'ТЕРМИНАЛ_#404', '[SYSTEM_ERROR] Файл не найден. Обнаружены скрытые дампы и призраки старого Web 2.0.', [
     { text: 'Вскрыть логи (25 Bits)', nextId: 'lore', cost: 25 },
     { text: 'Восстановить разделы.', nextId: 'quest_404_accept' },

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_hermit_dialogues = new DialogueBuilder('npc_hermit')
+export const npc_hermit_dialogues = new DialogueBuilder('npc_hermit').withDistrict('sokolniki')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

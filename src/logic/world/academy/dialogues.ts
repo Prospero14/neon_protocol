@@ -3,14 +3,14 @@ import { DialogueBuilder } from '../../dialogueUtils';
 
 export const academy_dialogues: Record<string, DialogueTree> = {
   // --- PROFESSOR ARKHIPOV ---
-  npc_professor_arkhipov: new DialogueBuilder('npc_professor_arkhipov')
+  npc_professor_arkhipov: new DialogueBuilder('npc_professor_arkhipov').withDistrict('academy')
     .withGreetings({
       neutral: ['intro', 'welcome_v2'],
       friendly: ['welcome_friendly'],
       stressed: ['stressed_welcome'],
       repeat: ['welcome_repeat']
     })
-    .addNode('intro', 'ПРОФЕССОР Туранов', 'IDENTITY_VERIFIED: Поздравляю с получением лицензии Silicon Hedge. Твоя дека — это скальпель в руках хирурга. Начнем с основ архитектуры.', [
+    .addNode('intro', 'ПРОФЕССОР Туранов', 'Личность подтверждена. Silicon Hedge выдал тебе лицензию — значит, ты уже кому-то нужен как инструмент. Здесь мы учим не красоте кода, а устойчивости: дека — не талисман, а скальпель. Начнём с архитектуры, пока Ядро не прислало очередной патч реальности.', [
       { text: 'Я принес методички от Ильи.', nextId: 'delivery_complete', requireQuestId: 'q_sokol_talk_lab_delivery' },
       { text: 'Где мне искать продвинутые библиотеки (Collections/Streams)?', nextId: 'lore_libraries', requireReputation: { factionId: 'SILICON_HEDGE', minPoints: 25 } },
       { text: 'Я готов слушать. [ CORE_CPU ]', nextId: 'cpu_lecture' },
@@ -48,19 +48,19 @@ export const academy_dialogues: Record<string, DialogueTree> = {
     .addNode('combat_lecture', 'ПРОФЕССОР Туранов', ' OPERATIONS делятся на ARCHITECTURE (планирование) и ENGINEERING (исполнение). Никогда не начинай Engineering, если твоя архитектура — мусор.', [
       { text: 'Я готов к практике. [ ЗАВЕРШИТЬ ОБУЧЕНИЕ ]', nextId: 'installed_end', completeQuestId: 'q_neon_academy_bootcamp' }
     ])
-    .addNode('delivery_complete', 'ПРОФЕССОР Туранов', 'О, материалы от Ильи. Оперативно. Твоя дисциплина впечатляет. Держи небольшой бонус к репутации.', [
+    .addNode('delivery_complete', 'ПРОФЕССОР Туранов', 'Методички из Сокола — без помятости и без «случайных» вложений. Илья держит марку; ты держишь срок. Мелкий жест с моей стороны — крупный для вашей репутации в EU Syntax.', [
       { text: 'Спасибо, Профессор.', nextId: 'intro', effect: 'GIVE_REPUTATION', amount: 10, cardRewardId: 'SILICON_HEDGE' }
     ])
-    .addNode('lore_nixanna', 'ПРОФЕССОР Туранов', 'Никсанна... Давно её не было в сети Академии. Говорят, она ушла в глубокий аутсорс в Алтуфьево. Хороший специалист, хоть и со странностями.', [
+    .addNode('lore_nixanna', 'ПРОФЕССОР Туранов', 'Никсанна… В нашем контуре её давно нет — северные силосы забрали её как тестера реальности. Если пришлёшь от неё не оправдание, а метрики — я выслушаю. Странностей у неё хватает, зато руки чистые по логам.', [
       { text: 'Она помогла мне.', nextId: 'intro' }
     ])
-    .addNode('installed_end', 'ПРОФЕССОР Туранов', 'Теперь ты — сертифицированный оператор. Твоя дека разблокирована. Иди и не позорь мои алгоритмы.', [
+    .addNode('installed_end', 'ПРОФЕССОР Туранов', 'Сертификат вшит. Дека разблокирована — дальше ты сам себе аудитор. Иди в город и не позорь то, что мы только что назвали стандартом.', [
       { text: 'Спасибо, Профессор.', nextId: 'LEAVE' }
     ])
     .build(),
 
   // --- ACADEMY STUDENT ---
-  npc_academy_student: new DialogueBuilder('npc_academy_student')
+  npc_academy_student: new DialogueBuilder('npc_academy_student').withDistrict('academy')
     .withGreetings({
       neutral: ['intro', 'intro_v2'],
       repeat: ['intro_repeat']
@@ -83,7 +83,7 @@ export const academy_dialogues: Record<string, DialogueTree> = {
     .build(),
 
   // --- TUTOR BOT ---
-  npc_academy_tutor: new DialogueBuilder('npc_academy_tutor')
+  npc_academy_tutor: new DialogueBuilder('npc_academy_tutor').withDistrict('academy')
     .withGreetings({
       neutral: ['intro', 'intro_v2'],
       repeat: ['intro_repeat']

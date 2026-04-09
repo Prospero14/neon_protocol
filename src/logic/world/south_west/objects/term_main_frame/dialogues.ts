@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_main_frame_dialogues = new DialogueBuilder('term_main_frame', 'intro')
+export const term_main_frame_dialogues = new DialogueBuilder('term_main_frame', 'intro').withDistrict('south_west')
   .addNode('intro', 'УЗЕЛ: МЕЙНФРЕЙМ', '[AUTO_DEFENSE] Доступ ограничен. Требуется авторизация ACADEMIC.', [
     { text: '[ Попытаться авторизоваться ]', nextId: 'rank_check' },
     { text: '[Выйти]', nextId: 'LEAVE' }

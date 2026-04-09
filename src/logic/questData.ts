@@ -1,4 +1,5 @@
 import { MAP_NODES } from './mapData';
+import { literaryEchoQuest } from './world/literaryEchoes';
 
 export type QuestType = 'talk' | 'combat' | 'delivery' | 'diagnostics';
 export type QuestDifficulty = 'quick' | 'standard' | 'hard';
@@ -376,7 +377,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_niksanna_recommendation',
     title: '[TALK] Рекомендация в Академию',
-    description: 'Никсанна хочет, чтобы вы пошли в Академию. Обратитесь к Профессору Туранову в Юго-Западном секторе с её "визуальным образцом".',
+    description:
+      'Никсанна даёт слепок лога со своей сцены — не портфолио для красоты, а аргумент для EU Syntax. Отнеси пакет Туранову в Юго-Запад; он поймёт, зачем ты пришёл не с пустыми руками.',
     districtId: 'altufyevo',
     giverNpcId: 'npc_niksanna',
     type: 'talk',
@@ -400,7 +402,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_altufyevo_silo_scout',
     title: '[SCAN] Тепловая карта Силоса 7',
-    description: 'Варвару нужны данные о температуре в 7-м силосе. Литейные цени перекрыты, но консоль в Силосе №7 всё еще доступна для ручной диагностики.',
+    description:
+      'Варвар ждёт снимок с терминала глубины: перегрев в коллекторах, пока литейку не задрали по верхней строке. Доска в Алтуфьево дублирует заказ — сними показания с консоли Силоса 7, пока узел отвечает.',
     districtId: 'altufyevo',
     giverNpcId: 'npc_varvar',
     objectiveNodeId: 'term_silo_7',
@@ -412,7 +415,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_altufyevo_scrap_rats',
     title: '[COMBAT] Охота за хламом',
-    description: 'Скупщику нужны запчасти от ботов "Восход". Отправься в зону Свалки и добудь пару рабочих процессоров.',
+    description:
+      'Серый на свалке покупает то, что Восход считает браком: платы с дронов патруля. Грязная работа — зато связана с тем же северным потоком мусора, из которого он кормится. Выбей процессоры в зоне крыс, пока патруль не сжал маршрут.',
     districtId: 'altufyevo',
     giverNpcId: 'shop_scrap',
     objectiveNodeId: 'combat_rats',
@@ -558,7 +562,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_academy_student_research',
     title: '[SCAN] Сбор данных для курсовой',
-    description: 'Студент-Прикладник в Академии просит собрать три дампа с внешних узлов для его работы по низкоуровневым протоколам.',
+    description:
+      'Студент EU Syntax зажат дедлайном: три внешних дампа для курсовой по грязным протоколам. Формально это учёба; по факту — ты таскаешь за него риск, пока Туранов греет компилятор.',
     districtId: 'academy',
     giverNpcId: 'npc_academy_student',
     type: 'diagnostics',
@@ -580,7 +585,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_sokol_talk_lab_delivery',
     title: '[ДОСТ] Методички по Ассемблеру',
-    description: 'Лаборант Илья просит доставить учебные материалы Профессору Туранову. Простое задание для укрепления репутации.',
+    description:
+      'Илья в Соколе запаковал пакет для Туранова; та же очередь висит на доске Алтуфьево — север и академический Юго-Запад связаны одной цепочкой поставки. Довези без вложений «лишних» байтов.',
     districtId: 'sokol',
     giverNpcId: 'npc_lab_assistant',
     type: 'delivery',
@@ -738,7 +744,8 @@ const TUTORIAL_QUESTS: QuestDefinition[] = [
   {
     id: 'q_altufyevo_silo_clear',
     title: '[ВВОД] Зачистка Силоса 7',
-    description: 'Петрович говорит, что системы охлаждения шумят из-за стаи крыс-кодеров. Помоги ему стабилизировать узел в зоне "СИЛОС №7: ВНУТРЕННИЙ КОНТУР".',
+    description:
+      'Петрович вешает тикет без поэзии: внутренний контур Силоса 7 зашумел — охлаждение орёт, шина врёт в мониторинге. В бою закрой цепочку как в тикете (ls → grep → cat на шине), иначе узел останется красным.',
     districtId: 'altufyevo',
     giverNpcId: 'npc_petrovich',
     objectiveNodeId: 'combat_silo_inner',
@@ -848,9 +855,19 @@ const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
   { id: 'q_petrovich_rogue_module', title: '[CHAIN] Изгнанный Модуль Петровича', description: 'Петрович потерял чип «Zero-Point». Последний сигнал зафиксирован в районе Крысы-курьера в Марьино. Разберись.', districtId: 'altufyevo', giverNpcId: 'npc_petrovich', type: 'delivery', difficulty: 'standard', tier: 1 },
 ];
 
-export const QUEST_LIBRARY: QuestDefinition[] = [
+function attachQuestLiteraryEcho(q: QuestDefinition): QuestDefinition {
+  const base = q.description?.trim();
+  if (!base) return q;
+  const tail = literaryEchoQuest(q.districtId, q.id);
+  if (base.endsWith(tail) || base.includes(tail)) return q;
+  return { ...q, description: `${base} ${tail}` };
+}
+
+const RAW_QUEST_LIBRARY: QuestDefinition[] = [
   ...TUTORIAL_QUESTS,
   ...DISTRICT_NARRATIVE_QUESTS,
-  ...buildNpcQuests(), 
-  ...buildCombatDistrictQuests()
+  ...buildNpcQuests(),
+  ...buildCombatDistrictQuests(),
 ];
+
+export const QUEST_LIBRARY: QuestDefinition[] = RAW_QUEST_LIBRARY.map(attachQuestLiteraryEcho);

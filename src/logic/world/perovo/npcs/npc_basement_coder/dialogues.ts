@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_basement_coder_dialogues = new DialogueBuilder('npc_basement_coder')
+export const npc_basement_coder_dialogues = new DialogueBuilder('npc_basement_coder').withDistrict('perovo')
   .addNode('intro', 'ПОДВАЛЬНЫЙ_КОДЕР', 'Уже утро? Скрипт еще не доработал... Есть лазейки в Перово. Хочешь знать?', [
       { text: 'Покажи.', nextId: 'lore' },
       { text: '[Уйти]', nextId: 'LEAVE' }

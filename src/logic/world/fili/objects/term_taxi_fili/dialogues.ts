@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_fili_dialogues = new DialogueBuilder('term_taxi_fili')
+export const term_taxi_fili_dialogues = new DialogueBuilder('term_taxi_fili').withDistrict('fili')
   .addNode('intro', 'ТАКСИ: ФИЛИ', 'СИСТЕМА_ТАКСИ: Узел Фили (Орбитальный линк). Глобальная навигация: 100 Bits. ДОСТУП: СЕРТИФИЦИРОВАН.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[КУТУЗОВСКАЯ]', nextId: 'TRAVEL_KUTUZ', cost: 10 },

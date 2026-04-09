@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_taganka_dialogues = new DialogueBuilder('term_taxi_taganka')
+export const term_taxi_taganka_dialogues = new DialogueBuilder('term_taxi_taganka').withDistrict('taganka')
   .addNode('intro', 'ТАКСИ: ТАГАНКА', 'СИСТЕМА_ТАКСИ: Узел Таганка (Бункер). Глобальная навигация: 100 Bits. ДОСТУП: ПРИОРИТЕТНЫЙ.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[КУРСКАЯ]', nextId: 'TRAVEL_KURSKAYA', cost: 20 },

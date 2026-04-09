@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_forest_log_dialogues = new DialogueBuilder('term_forest_log')
+export const term_forest_log_dialogues = new DialogueBuilder('term_forest_log').withDistrict('sokolniki')
   .addNode('intro', 'ЖУРНАЛ ЛЕСА', '[SYSTEM_LOGS] Данные о росте подсетей: 68% стабильности. Рекомендуется калибровка датчиков в 5-м секторе.', [
     { text: 'Запустить калибровку датчиков.', nextId: 'rank_check' },
     { text: '[Уйти]', nextId: 'LEAVE' }

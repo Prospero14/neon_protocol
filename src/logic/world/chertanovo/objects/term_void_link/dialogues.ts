@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_void_link_dialogue: DialogueTree = new DialogueBuilder('term_void_link')
+export const term_void_link_dialogue: DialogueTree = new DialogueBuilder('term_void_link').withDistrict('chertanovo')
   .addNode('intro', 'ЛИНК_В_ПУСТОТУ', '[DENIED] Нужен доступ уровня NULLPOINTERS. Ваша Репутация: НИЖЕ 50. Только избранные могут видеть теневые репозитории.', [
     { text: 'Взломать (50%)', nextId: 'hack', requireTrait: 'social_engineer' },
     { text: 'Войти официально', nextId: 'access', requireReputation: { factionId: 'ANARCHO_VOID', minPoints: 50 } },

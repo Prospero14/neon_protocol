@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_hub_dialogues = new DialogueBuilder('term_taxi_hub')
+export const term_taxi_hub_dialogues = new DialogueBuilder('term_taxi_hub').withDistrict('kitay_gorod')
   .addNode('intro', 'ТАКСИ: КИТАЙ-ГОРОД', 'СИСТЕМА_ТАКСИ: Центральный Узел (The Socket). ДОСТУП К ВСЕМ РАЙОНАМ. Глобальная навигация: 100 Bits.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[ПЕРОВО]', nextId: 'TRAVEL_PEROVO', cost: 20 },

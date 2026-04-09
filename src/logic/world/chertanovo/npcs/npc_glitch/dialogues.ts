@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_glitch_dialogue: DialogueTree = new DialogueBuilder('npc_glitch')
+export const npc_glitch_dialogue: DialogueTree = new DialogueBuilder('npc_glitch').withDistrict('chertanovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

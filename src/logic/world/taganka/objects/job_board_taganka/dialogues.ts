@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const job_board_taganka_dialogues = new DialogueBuilder('job_board_taganka')
+export const job_board_taganka_dialogues = new DialogueBuilder('job_board_taganka').withDistrict('taganka')
   .addNode('intro', 'ДОСКА РОЗЫСКА: ТАГАНКА', 'Список нарушителей констант Krylovo и ренегатов, скрывающихся в технических туннелях. Награда выплачивается Bits или Репутацией.', [
     { text: 'Охота: Теневой Кодер (Level 5+)', nextId: 'quest_accept_1', requireMinLevel: 5 },
     { text: 'Охота: Призрак Модема (Level 8+)', nextId: 'quest_accept_2', requireMinLevel: 8 },

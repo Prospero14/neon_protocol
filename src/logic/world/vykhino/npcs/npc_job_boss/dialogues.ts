@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_job_boss_dialogues = new DialogueBuilder('npc_job_boss')
+export const npc_job_boss_dialogues = new DialogueBuilder('npc_job_boss').withDistrict('vykhino')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly'],

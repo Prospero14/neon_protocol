@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const job_board_bibi_dialogue: DialogueTree = new DialogueBuilder('job_board_bibi')
+export const job_board_bibi_dialogue: DialogueTree = new DialogueBuilder('job_board_bibi').withDistrict('bibirevo')
   .addNode('intro', 'ИНФО-ПАНЕЛЬ', 'СИСТЕМА: Узел Бибирево. Список запросов обновлен.', [
     { text: 'Взять: Fix Link (50 Bits)', nextId: 'accept', requireMaxLevel: 1 },
     { text: '[ЗАКРЫТЬ]', nextId: 'LEAVE' }

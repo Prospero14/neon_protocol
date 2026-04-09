@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_compiler_dialogues = new DialogueBuilder('npc_compiler')
+export const npc_compiler_dialogues = new DialogueBuilder('npc_compiler').withDistrict('south_west')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

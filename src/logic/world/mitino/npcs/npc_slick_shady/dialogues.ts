@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_slick_shady_dialogues = new DialogueBuilder('npc_slick_shady')
+export const npc_slick_shady_dialogues = new DialogueBuilder('npc_slick_shady').withDistrict('mitino')
   .addNode('intro', 'СЛИК (СКУПЩИК)', 'Тсс... Не шуми. Стены имеют уши. Сделка через теневой шлюз, но линии "барахлят". Нужен проверочный пинг без ведома Регуляторов.', [
     { text: 'Кто такие Регуляторы?', nextId: 'lore_market' },
     { text: 'Откалибровать частоты (Technical).', nextId: 'branch_tech_1' },

@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const bar_null_pointer_dialogue: DialogueTree = new DialogueBuilder('bar_null_pointer')
+export const bar_null_pointer_dialogue: DialogueTree = new DialogueBuilder('bar_null_pointer').withDistrict('chertanovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2']
   })

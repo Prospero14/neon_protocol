@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const shop_edu_addons_dialogues = new DialogueBuilder('shop_edu_addons')
+export const shop_edu_addons_dialogues = new DialogueBuilder('shop_edu_addons').withDistrict('south_west')
   .addNode('intro', 'МОДУЛИ ЗНАНИЙ+', 'Продвинутые курсы и карты-скрипты для тех, кто хочет подняться выше уровня Junior.', [
     { text: 'Курс: Junior Java Vanilla (500 Bits)', nextId: 'intro', cost: 500, effect: 'GIVE_CARD', cardRewardIds: [
        'syntax_class_decl', 'syntax_method_decl', 'syntax_if', 'syntax_elseif',

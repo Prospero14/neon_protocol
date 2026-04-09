@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_uplink_dialogues = new DialogueBuilder('term_uplink')
+export const term_uplink_dialogues = new DialogueBuilder('term_uplink').withDistrict('fili')
   .addNode('intro', 'ТЕРМИНАЛ АПЛИНКА', '[SYSTEM_LOGS] Связь с орбитой установлена. Доступ: ОГРАНИЧЕН. Требуется авторизация Redundants или SRE.', [
     { text: 'Использовать допуск Redundants.', nextId: 'access_granted', requireReputation: { factionId: 'REDUNDANTS', minPoints: 20 } },
     { text: 'Силовой взлом (SSH Brute Force).', nextId: 'rank_check' },

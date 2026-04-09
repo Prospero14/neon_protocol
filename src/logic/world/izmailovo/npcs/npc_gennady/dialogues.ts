@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_gennady_dialogues = new DialogueBuilder('npc_gennady')
+export const npc_gennady_dialogues = new DialogueBuilder('npc_gennady').withDistrict('izmailovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     hostile: ['intro_hostile'],

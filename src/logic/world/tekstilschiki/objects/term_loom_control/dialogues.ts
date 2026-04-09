@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_loom_control_dialogues = new DialogueBuilder('term_loom_control')
+export const term_loom_control_dialogues = new DialogueBuilder('term_loom_control').withDistrict('tekstilschiki')
   .addNode('intro', 'ТЕРМИНАЛ-УПРАВЛЕНИЯ', 'Консоль управления 7-й линией. Системный статус: КРИТИЧЕСКИЕ ОШИБКИ.', [
     { text: 'Диагностика системы (Technical).', nextId: 'diag', requireMinLevel: 1 },
     { text: 'Просмотр логов (Quest).', nextId: 'quest_audit', requireQuestId: 'q_safety_audit' },

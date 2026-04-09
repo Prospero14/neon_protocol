@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_sarge_dialogue: DialogueTree = new DialogueBuilder('npc_sarge')
+export const npc_sarge_dialogue: DialogueTree = new DialogueBuilder('npc_sarge').withDistrict('maryino')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

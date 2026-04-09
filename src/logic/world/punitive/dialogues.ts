@@ -6,7 +6,7 @@ import { DialogueBuilder } from '../../dialogueUtils';
  * Triggered at reputation < -50 or high-heat events.
  */
 export const punitive_dialogues: Record<string, DialogueTree> = {
-  punitive_squad: new DialogueBuilder('punitive_squad')
+  punitive_squad: new DialogueBuilder('punitive_squad').withDistrict('punitive')
     .withGreetings({
       neutral: ['intro'],
       hostile: ['intro', 'intro_v2'],

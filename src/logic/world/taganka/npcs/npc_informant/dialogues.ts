@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_informant_dialogues = new DialogueBuilder('npc_informant')
+export const npc_informant_dialogues = new DialogueBuilder('npc_informant').withDistrict('taganka')
   .addNode('intro', 'ИНФОРМАТОР М.', 'Тише... Стены здесь не просто имеют уши, они пишут логи. Ищешь обходной путь в Ядро или просто хочешь купить свежий компромат на Инквизитора?', [
     { text: 'Нужен пропуск в Ядро.', nextId: 'quest_pass' },
     { text: 'Что ты знаешь об Инквизиции?', nextId: 'lore' },

@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const shop_pharmacy_dialogue: DialogueTree = new DialogueBuilder('shop_pharmacy')
+export const shop_pharmacy_dialogue: DialogueTree = new DialogueBuilder('shop_pharmacy').withDistrict('maryino')
   .withGreetings({
     neutral: ['intro', 'intro_v2']
   })

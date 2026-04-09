@@ -409,12 +409,13 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'PROJECT: REMOTE_SSH_BREACH',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Цель на связи. Пробрось SSH-туннель, пробей авторизацию и осмотрись. Если найдешь что-то ценное — читай без промедления. Это твой билет в высшую лигу.',
+    description:
+      'Сухой контракт: ssh (туннель) → auth (логин) → ls (инвентарь на стороне) → cat (считать файл). Без лирики — либо цепочка закрыта, либо сессия рвётся.',
     steps: [
-      { id: 'TUNNEL', name: 'ESTABLISH_SSH', requiredCardIds: ['script_ssh'] },
-      { id: 'LOGIN', name: 'AUTH_SESSION', requiredCardIds: ['script_auth'] },
-      { id: 'EXPLORE', name: 'LS_TARGET', requiredCardIds: ['script_ls'] },
-      { id: 'EXTRACT', name: 'CAT_DATA', requiredCardIds: ['script_cat'] }
+      { id: 'TUNNEL', name: 'SSH', requiredCardIds: ['script_ssh'] },
+      { id: 'LOGIN', name: 'AUTH', requiredCardIds: ['script_auth'] },
+      { id: 'EXPLORE', name: 'LS', requiredCardIds: ['script_ls'] },
+      { id: 'EXTRACT', name: 'CAT', requiredCardIds: ['script_cat'] }
     ]
   },
   {
@@ -435,12 +436,13 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'PROJECT: STEALTH_DATA_MINE',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Тихая охота. Проверь окружение, найди пароли в логах и вали оттуда, пока защитные скрипты не проснулись. И прибери за собой в логах, скрипт-киддо.',
+    description:
+      'Ночной сценарий без геройства: ls → grep по логам → cat нужного файла → wash_logs, чтобы не оставить жирный след. Торопись — чужой cron не спит.',
     steps: [
-      { id: 'DISCOVERY', name: 'LS_PROBE', requiredCardIds: ['script_ls'] },
-      { id: 'FIND_ID', name: 'GREP_CREDS', requiredCardIds: ['script_grep'] },
-      { id: 'READ_FILE', name: 'CAT_SECRET', requiredCardIds: ['script_cat'] },
-      { id: 'WIPE', name: 'LOG_PURGE', requiredCardIds: ['script_wash_logs'] }
+      { id: 'DISCOVERY', name: 'LS', requiredCardIds: ['script_ls'] },
+      { id: 'FIND_ID', name: 'GREP', requiredCardIds: ['script_grep'] },
+      { id: 'READ_FILE', name: 'CAT', requiredCardIds: ['script_cat'] },
+      { id: 'WIPE', name: 'WIPE_LOGS', requiredCardIds: ['script_wash_logs'] }
     ]
   },
   {
@@ -448,10 +450,11 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'TUTORIAL: SEQUENTIAL_DEBUG',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Учебный манекен Академии. Сначала просканируй структуру (ls), затем выведи приветствие (cat). Порядок — это дисциплина.',
+    description:
+      'Учебный стенд: два шага, как в консоли — сначала ls (оглянуться по дереву), потом cat (прочитать выбранный кусок). Нарушишь порядок — манекен не засчитает.',
     steps: [
-      { id: '1', name: 'DISCOVERY_PING', requiredCardIds: ['script_ls'] },
-      { id: '2', name: 'HELLO_WORLD', requiredCardIds: ['script_cat'] }
+      { id: '1', name: 'LS', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'CAT', requiredCardIds: ['script_cat'] }
     ]
   },
   {
@@ -459,11 +462,12 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     name: 'CLEANUP: SILO_7_INFESTATION',
     rank: 'script-kiddie',
     isExecutionChain: true,
-    description: 'Силосы забиты мусором и кодерами-грызунами. Проведи зачистку: сначала осмотрись (ls), затем отфильтруй записи вредителей (grep) и выведи статус ядра (cat). Это стабилизирует узел.',
+    description:
+      'Петрович скидывает тикет без философии: в шине шумят остатки старых прошивок. На шине по порядку: ls (что лежит в каталоге), grep (выцепить строки по сигнатуре), cat (снять дамп статуса). Иначе узел так и останется «красным» в мониторинге.',
     steps: [
-      { id: '1', name: 'DIRECTORY_SCAN', requiredCardIds: ['script_ls'] },
-      { id: '2', name: 'CONFIG_FILTER', requiredCardIds: ['script_grep'] },
-      { id: '3', name: 'SYSTEM_ECHO', requiredCardIds: ['script_cat'] }
+      { id: '1', name: 'LS_LIST', requiredCardIds: ['script_ls'] },
+      { id: '2', name: 'GREP_FILTER', requiredCardIds: ['script_grep'] },
+      { id: '3', name: 'CAT_DUMP', requiredCardIds: ['script_cat'] }
     ]
   },
   {

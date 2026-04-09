@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_guide_vdnkh_dialogue: DialogueTree = new DialogueBuilder('npc_guide_vdnkh')
+export const npc_guide_vdnkh_dialogue: DialogueTree = new DialogueBuilder('npc_guide_vdnkh').withDistrict('vdnkh')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly'],

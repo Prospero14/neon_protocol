@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_taxi_izmailovo_dialogues = new DialogueBuilder('term_taxi_izmailovo')
+export const term_taxi_izmailovo_dialogues = new DialogueBuilder('term_taxi_izmailovo').withDistrict('izmailovo')
   .addNode('intro', 'ТАКСИ: ИЗМАЙЛОВО', 'СИСТЕМА_ТАКСИ: Узел Измайлово (Рынок). Глобальная навигация: 100 Bits. ДОСТУП: СВОБОДНЫЙ.', [
     { text: 'Купить подписку [РАЗБЛОКИРОВАТЬ МОСКВУ]', nextId: 'LEAVE', effect: 'UNLOCK_CITY', cost: 100 },
     { text: '[ПЕРТОВО]', nextId: 'TRAVEL_PEROVO', cost: 15 },

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const job_board_fili_dialogues = new DialogueBuilder('job_board_fili')
+export const job_board_fili_dialogues = new DialogueBuilder('job_board_fili').withDistrict('fili')
   .addNode('intro', 'ЦЕНТР УПРАВЛЕНИЯ НАЙМА', 'Список активных контрактов на орбитальный аудит и зачистку секторов Хруничева. Каждое выполнение — это шаг к аплинку.', [
     { text: 'Контракт: Охрана Пуска (Level 6+)', nextId: 'quest_accept_1', requireMinLevel: 6 },
     { text: 'Контракт: Сбор Обломков (Level 4+)', nextId: 'quest_accept_2', requireMinLevel: 4 },

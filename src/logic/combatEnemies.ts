@@ -393,6 +393,47 @@ export const PERSONALITY_ENEMIES: BugEnemy[] = [
 
 export const ALL_ENEMIES: BugEnemy[] = [...BUGS, ...PERSONALITY_ENEMIES];
 
+/** Равномерный выбор (тесты, старый код). В бою предпочтительнее pickNextBugAction. */
 export const getRandomBugAction = (bug: BugEnemy): BugAction => {
   return bug.actions[Math.floor(Math.random() * bug.actions.length)];
 };
+
+export type AiRecentEntry = { id: string; problemType?: BugProblemType };
+
+/**
+ * Выбор следующего действия ИИ: реже повторяет тот же id и тот же класс сбоя подряд,
+ * чтобы колода с разными контрприёмами имела смысл, а «одна золотая карта» — нет.
+ */
+export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[]): BugAction {
+  const actions = bug.actions;
+  if (actions.length === 0) throw new Error(`Enemy ${bug.id} has no actions`);
+  if (actions.length === 1) return actions[0];
+
+  const lastTwoIds = new Set(recent.slice(-2).map((r) => r.id));
+  const last = recent.length ? recent[recent.length - 1] : undefined;
+  const lastPt = last?.problemType;
+  let streakSamePt = 0;
+  if (lastPt !== undefined) {
+    for (let i = recent.length - 1; i >= 0; i--) {
+      if (recent[i].problemType === lastPt) streakSamePt++;
+      else break;
+    }
+  }
+
+  const weights = actions.map((a) => {
+    let w = 1;
+    if (lastTwoIds.has(a.id)) w *= 0.38;
+    if (lastPt !== undefined && a.problemType === lastPt) {
+      w *= streakSamePt >= 2 ? 0.22 : 0.55;
+    }
+    return Math.max(0.06, w);
+  });
+
+  const sum = weights.reduce((s, x) => s + x, 0);
+  let roll = Math.random() * sum;
+  for (let i = 0; i < actions.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return actions[i];
+  }
+  return actions[actions.length - 1];
+}

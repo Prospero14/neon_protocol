@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_vlad_dialogues = new DialogueBuilder('npc_vlad')
+export const npc_vlad_dialogues = new DialogueBuilder('npc_vlad').withDistrict('tekstilschiki')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

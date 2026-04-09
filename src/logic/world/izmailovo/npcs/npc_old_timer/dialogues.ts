@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_old_timer_dialogues = new DialogueBuilder('npc_old_timer')
+export const npc_old_timer_dialogues = new DialogueBuilder('npc_old_timer').withDistrict('izmailovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2']
   })

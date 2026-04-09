@@ -1,10 +1,12 @@
 import type { DialogueTree, DialogueOption } from './dialogues';
+import { literaryEchoTail } from './world/literaryEchoes';
 
 /**
  * Standard utility for creating dialogue trees with randomized greetings (Bibirevo Standard).
  */
 export class DialogueBuilder {
   private tree: DialogueTree;
+  private districtId: string | null = null;
 
   constructor(id: string, startNodeId: string = 'intro') {
     this.tree = {
@@ -19,6 +21,27 @@ export class DialogueBuilder {
         repeat: []
       }
     };
+  }
+
+  /** Район для литературного «эха» в интро-репликах (см. literaryEchoes.ts). */
+  withDistrict(districtId: string): this {
+    this.districtId = districtId;
+    return this;
+  }
+
+  private shouldAppendLiteraryEcho(nodeId: string): boolean {
+    return (
+      nodeId.startsWith('intro') ||
+      nodeId.startsWith('welcome') ||
+      nodeId === 'stressed_welcome'
+    );
+  }
+
+  private maybeEcho(nodeId: string, text: string): string {
+    if (!this.shouldAppendLiteraryEcho(nodeId)) return text;
+    const district = this.districtId ?? 'october';
+    const tail = literaryEchoTail(district, `${this.tree.id}_${nodeId}`);
+    return `${text.trim()} ${tail}`;
   }
 
   /**
@@ -39,7 +62,7 @@ export class DialogueBuilder {
    * Add a generic dialogue node.
    */
   addNode(id: string, speaker: string, text: string, options: DialogueOption[]): this {
-    this.tree.nodes[id] = { id, speaker, text, options };
+    this.tree.nodes[id] = { id, speaker, text: this.maybeEcho(id, text), options };
     return this;
   }
 

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_commissar_byte_dialogues = new DialogueBuilder('npc_commissar_byte')
+export const npc_commissar_byte_dialogues = new DialogueBuilder('npc_commissar_byte').withDistrict('perovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

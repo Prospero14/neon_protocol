@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_resident_perovo_dialogues = new DialogueBuilder('npc_resident_perovo')
+export const npc_resident_perovo_dialogues = new DialogueBuilder('npc_resident_perovo').withDistrict('perovo')
   .addNode('intro', 'МЕСТНЫЙ_ЖИТЕЛЬ', 'Сервера гудят, спать нельзя. Регуляторы не идут. Ты вроде техник?', [
       { text: 'Разберусь с шумом.', nextId: 'rank_check' },
       { text: '[Игнорировать]', nextId: 'LEAVE' }

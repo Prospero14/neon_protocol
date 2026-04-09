@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_zero_dialogue: DialogueTree = new DialogueBuilder('npc_zero')
+export const npc_zero_dialogue: DialogueTree = new DialogueBuilder('npc_zero').withDistrict('chertanovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],
@@ -91,7 +91,7 @@ export const npc_zero_dialogue: DialogueTree = new DialogueBuilder('npc_zero')
   .addNode('quest_reject', 'Z3R0', 'Зеленый еще. Нос не дорос. Ячейка сотрет тебя за три такта, и Ядро даже не заметит потери. Вернись позже.', [
     { text: 'Я вернусь.', nextId: 'LEAVE' }
   ])
-  .addNode('quest_accept', 'Z3R0', 'Код пахнет озоном и свободой. Выбирай цель. Помни про "Ночной Скан": найти (ls), отфильтровать (grep) и выгрузить (scp).', [
+  .addNode('quest_accept', 'Z3R0', 'Код тут пахнет озоном и дешёвым кофе. Выбери сценарий. Ночной скан — это не мистика: ls, grep, scp; сорвёшь порядок — сорвёшь себе пальцы.', [
     { text: '[ ТРЕНИРОВКА С ЯЧЕЙКОЙ ]', nextId: 'LEAVE', awardQuestId: 'q_chertanovo_combat_anarcho_cell_bug_sweep' },
     { text: '[ СТАРТ НОЧНОГО СКАНА ]', nextId: 'LEAVE', awardQuestId: 'q_chertanovo_combat_night_scan_bug_sweep' }
   ])

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_mentor_dialogues = new DialogueBuilder('npc_mentor')
+export const npc_mentor_dialogues = new DialogueBuilder('npc_mentor').withDistrict('mitino')
   .addNode('intro', 'МЕНТОР_КУРСОВ', 'Времени мало, кода много. Интенсивы "JetBrain-Zero" — твой единственный шанс не сгнить стажером. Какой стек прошиваем?', [
     { text: 'Проверить мои допуски на обучение.', nextId: 'rank_check' },
     { text: '[Уйти]', nextId: 'LEAVE' }

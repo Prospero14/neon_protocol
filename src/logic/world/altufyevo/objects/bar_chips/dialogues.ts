@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const bar_chips_dialogue: DialogueTree = new DialogueBuilder('bar_chips')
+export const bar_chips_dialogue: DialogueTree = new DialogueBuilder('bar_chips').withDistrict('altufyevo')
   .withGreetings({
     neutral: ['intro', 'intro_v2']
   })
@@ -14,5 +14,5 @@ export const bar_chips_dialogue: DialogueTree = new DialogueBuilder('bar_chips')
     { text: 'Заказать охладитель (25 Bits)', nextId: 'intro', cost: 25, effect: 'RESTORE_HP', amount: 30 },
     { text: '[Уйти]', nextId: 'LEAVE' }
   ])
-  .addLoreNode('lore_bar', 'БАРМЕН', 'Говорят, в Силосе №12 вчера видели кого-то из "Элиты". Искали старые бэкапы... Странно это.', 'intro')
+  .addLoreNode('lore_bar', 'БАРМЕН', 'Слышал шёпот: в двенадцатом силосе кто-то из верхних этажей шарился по старым бэкапам — не турист, а человек с допуском. Такое не для сплетен, такое для чужих логов.', 'intro')
   .build();

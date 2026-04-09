@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_corp_scout_dialogues = new DialogueBuilder('npc_corp_scout')
+export const npc_corp_scout_dialogues = new DialogueBuilder('npc_corp_scout').withDistrict('vykhino')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

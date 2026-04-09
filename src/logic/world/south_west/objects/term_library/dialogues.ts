@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_library_dialogues = new DialogueBuilder('term_library')
+export const term_library_dialogues = new DialogueBuilder('term_library').withDistrict('south_west')
   .addNode('intro', 'БИБЛИОТЕКА КОДА', 'Интерфейс: БИБЛИОТЕКА_КОДА. Доступные архивы:', [
     { text: 'История Ядра и Net Drivers', nextId: 'lore_1' },
     { text: 'Принципы Java Core', nextId: 'lore_2' },

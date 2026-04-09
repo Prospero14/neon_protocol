@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_central_gate_dialogues = new DialogueBuilder('term_central_gate')
+export const term_central_gate_dialogues = new DialogueBuilder('term_central_gate').withDistrict('taganka')
   .addNode('intro', 'ЦЕНТРАЛЬНЫЙ ШЛЮЗ', '[SYSTEM_LOGS] Доступ к Ядру Октября ограничен Инквизицией. Введите ключ допуска Crimson Access.', [
     { text: 'Использовать Crimson Access Key.', nextId: 'access_granted', requireItemId: 'item_gate_key_taganka' },
     { text: 'Обходной путь (Informant M Bypass).', nextId: 'access_granted', requireItemId: 'soft_bypass_key' },

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_lunariori_keeper_dialogues = new DialogueBuilder('npc_lunariori_keeper')
+export const npc_lunariori_keeper_dialogues = new DialogueBuilder('npc_lunariori_keeper').withDistrict('teply_stan')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3', 'intro_v4'],
     hostile: ['intro_hostile', 'intro_hostile_2'],

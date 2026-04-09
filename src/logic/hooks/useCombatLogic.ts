@@ -9,8 +9,8 @@ import type { TechnicalTask } from '../combatTasks';
 import { getStepCardIds } from '../combatTasks';
 
 import type { Trait } from '../traits';
-import { BUGS, getRandomBugAction } from '../combatEnemies';
-import type { BugEnemy, BugAction, BugProblemType } from '../combatEnemies';
+import { BUGS, pickNextBugAction } from '../combatEnemies';
+import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
 
 export type RailSlotType = 'EMPTY' | 'PLAYER_CODE' | 'BUG_ERROR';
 export interface RailSlot {
@@ -96,6 +96,14 @@ export function useCombatLogic({
 
   const [cardsPlayedThisTurn, setCardsPlayedThisTurn] = useState(0);
 
+  /** История ходов ИИ — веса в pickNextBugAction (анти-спам). */
+  const aiRecentRef = useRef<AiRecentEntry[]>([]);
+  /** Слабые снятия бага без outplay по классу сбоя → толще следующий баг этого класса. */
+  const weakPatchStackRef = useRef<Partial<Record<BugProblemType, number>>>({});
+  /** Уникальные CombatCard.type за бой — бонус за «широкий тулчейн». */
+  const cardFamiliesRef = useRef<Set<string>>(new Set());
+  const familyMilestoneRef = useRef({ t3: false, t5: false });
+
   // --- DERIVED ---
   const ramSlotsMax = useMemo(() => {
     const raw = Math.floor(ramMaxMb / 512);
@@ -127,8 +135,33 @@ export function useCombatLogic({
 
   const addLog = useCallback((msg: string) => setLog(prev => [msg, ...prev].slice(0, 15)), []);
 
+  const registerPlayDiversity = useCallback(
+    (card: CombatCard) => {
+      if (skillMode === 'script-kiddie') return;
+      if (cardFamiliesRef.current.has(card.type)) return;
+      cardFamiliesRef.current.add(card.type);
+      const n = cardFamiliesRef.current.size;
+      if (n >= 3 && !familyMilestoneRef.current.t3) {
+        familyMilestoneRef.current.t3 = true;
+        setStress((s) => Math.max(0, s - 4));
+        addLog('[TOOLCHAIN] Разные классы карт в бою — −4 стресс.');
+      }
+      if (n >= 5 && !familyMilestoneRef.current.t5) {
+        familyMilestoneRef.current.t5 = true;
+        setCpu((prev) => Math.min(cpuMax, prev + 1));
+        addLog('[TOOLCHAIN] Пять разных типов — +1 CPU (до максимума).');
+      }
+    },
+    [addLog, cpuMax, skillMode]
+  );
+
   // --- INIT ---
   useEffect(() => {
+    aiRecentRef.current = [];
+    weakPatchStackRef.current = {};
+    cardFamiliesRef.current = new Set();
+    familyMilestoneRef.current = { t3: false, t5: false };
+
     const infraPile = [...activeDeck.filter(isInfraDrawCard)].sort(() => Math.random() - 0.5);
     const n = Math.min(START_HAND_SIZE, infraPile.length);
     setHand(infraPile.slice(0, n));
@@ -136,7 +169,7 @@ export function useCombatLogic({
 
     stabilizationQueueRef.current = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
 
-    if (enemy) setNextBugAction(getRandomBugAction(enemy));
+    if (enemy) setNextBugAction(pickNextBugAction(enemy, []));
 
     addLog('[SYSTEM] BOOT_SEQUENCE... [OK]');
     addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
@@ -156,31 +189,66 @@ export function useCombatLogic({
   // --- PROGRESS LOGIC ---
   useEffect(() => {
     if (!missionTz.steps) return;
-    const railIds = runtimeRail.filter(s => s.type === 'PLAYER_CODE').map(s => (s.content as CombatCard).id);
     if (missionTz.isExecutionChain) {
       let matchedSteps = 0;
       for (let i = 0; i < missionTz.steps.length; i++) {
         const step = missionTz.steps[i];
-        const deployedCardId = railIds[i];
-        if (deployedCardId && getStepCardIds(step).includes(deployedCardId)) matchedSteps++; else break;
+        const slot = runtimeRail[i];
+        if (slot?.type !== 'PLAYER_CODE' || !slot.content) break;
+        const id = (slot.content as CombatCard).id;
+        if (getStepCardIds(step).includes(id)) matchedSteps++;
+        else break;
       }
       setPlayerProgress(Math.floor((matchedSteps / missionTz.steps.length) * 100));
     } else {
-      const satisfiedSteps = missionTz.steps.filter(step => getStepCardIds(step).some(id => railIds.includes(id)));
+      const railIds = runtimeRail.filter((s) => s.type === 'PLAYER_CODE').map((s) => (s.content as CombatCard).id);
+      const satisfiedSteps = missionTz.steps.filter((step) =>
+        getStepCardIds(step).some((id) => railIds.includes(id))
+      );
       setPlayerProgress(Math.floor((satisfiedSteps.length / missionTz.steps.length) * 100));
     }
   }, [runtimeRail, missionTz]);
-  
-  // Evaluate advancement conditions continuously
+
   useEffect(() => {
     const rules = SDLC_PHASES[currentPhase];
-    // If phase has no targetProgress (like ARCHITECTURE), it can always advance
-    if (!rules.targetProgress || playerProgress >= rules.targetProgress) {
+    if (currentPhase === 'ARCHITECTURE') {
       setCanAdvancePhase(true);
-    } else {
-      setCanAdvancePhase(false);
+      return;
     }
-  }, [currentPhase, playerProgress]);
+    if (currentPhase === 'DEVELOPMENT') {
+      if (missionTz.isExecutionChain) {
+        let ok = true;
+        for (let i = 0; i < missionTz.steps.length; i++) {
+          const step = missionTz.steps[i];
+          const slot = runtimeRail[i];
+          if (slot?.type !== 'PLAYER_CODE' || !slot.content) {
+            ok = false;
+            break;
+          }
+          const id = (slot.content as CombatCard).id;
+          if (!getStepCardIds(step).includes(id)) {
+            ok = false;
+            break;
+          }
+        }
+        setCanAdvancePhase(ok);
+        return;
+      }
+      const need = rules.targetProgress ?? 70;
+      setCanAdvancePhase(playerProgress >= need);
+      return;
+    }
+    if (currentPhase === 'VERIFICATION') {
+      const need = rules.targetProgress ?? 100;
+      setCanAdvancePhase(playerProgress >= need);
+      return;
+    }
+    if (currentPhase === 'DEPLOYMENT') {
+      setCanAdvancePhase(false);
+      return;
+    }
+    setCanAdvancePhase(true);
+  }, [currentPhase, playerProgress, missionTz, runtimeRail]);
 
   const drawCards = (count: number) => {
     if (currentPhase === 'DEVELOPMENT') return;
@@ -251,6 +319,7 @@ export function useCombatLogic({
         setInfraSlots(next);
         applyInfraEffect(card);
         setCpu(prev => prev - cost);
+        registerPlayDiversity(card);
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] INFRA_DEPLOYED: ${card.name}`);
       }
@@ -262,6 +331,7 @@ export function useCombatLogic({
         next[emptyIdx] = card;
         setSoftSlots(next);
         setCpu(prev => prev - cost);
+        registerPlayDiversity(card);
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] SOFT_SKILL_ATTACHED: ${card.name}`);
       }
@@ -313,6 +383,15 @@ export function useCombatLogic({
         } else {
           addLog(`[PATCH] ${card.name} снял блокировку (слабее оптимального инструмента).`);
         }
+        if (bugPayload.problemType) {
+          const pt = bugPayload.problemType;
+          if (outplay) {
+            weakPatchStackRef.current[pt] = Math.max(0, (weakPatchStackRef.current[pt] ?? 0) - 1);
+          } else {
+            weakPatchStackRef.current[pt] = (weakPatchStackRef.current[pt] ?? 0) + 1;
+          }
+        }
+        registerPlayDiversity(card);
         if (selectedCard.source === 'hand') {
           setHand(prev => prev.filter((_, i) => i !== selectedCard.idx));
           setDiscard(prev => [...prev, card]);
@@ -449,10 +528,12 @@ export function useCombatLogic({
       setDiscard(prev => [...prev, card]);
     }
 
+    registerPlayDiversity(card);
+
     // --- Reactive enemy: traceback наказывает за 2+ карты за тот же ход (используем актуальный счётчик, не stale state).
     setCardsPlayedThisTurn((p) => {
       const next = p + 1;
-      if (enemy?.id === 'enemy_traceback' && next >= 2) {
+      if (enemy?.id === 'enemy_traceback' && next >= 2 && skillMode !== 'script-kiddie') {
         setStress((s) => Math.min(100, s + 10));
         addLog('[WARNING] TRACEBACK_ANOMALY_PUNISHED_STRESS!');
       }
@@ -468,7 +549,11 @@ export function useCombatLogic({
     if (!nextBugAction || !enemy) return;
     if (currentPhase === 'ARCHITECTURE') { addLog(`[AI] ${enemy.name} IS WATCHING...`); return; }
     setAiProgress((prev) => {
-      const n = Math.min(100, prev + nextBugAction.progressPoints);
+      const pts =
+        skillMode === 'script-kiddie'
+          ? Math.max(1, Math.floor(nextBugAction.progressPoints * 0.75))
+          : nextBugAction.progressPoints;
+      const n = Math.min(100, prev + pts);
       if (n >= 100 && prev < 100) {
         queueMicrotask(() => {
           addLog('[CRITICAL] THREAT_MAX — снимай баги; сильный контрплей режет угрозу.');
@@ -482,7 +567,17 @@ export function useCombatLogic({
       setRuntimeRail((prev) => {
         const next = [...prev];
         const empty = next.findIndex((s, i) => s.type === 'EMPTY' && i < ramSlotsMax);
-        if (empty !== -1) next[empty] = { type: 'BUG_ERROR', content: nextBugAction, integrity: 10 };
+        if (empty !== -1) {
+          const pt = nextBugAction.problemType;
+          const stack = pt ? (weakPatchStackRef.current[pt] ?? 0) : 0;
+          const shell = 10 + stack * 6;
+          if (stack > 0) {
+            queueMicrotask(() =>
+              addLog(`[ADAPTATION] Повторяющийся класс сбоя — оболочка ICE +${stack * 6} (снимай outplay-ом).`)
+            );
+          }
+          next[empty] = { type: 'BUG_ERROR', content: nextBugAction, integrity: shell };
+        }
         return next;
       });
     }
@@ -498,14 +593,18 @@ export function useCombatLogic({
         addLog(`[INJECT] ${inst.name} → ${dest.toUpperCase()}`);
       }
     }
-    if (nextBugAction.damage > 0) setStress(prev => Math.min(100, prev + Math.floor(nextBugAction.damage * (1 + (tier - 1) * 0.25))));
-    if (
-      nextBugAction.problemType &&
-      (skillMode === 'junior' || skillMode === 'script-kiddie')
-    ) {
+    if (nextBugAction.damage > 0) {
+      const raw = Math.floor(nextBugAction.damage * (1 + (tier - 1) * 0.25));
+      const mitigated = skillMode === 'script-kiddie' ? Math.max(1, Math.floor(raw * 0.65)) : raw;
+      setStress((prev) => Math.min(100, prev + mitigated));
+    }
+    if (nextBugAction.problemType && skillMode === 'junior') {
       addLog(
         `[HINT] Класс сбоя: ${problemTypeLabelRu(nextBugAction.problemType)} — подбери инструмент (тест/рефакторинг/защита/скрипт).`
       );
+    }
+    if (nextBugAction.problemType && skillMode === 'script-kiddie' && Math.random() < 0.4) {
+      addLog(`[HINT] ${problemTypeLabelRu(nextBugAction.problemType)} — grep/ping/auth, смотри тип.`);
     }
     addLog(`[AI] ${nextBugAction.name}`);
   };
@@ -614,13 +713,12 @@ export function useCombatLogic({
   };
 
   const endTurn = () => {
-    if (playerProgress >= 100) { addLog('[SYSTEM] COMPILE... [OK]'); setIsPlayerTurn(false); runFinalDeploymentCheck(); return; }
     const playedThisTurn = cardsPlayedThisTurn;
     setIsPlayerTurn(false); setSelectedCard(null); setAiDeadline(prev => Math.max(0, prev - 1)); addLog('[AI] THINKING...');
 
     // --- PERSONALITY EFFECTS (end of player turn; считаем до сброса счётчика) ---
-    if (enemy?.personality === 'TRACER' && playedThisTurn > 2) {
-      setStress(s => Math.min(100, s + 15));
+    if (enemy?.personality === 'TRACER' && playedThisTurn > (skillMode === 'script-kiddie' ? 3 : 2)) {
+      setStress((s) => Math.min(100, s + 15));
       addLog(`[TRACER] SIGNATURE_DETECTED! ${playedThisTurn} cards played. +15 stress penalty.`);
     }
 
@@ -633,17 +731,21 @@ export function useCombatLogic({
         addLog(`[SNIFFER] ${statusCount} STATUS_CARDS_DETECTED. +${dmg} stress.`);
       }
     }
-    if (enemy?.personality === 'AUDITOR') {
-      const firstRailCard = runtimeRail.find(s => s.type === 'PLAYER_CODE');
+    if (enemy?.personality === 'AUDITOR' && currentPhase === 'VERIFICATION') {
+      const firstRailCard = runtimeRail.find((s) => s.type === 'PLAYER_CODE');
       if (firstRailCard && firstRailCard.content) {
         const card = firstRailCard.content as CombatCard;
         if (card.type !== 'REACTION' && card.id !== 'react_spoof_id') {
-          setPlayerProgress(p => Math.max(0, p - 10));
+          setPlayerProgress((p) => Math.max(0, p - 10));
           addLog('[AUDITOR] PROTOCOL_VIOLATION! First slot non-REACTION. -10 progress.');
         }
       }
     }
-    if (enemy?.personality === 'PHANTOM' && planningTurn % 2 === 0) {
+    if (
+      enemy?.personality === 'PHANTOM' &&
+      planningTurn % 2 === 0 &&
+      !(skillMode === 'script-kiddie' && missionTz.isExecutionChain)
+    ) {
       setRuntimeRail(prev => {
         const next = [...prev];
         const occupied = next.map((s, i) => s.type === 'PLAYER_CODE' ? i : -1).filter(i => i !== -1);
@@ -661,10 +763,14 @@ export function useCombatLogic({
     }
 
     setTimeout(() => {
+      const executed = nextBugAction;
       handleAiStep();
+      if (enemy && executed && currentPhase !== 'ARCHITECTURE') {
+        aiRecentRef.current = [...aiRecentRef.current, { id: executed.id, problemType: executed.problemType }].slice(-10);
+      }
       setTimeout(() => {
         setIsPlayerTurn(true); setCpu(cpuMax); drawCards(1);
-        if (enemy) setNextBugAction(getRandomBugAction(enemy));
+        if (enemy) setNextBugAction(pickNextBugAction(enemy, aiRecentRef.current));
         if (enemy?.visualType === 'DEVELOPER') {
           setAiDeadline(prev => {
             const clock = prev - 1;
@@ -673,8 +779,9 @@ export function useCombatLogic({
           });
         }
         
-        setStress(prev => Math.min(100, prev + 5)); 
-        addLog(`[WARNING] BACKGROUND_NOISE: +5% STRESS`);
+        const noise = skillMode === 'script-kiddie' ? 3 : 5;
+        setStress((prev) => Math.min(100, prev + noise));
+        addLog(`[WARNING] BACKGROUND_NOISE: +${noise}% STRESS`);
         if (currentPhase === 'ARCHITECTURE') {
           const nextTurn = planningTurn + 1;
           if (nextTurn >= 2) { setPlanningTurn(0); advancePhase(); } else setPlanningTurn(nextTurn);

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_vykhino_loader_dialogues = new DialogueBuilder('npc_vykhino_loader')
+export const npc_vykhino_loader_dialogues = new DialogueBuilder('npc_vykhino_loader').withDistrict('vykhino')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3', 'intro_v4'],
     friendly: ['intro_friendly'],

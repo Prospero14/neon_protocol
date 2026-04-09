@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_link_manager_dialogues = new DialogueBuilder('npc_link_manager')
+export const npc_link_manager_dialogues = new DialogueBuilder('npc_link_manager').withDistrict('vykhino')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

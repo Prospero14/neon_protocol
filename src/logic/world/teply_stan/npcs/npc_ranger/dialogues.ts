@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_ranger_dialogues = new DialogueBuilder('npc_ranger')
+export const npc_ranger_dialogues = new DialogueBuilder('npc_ranger').withDistrict('teply_stan')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

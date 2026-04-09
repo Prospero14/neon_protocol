@@ -58,6 +58,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                   <div className="tooltip-title">{action.name}</div>
                   <div className="tooltip-desc">{action.description}</div>
                   <div className="tooltip-stats">
+                    {action.problemType && (
+                      <span style={{ color: '#7ad7ff' }}>Класс: {problemTypeLabelRu(action.problemType)}</span>
+                    )}
                     {action.damage > 0 && <span style={{ color: '#ff4060' }}>Stress: +{action.damage}</span>}
                     {action.progressPoints > 0 && <span style={{ color: '#ffaa00' }}>Threat: +{action.progressPoints}%</span>}
                   </div>

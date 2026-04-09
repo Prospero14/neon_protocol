@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const bar_signal_dialogue: DialogueTree = new DialogueBuilder('bar_signal')
+export const bar_signal_dialogue: DialogueTree = new DialogueBuilder('bar_signal').withDistrict('bibirevo')
   .withGreetings({
     neutral: ['intro', 'intro_v2']
   })

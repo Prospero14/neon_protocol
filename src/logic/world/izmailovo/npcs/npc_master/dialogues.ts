@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_master_dialogues = new DialogueBuilder('npc_master')
+export const npc_master_dialogues = new DialogueBuilder('npc_master').withDistrict('izmailovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

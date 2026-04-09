@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_kosmos_dialogues = new DialogueBuilder('npc_kosmos')
+export const npc_kosmos_dialogues = new DialogueBuilder('npc_kosmos').withDistrict('fili')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

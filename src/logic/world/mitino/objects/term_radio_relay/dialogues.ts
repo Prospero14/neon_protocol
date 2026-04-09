@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_radio_relay_dialogues = new DialogueBuilder('term_radio_relay')
+export const term_radio_relay_dialogues = new DialogueBuilder('term_radio_relay').withDistrict('mitino')
   .addNode('intro', 'РАДИО-РЕЛЕ', 'Древнее, но надежное оборудование. Позволяет транслировать данные на большие расстояния через старые частоты.', [
     { text: 'Обновить таблицу маршрутов.', nextId: 'rank_check' },
     { text: '[Уйти]', nextId: 'LEAVE' }

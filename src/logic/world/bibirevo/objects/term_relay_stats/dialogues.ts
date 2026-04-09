@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_relay_stats_dialogue: DialogueTree = new DialogueBuilder('term_relay_stats')
+export const term_relay_stats_dialogue: DialogueTree = new DialogueBuilder('term_relay_stats').withDistrict('bibirevo')
   .addNode('intro', 'СТАТИСТИКА РЕЛЕ', '[SYSTEM] ЛОГИ_СЕВЕРНОГО_УЗЛА. ПРОВЕРКА_ТРАФИКА:', [
     { text: 'Посмотреть загрузку (5 Bits)', nextId: 'lore', cost: 5 },
     { text: '[Выход]', nextId: 'LEAVE' }

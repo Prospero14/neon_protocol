@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_craft_log_dialogues = new DialogueBuilder('term_craft_log')
+export const term_craft_log_dialogues = new DialogueBuilder('term_craft_log').withDistrict('izmailovo')
   .addNode('intro', 'ЖУРНАЛ МАСТЕРА', '[SYSTEM] ДОСТУП К РЕЦЕПТАМ ОТКРЫТ. ВЫБЕРИТЕ КАТЕГОРИЮ:', [
       { text: 'Архитектура Деки', nextId: 'lore' },
       { text: '[Выход]', nextId: 'LEAVE' }

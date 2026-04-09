@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_archivist_dialogues = new DialogueBuilder('npc_archivist')
+export const npc_archivist_dialogues = new DialogueBuilder('npc_archivist').withDistrict('fili')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

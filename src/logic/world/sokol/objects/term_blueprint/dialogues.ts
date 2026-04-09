@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_blueprint_dialogue: DialogueTree = new DialogueBuilder('term_blueprint')
+export const term_blueprint_dialogue: DialogueTree = new DialogueBuilder('term_blueprint').withDistrict('sokol')
   .addNode('intro', 'АРХИВ ЧЕРТЕЖЕЙ', '[AUTHORIZED_ONLY] Доступ к схемам авионики и чертежам дронов Сокола. Желаете извлечь архитектурные спецификации?', [
     { text: '[ ИЗВЛЕЧЬ ЛОГИ ] (Lore)', nextId: 'lore' },
     { text: '[ СКАНИРОВАТЬ СЕТЬ ]', nextId: 'LEAVE', effect: 'GIVE_BITS', amount: 40 },

@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_rat_dialogue: DialogueTree = new DialogueBuilder('npc_rat')
+export const npc_rat_dialogue: DialogueTree = new DialogueBuilder('npc_rat').withDistrict('maryino')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],
@@ -74,11 +74,11 @@ export const npc_rat_dialogue: DialogueTree = new DialogueBuilder('npc_rat')
   ])
 
   // === QUEST NODES ===
-  .addNode('quest_explain_1', 'КРЫСА_КУРЬЕР', 'В Overflow Zone лежит архив логов. Нужно зайти и выкачать ядро. Порядок действий строгий: сначала просканируй место (ls), найди индекс (grep) и только потом тяни данные (scp). Справишься?', [
+  .addNode('quest_explain_1', 'КРЫСА_КУРЬЕР', 'В Overflow лежит жирный архив логов — ядро данных. Не геройствуй: сначала ls, что бы там ни значило в твоей голове, потом grep по сигнатуре, потом scp наружу. Иначе вытащишь мусор и накормишь охрану.', [
     { text: 'А если боты меня заметят?', nextId: 'quest_explain_2' },
-    { text: 'Запоминаю: ls, grep, scp. Я готов.', nextId: 'rank_check' }
+    { text: 'Понял порядок. Готов.', nextId: 'rank_check' }
   ])
-  .addNode('quest_explain_2', 'КРЬИСА_КУРЬЕР', 'Пи! Тогда беги! Или бей первым. В Overflow нет правил. Запомни пайплайн: Просмотр (ls), Поиск (grep), Копия (scp). Рискнешь?', [
+  .addNode('quest_explain_2', 'КРЫСА_КУРЬЕР', 'Пи! Тогда беги или бей первым — в Overflow закон один: кто успел вытащить, тот и прав. Пайплайн тот же: глаза (ls), сито (grep), вынос (scp). Рискнёшь?', [
     { text: 'Погнали.', nextId: 'rank_check' },
     { text: 'Нет, опасно.', nextId: 'intro' }
   ])

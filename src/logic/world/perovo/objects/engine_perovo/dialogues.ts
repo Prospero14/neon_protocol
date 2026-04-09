@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const engine_perovo_dialogues = new DialogueBuilder('engine_perovo')
+export const engine_perovo_dialogues = new DialogueBuilder('engine_perovo').withDistrict('perovo')
   .addNode('intro', 'ЗАВОДСКАЯ ТУРБИНА', '[STATUS] Вибрация. Калибровка фазового сдвига. Авторизоваться?', [
       { text: '[ ПРОВЕСТИ КАЛИБРОВКУ ]', nextId: 'success', requireQuestId: 'q_perovo_engine_repair' },
       { text: '[ ВЫХОД ]', nextId: 'LEAVE' }

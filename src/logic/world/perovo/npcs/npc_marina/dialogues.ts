@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_marina_dialogues = new DialogueBuilder('npc_marina')
+export const npc_marina_dialogues = new DialogueBuilder('npc_marina').withDistrict('perovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_foreman_dialogues = new DialogueBuilder('npc_foreman')
+export const npc_foreman_dialogues = new DialogueBuilder('npc_foreman').withDistrict('perovo')
   .addNode('intro', 'БРИГАДИР', 'План сам себя не выполнит! Если не кодер по вызову — проваливай. Турбина свистит, а ты стоишь.', [
     { text: 'Что с турбиной?', nextId: 'quest_engine_accept' },
     { text: 'Слышал про стачку?', nextId: 'lore_strike' },

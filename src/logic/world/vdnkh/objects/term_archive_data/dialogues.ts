@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_archive_data_dialogue: DialogueTree = new DialogueBuilder('term_archive_data')
+export const term_archive_data_dialogue: DialogueTree = new DialogueBuilder('term_archive_data').withDistrict('vdnkh')
   .addNode('intro', 'АРХИВ ВДНХ', '[ACCESS_GRANTED] Исторические логи Pavilion Zero. Здесь хранятся сигнатуры тех, кто строил первый сегмент Москвы. Желаете извлечь архивные данные?', [
     { text: '[ ИЗВЛЕЧЬ ЛОГИ ] (Lore)', nextId: 'lore' },
     { text: '[ СИНХРОНИЗИРОВАТЬ ДЕКУ ]', nextId: 'LEAVE', effect: 'GIVE_BITS', amount: 30 },

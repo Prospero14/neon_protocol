@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const term_silo_7_dialogue: DialogueTree = new DialogueBuilder('term_silo_7')
+export const term_silo_7_dialogue: DialogueTree = new DialogueBuilder('term_silo_7').withDistrict('altufyevo')
   .addNode('intro', 'СИЛОС_#7', '[SYSTEM_ALERT] Температура: 115°C. Ошибка контура. Сервисный лог: Нашествие вредителей ("rats").', [
     { text: 'Провести диагностику охлаждения', nextId: 'diag_finish', requireQuestId: 'q_altufyevo_silo_scout' },
     { text: '[ВЫХОД]', nextId: 'LEAVE' }

@@ -5,7 +5,7 @@
  * Специализация: нагрузочное тестирование, SLO/SLI/SLA, incident management.
  * Тон: жёсткий, корпоративно-технический, сухой юмор. Уважает данные.
  */
-export const npc_kin_t_dialogues = new DialogueBuilder('npc_kin_t')
+export const npc_kin_t_dialogues = new DialogueBuilder('npc_kin_t').withDistrict('teply_stan')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3', 'intro_v4'],
     friendly: ['intro_friendly'],

@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_radio_ham_dialogues = new DialogueBuilder('npc_radio_ham')
+export const npc_radio_ham_dialogues = new DialogueBuilder('npc_radio_ham').withDistrict('mitino')
   .withGreetings({
     neutral: ['intro'],
     friendly: ['intro_friendly'],

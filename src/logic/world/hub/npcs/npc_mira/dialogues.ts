@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_mira_dialogues = new DialogueBuilder('npc_mira')
+export const npc_mira_dialogues = new DialogueBuilder('npc_mira').withDistrict('kitay_gorod')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

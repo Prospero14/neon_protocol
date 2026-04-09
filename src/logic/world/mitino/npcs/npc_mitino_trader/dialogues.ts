@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_mitino_trader_dialogues = new DialogueBuilder('npc_mitino_trader')
+export const npc_mitino_trader_dialogues = new DialogueBuilder('npc_mitino_trader').withDistrict('mitino')
   .addNode('intro', 'БАРЫГА МИША', 'Bits вперед, товар потом. Никаких возвратов, никаких жалоб в Ядро. Что ищешь?', [
     { text: 'Я пришел по поводу долга Флэша.', nextId: 'quest_debt_check', requireQuestId: 'q_mitino_debt' },
     { text: 'Купить ключ (60 Bits)', nextId: 'intro', cost: 60, effect: 'GIVE_CARD', cardRewardId: 'fn_ping' },

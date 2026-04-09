@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_petrovich')
+export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_petrovich').withDistrict('altufyevo')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],
@@ -65,10 +65,10 @@ export const npc_petrovich_dialogue: DialogueTree = new DialogueBuilder('npc_pet
   ])
 
   // === LORE ===
-  .addLoreNode('lore_zombie', 'ПЕТРОВИЧ', 'Да мусор это, остатки старых прошивок. Они как крысы — плодятся в пустых кластерах и жрут циклы CPU. Без ручного CRC-чека их не выкурить. Формат задачи: DIRECT_PURGE, сложность: JUNIOR.', 'intro')
+  .addLoreNode('lore_zombie', 'ПЕТРОВИЧ', 'Да мусор это — обломки старых прошивок. Живут в пустых кластерах, жрут циклы, размножаются быстрее жалоб клиента. В поле боя тебе всё равно придётся идти как по консоли: сначала глянуть, что лежит, потом выцепить нужное, потом снять дамп — иначе железо так и будет думать, что всё «норм».', 'intro')
 
   // === QUEST ===
-  .addNode('quest_accept', 'ПЕТРОВИЧ', 'Вот и ладно. Узел забит под завязку, так что готовь дебаггер. Как закончишь — с меня 50 Bits на охлад.', [
+  .addNode('quest_accept', 'ПЕТРОВИЧ', 'Вот и ладно. Узел в Силосе 7 забит под завязку — в тикете расписано, что делать по шагам; не импровизируй, пока не закроешь цепочку. Как пришлёшь чистые логи — с меня 50 Bits на охлад.', [
     { text: '[ ПРИНЯТЬ КОНТРАКТ ]', nextId: 'LEAVE', effect: 'AWARD_QUEST', cardRewardId: 'q_altufyevo_silo_clear' },
     { text: '[ НАЗАД ]', nextId: 'intro' }
   ])

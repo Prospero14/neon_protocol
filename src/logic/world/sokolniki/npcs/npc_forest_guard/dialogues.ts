@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_forest_guard_dialogues = new DialogueBuilder('npc_forest_guard')
+export const npc_forest_guard_dialogues = new DialogueBuilder('npc_forest_guard').withDistrict('sokolniki')
   .addNode('intro', 'ЛЕСНИК', 'Стой. Территория GigaBank. Физический доступ к стойкам разрешен только персоналу SYS_SEC. Твои логи выглядять... нелицензионно.', [
     { text: 'Я просто гуляю.', nextId: 'lore_warning' },
     { text: 'У меня есть допуск. (Social)', nextId: 'check_rep', requireReputation: { factionId: 'GIGABANK', minPoints: 10 } },

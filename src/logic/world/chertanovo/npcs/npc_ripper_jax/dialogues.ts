@@ -1,7 +1,7 @@
 import type { DialogueTree } from '../../../../dialogues';
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_ripper_jax_dialogue: DialogueTree = new DialogueBuilder('npc_ripper_jax')
+export const npc_ripper_jax_dialogue: DialogueTree = new DialogueBuilder('npc_ripper_jax').withDistrict('chertanovo')
   .withGreetings({
     neutral: ['intro', 'intro_v2', 'intro_v3'],
     friendly: ['intro_friendly', 'intro_friendly_v2'],

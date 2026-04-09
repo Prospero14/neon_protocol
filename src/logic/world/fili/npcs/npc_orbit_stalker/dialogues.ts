@@ -1,6 +1,6 @@
 import { DialogueBuilder } from '../../../../dialogueUtils';
 
-export const npc_orbit_stalker_dialogues = new DialogueBuilder('npc_orbit_stalker')
+export const npc_orbit_stalker_dialogues = new DialogueBuilder('npc_orbit_stalker').withDistrict('fili')
   .withGreetings({
     neutral: ['intro', 'intro_v2'],
     friendly: ['intro_friendly'],

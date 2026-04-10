@@ -79,6 +79,16 @@ export const HubView: React.FC<HubViewProps> = ({
   onNavigateToBarNode
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
+  const messengerFeedRef = React.useRef<HTMLDivElement | null>(null);
+  const profilePopupRef = React.useRef<HTMLDivElement | null>(null);
+  const [selectedChatProfile, setSelectedChatProfile] = React.useState<{
+    nick: string;
+    genderNoun: string;
+    district: string;
+    about?: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const channelFeed = React.useMemo(
     () => messengerFeed.filter((m) => !m.channelId || m.channelId === activeMessengerChannel),
     [messengerFeed, activeMessengerChannel]
@@ -87,6 +97,84 @@ export const HubView: React.FC<HubViewProps> = ({
     () => sanitizeMessengerFeed(channelFeed),
     [channelFeed]
   );
+  const orderedChannelFeed = React.useMemo(
+    () => displayChannelFeed.slice(0, 160).reverse(),
+    [displayChannelFeed]
+  );
+  const knownDistrictOptions = React.useMemo(
+    () => (knownDistrictChannels.length > 0 ? knownDistrictChannels : ['altufyevo']),
+    [knownDistrictChannels]
+  );
+  const hashNick = React.useCallback((value: string) => {
+    let h = 2166136261;
+    for (let i = 0; i < value.length; i++) {
+      h ^= value.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }, []);
+  const buildProfileByNick = React.useCallback((nick: string, x: number, y: number) => {
+    const seed = hashNick(nick.toLowerCase());
+    const nouns = [
+      'оператор',
+      'курьер',
+      'наблюдатель',
+      'скиталец',
+      'медиатор',
+      'компилятор',
+      'проводник',
+      'архивариус',
+      'диспетчер',
+      'ремесленник',
+      'рейнджер',
+      'инквизитор',
+      'контролёр',
+      'перехватчик',
+    ];
+    const aboutPool = [
+      'Держу зеркала логов для ночной смены.',
+      'Работаю тихо, вопросы задаю редко.',
+      'Ищу стабильный uplink без лишнего шума.',
+      'Предпочитаю короткие сессии и чистые выходы.',
+      'Проверяю маршруты перед рассветом.',
+      'Собираю слухи, фильтрую шум.',
+      'Торгую временем, не железом.',
+      'Смотрю на сеть как на погоду.',
+    ];
+    const district = knownDistrictOptions[seed % knownDistrictOptions.length] || activeMessengerChannel;
+    const genderNoun = nouns[(seed >>> 3) % nouns.length] || 'оператор';
+    const withAbout = ((seed >>> 7) % 100) < 62;
+    return {
+      nick,
+      genderNoun,
+      district,
+      about: withAbout ? aboutPool[(seed >>> 11) % aboutPool.length] : undefined,
+      x,
+      y,
+    };
+  }, [activeMessengerChannel, hashNick, knownDistrictOptions]);
+  const handleSendMessage = React.useCallback(() => {
+    const clean = messageDraft.trim();
+    if (!clean) return;
+    onSendMessengerPing(clean);
+    setMessageDraft('');
+  }, [messageDraft, onSendMessengerPing]);
+  React.useEffect(() => {
+    const node = messengerFeedRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [activeMessengerChannel, orderedChannelFeed.length]);
+  React.useEffect(() => {
+    const onPointerDown = (evt: MouseEvent) => {
+      if (!selectedChatProfile) return;
+      const target = evt.target as Node;
+      if (profilePopupRef.current && !profilePopupRef.current.contains(target)) {
+        setSelectedChatProfile(null);
+      }
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [selectedChatProfile]);
   const isActiveChannelUnlocked = unlockedDistrictChannels.includes(activeMessengerChannel);
   const channelVisitedBar = barContactDistricts.includes(activeMessengerChannel);
   const formatChannelName = (districtId: string) => `#${districtId.replaceAll('_', '-').toUpperCase()}`;
@@ -94,7 +182,7 @@ export const HubView: React.FC<HubViewProps> = ({
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
         <div className="brand-box">
-          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.11 | BUILD_7A_LAYOUT]</span></h1>
+          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.11.01 | BUILD_7A_LAYOUT]</span></h1>
           <div className="meta-line mono-text">
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>
@@ -260,19 +348,73 @@ export const HubView: React.FC<HubViewProps> = ({
                 </div>
               </div>
             )}
-            <div className="messenger-feed">
-              {displayChannelFeed.slice(0, 160).map((m) => (
+            <div className="messenger-feed" ref={messengerFeedRef}>
+              {orderedChannelFeed.map((m) => (
                 <div key={m.id} className={`mono-text messenger-line ${m.isSpam ? 'spam' : ''}`}>
-                  <span className="messenger-from">[{m.from}]</span> {m.text}
+                  <button
+                    type="button"
+                    className="messenger-from"
+                    style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer' }}
+                    onClick={(e) => {
+                      const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                      setSelectedChatProfile(buildProfileByNick(m.from, rect.left + 6, rect.bottom + 6));
+                    }}
+                    title="Открыть профиль"
+                  >
+                    [{m.from}]
+                  </button>{' '}
+                  {m.text}
                 </div>
               ))}
             </div>
+            {selectedChatProfile && (
+              <div
+                ref={profilePopupRef}
+                className="neon-panel"
+                style={{
+                  position: 'fixed',
+                  left: Math.max(16, Math.min(window.innerWidth - 320, selectedChatProfile.x)),
+                  top: Math.max(16, Math.min(window.innerHeight - 220, selectedChatProfile.y)),
+                  width: 300,
+                  zIndex: 70,
+                  padding: 10,
+                  border: '1px solid rgba(0, 255, 255, 0.28)',
+                  boxShadow: '0 0 18px rgba(0, 255, 255, 0.15)',
+                  background: 'rgba(7, 10, 26, 0.98)',
+                }}
+              >
+                <div className="mono-text" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <strong>USER_INFO</strong>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChatProfile(null)}
+                    style={{ background: 'transparent', color: '#8ab4ff', border: 0, cursor: 'pointer' }}
+                  >
+                    [x]
+                  </button>
+                </div>
+                <div className="mono-text" style={{ lineHeight: 1.45 }}>
+                  <div><span style={{ opacity: 0.7 }}>НИК:</span> {selectedChatProfile.nick}</div>
+                  <div><span style={{ opacity: 0.7 }}>ПОЛ:</span> {selectedChatProfile.genderNoun}</div>
+                  <div><span style={{ opacity: 0.7 }}>РАЙОН:</span> {formatChannelName(selectedChatProfile.district)}</div>
+                  {selectedChatProfile.about && (
+                    <div style={{ marginTop: 6 }}><span style={{ opacity: 0.7 }}>О СЕБЕ:</span> {selectedChatProfile.about}</div>
+                  )}
+                </div>
+              </div>
+            )}
             </div>
             <div className="messenger-composer">
               <div className="messenger-input-row">
                 <input
                   value={messageDraft}
                   onChange={(e) => setMessageDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                   placeholder="написать в районный канал..."
                   className="messenger-input"
                   disabled={!isActiveChannelUnlocked}
@@ -280,7 +422,7 @@ export const HubView: React.FC<HubViewProps> = ({
                 <button
                   type="button"
                   className="neon-border-btn glow-cyan messenger-send-btn"
-                  onClick={() => { onSendMessengerPing(messageDraft); setMessageDraft(''); }}
+                  onClick={handleSendMessage}
                   disabled={!isActiveChannelUnlocked}
                 >
                   SEND

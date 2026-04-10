@@ -99,12 +99,11 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
         ))}
       </div>
       {showQuestTutorial && (
-        <div className="nb2-ai-impact-strip" style={{ display: 'block', lineHeight: 1.35 }}>
-          <div className="chip inject" style={{ display: 'inline-block', marginBottom: 6 }}>FIRST CONTRACT GUIDE</div>
-          <div>[1] Враг каждый ход выполняет `NEXT_INTENT` сверху: растит THREAT, BUGS и иногда STRESS.</div>
-          <div>[2] Ты в DEVELOPMENT выкладываешь код в шину, чтобы поднять PROJECT до 100%.</div>
-          <div>[3] В VERIFICATION чистишь BUG_ERROR на шине реакциями/защитой, иначе DEPLOYMENT сорвётся.</div>
-          <div>[4] Если THREAT добежит до 100% раньше — противник «релизнется» раньше тебя.</div>
+        <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
+          <span className="chip inject">FIRST CONTRACT GUIDE:</span>
+          <span className="chip bug" title="Короткая памятка по первому бою">
+            NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR · THREAT 100% = проигрыш темпа
+          </span>
         </div>
       )}
 

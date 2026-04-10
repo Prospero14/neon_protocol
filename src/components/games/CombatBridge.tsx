@@ -113,8 +113,20 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         onExecuteCardOnSlot={actions.executeCardOnSlot}
       />
       {showFirstQuestMemo && (
-        <div className="result-overlay victory animate-fade-in" style={{ zIndex: 60 }}>
-          <div className="result-box shadow-green">
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'rgba(2, 6, 16, 0.94)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'all',
+          }}
+        >
+          <div className="result-box shadow-green" style={{ maxWidth: 520 }}>
             <div className="result-title green glow-green">ПАМЯТКА: ПЕРВЫЙ КОНТРАКТ</div>
             <div className="result-stats" style={{ textAlign: 'left' }}>
               <div className="stat-row">1) Смотри `NEXT_INTENT` — это следующий ход оппонента.</div>

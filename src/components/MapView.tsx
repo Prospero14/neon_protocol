@@ -68,6 +68,52 @@ const MapView: React.FC<MapViewProps> = ({
     subNodes: customSubNodes || activeDistrictBase.subNodes
   };
   const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
+  const renderSubNodes = React.useMemo(() => {
+    const source = activeDistrict.subNodes || [];
+    const placed: Array<{ id: string; x: number; y: number; rx: number; ry: number; type: string; name: string; description: string; labelDy: number }> = [];
+    const minGap = 4.2;
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+    const hash = (s: string) => {
+      let h = 2166136261;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    };
+    for (const sn of source) {
+      let rx = sn.x;
+      let ry = sn.y;
+      const seed = hash(sn.id);
+      const baseAngle = (seed % 360) * (Math.PI / 180);
+      for (let iter = 0; iter < 14; iter++) {
+        let collided = false;
+        for (const p of placed) {
+          const dx = rx - p.rx;
+          const dy = ry - p.ry;
+          const dist = Math.hypot(dx, dy);
+          if (dist < minGap) {
+            collided = true;
+            const push = ((minGap - dist) + 0.9);
+            const angle = baseAngle + iter * 0.65;
+            rx += Math.cos(angle) * push;
+            ry += Math.sin(angle) * push;
+          }
+        }
+        rx = clamp(rx, 4, 96);
+        ry = clamp(ry, 4, 96);
+        if (!collided) break;
+      }
+      placed.push({
+        ...sn,
+        rx,
+        ry,
+        labelDy: (seed % 2 === 0) ? 4.5 : 6.0,
+      });
+    }
+    return placed;
+  }, [activeDistrict.subNodes]);
+  const selectedRenderSubNode = renderSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
 
   const getTravelCost = (targetNode: MapNodeData) => {
     if (targetNode.id === activeDistrictId) return 0;
@@ -254,11 +300,11 @@ const MapView: React.FC<MapViewProps> = ({
                   </g>
 
                   {/* Active Selection Scanning Square */}
-                  {selectedSubNode && (
+                  {selectedRenderSubNode && (
                     <g className="blueprint-selection-wrap">
                       <rect 
-                        x={selectedSubNode.x - 4} 
-                        y={selectedSubNode.y - 4} 
+                        x={selectedRenderSubNode.rx - 4} 
+                        y={selectedRenderSubNode.ry - 4} 
                         width="8" 
                         height="8" 
                         fill="none" 
@@ -267,22 +313,22 @@ const MapView: React.FC<MapViewProps> = ({
                         strokeDasharray="1, 2"
                         className="blueprint-selection-sq"
                       />
-                      <line x1={selectedSubNode.x} y1="0" x2={selectedSubNode.x} y2="100" stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
-                      <line x1="0" y1={selectedSubNode.y} x2="100" y2={selectedSubNode.y} stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
+                      <line x1={selectedRenderSubNode.rx} y1="0" x2={selectedRenderSubNode.rx} y2="100" stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
+                      <line x1="0" y1={selectedRenderSubNode.ry} x2="100" y2={selectedRenderSubNode.ry} stroke="rgba(0, 255, 255, 0.15)" strokeWidth="0.05" />
                     </g>
                   )}
 
                   {/* Nodes Layer */}
                   <g className="blueprint-nodes-layer">
-                    {activeDistrict.subNodes?.map(sn => {
+                    {renderSubNodes.map(sn => {
                        const isSelected = selectedSubNodeId === sn.id;
                        return (
                         <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
-                          <circle cx={sn.x} cy={sn.y} r="5" fill="transparent" />
-                          <circle cx={sn.x} cy={sn.y} r="0.8" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
-                          <circle cx={sn.x} cy={sn.y} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
+                          <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
+                          <circle cx={sn.rx} cy={sn.ry} r="0.8" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
+                          <circle cx={sn.rx} cy={sn.ry} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
                           
-                          <g transform={`translate(${sn.x}, ${sn.y + 4.5})`}>
+                          <g transform={`translate(${sn.rx}, ${sn.ry + sn.labelDy})`}>
                             <text y="-0.8" fontSize="0.55" fill={NODE_COLORS[sn.type] || '#889'} textAnchor="middle" style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '2px' }}>
                               {sn.type}
                             </text>

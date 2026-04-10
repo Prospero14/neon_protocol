@@ -41,6 +41,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
   const ENEMY_VISIBLE_SLOTS = 7;
   const maskedCount = Math.max(0, ENEMY_VISIBLE_SLOTS - 1);
+  const isThreatSpike = Boolean(isAiResolving && (lastAiImpact?.threatDelta ?? 0) > 0);
+  const isBugSpike = Boolean(isAiResolving && (lastAiImpact?.bugDelta ?? 0) > 0);
+  const isStressSpike = Boolean(isAiResolving && (lastAiImpact?.stressDelta ?? 0) > 0);
 
   return (
     <main className="nb2">
@@ -85,9 +88,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
         {!isPlayerTurn && nextBugAction ? `AI EXECUTING: ${nextBugAction.name}` : `LAST AI ACTION: ${lastAiAction?.name || '—'}`}
       </div>
       <div className="nb2-ai-impact-strip">
-        <span className="chip threat">THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
-        <span className="chip bug">BUG +{lastAiImpact?.bugDelta ?? 0}</span>
-        <span className="chip stress">STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
+        <span className={`chip threat ${isThreatSpike ? 'flash-threat' : ''}`}>THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
+        <span className={`chip bug ${isBugSpike ? 'flash-bug' : ''}`}>BUG +{lastAiImpact?.bugDelta ?? 0}</span>
+        <span className={`chip stress ${isStressSpike ? 'flash-stress' : ''}`}>STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
         <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
       </div>
       <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -100,9 +103,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
       </div>
       {showQuestTutorial && (
         <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
-          <span className="chip inject">FIRST CONTRACT GUIDE:</span>
-          <span className="chip bug" title="Короткая памятка по первому бою">
-            NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR · THREAT 100% = проигрыш темпа
+          <span className="chip inject">HINT:</span>
+          <span className="chip bug" title="Короткая подсказка по первому бою">
+            NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR реакциями/дефом · THREAT 100% = провал темпа
           </span>
         </div>
       )}

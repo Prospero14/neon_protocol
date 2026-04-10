@@ -740,10 +740,14 @@ export function useCombatLogic({
   const handleAiStep = () => {
     if (!nextBugAction || !enemy) return;
     if (currentPhase === 'ARCHITECTURE') { addLog(`[AI] ${enemy.name} IS WATCHING...`); return; }
-    const threatDelta =
+    const baseThreatDelta =
       skillMode === 'script-kiddie'
         ? Math.max(1, Math.floor(nextBugAction.progressPoints * 0.75))
         : nextBugAction.progressPoints;
+    const threatDelta =
+      currentPhase === 'VERIFICATION'
+        ? Math.max(2, Math.floor(baseThreatDelta * (skillMode === 'script-kiddie' ? 1.25 : 1.35)))
+        : baseThreatDelta;
     const bugDelta = nextBugAction.bugPoints;
     const rawDamage = Math.floor(nextBugAction.damage * (1 + (tier - 1) * 0.25));
     const stressDelta =
@@ -809,6 +813,17 @@ export function useCombatLogic({
       addLog(`[HINT] ${problemTypeLabelRu(nextBugAction.problemType)} — grep/ping/auth, смотри тип.`);
     }
     if (mitigationBuffer > 0) setMitigationBuffer((b) => Math.max(0, b - 2));
+    if (
+      currentPhase === 'VERIFICATION' &&
+      threatDelta === 0 &&
+      bugDelta === 0 &&
+      stressDelta === 0 &&
+      !nextBugAction.spawnId &&
+      !nextBugAction.injectStatusId
+    ) {
+      setAiProgress((p) => Math.min(100, p + 4));
+      addLog('[AI] PASSIVE_SCAN: +4% THREAT (verification pressure).');
+    }
     addLog(`[AI] ${nextBugAction.name} | threat +${threatDelta}% | bugs +${bugDelta}${stressDelta > 0 ? ` | stress +${stressDelta}` : ''}`);
     setLastAiAction(nextBugAction);
     setLastAiImpact({
@@ -902,9 +917,30 @@ export function useCombatLogic({
         const stabQ = stabilizationQueueRef.current;
         stabilizationQueueRef.current = [];
         const drawN = Math.min(START_HAND_SIZE, stabQ.length);
-        setHand(stabQ.slice(0, drawN));
-        setDeck(stabQ.slice(drawN));
-        addLog(`[SYSTEM] STABILIZATION_DRAW: ${drawN} cards (react / soft / status)`);
+        let nextHand = stabQ.slice(0, drawN);
+        const nextDeck = stabQ.slice(drawN);
+        const hasPlayableCounter = nextHand.some((c) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || c.type === 'SOFT');
+        if (!hasPlayableCounter) {
+          const emergencyIds = ['react_unit_test', 'react_firewall_patch', 'def_validator', 'react_trace_jam'];
+          const emergencyCards = emergencyIds
+            .map((id) => getCardById(id))
+            .filter((c): c is CombatCard => Boolean(c))
+            .slice(0, 2);
+          nextHand = [...emergencyCards, ...nextHand].slice(0, START_HAND_SIZE);
+          addLog('[SYSTEM] EMERGENCY_COUNTER_KIT loaded for VERIFICATION.');
+        }
+        setHand(nextHand);
+        setDeck(nextDeck);
+        addLog(`[SYSTEM] STABILIZATION_DRAW: ${nextHand.length} cards (react / soft / status)`);
+        if (enemy) {
+          setNextBugAction(
+            pickNextBugAction(enemy, aiRecentRef.current, {
+              phase: 'VERIFICATION',
+              bugPressure: runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
+              playerProgress,
+            })
+          );
+        }
       }
     }
   };
@@ -949,12 +985,24 @@ export function useCombatLogic({
     setCardsPlayedThisTurn(0);
     setClearedBugsThisTurn(0);
     if ((currentPhase === 'DEVELOPMENT' || currentPhase === 'VERIFICATION') && playedThisTurn === 0) {
-      setIdleTurnStreak((n) => n + 1);
-      const stallThreat = Math.min(12, 4 + idleTurnStreak * 2);
-      const stallStress = Math.min(8, 2 + idleTurnStreak);
-      setAiProgress((p) => Math.min(100, p + stallThreat));
-      setStress((s) => Math.min(100, s + stallStress));
-      addLog(`[STALL] Idle turn penalty: +${stallThreat}% threat, +${stallStress} stress.`);
+      const noPlayableInVerification =
+        currentPhase === 'VERIFICATION' &&
+        !hand.some((c) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || c.type === 'SOFT' || c.type === 'SCRIPT');
+      if (noPlayableInVerification) {
+        drawCards(2);
+        addLog('[STALL] No playable counter cards. Auto-draw +2 for recovery.');
+      } else {
+        setIdleTurnStreak((n) => n + 1);
+        const stallThreat = currentPhase === 'VERIFICATION'
+          ? Math.min(10, 4 + idleTurnStreak * 2)
+          : Math.min(12, 4 + idleTurnStreak * 2);
+        const stallStress = currentPhase === 'VERIFICATION'
+          ? Math.min(4, 1 + Math.floor(idleTurnStreak / 2))
+          : Math.min(8, 2 + idleTurnStreak);
+        setAiProgress((p) => Math.min(100, p + stallThreat));
+        setStress((s) => Math.min(100, s + stallStress));
+        addLog(`[STALL] Idle turn penalty: +${stallThreat}% threat, +${stallStress} stress.`);
+      }
     } else {
       setIdleTurnStreak(0);
     }
@@ -998,6 +1046,15 @@ export function useCombatLogic({
     }
 
     setTimeout(() => {
+      if (!nextBugAction && enemy && currentPhase !== 'ARCHITECTURE') {
+        const fallbackAction = pickNextBugAction(enemy, aiRecentRef.current, {
+          phase: currentPhase,
+          bugPressure: runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
+          playerProgress,
+        });
+        setNextBugAction(fallbackAction);
+        addLog('[AI] NEXT_INTENT synchronized before execution.');
+      }
       const executed = nextBugAction;
       setIsAiResolving(true);
       handleAiStep();

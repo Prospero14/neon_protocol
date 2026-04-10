@@ -403,7 +403,17 @@
   box-shadow: 0 0 14px rgba(255, 64, 96, 0.2);
 }
 .nb2-enemy-slot.executing {
-  animation: enemy-exec-pulse 0.8s ease-in-out infinite;
+  border-color: rgba(255, 64, 96, 0.95);
+  background: linear-gradient(180deg, rgba(255, 64, 96, 0.28), rgba(255, 64, 96, 0.1));
+  animation: enemy-exec-pulse 0.55s ease-in-out infinite;
+}
+.nb2-enemy-slot.executing::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(255, 120, 140, 0.95);
+  box-shadow: 0 0 18px rgba(255, 64, 96, 0.85), inset 0 0 14px rgba(255, 64, 96, 0.5);
+  pointer-events: none;
 }
 .nb2-enemy-slot.masked {
   border-style: dashed;
@@ -417,8 +427,8 @@
 .nb2-eslot-id { font-size: 0.6rem; color: rgba(255,45,109,0.3); font-weight: 900; }
 .nb2-eslot-name { font-size: 0.8rem; color: #aab; font-weight: 900; }
 @keyframes enemy-exec-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(255, 64, 96, 0.2); transform: translateY(0); }
-  50% { box-shadow: 0 0 22px rgba(255, 64, 96, 0.45); transform: translateY(-2px); }
+  0%, 100% { box-shadow: 0 0 12px rgba(255, 64, 96, 0.35); transform: translateY(0); }
+  50% { box-shadow: 0 0 30px rgba(255, 64, 96, 0.9); transform: translateY(-2px); }
 }
 
 .nb2-eslot-tooltip {
@@ -486,6 +496,27 @@
 .nb2-ai-impact-strip .chip.bug { color: #fb7185; border-color: rgba(251, 113, 133, 0.45); background: rgba(251, 113, 133, 0.08); }
 .nb2-ai-impact-strip .chip.stress { color: #f43f5e; border-color: rgba(244, 63, 94, 0.45); background: rgba(244, 63, 94, 0.08); }
 .nb2-ai-impact-strip .chip.inject { color: #a5b4fc; border-color: rgba(165, 180, 252, 0.45); background: rgba(165, 180, 252, 0.08); }
+.nb2-ai-impact-strip .chip.flash-threat {
+  animation: chip-flash-threat 0.52s steps(2, end) 4;
+}
+.nb2-ai-impact-strip .chip.flash-bug {
+  animation: chip-flash-bug 0.52s steps(2, end) 4;
+}
+.nb2-ai-impact-strip .chip.flash-stress {
+  animation: chip-flash-stress 0.52s steps(2, end) 4;
+}
+@keyframes chip-flash-threat {
+  0%, 100% { background: rgba(251, 191, 36, 0.08); box-shadow: none; }
+  50% { background: rgba(251, 191, 36, 0.38); box-shadow: 0 0 18px rgba(251, 191, 36, 0.9); }
+}
+@keyframes chip-flash-bug {
+  0%, 100% { background: rgba(251, 113, 133, 0.08); box-shadow: none; }
+  50% { background: rgba(251, 113, 133, 0.38); box-shadow: 0 0 18px rgba(251, 113, 133, 0.85); }
+}
+@keyframes chip-flash-stress {
+  0%, 100% { background: rgba(244, 63, 94, 0.08); box-shadow: none; }
+  50% { background: rgba(244, 63, 94, 0.42); box-shadow: 0 0 20px rgba(244, 63, 94, 0.95); }
+}
 
 /* Code editor pipeline */
 .nb2-code-editor {

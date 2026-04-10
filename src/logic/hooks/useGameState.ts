@@ -112,6 +112,8 @@ export function useGameState() {
   const hasLoadedInitialState = useRef(false);
   /** Анти-повтор для автосообщений публичного чата (последние тексты). */
   const recentPublicChatterTextsRef = useRef<string[]>([]);
+  /** Анти-повтор по каждому району отдельно (чтобы один и тот же шаблон не спамился подряд). */
+  const recentPublicChatterByChannelRef = useRef<Record<string, string[]>>({});
 
   useEffect(() => {
     fetch('https://api.ipify.org?format=json')
@@ -225,6 +227,8 @@ export function useGameState() {
       ? trustedNpcContacts[Math.floor(Math.random() * trustedNpcContacts.length)]
       : '';
     const from = contactId ? publicChatNickForSeed(contactId) : randomPublicChatNick();
+    const districtMeta = MAP_NODES.find((d) => d.id === districtId);
+    const factionTag = (districtMeta?.dominantFactionId || 'LOCAL_NET').replaceAll('_', ' ');
 
     const rumorPools: Record<'quest_completed' | 'combat_win' | 'combat_fail', string[]> = {
       quest_completed: [
@@ -243,8 +247,21 @@ export function useGameState() {
         `В чате шутят, что ${playerAlias} то ли провалил "${params.subject || 'операцию'}", то ли сам отвалился.`,
       ],
     };
+    const factionActionRumors = [
+      `[FACTION] ${factionTag}: запускают ночной фильтр трафика, часть узлов уже в серой зоне.`,
+      `[FACTION] ${factionTag}: подняли проверку ключей на входе, случайные ники режут первыми.`,
+      `[FACTION] ${factionTag}: спорят о переделе маршрутов, локальные шлюзы дергает каждые 10 минут.`,
+      `[FACTION] ${factionTag}: зачистка витрин от нелегальных лотов, продавцы ушли в приват.`,
+      `[FACTION] ${factionTag}: временная квота на исходящие пакеты, готовьте обход.`,
+      `[FACTION] ${factionTag}: усиливают контроль в районе, лишние сканы могут триггерить ICE.`,
+      `[FACTION] ${factionTag}: слухи о точечной рейд-проверке терминалов этой ночью.`,
+      `[FACTION] ${factionTag}: кто-то протолкнул новый регламент, трафик сжимают жёстче.`,
+    ];
 
-    const text = rumorPools[params.outcome][Math.floor(Math.random() * rumorPools[params.outcome].length)];
+    const baseText = rumorPools[params.outcome][Math.floor(Math.random() * rumorPools[params.outcome].length)];
+    const text = Math.random() < 0.45
+      ? factionActionRumors[Math.floor(Math.random() * factionActionRumors.length)]
+      : baseText;
     postMessengerMessages([{
       id: `msg_rumor_${Date.now()}_${Math.random()}`,
       from,
@@ -260,26 +277,40 @@ export function useGameState() {
     const districtMeta = MAP_NODES.find((d) => d.id === channelId);
     const factionName = (districtMeta?.dominantFactionId || 'LOCAL_NET').replaceAll('_', ' ');
     const tag = `#${channelId.replaceAll('_', '-').toUpperCase()}`;
-    const { casual, vendor } = getDistrictChatterPools(factionName, tag);
+    const { casual, vendor, spam } = getDistrictChatterPools(factionName, tag);
+    const normalizeChatterSignature = (value: string): string => value
+      .toLowerCase()
+      .replace(/\[реклама\]\s*/gi, '')
+      .replace(/\d+/g, '#')
+      .replace(/[^\p{L}\p{N}\s#]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     const recent = recentPublicChatterTextsRef.current;
-    const recentWindow = recent.slice(-14);
+    const recentWindow = recent.slice(-20);
+    const channelRecent = recentPublicChatterByChannelRef.current[channelId] ?? [];
+    const globalSignatures = new Set(recentWindow.map(normalizeChatterSignature));
+    const channelSignatures = new Set(channelRecent.map(normalizeChatterSignature));
     let text = casual[0];
     for (let attempt = 0; attempt < 24; attempt++) {
-      const useVendor = Math.random() < 0.11;
-      const pool = useVendor ? vendor : casual;
+      const useSpam = Math.random() < 0.18;
+      const useVendor = !useSpam && Math.random() < 0.11;
+      const pool = useSpam ? spam : (useVendor ? vendor : casual);
       const candidate = pool[Math.floor(Math.random() * pool.length)];
-      if (!recentWindow.includes(candidate) || attempt >= 20) {
+      const signature = normalizeChatterSignature(candidate);
+      if ((!globalSignatures.has(signature) && !channelSignatures.has(signature)) || attempt >= 20) {
         text = candidate;
         break;
       }
     }
-    recentPublicChatterTextsRef.current = [...recent.slice(-48), text];
+    recentPublicChatterTextsRef.current = [...recent.slice(-72), text];
+    recentPublicChatterByChannelRef.current[channelId] = [...channelRecent.slice(-24), text];
     postMessengerMessages([
       {
         id: `msg_chatter_${Date.now()}_${Math.random()}`,
         from: randomPublicChatNick(),
         text,
         channelId,
+        isSpam: text.startsWith('[РЕКЛАМА]'),
       }
     ]);
   }, [postMessengerMessages, unlockedDistrictChannels]);
@@ -872,7 +903,21 @@ export function useGameState() {
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
       if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics' || trackedDef.type === 'talk')) {
-        if (trackedDef.objectiveNodeId === nodeId) {
+        let objectiveHit = trackedDef.objectiveNodeId === nodeId;
+        if (!objectiveHit && trackedDef.id.startsWith('q_kiddo_start_') && type === 'bar') {
+          const questDistrict = MAP_NODES.find((n) => n.id === trackedDef.districtId);
+          const barIds = questDistrict?.subNodes?.filter((s) => s.type === 'bar').map((s) => s.id) ?? [];
+          objectiveHit = barIds.includes(nodeId);
+        }
+        if (
+          !objectiveHit &&
+          trackedDef.id.startsWith('q_kiddo_start_') &&
+          trackedDef.objectiveNodeId === districtId &&
+          districtId === nodeOwnerDistrict?.id
+        ) {
+          objectiveHit = ['bar', 'npc', 'terminal', 'shop', 'story'].includes(type);
+        }
+        if (objectiveHit) {
           setQuestStates((prev) => markQuestReady(prev, trackedDef.id));
         }
       }

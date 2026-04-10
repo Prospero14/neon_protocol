@@ -61,6 +61,26 @@ const CyberCard: React.FC<CyberCardProps> = ({ card, onClick, disabled, isSmall,
 
   // For Java, we always show the Coffee icon for branding
   const isJava = (card.language || 'java') === 'java';
+  const infraImpact = React.useMemo(() => {
+    if (card.type !== 'INFRASTRUCTURE') return null;
+    const map: Record<string, string> = {
+      infra_dns_resolver: '+1 CPU (сразу)',
+      infra_lb_nginx: '+1 CPU и +512MB RAM',
+      infra_basic_pod: '+1 CPU и +512MB RAM',
+      infra_mesh_relay: '+1 CPU и +512MB RAM',
+      infra_orbital_uplink: '+1 CPU и +2048MB RAM',
+      infra_quarantine_vm: '-8 стресс и +512MB RAM',
+      infra_street_fusion: '+2 CPU, но +3 стресс',
+      infra_docker: '+512MB RAM',
+      infra_old_hw: '+512MB RAM',
+      infra_s3_bucket: '+1536MB RAM',
+      infra_raid_array: '-20 стресс',
+      infra_postgres: '+2 CPU (сразу)',
+      infra_edge_cache: 'стабилизация старта, помогает снижать риск перегрева',
+      infra_safe_proxy: 'смягчает входящий стресс и держит темп',
+    };
+    return map[card.id] || '+1 CPU (базовый эффект INFRA)';
+  }, [card.id, card.type]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
@@ -117,6 +137,18 @@ const CyberCard: React.FC<CyberCardProps> = ({ card, onClick, disabled, isSmall,
                 <div className="spec-item"><span className="label">COST</span><span className="val">{card.cost} CPU</span></div>
                 <div className="spec-item"><span className="label">LIBRARIES</span><span className="val">{libsToShow.join(' · ').toUpperCase() || 'JAVA_CORE'}</span></div>
               </div>
+              {infraImpact && (
+                <div className="spec-item" style={{ marginTop: 8 }}>
+                  <span className="label">IMPACT_IN_BATTLE</span>
+                  <span className="val">{infraImpact}</span>
+                </div>
+              )}
+              {(card.description.toLowerCase().includes('перегрев') || card.id === 'infra_edge_cache') && (
+                <div className="spec-item" style={{ marginTop: 8 }}>
+                  <span className="label">NOTE</span>
+                  <span className="val">См. DOCS → GAME_SYSTEMS → OVERHEAT</span>
+                </div>
+              )}
             </div>
 
             <div className="popup-footer">

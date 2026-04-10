@@ -10,6 +10,7 @@ export const academy: WorldDistrict = {
     description: 'Учебный центр Silicon Hedge. Здесь начинается путь настоящей Элиты.',
     x: 45, y: 55, stability: 100, type: 'hub', tier: 1,
     subNodes: [
+      { id: 'bar_academy_refill', name: 'Буфет «Рефилл»', type: 'bar', description: 'Кампусный автокафе: синт-кофе и охладители между парами.', x: 38, y: 62 },
       { id: 'npc_professor_arkhipov', name: 'Профессор Туранов', type: 'npc', description: 'Ваш наставник в мире Java.', x: 50, y: 50 },
       { id: 'npc_academy_tutor', name: 'Тьютор-бот', type: 'npc', description: 'Помощник по боевой практике.', x: 70, y: 30 },
       { id: 'combat_tutorial_dummy', name: 'Тренировочный Манекен', type: 'combat', description: 'Для отработки теории на практике.', x: 30, y: 70 },

@@ -39,5 +39,9 @@ export function rollLoot(source: LootSource, tier: number, traits: Trait[] = [])
   ]);
 
   const pool = rarityPool(rarity);
+  if (pool.length === 0) {
+    const fallback = ITEM_LIBRARY.find((i) => !i.lootExclude) ?? ITEM_LIBRARY[0];
+    return fallback as GameItem;
+  }
   return pool[randomInt(0, pool.length - 1)];
 }

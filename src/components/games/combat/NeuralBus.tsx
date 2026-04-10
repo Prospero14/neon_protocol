@@ -27,13 +27,15 @@ interface NeuralBusProps {
   aiProgress: number;
   bugPoints: number;
   aiDeadline: number;
+  enemyActions: BugAction[];
+  showQuestTutorial: boolean;
   onExecuteCardOnSlot: (idx: number) => void;
 }
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
   enemy, nextBugAction, lastAiAction, isPlayerTurn, isAiResolving, lastAiImpact, selectedCard, playerProgress, aiProgress,
-  bugPoints, aiDeadline, onExecuteCardOnSlot
+  bugPoints, aiDeadline, onExecuteCardOnSlot, enemyActions, showQuestTutorial
 }) => {
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
@@ -88,6 +90,23 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
         <span className="chip stress">STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
         <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
       </div>
+      <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <span className="chip inject">OPPONENT_ACTIONS:</span>
+        {enemyActions.slice(0, 4).map((a) => (
+          <span key={a.id} className="chip threat" title={a.description}>
+            {a.name} {a.problemType ? `(${problemTypeLabelRu(a.problemType)})` : ''}
+          </span>
+        ))}
+      </div>
+      {showQuestTutorial && (
+        <div className="nb2-ai-impact-strip" style={{ display: 'block', lineHeight: 1.35 }}>
+          <div className="chip inject" style={{ display: 'inline-block', marginBottom: 6 }}>FIRST CONTRACT GUIDE</div>
+          <div>[1] Враг каждый ход выполняет `NEXT_INTENT` сверху: растит THREAT, BUGS и иногда STRESS.</div>
+          <div>[2] Ты в DEVELOPMENT выкладываешь код в шину, чтобы поднять PROJECT до 100%.</div>
+          <div>[3] В VERIFICATION чистишь BUG_ERROR на шине реакциями/защитой, иначе DEPLOYMENT сорвётся.</div>
+          <div>[4] Если THREAT добежит до 100% раньше — противник «релизнется» раньше тебя.</div>
+        </div>
+      )}
 
       {/* ── PIPELINE (CODE EDITOR) ── */}
       <div className="nb2-pipeline-area">

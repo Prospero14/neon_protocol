@@ -114,6 +114,15 @@ function App() {
       let combatDeck = gs.activeDeck;
 
 
+      const trackedCombat = getTrackedQuest(gs.questStates);
+      const trackedCombatDef = trackedCombat ? QUEST_LIBRARY.find(q => q.id === trackedCombat.questId) : undefined;
+      const isQuestCombat = !!(
+        trackedCombatDef &&
+        trackedCombatDef.type === 'combat' &&
+        (!trackedCombatDef.objectiveNodeId || trackedCombatDef.objectiveNodeId === gs.activeBarNode)
+      );
+      const isFirstCombatQuestTutorial = Boolean(trackedCombatDef?.id.startsWith('q_kiddo_first_bits_'));
+
       return (
         <CombatBridge 
           skillMode={effectiveRank} 
@@ -125,12 +134,8 @@ function App() {
           deckCores={gs.deckCores} 
           deckRamMb={gs.deckRamMb} 
           homeDistrictId={gs.homeDistrictId}
-          isQuestCombat={(() => {
-            const tracked = getTrackedQuest(gs.questStates);
-            if (!tracked) return false;
-            const tDef = QUEST_LIBRARY.find(q => q.id === tracked.questId);
-            return !!(tDef && tDef.type === 'combat' && (!tDef.objectiveNodeId || tDef.objectiveNodeId === gs.activeBarNode));
-          })()}
+          isQuestCombat={isQuestCombat}
+          isFirstCombatQuestTutorial={isFirstCombatQuestTutorial}
           onWin={(earned, rank, chain, missionName, updatedDeck) => {
             if (updatedDeck) gs.setActiveDeck(updatedDeck);
             gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);

@@ -22,6 +22,7 @@ interface CombatBridgeProps {
   initialTaskIndex?: number;
   onWin: (bitsEarned: number, taskRank: string, finalChain: string[], missionName: string, updatedDeck?: CombatCard[]) => void;
   isQuestCombat?: boolean;
+  isFirstCombatQuestTutorial?: boolean;
   tier: number;
   deckCores: number;
   deckRamMb: number;
@@ -33,6 +34,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   const missionTz = taskLibrary[initialTaskIndex] ?? taskLibrary[0];
   
   const [showTzModal, setShowTzModal] = useState(false);
+  const [showFirstQuestMemo, setShowFirstQuestMemo] = useState(Boolean(props.isFirstCombatQuestTutorial));
 
   // --- DRAFT STATE ---
   const [showDraft, setShowDraft] = useState(false);
@@ -64,6 +66,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     setShowDraft(false);
     if (pendingWin) props.onWin(pendingWin.bits, pendingWin.rank, pendingWin.chain, pendingWin.name, draftDeck);
   };
+
+  React.useEffect(() => {
+    setShowFirstQuestMemo(Boolean(props.isFirstCombatQuestTutorial));
+  }, [props.isFirstCombatQuestTutorial]);
 
   return (
     <div className={`combat-v2 ${state.stress > 70 ? 'screen-glitch' : ''}`}>
@@ -102,8 +108,27 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         aiProgress={state.aiProgress}
         bugPoints={state.bugPoints}
         aiDeadline={state.aiDeadline}
+        enemyActions={state.enemy?.actions || []}
+        showQuestTutorial={Boolean(props.isFirstCombatQuestTutorial && props.skillMode === 'script-kiddie')}
         onExecuteCardOnSlot={actions.executeCardOnSlot}
       />
+      {showFirstQuestMemo && (
+        <div className="result-overlay victory animate-fade-in" style={{ zIndex: 60 }}>
+          <div className="result-box shadow-green">
+            <div className="result-title green glow-green">ПАМЯТКА: ПЕРВЫЙ КОНТРАКТ</div>
+            <div className="result-stats" style={{ textAlign: 'left' }}>
+              <div className="stat-row">1) Смотри `NEXT_INTENT` — это следующий ход оппонента.</div>
+              <div className="stat-row">2) В `DEVELOPMENT` выкладывай код в шину, цель: `PROJECT 100%`.</div>
+              <div className="stat-row">3) В `VERIFICATION` чисти баги реакциями/защитой.</div>
+              <div className="stat-row">4) `THREAT 100%` = оппонент успел раньше тебя.</div>
+              <div className="stat-row">5) `OC` даёт +1 CPU, но повышает стресс (перегрев).</div>
+            </div>
+            <button className="result-btn green bg-green-90" onClick={() => setShowFirstQuestMemo(false)}>
+              [ ПОНЯЛ, ПОГНАЛИ ]
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── HAND + ACTIONS ── */}
       <HandControls 

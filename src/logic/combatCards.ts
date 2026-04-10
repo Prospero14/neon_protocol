@@ -115,13 +115,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'soft_coffee', name: 'ВЫПИТЬ КОФЕ', type: 'SOFT', grade: 'Script-Kiddo',
     cost: 0, power: 0, integrity: 10,
-    description: 'Восстановление концентрации. Дает +1 Энергию (RAM) на текущий ход.',
+    description: 'Восстановление концентрации. Снимает стресс и добавляет небольшой защитный буфер.',
     language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'soft_ai_ask', name: 'СПРОСИТЬ НЕЙРОСЕТКУ', type: 'SOFT', grade: 'Script-Kiddo',
     cost: 0, power: 15, integrity: 5,
-    description: 'Генерация кода через нейро-подсказку. Наносит урон и раскрывает 1 карту ИИ.',
+    description: 'Нейро-подсказка. Помогает предсказать следующий ход ИИ и режет темп угрозы.',
     language: 'none', tags: ['utility'], phaseConstraint: 'CODING'
   },
   {
@@ -133,13 +133,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'infra_edge_cache', name: 'EDGE_CACHE_BOX', type: 'INFRASTRUCTURE', grade: 'Script-Kiddo',
     cost: 0, power: 0, integrity: 9,
-    description: 'Локальный кэш на краю сети. Стабилизирует первые ходы и снижает риск перегрева.',
+    description: 'Локальный кэш на краю сети. Дает защитный буфер и немного снижает стресс старта.',
     language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_safe_proxy', name: 'SAFE_PROXY_NODE', type: 'INFRASTRUCTURE', grade: 'Script-Kiddo',
     cost: 0, power: 3, integrity: 10,
-    description: 'Прокси-узел для безопасного транзита. Смягчает входящий стресс и помогает держать темп.',
+    description: 'Прокси-узел для безопасного транзита. Сильно повышает mitigation и дополнительно снимает стресс.',
     language: 'none', tags: ['utility'], phaseConstraint: 'PLANNING'
   },
 
@@ -172,7 +172,7 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'soft_focus', name: 'SOFT_FOCUS', type: 'SOFT', grade: 'Junior',
     cost: 1, power: 0, integrity: 20,
-    description: 'Концентрация. Увеличивает множитель прогресса на текущую фазу.',
+    description: 'Концентрация. Дает +1 CPU и небольшой mitigation на ближайший ответ ИИ.',
     tags: ['utility'], phaseConstraint: 'DESIGN'
   },
   {
@@ -343,13 +343,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'infra_actions_ci', name: 'GITHUB_ACTIONS', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 0, integrity: 25,
-    description: 'CI/CD пайплайн. Автоматизирует тесты. Дает +1 Энергию каждый ход в фазе DESIGN.',
+    description: 'CI/CD пайплайн. Сразу дает +1 CPU и небольшой защитный буфер.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_prometheus', name: 'PROMETHEUS_MON', type: 'INFRASTRUCTURE', grade: 'Senior',
     cost: 2, power: 0, integrity: 30,
-    description: 'Мониторинг метрик. Анализирует поведение системы. Раскрывает следующие 2 действия ИИ.',
+    description: 'Мониторинг метрик. Снижает текущие threat/bugs за счет раннего обнаружения аномалий.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
@@ -367,13 +367,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'soft_pair_programming', name: 'PAIR_PROG', type: 'SOFT', grade: 'Junior',
     cost: 0, power: 0, integrity: 20,
-    description: 'Парное программирование. Ускоряет написание кода и снижает риск багов.',
+    description: 'Парное программирование. Ускоряет прогресс проекта и немного чистит баги.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'soft_critical_thinking', name: 'CRIT_THINKING', type: 'SOFT', grade: 'Middle',
     cost: 1, power: 10, integrity: 20,
-    description: 'Критическое мышление. Позволяет перерисовать 2 карты из колоды.',
+    description: 'Критическое мышление. Подкидывает CPU и усиливает контроль в фазе стабилизации.',
     tags: ['utility'], phaseConstraint: 'DESIGN'
   },
   {
@@ -391,7 +391,7 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'infra_docker', name: 'DOCKER_CONTAINER', type: 'INFRASTRUCTURE', grade: 'Junior',
     cost: 1, power: 0, integrity: 30,
-    description: 'Контейнеризация. Увеличивает максимальную Энергию (RAM) на +1.',
+    description: 'Контейнеризация. Увеличивает RAM-лимит на +512MB.',
     tags: ['utility'], phaseConstraint: 'DESIGN'
   },
   {
@@ -403,13 +403,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'infra_cicd', name: 'CICD_PIPELINE', type: 'INFRASTRUCTURE', grade: 'Senior',
     cost: 3, power: 0, integrity: 30,
-    description: 'Автоматическое развертывание. Значительно ускоряет релизы. Дает +1 Energy каждый ход фазы DESIGN.',
+    description: 'Автоматическое развертывание. Моментально расширяет вычислительный лимит: +2 CPU.',
     tags: ['utility'], phaseConstraint: 'DESIGN'
   },
   {
     id: 'infra_redis', name: 'REDIS_CACHE', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 0, integrity: 20,
-    description: 'In-Memory кэширование. Дает мгновенный добор +2 карт в фазе Планирования.',
+    description: 'In-Memory кэширование. Мгновенно добирает 2 карты и слегка разгружает баг-давление.',
     tags: ['utility'], phaseConstraint: 'DESIGN'
   },
   {
@@ -423,13 +423,13 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'status_spaghetti', name: 'SPAGHETTI_CODE', type: 'STATUS', grade: 'Junior',
     cost: 1, power: 0, integrity: 1,
-    description: 'Мусорная карта. Нельзя сыграть на Шину. Потратьте 1 Энергию, чтобы сбросить её из руки.',
+    description: 'Мусорная карта. Нельзя сыграть на Шину. Потратьте 1 CPU, чтобы сбросить её из руки.',
     tags: ['utility'] // No phaseConstraint so it can be drawn anywhere
   },
   {
     id: 'status_deprecated', name: 'DEPRECATED_LIB', type: 'STATUS', grade: 'Middle',
     cost: 2, power: 0, integrity: 1,
-    description: 'Устаревшая зависимость. Занимает место в руке. Сброс стоит целых 2 Энергии.',
+    description: 'Устаревшая зависимость. Занимает место в руке. Сброс стоит целых 2 CPU.',
     tags: ['utility']
   },
   {
@@ -441,73 +441,73 @@ export const CARD_LIBRARY: CombatCard[] = [
   {
     id: 'infra_raid_array', name: 'RAID_ARRAY', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 0, integrity: 40,
-    description: 'Отказоустойчивый массив. Увеличивает максимальную целостность (HP) на 50.',
+    description: 'Отказоустойчивый массив. Резко снижает текущий стресс (-20).',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'soft_buffer_flush', name: 'BUFFER_FLUSH', type: 'SOFT', grade: 'Junior',
     cost: 0, power: 0, integrity: 10,
-    description: 'Сброс буфера: Сбросьте текущую руку и возьмите 3 новые карты.',
+    description: 'Сброс буфера: перезагрузка руки под текущую фазу и разгрузка стресса.',
     tags: ['utility']
   },
   {
     id: 'soft_recursive_logic', name: 'RECURSIVE_THINK', type: 'SOFT', grade: 'Middle',
     cost: 1, power: 5, integrity: 15,
-    description: 'Рекурсивное мышление: +1 карта в руку каждый ход.',
+    description: 'Рекурсивное мышление: добавляет mitigation и дает быстрый прирост прогресса.',
     tags: ['utility']
   },
   {
     id: 'soft_async_request', name: 'ASYNC_AWAIT', type: 'SOFT', grade: 'Junior',
     cost: 0, power: 0, integrity: 10,
-    description: 'Асинхронный вызов: Следующая карта в этом ходу стоит на 1 CPU меньше.',
+    description: 'Асинхронный вызов: расширяет окно CPU на ход и помогает пережить ответ ИИ.',
     tags: ['utility']
   },
   {
     id: 'infra_k8s_cluster', name: 'K8S_CLUSTER', type: 'INFRASTRUCTURE', grade: 'Senior',
     cost: 3, power: 0, integrity: 60,
-    description: 'Kubernetes Cluster: +3 CPU и +4GB RAM. Ультимативная мощность.',
+    description: 'Kubernetes Cluster: +3 CPU и +4GB RAM. Ультимативный разгон инфраструктуры.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_cdn_edge', name: 'CDN_EDGE', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 10, integrity: 30,
-    description: 'CDN Edge: Распределенная сеть. Снижает стоимость NETWORK-карт на 1.',
+    description: 'CDN Edge: распределенная сеть. Снижает текущую угрозу и добавляет защитный буфер.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_log_aggregator', name: 'LOG_STASH', type: 'INFRASTRUCTURE', grade: 'Junior',
     cost: 1, power: 0, integrity: 20,
-    description: 'Сбор логов: +512MB RAM и добор +1 карты при разыгрывании.',
+    description: 'Сбор логов: +512MB RAM и мгновенный добор +1 карты.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_vpc_network', name: 'VPC_PRIVATE', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 0, integrity: 40,
-    description: 'Virtual Private Cloud: +1 CPU и +10 к базовой защите системы.',
+    description: 'Virtual Private Cloud: +1 CPU и сильный защитный буфер (+mitigation).',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'infra_db_cluster', name: 'DB_REPLICAS', type: 'INFRASTRUCTURE', grade: 'Senior',
     cost: 3, power: 0, integrity: 50,
-    description: 'Кластер БД: +3GB RAM. Позволяет перебрасывать ошибки в лог без урона.',
+    description: 'Кластер БД: +3GB RAM и заметное снижение стресса за счет репликации.',
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
     id: 'soft_throw_ex', name: 'THROW_EX', type: 'SOFT', grade: 'Middle',
     cost: 1, power: 25, integrity: 5,
-    description: 'throw new Exception("MEOW!"); Выбрасывает прерывание и наносит мощный урон.',
+    description: 'Контролируемый сброс: режет угрозу и баги, но слегка повышает стресс.',
     tags: ['base-java'], phaseConstraint: 'CODING'
   },
   {
     id: 'soft_finally', name: 'FINALLY_BLOCK', type: 'SOFT', grade: 'Middle',
     cost: 1, power: 0, integrity: 30,
-    description: 'finally {…}. Гарантирует завершение процесса вне зависимости от багов.',
+    description: 'FINALLY-блок: усиливает защитный буфер и снимает часть стресса.',
     tags: ['base-java'], phaseConstraint: 'CODING'
   },
   {
     id: 'reward_divine_debug', name: 'DIVINE_DEBUG', type: 'SOFT', grade: 'Senior',
     cost: 1, power: 0, integrity: 50,
-    description: 'Благословение Никсанны. Мгновенно восстанавливает 30 HP и очищает все баги в руке.',
+    description: 'Глубокий дебаг. Сильно снимает стресс, чистит баги в руке и стабилизирует бой.',
     tags: ['utility'], phaseConstraint: 'TESTING'
   },
   {

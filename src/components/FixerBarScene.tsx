@@ -134,7 +134,16 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     setIsTyping(true);
   }, [locationId, tree.startNodeId, npcPresenceMap, dayPhase]);
 
-  const node: DialogueNode = tree.nodes[currentNodeId] || tree.nodes[tree.startNodeId];
+  const node: DialogueNode = (() => {
+    const resolved = tree.nodes[currentNodeId] || tree.nodes[tree.startNodeId];
+    if (resolved) return resolved;
+    return {
+      id: '__dialogue_fallback',
+      speaker: 'SYSTEM',
+      text: '[СБОЙ_ПРОТОКОЛА] Узел диалога не найден. Закройте сессию и откройте локацию снова.',
+      options: [{ text: '[ РАЗОРВАТЬ СОЕДИНЕНИЕ ]', nextId: 'LEAVE' }],
+    };
+  })();
 
   const visibleOptions = node.options.filter(opt => {
     if (opt.requireTrait && !playerTraits.some((t: Trait) => t.id === opt.requireTrait)) return false;

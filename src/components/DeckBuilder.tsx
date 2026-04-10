@@ -63,7 +63,14 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     
     // Script-Kiddo Gating: Only show entry-level modules until profession is unlocked
     if (!classUnlocked) {
-      filtered = filtered.filter(c => c.grade === 'Script-Kiddo' || c.type === 'SCRIPT');
+      filtered = filtered.filter(c =>
+        c.grade === 'Script-Kiddo' ||
+        c.type === 'SCRIPT' ||
+        c.type === 'REACTION' ||
+        c.type === 'DEFENSIVE' ||
+        c.type === 'SOFT' ||
+        c.type === 'INFRASTRUCTURE'
+      );
     }
     
     filtered = filtered.filter((c) => cardMatchesJavaStack(c, opts));

@@ -31,6 +31,7 @@ interface UseCombatLogicProps {
   deckCores: number;
   deckRamMb: number;
   isQuestCombat?: boolean;
+  isFirstCombatQuestTutorial?: boolean;
 }
 
 interface AiImpactSummary {
@@ -49,7 +50,8 @@ export function useCombatLogic({
   tier,
   deckCores,
   deckRamMb,
-  isQuestCombat
+  isQuestCombat,
+  isFirstCombatQuestTutorial
 }: UseCombatLogicProps) {
   const START_HAND_SIZE = 6;
 
@@ -195,6 +197,12 @@ export function useCombatLogic({
     addLog('[SYSTEM] BOOT_SEQUENCE... [OK]');
     addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
     addLog(`[SYSTEM] PHASE_${currentPhase}_ACTIVE.`);
+    if (isFirstCombatQuestTutorial && skillMode === 'script-kiddie') {
+      addLog('[TUTORIAL] Цель: PROJECT 100% до THREAT 100%.');
+      addLog('[TUTORIAL] DEVELOPMENT: выкладывай код в шину и собирай прогресс.');
+      addLog('[TUTORIAL] VERIFICATION: чисти BUG_ERROR реакциями/защитой.');
+      addLog('[TUTORIAL] Смотри NEXT_INTENT: это следующее действие оппонента.');
+    }
 
     if (playerTraits.some(t => t.id === 'hobby_comp_coding')) setRamMaxMb(prev => prev + 512);
     if (playerTraits.some(t => t.id === 'hardware_reclaimer')) setRamMaxMb(prev => prev + 512);
@@ -353,6 +361,64 @@ export function useCombatLogic({
         setSoftSlots(next);
         setCpu(prev => prev - cost);
         switch (card.id) {
+          case 'soft_coffee':
+            setStress((s) => Math.max(0, s - 8));
+            setMitigationBuffer((b) => Math.min(30, b + 3));
+            addLog('[SOFT] COFFEE: -8 stress, +3 mitigation');
+            break;
+          case 'soft_ai_ask':
+            setAiProgress((p) => Math.max(0, p - 4));
+            setBugPoints((p) => Math.max(0, p - 2));
+            addLog('[SOFT] AI_ASK: threat/bugs reduced, next intent clearer');
+            break;
+          case 'soft_focus':
+            setCpu((c) => Math.min(cpuMax + 1, c + 1));
+            setMitigationBuffer((b) => Math.min(30, b + 4));
+            addLog('[SOFT] FOCUS: +1 CPU, +4 mitigation');
+            break;
+          case 'soft_pair_programming':
+            setPlayerProgress((p) => Math.min(100, p + 8));
+            setBugPoints((p) => Math.max(0, p - 2));
+            addLog('[SOFT] PAIR_PROG: +8 project, -2 bugs');
+            break;
+          case 'soft_critical_thinking':
+            setCpu((c) => Math.min(cpuMax + 1, c + 1));
+            setMitigationBuffer((b) => Math.min(30, b + 3));
+            addLog('[SOFT] CRIT_THINKING: +1 CPU, +3 mitigation');
+            break;
+          case 'soft_buffer_flush':
+            setHand([]);
+            drawCards(3);
+            setStress((s) => Math.max(0, s - 4));
+            addLog('[SOFT] BUFFER_FLUSH: redraw 3, -4 stress');
+            break;
+          case 'soft_recursive_logic':
+            setMitigationBuffer((b) => Math.min(30, b + 6));
+            setPlayerProgress((p) => Math.min(100, p + 5));
+            addLog('[SOFT] RECURSIVE_THINK: +6 mitigation, +5 project');
+            break;
+          case 'soft_async_request':
+            setCpu((c) => Math.min(cpuMax + 2, c + 1));
+            setMitigationBuffer((b) => Math.min(30, b + 2));
+            addLog('[SOFT] ASYNC_AWAIT: +1 CPU, +2 mitigation');
+            break;
+          case 'soft_throw_ex':
+            setAiProgress((p) => Math.max(0, p - 8));
+            setBugPoints((p) => Math.max(0, p - 5));
+            setStress((s) => Math.min(100, s + 3));
+            addLog('[SOFT] THROW_EX: threat/bugs cut, +3 stress');
+            break;
+          case 'soft_finally':
+            setMitigationBuffer((b) => Math.min(30, b + 10));
+            setStress((s) => Math.max(0, s - 6));
+            addLog('[SOFT] FINALLY_BLOCK: +10 mitigation, -6 stress');
+            break;
+          case 'reward_divine_debug':
+            setStress((s) => Math.max(0, s - 30));
+            setBugPoints(0);
+            setHand((h) => h.filter((x) => x.type !== 'STATUS'));
+            addLog('[SOFT] DIVINE_DEBUG: -30 stress, bugs reset, status hand cleaned');
+            break;
           case 'soft_tactical_breath':
             setStress((s) => Math.max(0, s - 10));
             addLog('[SOFT] TACTICAL_BREATH: -10 stress');
@@ -395,7 +461,30 @@ export function useCombatLogic({
     switch (card.id) {
       case 'infra_dns_resolver': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); break;
       case 'infra_lb_nginx': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
+      case 'infra_actions_ci':
+        setCpuMax(prev => prev + 1);
+        setCpu(cur => cur + 1);
+        setMitigationBuffer((b) => Math.min(30, b + 2));
+        break;
+      case 'infra_prometheus':
+        setAiProgress((p) => Math.max(0, p - 5));
+        setBugPoints((p) => Math.max(0, p - 2));
+        break;
       case 'infra_basic_pod': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
+      case 'infra_h_scaling':
+        setCpuMax(prev => prev + 1);
+        setCpu(cur => cur + 1);
+        setRamMaxMb(prev => prev + 1024);
+        setStress((s) => Math.min(100, s + 2));
+        break;
+      case 'infra_edge_cache':
+        setMitigationBuffer((b) => Math.min(30, b + 4));
+        setStress((s) => Math.max(0, s - 3));
+        break;
+      case 'infra_safe_proxy':
+        setMitigationBuffer((b) => Math.min(30, b + 6));
+        setStress((s) => Math.max(0, s - 4));
+        break;
       case 'infra_mesh_relay': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
       case 'infra_orbital_uplink': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 2048); break;
       case 'infra_quarantine_vm': setStress(prev => Math.max(0, prev - 8)); setRamMaxMb(prev => prev + 512); break;
@@ -406,9 +495,39 @@ export function useCombatLogic({
         break;
       case 'infra_docker': setRamMaxMb(prev => prev + 512); break;
       case 'infra_old_hw': setRamMaxMb(prev => prev + 512); break;
+      case 'infra_redis':
+        drawCards(2);
+        setBugPoints((p) => Math.max(0, p - 1));
+        break;
+      case 'infra_cicd':
+        setCpuMax(prev => prev + 2);
+        setCpu(cur => cur + 2);
+        break;
       case 'infra_s3_bucket': setRamMaxMb(prev => prev + 1536); break;
       case 'infra_raid_array': setStress(prev => Math.max(0, prev - 20)); break;
       case 'infra_postgres': setCpuMax(prev => prev + 2); setCpu(cur => cur + 2); break;
+      case 'infra_k8s_cluster':
+        setCpuMax(prev => prev + 3);
+        setCpu(cur => cur + 3);
+        setRamMaxMb(prev => prev + 4096);
+        break;
+      case 'infra_cdn_edge':
+        setAiProgress((p) => Math.max(0, p - 4));
+        setMitigationBuffer((b) => Math.min(30, b + 3));
+        break;
+      case 'infra_log_aggregator':
+        setRamMaxMb(prev => prev + 512);
+        drawCards(1);
+        break;
+      case 'infra_vpc_network':
+        setCpuMax(prev => prev + 1);
+        setCpu(cur => cur + 1);
+        setMitigationBuffer((b) => Math.min(30, b + 10));
+        break;
+      case 'infra_db_cluster':
+        setRamMaxMb(prev => prev + 3072);
+        setStress((s) => Math.max(0, s - 6));
+        break;
       default: setCpuMax(prev => prev + 1); setCpu(cur => cur + 1);
     }
   };
@@ -690,7 +809,7 @@ export function useCombatLogic({
       addLog(`[HINT] ${problemTypeLabelRu(nextBugAction.problemType)} — grep/ping/auth, смотри тип.`);
     }
     if (mitigationBuffer > 0) setMitigationBuffer((b) => Math.max(0, b - 2));
-    addLog(`[AI] ${nextBugAction.name}`);
+    addLog(`[AI] ${nextBugAction.name} | threat +${threatDelta}% | bugs +${bugDelta}${stressDelta > 0 ? ` | stress +${stressDelta}` : ''}`);
     setLastAiAction(nextBugAction);
     setLastAiImpact({
       stressDelta,

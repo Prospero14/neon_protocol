@@ -59,7 +59,25 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
   }, [pack]);
 
   const refBook = pack === 'spring' ? SPRING_JAVA_REFERENCE : JAVA_REFERENCE;
-  const selectedEntry = selectedEntryId ? refBook[selectedEntryId] : null;
+  const getEntryById = React.useCallback((id: string | null) => {
+    if (!id) return null;
+    const fromBook = refBook[id];
+    if (fromBook) return fromBook;
+    const card = [...CARD_LIBRARY, ...SPRING_CARD_LIBRARY].find((c) => c.id === id);
+    if (!card) return null;
+    return {
+      title: card.name,
+      concept: `${card.type} / ${card.grade}`,
+      explanation: card.description,
+      bullets: [
+        `Тип: ${card.type}`,
+        `Стоимость: ${card.cost} CPU`,
+        `Фаза: ${card.phaseConstraint || 'ANY'}`,
+      ],
+      example: `// ${card.id}\n// Описание: ${card.description}`,
+    };
+  }, [refBook]);
+  const selectedEntry = getEntryById(selectedEntryId);
 
   const runSandbox = () => {
     if (sandboxCards.length === 0) {
@@ -172,6 +190,20 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
               <ul className="mech-list">
                 <li><strong>Дедлайн (0):</strong> При обнулении счетчика активируется <code>TECH_DEBT</code>: стоимость всех карт в CPU возрастает на <strong>+1</strong>.</li>
                 <li><strong>Баги:</strong> Ошибки (ERRORS) накапливаются от действий противника и замедляют ваш прогресс.</li>
+              </ul>
+            </section>
+
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Zap size={20} color="var(--neon-cyan)" />
+                <h4 className="section-label">4. OVERHEAT (ПЕРЕГРЕВ)</h4>
+              </div>
+              <p>Перегрев в бою = рост <strong>STRESS</strong>. Это не отдельная скрытая шкала, а прямое давление на нервную систему.</p>
+              <ul className="mech-list">
+                <li><strong>Что повышает стресс:</strong> атаки ИИ, некоторые агрессивные эффекты (например Overclock/Street Fusion), затяжные неэффективные ходы.</li>
+                <li><strong>Что снижает стресс:</strong> defensive/reaction-инструменты, часть soft/infra-карт, грамотный контрплей по типу сбоя.</li>
+                <li><strong>Критическая зона:</strong> при <strong>STRESS = 100%</strong> бой завершается аварией (SYSTEM_CRASH).</li>
+                <li><strong>Практика:</strong> OC включайте как рывок в нужный ход, а не по кулдауну — это ресурс за цену перегрева.</li>
               </ul>
             </section>
           </div>
@@ -392,7 +424,7 @@ spec: { containers: [{ image: neon-app:latest }] }`}</pre>
             <div className="entries-scroll-list">
               {cardLibrary.map((card: any) => {
                 const isDiscovered = discoveredCardIds.has(card.id);
-                const ref = refBook[card.id];
+                const ref = getEntryById(card.id);
                 if (!ref) return null;
 
                 return (

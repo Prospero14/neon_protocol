@@ -270,7 +270,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           <p className="filter-warning mono-text">Включите «ванильный Java» или хотя бы одну библиотеку.</p>
         )}
         {activeFilterSummary.length > 0 && (
-          <div className="deck-filter-active-bar mono-text" title="Все включённые фильтры (сумма условий для списка карт).">
+          <div className="deck-filter-active-bar mono-text" title="Включённые фильтры объединяются: показываются карты, подходящие под любой из них (Shell + категории — вместе).">
             <span className="deck-filter-active-label">ВКЛ:</span>
             <span>{activeFilterSummary.join(' · ')}</span>
           </div>

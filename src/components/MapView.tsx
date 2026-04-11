@@ -71,7 +71,7 @@ const MapView: React.FC<MapViewProps> = ({
 
   const renderSubNodes = React.useMemo(() => {
     const source = activeDistrict.subNodes || [];
-    const minGap = 9.2;
+    const minGap = 11;
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
     const hash = (s: string) => {
       let h = 2166136261;
@@ -98,7 +98,6 @@ const MapView: React.FC<MapViewProps> = ({
     type Placed = (typeof source)[number] & {
       rx: number;
       ry: number;
-      labelPlacement: 'above' | 'below';
       nameLines: string[];
       nameFontSize: number;
       labelGap: number;
@@ -128,17 +127,16 @@ const MapView: React.FC<MapViewProps> = ({
         ry = clamp(ry, 5, 95);
         if (!collided) break;
       }
-      const nameLines = splitMapLabel(sn.name || '', 18);
+      const nameLines = splitMapLabel(sn.name || '', 16);
       const longName = (sn.name || '').length > 22;
-      const nameFontSize = longName ? 0.72 : 0.88;
-      const labelPlacement: 'above' | 'below' = seed % 3 === 0 ? 'above' : 'below';
-      const labelGap = 7.5 + (seed % 6) * 0.35;
+      const nameFontSize = longName ? 0.68 : 0.78;
+      /** Всегда под узлом: стабильная привязка, без наслоения на круг. */
+      const labelGap = 11.2 + (seed % 5) * 0.22;
 
       placed.push({
         ...sn,
         rx,
         ry,
-        labelPlacement,
         nameLines,
         nameFontSize,
         labelGap,
@@ -235,6 +233,9 @@ const MapView: React.FC<MapViewProps> = ({
                    <path d={activeDistrict.boundary} fill="white" />
                 </mask>
               )}
+              <filter id="mapPillShadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0.25" stdDeviation="0.45" floodColor="#000" floodOpacity="0.75" />
+              </filter>
             </defs>
             <circle cx="50" cy="50" r="50" fill="url(#radarGlow)" />
             
@@ -292,7 +293,7 @@ const MapView: React.FC<MapViewProps> = ({
                   )}
 
                   {/* Grid Numbers Layer */}
-                  <g className="blueprint-grid-labels" opacity="0.3" fontSize="1.0" fill="var(--neon-cyan)" style={{ fontFamily: 'monospace', fontWeight: 300 }}>
+                  <g className="blueprint-grid-labels" opacity="0.18" fontSize="1.0" fill="var(--neon-cyan)" style={{ fontFamily: 'monospace', fontWeight: 300 }}>
                     {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(val => (
                       <g key={val}>
                         <text x={val} y="3" textAnchor="middle">{val}</text>
@@ -315,7 +316,7 @@ const MapView: React.FC<MapViewProps> = ({
                     
                     {/* Coordinate Markers at Corners */}
                     {activeDistrict.boundary && (
-                      <g className="blueprint-coords" fontSize="0.7" fill="var(--neon-cyan)" opacity="0.5" style={{fontFamily: 'monospace'}}>
+                      <g className="blueprint-coords" fontSize="0.55" fill="var(--neon-cyan)" opacity="0.22" style={{fontFamily: 'monospace'}}>
                          <text x="36" y="8">[X:35.00 Y:05.12]</text>
                          <text x="86" y="8">[X:85.00 Y:05.00]</text>
                          <text x="94" y="32">[X:95.12 Y:30.44]</text>
@@ -332,11 +333,8 @@ const MapView: React.FC<MapViewProps> = ({
                       if (isLabel) {
                          const coords = f.path.replace('M ', '').split(' ');
                          return (
-                           <g key={i} transform={`translate(${coords[0]}, ${coords[1]})`} opacity="0.3">
-                              <circle r="0.5" fill="var(--neon-cyan)" />
-                              <text x="1" y="0.3" fontSize="0.6" fill="var(--neon-cyan)" style={{fontFamily: 'monospace'}}>
-                                {i % 2 === 0 ? 'STATUS: ACTIVE' : 'SECTOR_ID: 0x4F'}
-                              </text>
+                           <g key={i} transform={`translate(${coords[0]}, ${coords[1]})`} opacity="0.1" aria-hidden>
+                              <circle r="0.35" fill="var(--neon-cyan)" />
                            </g>
                          );
                       }
@@ -377,81 +375,76 @@ const MapView: React.FC<MapViewProps> = ({
                   <g className="blueprint-nodes-layer">
                     {renderSubNodes.map((sn) => {
                        const isSelected = selectedSubNodeId === sn.id;
-                       const fillMain = isSelected ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.82)';
                        const fillType = NODE_COLORS[sn.type] || '#889';
-                       const lineStep = 1.05;
-                       const belowY = sn.labelGap;
-                       const aboveBlock = sn.labelGap + 3.4 + sn.nameLines.length * lineStep;
-                       const labelTransform =
-                         sn.labelPlacement === 'below'
-                           ? `translate(${sn.rx}, ${sn.ry + belowY})`
-                           : `translate(${sn.rx}, ${sn.ry - aboveBlock})`;
-                       const txtStroke = { stroke: '#020508', strokeWidth: 0.12, paintOrder: 'stroke fill' as const };
+                       const tagColor = isSelected ? 'var(--neon-cyan)' : fillType;
+                       const lineStep = 1.04;
+                       const padTop = 0.5;
+                       const padBot = 0.44;
+                       const firstY = padTop + sn.nameFontSize * 0.9;
+                       const lastNameY = firstY + Math.max(0, sn.nameLines.length - 1) * lineStep;
+                       const typeY = lastNameY + 0.92;
+                       const longestLine = Math.max(
+                         sn.nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
+                         sn.type.length + 2
+                       );
+                       const bw = Math.min(54, 2.6 + longestLine * (sn.nameFontSize * 0.5));
+                       const bh = typeY + 0.38 + padBot;
+                       const labelTransform = `translate(${sn.rx}, ${sn.ry + sn.labelGap})`;
+                       const pillFill = isSelected ? 'rgba(0, 28, 42, 0.94)' : 'rgba(2, 10, 18, 0.92)';
+                       const pillStroke = isSelected ? 'rgba(0, 212, 255, 0.45)' : 'rgba(0, 180, 220, 0.22)';
+                       const nameFill = isSelected ? '#b8f4ff' : '#e8f2ff';
+                       const txtStroke = { stroke: '#030810', strokeWidth: 0.08, paintOrder: 'stroke fill' as const };
                        return (
                         <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
                           <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
-                          <circle cx={sn.rx} cy={sn.ry} r="0.8" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
-                          <circle cx={sn.rx} cy={sn.ry} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
+                          <circle cx={sn.rx} cy={sn.ry} r="0.85" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
+                          <circle
+                            cx={sn.rx}
+                            cy={sn.ry}
+                            r="1.35"
+                            fill="none"
+                            stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]}
+                            strokeWidth="0.04"
+                            opacity={isSelected ? 0.55 : 0.28}
+                          />
                           
-                          <g transform={labelTransform}>
-                            {sn.labelPlacement === 'below' ? (
-                              <>
-                                <text y="0.35" fontSize="0.48" fill={fillType} textAnchor="middle" style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '1px' }} {...txtStroke}>
-                                  {sn.type}
-                                </text>
-                                {sn.nameLines.map((line, li) => (
-                                  <text
-                                    key={li}
-                                    y={0.95 + li * lineStep}
-                                    fontSize={sn.nameFontSize}
-                                    fill={fillMain}
-                                    textAnchor="middle"
-                                    style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.35px' }}
-                                    {...txtStroke}
-                                  >
-                                    {line}
-                                  </text>
-                                ))}
-                              </>
-                            ) : (
-                              <>
-                                {sn.nameLines.map((line, li) => (
-                                  <text
-                                    key={li}
-                                    y={0.35 + li * lineStep}
-                                    fontSize={sn.nameFontSize}
-                                    fill={fillMain}
-                                    textAnchor="middle"
-                                    style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.35px' }}
-                                    {...txtStroke}
-                                  >
-                                    {line}
-                                  </text>
-                                ))}
-                                <text
-                                  y={0.45 + sn.nameLines.length * lineStep}
-                                  fontSize="0.45"
-                                  fill={fillType}
-                                  textAnchor="middle"
-                                  style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '1px' }}
-                                  {...txtStroke}
-                                >
-                                  {sn.type}
-                                </text>
-                              </>
-                            )}
-                            {isSelected && (
+                          <g transform={labelTransform} filter="url(#mapPillShadow)" style={{ pointerEvents: 'none' }}>
+                            <rect
+                              x={-bw / 2}
+                              y="0"
+                              width={bw}
+                              height={bh}
+                              rx="0.75"
+                              ry="0.75"
+                              fill={pillFill}
+                              stroke={pillStroke}
+                              strokeWidth="0.06"
+                            />
+                            {sn.nameLines.map((line, li) => (
                               <text
-                                y={sn.labelPlacement === 'below' ? 0.95 + sn.nameLines.length * lineStep + 0.55 : 0.45 + sn.nameLines.length * lineStep + 0.65}
-                                fontSize="0.45"
-                                fill="var(--neon-cyan)"
+                                key={li}
+                                x="0"
+                                y={firstY + li * lineStep}
+                                fontSize={sn.nameFontSize}
+                                fill={nameFill}
                                 textAnchor="middle"
-                                style={{ fontFamily: 'monospace', opacity: 0.85 }}
+                                style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.2px' }}
                                 {...txtStroke}
                               >
-                                // LOCK
+                                {line}
                               </text>
-                            )}
+                            ))}
+                            <text
+                              x="0"
+                              y={typeY}
+                              fontSize="0.38"
+                              fill={tagColor}
+                              textAnchor="middle"
+                              style={{ fontFamily: 'monospace', fontWeight: 900, letterSpacing: '1.2px' }}
+                              {...txtStroke}
+                            >
+                              {sn.type}
+                            </text>
                           </g>
                         </g>
                        );

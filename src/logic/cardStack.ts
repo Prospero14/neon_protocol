@@ -41,10 +41,10 @@ export function cardMatchesJavaStack(
   // --- ADDITIVE FILTERING (OR) ---
   const anyCatActive = opts.enabledCats.size > 0;
 
-  // 1. Category-specific override: category chips have priority over language chips.
-  //    Keep one explicit exception: Shell mode should never expose INFRA cards.
+  // Пока включена хотя бы одна категория: карта проходит, если совпадает с ЛЮБЫМ включённым чипом
+  // (инфра, софт, контр) и/или с выбранным стеком (Shell показывает script-карты вместе с категориями).
   if (anyCatActive) {
-    if (opts.enabledCats.has('infra') && isInfra && opts.selectedLanguage !== 'script') return true;
+    if (opts.enabledCats.has('infra') && isInfra) return true;
     if (opts.enabledCats.has('soft') && isSoft) return true;
     if (opts.enabledCats.has('tests') && isTest) return true;
     if (opts.enabledCats.has('syntax') && isSyntax) {
@@ -52,6 +52,7 @@ export function cardMatchesJavaStack(
       if (opts.selectedLanguage === 'script') return isScript;
       return true;
     }
+    if (opts.selectedLanguage === 'script' && isScript) return true;
     return false;
   }
 

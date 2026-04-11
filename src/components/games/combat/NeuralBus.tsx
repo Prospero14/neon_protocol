@@ -84,31 +84,63 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
           ))}
         </div>
       </div>
-      <div className={`nb2-ai-banner ${!isPlayerTurn || isAiResolving ? 'live' : ''}`}>
-        {!isPlayerTurn && nextBugAction ? `AI EXECUTING: ${nextBugAction.name}` : `LAST AI ACTION: ${lastAiAction?.name || '—'}`}
-      </div>
-      <div className="nb2-ai-impact-strip">
-        <span className={`chip threat ${isThreatSpike ? 'flash-threat' : ''}`}>THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
-        <span className={`chip bug ${isBugSpike ? 'flash-bug' : ''}`}>BUG +{lastAiImpact?.bugDelta ?? 0}</span>
-        <span className={`chip stress ${isStressSpike ? 'flash-stress' : ''}`}>STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
-        <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
-      </div>
-      <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <span className="chip inject">OPPONENT_ACTIONS:</span>
-        {enemyActions.slice(0, 4).map((a) => (
-          <span key={a.id} className="chip threat" title={a.description}>
-            {a.name} {a.problemType ? `(${problemTypeLabelRu(a.problemType)})` : ''}
-          </span>
-        ))}
-      </div>
-      {showQuestTutorial && (
-        <div className="nb2-ai-impact-strip" style={{ gap: 8, flexWrap: 'nowrap', overflow: 'hidden' }}>
-          <span className="chip inject">HINT:</span>
-          <span className="chip bug" title="Короткая подсказка по первому бою">
-            NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR реакциями/дефом · THREAT 100% = провал темпа
-          </span>
+
+      {/* ── PROGRESS: сразу под оппонентом (основные метрики) ── */}
+      <div className="nb2-progress-row nb2-progress-row--under-enemy">
+        <div className="nb2-prog-item">
+          <span className="nb2-prog-label">PROJECT</span>
+          <div className="nb2-prog-track">
+            <div className="nb2-prog-fill cyan" style={{ width: `${playerProgress}%` }} />
+          </div>
+          <span className="nb2-prog-pct" style={{ color: '#00d4ff' }}>{playerProgress}%</span>
         </div>
-      )}
+        <div className="nb2-prog-item">
+          <span className="nb2-prog-label">THREAT</span>
+          <div className="nb2-prog-track">
+            <div className="nb2-prog-fill" style={{ width: `${aiProgress}%`, background: threatColor }} />
+          </div>
+          <span className="nb2-prog-pct" style={{ color: threatColor }}>{aiProgress}%</span>
+        </div>
+        <div className="nb2-prog-stat">
+          <span>DEADLINE <strong>{aiDeadline}</strong></span>
+        </div>
+        <div className="nb2-prog-stat">
+          <span>BUGS <strong className={bugPoints > 0 ? 'red' : ''}>{bugPoints}</strong></span>
+        </div>
+      </div>
+
+      <div className="nb2-ai-status-block">
+        <div className={`nb2-ai-banner ${!isPlayerTurn || isAiResolving ? 'live' : ''}`}>
+          {!isPlayerTurn && nextBugAction ? `AI EXECUTING: ${nextBugAction.name}` : `LAST AI ACTION: ${lastAiAction?.name || '—'}`}
+        </div>
+        <div className="nb2-ai-impact-strip">
+          <span className="chip inject mono-text" title="Дельты последнего хода оппонента">
+            ПОСЛЕДНИЙ ХОД:
+          </span>
+          <span className={`chip threat ${isThreatSpike ? 'flash-threat' : ''}`}>THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
+          <span className={`chip bug ${isBugSpike ? 'flash-bug' : ''}`}>BUG +{lastAiImpact?.bugDelta ?? 0}</span>
+          <span className={`chip stress ${isStressSpike ? 'flash-stress' : ''}`}>STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
+          <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
+        </div>
+        <div className="nb2-ai-impact-strip nb2-opponent-deck-strip">
+          <span className="chip inject" title="Возможные карты оппонента в этой сессии">
+            КОЛОДА ОППОНЕНТА:
+          </span>
+          {enemyActions.slice(0, 4).map((a) => (
+            <span key={a.id} className="chip threat" title={a.description}>
+              {a.name} {a.problemType ? `(${problemTypeLabelRu(a.problemType)})` : ''}
+            </span>
+          ))}
+        </div>
+        {showQuestTutorial && (
+          <div className="nb2-ai-impact-strip nb2-hint-strip">
+            <span className="chip inject">HINT:</span>
+            <span className="chip bug" title="Короткая подсказка по первому бою">
+              NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR реакциями/дефом · THREAT 100% = провал темпа
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* ── PIPELINE (CODE EDITOR) ── */}
       <div className="nb2-pipeline-area">
@@ -200,30 +232,6 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* ── PROGRESS BARS (inline) ── */}
-      <div className="nb2-progress-row">
-        <div className="nb2-prog-item">
-          <span className="nb2-prog-label">PROJECT</span>
-          <div className="nb2-prog-track">
-            <div className="nb2-prog-fill cyan" style={{ width: `${playerProgress}%` }} />
-          </div>
-          <span className="nb2-prog-pct" style={{ color: '#00d4ff' }}>{playerProgress}%</span>
-        </div>
-        <div className="nb2-prog-item">
-          <span className="nb2-prog-label">THREAT</span>
-          <div className="nb2-prog-track">
-            <div className="nb2-prog-fill" style={{ width: `${aiProgress}%`, background: threatColor }} />
-          </div>
-          <span className="nb2-prog-pct" style={{ color: threatColor }}>{aiProgress}%</span>
-        </div>
-        <div className="nb2-prog-stat">
-          <span>DEADLINE <strong>{aiDeadline}</strong></span>
-        </div>
-        <div className="nb2-prog-stat">
-          <span>BUGS <strong className={bugPoints > 0 ? 'red' : ''}>{bugPoints}</strong></span>
-        </div>
       </div>
     </main>
   );

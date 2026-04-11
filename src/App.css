@@ -684,6 +684,11 @@ body, html, #root {
 }
 .view-container.fullscreen {
   padding: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  flex: 1 1 auto;
 }
 
 /* ═══ GAME NAV BAR ═══ */

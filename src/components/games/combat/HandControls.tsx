@@ -34,15 +34,26 @@ const HandControls: React.FC<HandControlsProps> = ({
   const isSupply = currentPhase === 'ARCHITECTURE';
   const isStabilize = currentPhase === 'VERIFICATION';
 
+  const tabsTitle =
+    isSupply
+      ? 'Архитектура: дро карт INFRA, расклад по слотам, затем COMPILE / NEXT.'
+      : isCodePuzzle
+        ? 'Разработка: код из палитры и скриптов в шину, без случайного дро.'
+        : isStabilize
+          ? 'Верификация: реакции и защита против багов на шине.'
+          : currentPhase === 'DEPLOYMENT'
+            ? 'Финальная проверка перед деплоем.'
+            : '';
+
   return (
     <div className="hc2">
       {/* ── TAB BAR ── */}
-      <div className="hc2-tabs">
+      <div className="hc2-tabs" title={tabsTitle}>
         <span className="hc2-label">
-          {isSupply && 'SUPPLY_DRAW'}
-          {isCodePuzzle && 'CODE_PUZZLE'}
-          {isStabilize && 'STABILIZE_DRAW'}
-          {currentPhase === 'DEPLOYMENT' && 'DEPLOY'}
+          {isSupply && 'АРХИТЕКТУРА · INFRA'}
+          {isCodePuzzle && 'РАЗРАБОТКА · КОД'}
+          {isStabilize && 'ВЕРИФИКАЦИЯ · СТАБ'}
+          {currentPhase === 'DEPLOYMENT' && 'ДЕПЛОЙ'}
         </span>
         <span className="hc2-phase-tag">[{currentPhase}]</span>
         {!isCodePuzzle && currentPhase !== 'DEPLOYMENT' && (

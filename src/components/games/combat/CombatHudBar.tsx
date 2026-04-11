@@ -10,6 +10,11 @@ interface CombatHudBarProps {
   cpuMax: number;
   ramMaxMb: number;
   lastLog: string;
+  /** Явное имя последнего завершённого действия ИИ (для строки LAST / NEXT). */
+  lastAiActionName?: string | null;
+  /** Следующее намерение ИИ (пока ход ИИ). */
+  nextIntentName?: string | null;
+  isPlayerTurn?: boolean;
   tzName: string;
   playerProgress: number;
   aiProgress: number;
@@ -17,9 +22,15 @@ interface CombatHudBarProps {
 }
 
 const CombatHudBar: React.FC<CombatHudBarProps> = ({
-  currentPhase, stress, cpu, cpuMax, ramMaxMb, lastLog, tzName,
+  currentPhase, stress, cpu, cpuMax, ramMaxMb, lastLog, lastAiActionName, nextIntentName, isPlayerTurn = true, tzName,
   playerProgress, aiProgress, onShowTzModal
 }) => {
+  const hudPrimaryLine =
+    !isPlayerTurn && nextIntentName
+      ? `NEXT: ${nextIntentName}`
+      : lastAiActionName
+        ? `LAST: ${lastAiActionName}`
+        : lastLog || '> idle';
   const phases = Object.keys(SDLC_PHASES) as CombatPhase[];
   const phaseIdx = phases.indexOf(currentPhase);
   const stressColor = stress > 70 ? '#ff4060' : stress > 40 ? '#ffaa00' : '#a855f7';
@@ -73,10 +84,10 @@ const CombatHudBar: React.FC<CombatHudBarProps> = ({
       {/* Spacer */}
       <div className="chb-spacer" />
 
-      {/* Last log flash */}
-      <div className="chb-log-flash" title={lastLog}>
-        <Terminal size={14} color="#335" />
-        <span className="chb-log-text">{lastLog || '> idle'}</span>
+      {/* Последняя строка боя: NEXT при ходе ИИ, иначе LAST или сырой лог */}
+      <div className="chb-log-flash" title={lastLog || hudPrimaryLine}>
+        <Terminal size={14} color="#5ad4ff" />
+        <span className="chb-log-text chb-log-primary">{hudPrimaryLine}</span>
       </div>
 
       <div className="chb-sep" />

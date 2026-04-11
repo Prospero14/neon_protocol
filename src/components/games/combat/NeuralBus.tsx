@@ -122,7 +122,7 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                 </span>
               )}
             </div>
-            <div className="nb2-plan-slots">
+            <div className="nb2-plan-slots nb2-plan-slots--soft">
               {softSlots.map((s, i) => (
                 <div
                   key={i}

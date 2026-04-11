@@ -68,10 +68,10 @@ const MapView: React.FC<MapViewProps> = ({
     subNodes: customSubNodes || activeDistrictBase.subNodes
   };
   const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
+
   const renderSubNodes = React.useMemo(() => {
     const source = activeDistrict.subNodes || [];
-    const placed: Array<{ id: string; x: number; y: number; rx: number; ry: number; type: string; name: string; description: string; labelDy: number }> = [];
-    const minGap = 4.2;
+    const minGap = 9.2;
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
     const hash = (s: string) => {
       let h = 2166136261;
@@ -81,12 +81,36 @@ const MapView: React.FC<MapViewProps> = ({
       }
       return h >>> 0;
     };
+
+    const splitMapLabel = (raw: string, maxLine = 18): string[] => {
+      const s = raw.toUpperCase().trim();
+      if (s.length <= maxLine) return [s];
+      const mid = Math.floor(s.length / 2);
+      let cut = s.lastIndexOf(' ', mid);
+      if (cut < 5) cut = s.indexOf(' ', mid);
+      if (cut < 1 || cut >= s.length - 1) cut = mid;
+      const a = s.slice(0, cut).trim();
+      const b = s.slice(cut).trim();
+      if (!b) return [a];
+      return b.length > maxLine ? [a, b.slice(0, maxLine) + '…'] : [a, b];
+    };
+
+    type Placed = (typeof source)[number] & {
+      rx: number;
+      ry: number;
+      labelPlacement: 'above' | 'below';
+      nameLines: string[];
+      nameFontSize: number;
+      labelGap: number;
+    };
+
+    const placed: Placed[] = [];
     for (const sn of source) {
       let rx = sn.x;
       let ry = sn.y;
       const seed = hash(sn.id);
       const baseAngle = (seed % 360) * (Math.PI / 180);
-      for (let iter = 0; iter < 14; iter++) {
+      for (let iter = 0; iter < 36; iter++) {
         let collided = false;
         for (const p of placed) {
           const dx = rx - p.rx;
@@ -94,23 +118,54 @@ const MapView: React.FC<MapViewProps> = ({
           const dist = Math.hypot(dx, dy);
           if (dist < minGap) {
             collided = true;
-            const push = ((minGap - dist) + 0.9);
-            const angle = baseAngle + iter * 0.65;
+            const push = minGap - dist + 1.15;
+            const angle = baseAngle + iter * 0.55;
             rx += Math.cos(angle) * push;
             ry += Math.sin(angle) * push;
           }
         }
-        rx = clamp(rx, 4, 96);
-        ry = clamp(ry, 4, 96);
+        rx = clamp(rx, 5, 95);
+        ry = clamp(ry, 5, 95);
         if (!collided) break;
       }
+      const nameLines = splitMapLabel(sn.name || '', 18);
+      const longName = (sn.name || '').length > 22;
+      const nameFontSize = longName ? 0.72 : 0.88;
+      const labelPlacement: 'above' | 'below' = seed % 3 === 0 ? 'above' : 'below';
+      const labelGap = 7.5 + (seed % 6) * 0.35;
+
       placed.push({
         ...sn,
         rx,
         ry,
-        labelDy: (seed % 2 === 0) ? 4.5 : 6.0,
+        labelPlacement,
+        nameLines,
+        nameFontSize,
+        labelGap,
       });
     }
+
+    for (let pass = 0; pass < 14; pass++) {
+      for (let i = 0; i < placed.length; i++) {
+        for (let j = i + 1; j < placed.length; j++) {
+          const a = placed[i];
+          const b = placed[j];
+          let dx = b.rx - a.rx;
+          let dy = b.ry - a.ry;
+          const d = Math.hypot(dx, dy) || 0.001;
+          if (d < minGap) {
+            const push = ((minGap - d) * 0.52) / d;
+            dx *= push;
+            dy *= push;
+            a.rx = clamp(a.rx - dx, 5, 95);
+            a.ry = clamp(a.ry - dy, 5, 95);
+            b.rx = clamp(b.rx + dx, 5, 95);
+            b.ry = clamp(b.ry + dy, 5, 95);
+          }
+        }
+      }
+    }
+
     return placed;
   }, [activeDistrict.subNodes]);
   const selectedRenderSubNode = renderSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
@@ -320,24 +375,81 @@ const MapView: React.FC<MapViewProps> = ({
 
                   {/* Nodes Layer */}
                   <g className="blueprint-nodes-layer">
-                    {renderSubNodes.map(sn => {
+                    {renderSubNodes.map((sn) => {
                        const isSelected = selectedSubNodeId === sn.id;
+                       const fillMain = isSelected ? 'var(--neon-cyan)' : 'rgba(255,255,255,0.82)';
+                       const fillType = NODE_COLORS[sn.type] || '#889';
+                       const lineStep = 1.05;
+                       const belowY = sn.labelGap;
+                       const aboveBlock = sn.labelGap + 3.4 + sn.nameLines.length * lineStep;
+                       const labelTransform =
+                         sn.labelPlacement === 'below'
+                           ? `translate(${sn.rx}, ${sn.ry + belowY})`
+                           : `translate(${sn.rx}, ${sn.ry - aboveBlock})`;
+                       const txtStroke = { stroke: '#020508', strokeWidth: 0.12, paintOrder: 'stroke fill' as const };
                        return (
                         <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
                           <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
                           <circle cx={sn.rx} cy={sn.ry} r="0.8" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
                           <circle cx={sn.rx} cy={sn.ry} r="2" fill="none" stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]} strokeWidth="0.05" opacity="0.5" />
                           
-                          <g transform={`translate(${sn.rx}, ${sn.ry + sn.labelDy})`}>
-                            <text y="-0.8" fontSize="0.55" fill={NODE_COLORS[sn.type] || '#889'} textAnchor="middle" style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '2px' }}>
-                              {sn.type}
-                            </text>
-                            <text fontSize="1.1" fill={isSelected ? "var(--neon-cyan)" : "rgba(255,255,255,0.7)"} textAnchor="middle" style={{fontFamily: 'monospace', fontWeight: 600, letterSpacing: '0.5px'}}>
-                              {sn.name.toUpperCase()}
-                            </text>
+                          <g transform={labelTransform}>
+                            {sn.labelPlacement === 'below' ? (
+                              <>
+                                <text y="0.35" fontSize="0.48" fill={fillType} textAnchor="middle" style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '1px' }} {...txtStroke}>
+                                  {sn.type}
+                                </text>
+                                {sn.nameLines.map((line, li) => (
+                                  <text
+                                    key={li}
+                                    y={0.95 + li * lineStep}
+                                    fontSize={sn.nameFontSize}
+                                    fill={fillMain}
+                                    textAnchor="middle"
+                                    style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.35px' }}
+                                    {...txtStroke}
+                                  >
+                                    {line}
+                                  </text>
+                                ))}
+                              </>
+                            ) : (
+                              <>
+                                {sn.nameLines.map((line, li) => (
+                                  <text
+                                    key={li}
+                                    y={0.35 + li * lineStep}
+                                    fontSize={sn.nameFontSize}
+                                    fill={fillMain}
+                                    textAnchor="middle"
+                                    style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.35px' }}
+                                    {...txtStroke}
+                                  >
+                                    {line}
+                                  </text>
+                                ))}
+                                <text
+                                  y={0.45 + sn.nameLines.length * lineStep}
+                                  fontSize="0.45"
+                                  fill={fillType}
+                                  textAnchor="middle"
+                                  style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '1px' }}
+                                  {...txtStroke}
+                                >
+                                  {sn.type}
+                                </text>
+                              </>
+                            )}
                             {isSelected && (
-                              <text y="1.2" fontSize="0.5" fill="var(--neon-cyan)" textAnchor="middle" style={{fontFamily: 'monospace', opacity: 0.8}}>
-                                // TARGET_LOCKED
+                              <text
+                                y={sn.labelPlacement === 'below' ? 0.95 + sn.nameLines.length * lineStep + 0.55 : 0.45 + sn.nameLines.length * lineStep + 0.65}
+                                fontSize="0.45"
+                                fill="var(--neon-cyan)"
+                                textAnchor="middle"
+                                style={{ fontFamily: 'monospace', opacity: 0.85 }}
+                                {...txtStroke}
+                              >
+                                // LOCK
                               </text>
                             )}
                           </g>

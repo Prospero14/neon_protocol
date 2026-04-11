@@ -14,15 +14,16 @@ interface CyberCardProps {
 }
 
 function accentFromCard(card: CombatCard): 'vanilla' | 'spring' | 'network' | 'collections' | 'infra' | 'react' | 'soft' {
+  if (card.type === 'INFRASTRUCTURE' || card.type === 'HARD') return 'infra';
+
   const libs = card.libs || [];
   if (libs.includes('spring')) return 'spring';
   if (libs.includes('network')) return 'network';
   if (libs.includes('collections')) return 'collections';
 
-  if (card.type === 'INFRASTRUCTURE') return 'infra';
   if (card.type === 'REACTION' || card.type === 'DEFENSIVE') return 'react';
   if (card.type === 'SOFT') return 'soft';
-  
+
   return 'vanilla';
 }
 

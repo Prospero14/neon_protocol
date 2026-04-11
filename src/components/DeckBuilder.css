@@ -106,10 +106,13 @@
   background: #00ff88;
   box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
+/* Как «Старое железо» / card-origin-infra — яркий зелёный, не лайм из .on */
 .lib-chip.on.infra {
-  border-color: #a8e063; color: #a8e063;
-  background: rgba(168, 224, 99, 0.08);
-  box-shadow: 0 0 10px rgba(168, 224, 99, 0.15);
+  border-color: #00ff88;
+  color: #061208;
+  background: rgba(0, 255, 136, 0.28);
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.4);
+  text-shadow: none;
 }
 .lib-chip.on.soft {
   border-color: var(--neon-cyan); color: var(--neon-cyan);
@@ -120,6 +123,22 @@
   border-color: var(--neon-amber); color: var(--neon-amber);
   background: rgba(255, 176, 0, 0.08);
   box-shadow: 0 0 10px rgba(255, 176, 0, 0.15);
+}
+.deck-filter-active-bar {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 212, 255, 0.18);
+  border-radius: 4px;
+  background: rgba(0, 12, 24, 0.55);
+  font-size: 0.62rem;
+  color: #9ae8ff;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+}
+.deck-filter-active-label {
+  color: var(--neon-amber);
+  font-weight: 900;
+  margin-right: 8px;
 }
 .filter-warning {
   font-size: 0.7rem;

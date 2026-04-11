@@ -81,6 +81,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         cpuMax={state.cpuMax}
         ramMaxMb={state.ramMaxMb}
         lastLog={state.log[0] || ''}
+        lastAiActionName={state.lastAiAction?.name ?? null}
+        nextIntentName={state.nextBugAction?.name ?? null}
+        isPlayerTurn={state.isPlayerTurn}
         tzName={missionTz.name}
         playerProgress={state.playerProgress}
         aiProgress={state.aiProgress}

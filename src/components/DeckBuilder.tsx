@@ -57,9 +57,19 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     });
   };
 
+  /** Карты из инвентаря + уникальные из активной колоды (чтобы контры/прочее из стартового набора не пропадали из списка). */
+  const browsePool = useMemo(() => {
+    const m = new Map<string, CombatCard>();
+    inventoryUnique.forEach((c) => m.set(c.id, c));
+    activeDeck.forEach((c) => {
+      if (!m.has(c.id)) m.set(c.id, c);
+    });
+    return [...m.values()];
+  }, [inventoryUnique, activeDeck]);
+
   const filteredInventory = useMemo(() => {
     const opts = { includeVanilla, enabledLibs, enabledCats, selectedLanguage };
-    let filtered = inventoryUnique;
+    let filtered = browsePool;
     
     // Script-Kiddo Gating: Only show entry-level modules until profession is unlocked
     if (!classUnlocked) {
@@ -79,7 +89,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       if (sortBy === 'cost') return a.cost - b.cost;
       return a.name.localeCompare(b.name);
     });
-  }, [inventoryUnique, includeVanilla, enabledLibs, enabledCats, sortBy, classUnlocked, selectedLanguage]);
+  }, [browsePool, includeVanilla, enabledLibs, enabledCats, sortBy, classUnlocked, selectedLanguage]);
 
   const devTypes = ['SYNTAX', 'FUNCTION', 'NETWORK', 'SCRIPT'];
   const auxTypes = ['SOFT', 'HARD', 'DEFENSIVE', 'REACTION', 'INFRASTRUCTURE', 'STATUS'];
@@ -116,7 +126,26 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     // Info tooltip now handled inside CyberCard
   };
 
-  const filterInactive = !includeVanilla && enabledLibs.size === 0;
+  /** Блокируем сетку только если выбран Java с классом, но не включены ни vanilla, ни библиотеки, ни категории. */
+  const filterInactive =
+    classUnlocked &&
+    selectedLanguage === 'java' &&
+    !includeVanilla &&
+    enabledLibs.size === 0 &&
+    enabledCats.size === 0;
+
+  const activeFilterSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (selectedLanguage === 'script') parts.push('Shell');
+    if (selectedLanguage === 'java') parts.push('Java');
+    if (classUnlocked && selectedLanguage === 'java' && includeVanilla) parts.push('Vanilla/core');
+    enabledLibs.forEach((lib) => parts.push(LIB_TAG_LABELS[lib] ?? lib));
+    if (enabledCats.has('infra')) parts.push('INFRA');
+    if (enabledCats.has('soft')) parts.push('SOFT');
+    if (enabledCats.has('tests')) parts.push('COUNTER');
+    if (enabledCats.has('syntax')) parts.push('CODE');
+    return parts;
+  }, [selectedLanguage, classUnlocked, includeVanilla, enabledLibs, enabledCats]);
 
   return (
     <div className="deck-v4-view">
@@ -239,6 +268,12 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
         </div>
         {filterInactive && (
           <p className="filter-warning mono-text">Включите «ванильный Java» или хотя бы одну библиотеку.</p>
+        )}
+        {activeFilterSummary.length > 0 && (
+          <div className="deck-filter-active-bar mono-text" title="Все включённые фильтры (сумма условий для списка карт).">
+            <span className="deck-filter-active-label">ВКЛ:</span>
+            <span>{activeFilterSummary.join(' · ')}</span>
+          </div>
         )}
       </div>
       <style>{`.opacity-50 {

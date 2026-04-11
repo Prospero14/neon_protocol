@@ -82,6 +82,7 @@ function App() {
           objectiveNodeId={gs.objectiveNodeId} 
           playerBits={gs.bits} 
           customSubNodes={filteredNodes}
+          gameClock={gs.gameClock}
         />
       );
     }
@@ -150,7 +151,6 @@ function App() {
             if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === gs.activeBarNode) && earned > 0) { 
               gs.setQuestStates((prev) => markQuestReady(prev, trackedDef.id)); 
             }
-            gs.advanceTime(2);
             gs.setCurrentView('MAP'); 
             gs.setViewMode('DISTRICT');
           }} 
@@ -334,6 +334,8 @@ function App() {
         tutorialCompleted={gs.questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')}
         worldDay={gs.worldDay}
         dayPhase={gs.dayPhase}
+        gameTimeLabel={gs.gameClock.timeLabel}
+        phaseLabelRu={gs.gameClock.phaseLabelRu}
         trustedNpcContacts={gs.trustedNpcContacts}
         messengerFeed={gs.messengerFeed}
         knownDistrictChannels={gs.knownDistrictChannels}
@@ -365,7 +367,8 @@ function App() {
           hp={gs.stress} 
           level={gs.classUnlocked ? 5 : 1} 
           maxStress={gs.maxStress} 
-          onLogout={gs.logout} 
+          onLogout={gs.logout}
+          gameClockLine={`${gs.gameClock.timeLabel} · ${gs.gameClock.phaseLabelRu} · Д${gs.worldDay}`}
         />
       )}
       <main className={`view-container ${hideNav ? 'fullscreen' : ''}`}>

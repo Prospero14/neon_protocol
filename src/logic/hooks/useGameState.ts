@@ -18,6 +18,7 @@ import { applyBitModifiers, baseQuestBits } from '../economy';
 import { rollLoot } from '../lootTables';
 import { ITEM_LIBRARY, getItemById, type GameItem } from '../items';
 import type { NpcDayPhase } from '../npcPresence';
+import { getGameClockSnapshot, MS_PER_GAME_HOUR, type GameClockSnapshot } from '../gameClock';
 
 
 export type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
@@ -163,8 +164,10 @@ export function useGameState() {
   const [questStates, setQuestStates] = useState<QuestState[]>([]);
   const [completedQuestCount, setCompletedQuestCount] = useState(0);
   const [bitsFromQuests, setBitsFromQuests] = useState(0);
-  const [worldDay, setWorldDay] = useState(1);
-  const [dayTick, setDayTick] = useState(0);
+  /** Реальное время, когда игрок был на 00:00 игрового дня 1. Сохраняется в синк. */
+  const [clockAnchorMs, setClockAnchorMs] = useState<number | null>(null);
+  /** Тик раз в секунду для обновления часов. */
+  const [clockTick, setClockTick] = useState(0);
   
   const [isPetrovichHomeUnlocked, setIsPetrovichHomeUnlocked] = useState(false);
   const [npcPresenceMap, setNpcPresenceMap] = useState<Record<string, 'HOME' | 'AWAY'>>({});
@@ -342,12 +345,17 @@ export function useGameState() {
     tryAutopostNpcChatter(districtId);
     return true;
   }, [barContactDistricts, unlockedDistrictChannels, bits, canUnlockDistrictChannelByQuest, postSystemMessage, tryAutopostNpcChatter]);
-  const dayPhase = useMemo<NpcDayPhase>(() => {
-    if (dayTick <= 1) return 'morning';
-    if (dayTick <= 3) return 'day';
-    if (dayTick <= 5) return 'evening';
-    return 'night';
-  }, [dayTick]);
+  useEffect(() => {
+    const id = window.setInterval(() => setClockTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const gameClock = useMemo<GameClockSnapshot>(
+    () => getGameClockSnapshot(clockAnchorMs, Date.now()),
+    [clockAnchorMs, clockTick]
+  );
+  const worldDay = gameClock.worldDay;
+  const dayPhase: NpcDayPhase = gameClock.phase;
 
   useEffect(() => {
     if (!homeDistrictId) return;
@@ -367,17 +375,6 @@ export function useGameState() {
       return prev;
     });
   }, [homeDistrictId]);
-
-  const advanceTime = useCallback((steps: number = 1) => {
-    if (steps <= 0) return;
-    setDayTick((prevTick) => {
-      const total = prevTick + steps;
-      const daysPassed = Math.floor(total / 8);
-      const nextTick = total % 8;
-      if (daysPassed > 0) setWorldDay((d) => d + daysPassed);
-      return nextTick;
-    });
-  }, []);
 
   // --- PROGRESSION LOGIC ---
   const playerLevel = useMemo(() => {
@@ -493,8 +490,8 @@ export function useGameState() {
       deckCores: deckCores,
       deckRamMb: deckRamMb,
       discoveredCardIds: Array.from(discoveredCardIds),
-      worldDay,
-      dayTick,
+      worldDay: gameClock.worldDay,
+      clockAnchorMs,
       trustedNpcContacts,
       messengerFeed,
       knownDistrictChannels,
@@ -578,8 +575,14 @@ export function useGameState() {
       if (gs.deckCores !== undefined) setDeckCores(gs.deckCores);
       if (gs.deckRamMb !== undefined) setDeckRamMb(gs.deckRamMb);
       if (gs.discoveredCardIds) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
-      if (gs.worldDay !== undefined) setWorldDay(gs.worldDay);
-      if (gs.dayTick !== undefined) setDayTick(gs.dayTick);
+      if (typeof gs.clockAnchorMs === 'number' && !Number.isNaN(gs.clockAnchorMs)) {
+        setClockAnchorMs(gs.clockAnchorMs);
+      } else {
+        const wd = typeof gs.worldDay === 'number' ? gs.worldDay : 1;
+        const tick = typeof gs.dayTick === 'number' ? gs.dayTick : 0;
+        const hoursIntoCampaign = (wd - 1) * 24 + (tick / 8) * 24;
+        setClockAnchorMs(Date.now() - hoursIntoCampaign * MS_PER_GAME_HOUR);
+      }
       if (gs.trustedNpcContacts) setTrustedNpcContacts(gs.trustedNpcContacts);
       if (gs.messengerFeed) setMessengerFeed(sanitizeMessengerFeed(gs.messengerFeed as MessengerMessage[]));
       if (gs.barContactDistricts) setBarContactDistricts(gs.barContactDistricts);
@@ -659,7 +662,7 @@ export function useGameState() {
     return () => clearTimeout(timer);
   }, [
     bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId,
-    isCityMapUnlocked, worldDay, dayTick, trustedNpcContacts, messengerFeed, knownDistrictChannels,
+    isCityMapUnlocked, clockAnchorMs, gameClock.worldDay, trustedNpcContacts, messengerFeed, knownDistrictChannels,
     unlockedDistrictChannels, activeMessengerChannel, barContactDistricts
   ]);
 
@@ -741,8 +744,8 @@ export function useGameState() {
         channelId: data.district.id
       }
     ]);
-    setWorldDay(1);
-    setDayTick(0);
+    const anchor = Date.now();
+    setClockAnchorMs(anchor);
     setCurrentView('HUB');
     // Force-write canonical district state to backend to avoid race with async setState.
     syncGame({
@@ -751,7 +754,7 @@ export function useGameState() {
       currentView: 'HUB',
       viewMode: 'DISTRICT',
       worldDay: 1,
-      dayTick: 0
+      clockAnchorMs: anchor,
     });
   };
 
@@ -793,7 +796,6 @@ export function useGameState() {
       outcome: 'quest_completed',
       subject: q.title,
     });
-    advanceTime(1);
   };
 
   const reportCombatRumor = useCallback((missionName: string, success: boolean) => {
@@ -845,7 +847,6 @@ export function useGameState() {
         setActiveMessengerChannel(nodeId);
         tryAutopostNpcChatter(nodeId);
       }
-      advanceTime(1);
       return;
     }
 
@@ -870,7 +871,6 @@ export function useGameState() {
 
       setActiveBarNode(nodeId);
       setCurrentView('COMBAT');
-      advanceTime(1);
       return;
     }
 
@@ -899,7 +899,6 @@ export function useGameState() {
       }
       setActiveBarNode(nodeId);
       setCurrentView('FIXER_BAR');
-      advanceTime(1);
       const tracked = getTrackedQuest(questStates);
       const trackedDef = tracked ? QUEST_LIBRARY.find((q) => q.id === tracked.questId) : undefined;
       if (tracked && tracked.status === 'active' && trackedDef && (trackedDef.type === 'delivery' || trackedDef.type === 'diagnostics' || trackedDef.type === 'talk')) {
@@ -1063,7 +1062,7 @@ export function useGameState() {
     ramPool, setRamPool,
     stress, setStress,
     bits, setBits,
-    worldDay, dayTick, dayPhase, advanceTime,
+    worldDay, gameClock, dayPhase,
     solvedTaskCounts, setSolvedTaskCounts,
     solvedChains, saveSolvedChain,
     deckCores, setDeckCores,

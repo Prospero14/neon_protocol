@@ -30,6 +30,10 @@ interface HubViewProps {
   tutorialCompleted: boolean;
   worldDay: number;
   dayPhase: string;
+  /** Игровое время «ЧЧ:ММ» (ускоренное). */
+  gameTimeLabel: string;
+  /** Короткая метка фазы суток (УТРО/ДЕНЬ/…). */
+  phaseLabelRu: string;
   trustedNpcContacts: string[];
   messengerFeed: MessengerMessage[];
   knownDistrictChannels: string[];
@@ -64,6 +68,8 @@ export const HubView: React.FC<HubViewProps> = ({
   tutorialCompleted,
   worldDay,
   dayPhase,
+  gameTimeLabel,
+  phaseLabelRu,
   trustedNpcContacts,
   messengerFeed,
   knownDistrictChannels,
@@ -188,7 +194,9 @@ export const HubView: React.FC<HubViewProps> = ({
             <span className="meta-divider">|</span>
             <span className="meta-item"><User size={12} /> {playerName}</span>
             <span className="meta-divider">|</span>
-            <span className="meta-item">DAY {worldDay} / {dayPhase.toUpperCase()}</span>
+            <span className="meta-item" title="Игровые сутки: 12 ч игры ≈ 4 ч реального времени">
+              ДЕНЬ {worldDay} · {gameTimeLabel} · {phaseLabelRu}
+            </span>
           </div>
         </div>
         <div className="hub-top-stats">

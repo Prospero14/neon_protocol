@@ -4,6 +4,7 @@ import { MAP_NODES } from '../logic/mapData';
 import { DEFAULT_DISTRICT_BLUEPRINT, DEFAULT_DISTRICT_BOUNDARY } from '../logic/mapVisualDefaults';
 import { Search, MousePointer2 } from 'lucide-react';
 import { type QuestState } from '../logic/questEngine';
+import type { GameClockSnapshot } from '../logic/gameClock';
 import '../blueprints.css';
 
 interface MapViewProps {
@@ -17,6 +18,8 @@ interface MapViewProps {
   objectiveNodeId?: string | null;
   playerBits?: number;
   customSubNodes?: any[]; // To override the district subNodes
+  /** Игровые часы и фаза суток (день/ночь на карте). */
+  gameClock?: GameClockSnapshot | null;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -40,6 +43,7 @@ const MapView: React.FC<MapViewProps> = ({
   objectiveNodeId = null,
   playerBits = 0,
   customSubNodes = null,
+  gameClock = null,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
@@ -53,7 +57,7 @@ const MapView: React.FC<MapViewProps> = ({
     e.preventDefault();
     const zoomSpeed = 0.05;
     const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    setZoom(prev => Math.min(Math.max(prev + delta, 1.0), 1.2));
+    setZoom(prev => Math.min(Math.max(prev + delta, 1.0), 1.45));
   };
 
   const resetView = () => {
@@ -71,18 +75,9 @@ const MapView: React.FC<MapViewProps> = ({
 
   const renderSubNodes = React.useMemo(() => {
     const source = activeDistrict.subNodes || [];
-    const minGap = 11;
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-    const hash = (s: string) => {
-      let h = 2166136261;
-      for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-      }
-      return h >>> 0;
-    };
 
-    const splitMapLabel = (raw: string, maxLine = 18): string[] => {
+    const splitMapLabel = (raw: string, maxLine = 14): string[] => {
       const s = raw.toUpperCase().trim();
       if (s.length <= maxLine) return [s];
       const mid = Math.floor(s.length / 2);
@@ -98,70 +93,92 @@ const MapView: React.FC<MapViewProps> = ({
     type Placed = (typeof source)[number] & {
       rx: number;
       ry: number;
+      labelDx: number;
       nameLines: string[];
       nameFontSize: number;
       labelGap: number;
+      lineStep: number;
+      firstY: number;
+      typeY: number;
+      bw: number;
+      bh: number;
     };
 
+    /** Маркеры остаются в данных чертежа; расстояние «точка → подпись» компактное; крупный шрифт в единицах viewBox. */
+    const LABEL_GAP = 4.05;
     const placed: Placed[] = [];
+
     for (const sn of source) {
-      let rx = sn.x;
-      let ry = sn.y;
-      const seed = hash(sn.id);
-      const baseAngle = (seed % 360) * (Math.PI / 180);
-      for (let iter = 0; iter < 36; iter++) {
-        let collided = false;
-        for (const p of placed) {
-          const dx = rx - p.rx;
-          const dy = ry - p.ry;
-          const dist = Math.hypot(dx, dy);
-          if (dist < minGap) {
-            collided = true;
-            const push = minGap - dist + 1.15;
-            const angle = baseAngle + iter * 0.55;
-            rx += Math.cos(angle) * push;
-            ry += Math.sin(angle) * push;
-          }
-        }
-        rx = clamp(rx, 5, 95);
-        ry = clamp(ry, 5, 95);
-        if (!collided) break;
-      }
-      const nameLines = splitMapLabel(sn.name || '', 16);
-      const longName = (sn.name || '').length > 22;
-      const nameFontSize = longName ? 0.68 : 0.78;
-      /** Всегда под узлом: стабильная привязка, без наслоения на круг. */
-      const labelGap = 11.2 + (seed % 5) * 0.22;
+      const rx = clamp(sn.x, 3, 97);
+      const ry = clamp(sn.y, 3, 97);
+      const nameLines = splitMapLabel(sn.name || '', 14);
+      const longName = (sn.name || '').length > 20;
+      const nameFontSize = longName ? 0.82 : 0.95;
+      const lineStep = 1.22;
+      const padTop = 0.58;
+      const padBot = 0.52;
+      const firstY = padTop + nameFontSize * 0.92;
+      const lastNameY = firstY + Math.max(0, nameLines.length - 1) * lineStep;
+      const typeY = lastNameY + 1.05;
+      const longestLine = Math.max(
+        nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
+        sn.type.length + 2
+      );
+      const bw = Math.min(60, 3.0 + longestLine * (nameFontSize * 0.52));
+      const bh = typeY + 0.45 + padBot;
 
       placed.push({
         ...sn,
         rx,
         ry,
+        labelDx: 0,
         nameLines,
         nameFontSize,
-        labelGap,
+        labelGap: LABEL_GAP,
+        lineStep,
+        firstY,
+        typeY,
+        bw,
+        bh,
       });
     }
 
-    for (let pass = 0; pass < 14; pass++) {
+    const pairOverlaps = (a: Placed, b: Placed) => {
+      const ax = a.rx + a.labelDx;
+      const ay = a.ry + a.labelGap + a.bh / 2;
+      const bx = b.rx + b.labelDx;
+      const by = b.ry + b.labelGap + b.bh / 2;
+      const hd = Math.abs(ax - bx);
+      const vd = Math.abs(ay - by);
+      return hd < ((a.bw + b.bw) / 2) * 0.88 && vd < ((a.bh + b.bh) / 2) * 0.88;
+    };
+
+    for (let pass = 0; pass < 20; pass++) {
       for (let i = 0; i < placed.length; i++) {
         for (let j = i + 1; j < placed.length; j++) {
           const a = placed[i];
           const b = placed[j];
-          let dx = b.rx - a.rx;
-          let dy = b.ry - a.ry;
-          const d = Math.hypot(dx, dy) || 0.001;
-          if (d < minGap) {
-            const push = ((minGap - d) * 0.52) / d;
-            dx *= push;
-            dy *= push;
-            a.rx = clamp(a.rx - dx, 5, 95);
-            a.ry = clamp(a.ry - dy, 5, 95);
-            b.rx = clamp(b.rx + dx, 5, 95);
-            b.ry = clamp(b.ry + dy, 5, 95);
+          if (!pairOverlaps(a, b)) continue;
+          const push = 2.1;
+          if (a.rx + a.labelDx <= b.rx + b.labelDx) {
+            a.labelDx -= push;
+            b.labelDx += push;
+          } else {
+            a.labelDx += push;
+            b.labelDx -= push;
           }
+          a.labelDx = clamp(a.labelDx, -18, 18);
+          b.labelDx = clamp(b.labelDx, -18, 18);
         }
       }
+    }
+
+    for (const p of placed) {
+      let dx = p.labelDx;
+      const half = p.bw / 2;
+      if (p.rx + dx - half < 2) dx = 2 + half - p.rx;
+      if (p.rx + dx + half > 98) dx = 98 - half - p.rx;
+      p.labelDx = clamp(dx, -18, 18);
     }
 
     return placed;
@@ -175,7 +192,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="map-view-v4 no-pan">
+    <div className={`map-view-v4 no-pan ${gameClock ? `map-phase-${gameClock.phase}` : ''}`}>
       <header className="map-hdr-v5">
         <div className="hdr-main-area">
           <div className="hdr-micro-label side-fixed">
@@ -185,6 +202,15 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
         <div className="hdr-actions-area">
           <div className="hdr-status-row">
+            {gameClock && (
+              <div className="hdr-game-clock mono-text" title="Игровое время: 12 ч в игре = 4 ч в реальности. Сутки цикличны.">
+                <span className="hdr-clock-time">{gameClock.timeLabel}</span>
+                <span className="hdr-clock-sep"> · </span>
+                <span className="hdr-clock-phase">{gameClock.phaseLabelRu}</span>
+                <span className="hdr-clock-sep"> · </span>
+                <span className="hdr-clock-day">ДЕНЬ {gameClock.worldDay}</span>
+              </div>
+            )}
             <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%] </div>
             <div className="hdr-actions">
             {viewMode === 'DISTRICT' && isCityMapUnlocked && (
@@ -377,35 +403,34 @@ const MapView: React.FC<MapViewProps> = ({
                        const isSelected = selectedSubNodeId === sn.id;
                        const fillType = NODE_COLORS[sn.type] || '#889';
                        const tagColor = isSelected ? 'var(--neon-cyan)' : fillType;
-                       const lineStep = 1.04;
-                       const padTop = 0.5;
-                       const padBot = 0.44;
-                       const firstY = padTop + sn.nameFontSize * 0.9;
-                       const lastNameY = firstY + Math.max(0, sn.nameLines.length - 1) * lineStep;
-                       const typeY = lastNameY + 0.92;
-                       const longestLine = Math.max(
-                         sn.nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
-                         sn.type.length + 2
-                       );
-                       const bw = Math.min(54, 2.6 + longestLine * (sn.nameFontSize * 0.5));
-                       const bh = typeY + 0.38 + padBot;
-                       const labelTransform = `translate(${sn.rx}, ${sn.ry + sn.labelGap})`;
+                       const { lineStep, firstY, typeY, bw, bh } = sn;
+                       const labelTransform = `translate(${sn.rx + sn.labelDx}, ${sn.ry + sn.labelGap})`;
                        const pillFill = isSelected ? 'rgba(0, 28, 42, 0.94)' : 'rgba(2, 10, 18, 0.92)';
                        const pillStroke = isSelected ? 'rgba(0, 212, 255, 0.45)' : 'rgba(0, 180, 220, 0.22)';
                        const nameFill = isSelected ? '#b8f4ff' : '#e8f2ff';
-                       const txtStroke = { stroke: '#030810', strokeWidth: 0.08, paintOrder: 'stroke fill' as const };
+                       const txtStroke = { stroke: '#030810', strokeWidth: 0.07, paintOrder: 'stroke fill' as const };
                        return (
                         <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
                           <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
-                          <circle cx={sn.rx} cy={sn.ry} r="0.85" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
+                          <line
+                            x1={sn.rx}
+                            y1={sn.ry + 1.0}
+                            x2={sn.rx + sn.labelDx}
+                            y2={sn.ry + sn.labelGap + 0.08}
+                            stroke="rgba(0, 212, 255, 0.4)"
+                            strokeWidth="0.07"
+                            strokeLinecap="round"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <circle cx={sn.rx} cy={sn.ry} r="0.95" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
                           <circle
                             cx={sn.rx}
                             cy={sn.ry}
-                            r="1.35"
+                            r="1.45"
                             fill="none"
                             stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]}
-                            strokeWidth="0.04"
-                            opacity={isSelected ? 0.55 : 0.28}
+                            strokeWidth="0.045"
+                            opacity={isSelected ? 0.55 : 0.32}
                           />
                           
                           <g transform={labelTransform} filter="url(#mapPillShadow)" style={{ pointerEvents: 'none' }}>
@@ -414,11 +439,11 @@ const MapView: React.FC<MapViewProps> = ({
                               y="0"
                               width={bw}
                               height={bh}
-                              rx="0.75"
-                              ry="0.75"
+                              rx="0.85"
+                              ry="0.85"
                               fill={pillFill}
                               stroke={pillStroke}
-                              strokeWidth="0.06"
+                              strokeWidth="0.07"
                             />
                             {sn.nameLines.map((line, li) => (
                               <text
@@ -428,7 +453,7 @@ const MapView: React.FC<MapViewProps> = ({
                                 fontSize={sn.nameFontSize}
                                 fill={nameFill}
                                 textAnchor="middle"
-                                style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.2px' }}
+                                style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.15px' }}
                                 {...txtStroke}
                               >
                                 {line}
@@ -437,10 +462,10 @@ const MapView: React.FC<MapViewProps> = ({
                             <text
                               x="0"
                               y={typeY}
-                              fontSize="0.38"
+                              fontSize="0.5"
                               fill={tagColor}
                               textAnchor="middle"
-                              style={{ fontFamily: 'monospace', fontWeight: 900, letterSpacing: '1.2px' }}
+                              style={{ fontFamily: 'monospace', fontWeight: 900, letterSpacing: '1.1px' }}
                               {...txtStroke}
                             >
                               {sn.type}
@@ -504,6 +529,17 @@ const MapView: React.FC<MapViewProps> = ({
       </main>
 
       <style>{`
+        .hdr-game-clock {
+          font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em;
+          color: var(--neon-cyan); text-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
+          white-space: nowrap;
+        }
+        .hdr-clock-time { color: #e8f8ff; font-variant-numeric: tabular-nums; }
+        .hdr-clock-phase { color: var(--neon-amber); opacity: 0.95; }
+        .hdr-clock-day { color: #8899aa; font-size: 0.68rem; }
+        .map-view-v4.map-phase-night .map-canvas-wrap { filter: brightness(0.74) saturate(0.9) hue-rotate(-4deg); }
+        .map-view-v4.map-phase-evening .map-canvas-wrap { filter: brightness(0.88) saturate(0.96); }
+        .map-view-v4.map-phase-morning .map-canvas-wrap { filter: brightness(0.96) saturate(0.98); }
         .map-view-v4 { height: 100%; display: flex; flex-direction: column; background: #000; overflow: hidden; }
         .map-hdr-v5 {
           height: 100px; display: grid; grid-template-columns: 1fr 340px; 

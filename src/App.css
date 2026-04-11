@@ -757,6 +757,16 @@ body, html, #root {
   font-family: var(--font-mono);
   font-size: 0.65rem;
   margin-left: 24px;
+  align-items: center;
+}
+.nav-game-clock {
+  color: var(--neon-cyan);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.95;
+  padding-right: 8px;
+  border-right: 1px solid rgba(0, 200, 255, 0.15);
 }
 
 /* --- NEON PANEL BASE --- */

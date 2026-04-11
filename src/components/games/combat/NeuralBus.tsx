@@ -10,40 +10,30 @@ interface NeuralBusProps {
   currentPhase: CombatPhase;
   /** Софт-скиллы кладутся только в фазе стабилизации (после кода). */
   softSocketsLocked: boolean;
-  skillMode: string;
   infraSlots: (CombatCard | null)[];
   softSlots: (CombatCard | null)[];
   runtimeRail: RailSlot[];
   ramSlotsMax: number;
-  missionTzStepsCount: number;
   enemy: BugEnemy | null;
   nextBugAction: BugAction | null;
-  lastAiAction: BugAction | null;
   isPlayerTurn: boolean;
-  isAiResolving: boolean;
-  lastAiImpact: { stressDelta: number; threatDelta: number; bugDelta: number; statusInjected: string | null; ts: number } | null;
   selectedCard: { source: string; idx: number; card: CombatCard } | null;
   playerProgress: number;
   aiProgress: number;
   bugPoints: number;
   aiDeadline: number;
-  enemyActions: BugAction[];
-  showQuestTutorial: boolean;
   onExecuteCardOnSlot: (idx: number) => void;
 }
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
-  enemy, nextBugAction, lastAiAction, isPlayerTurn, isAiResolving, lastAiImpact, selectedCard, playerProgress, aiProgress,
-  bugPoints, aiDeadline, onExecuteCardOnSlot, enemyActions, showQuestTutorial
+  enemy, nextBugAction, isPlayerTurn, selectedCard, playerProgress, aiProgress,
+  bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
   const ENEMY_VISIBLE_SLOTS = 7;
   const maskedCount = Math.max(0, ENEMY_VISIBLE_SLOTS - 1);
-  const isThreatSpike = Boolean(isAiResolving && (lastAiImpact?.threatDelta ?? 0) > 0);
-  const isBugSpike = Boolean(isAiResolving && (lastAiImpact?.bugDelta ?? 0) > 0);
-  const isStressSpike = Boolean(isAiResolving && (lastAiImpact?.stressDelta ?? 0) > 0);
 
   return (
     <main className="nb2">
@@ -109,39 +99,6 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
         </div>
       </div>
 
-      <div className="nb2-ai-status-block">
-        <div className={`nb2-ai-banner ${!isPlayerTurn || isAiResolving ? 'live' : ''}`}>
-          {!isPlayerTurn && nextBugAction ? `AI EXECUTING: ${nextBugAction.name}` : `LAST AI ACTION: ${lastAiAction?.name || '—'}`}
-        </div>
-        <div className="nb2-ai-impact-strip">
-          <span className="chip inject mono-text" title="Дельты последнего хода оппонента">
-            ПОСЛЕДНИЙ ХОД:
-          </span>
-          <span className={`chip threat ${isThreatSpike ? 'flash-threat' : ''}`}>THREAT +{lastAiImpact?.threatDelta ?? 0}%</span>
-          <span className={`chip bug ${isBugSpike ? 'flash-bug' : ''}`}>BUG +{lastAiImpact?.bugDelta ?? 0}</span>
-          <span className={`chip stress ${isStressSpike ? 'flash-stress' : ''}`}>STRESS +{lastAiImpact?.stressDelta ?? 0}</span>
-          <span className="chip inject">INJECT: {lastAiImpact?.statusInjected ?? 'none'}</span>
-        </div>
-        <div className="nb2-ai-impact-strip nb2-opponent-deck-strip">
-          <span className="chip inject" title="Возможные карты оппонента в этой сессии">
-            КОЛОДА ОППОНЕНТА:
-          </span>
-          {enemyActions.slice(0, 4).map((a) => (
-            <span key={a.id} className="chip threat" title={a.description}>
-              {a.name} {a.problemType ? `(${problemTypeLabelRu(a.problemType)})` : ''}
-            </span>
-          ))}
-        </div>
-        {showQuestTutorial && (
-          <div className="nb2-ai-impact-strip nb2-hint-strip">
-            <span className="chip inject">HINT:</span>
-            <span className="chip bug" title="Короткая подсказка по первому бою">
-              NEXT_INTENT = ход врага · DEV: PROJECT 100% · VERIFY: чисти BUG_ERROR реакциями/дефом · THREAT 100% = провал темпа
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* ── PIPELINE (CODE EDITOR) ── */}
       <div className="nb2-pipeline-area">
         {currentPhase === 'ARCHITECTURE' ? (
@@ -154,10 +111,15 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                 </div>
               ))}
             </div>
-            <div className="nb2-section-label" style={{ marginTop: 12 }}>
-              SOFT_SOCKETS
+            <div className="nb2-section-label nb2-soft-section-head" style={{ marginTop: 12 }}>
+              <span>SOFT_SOCKETS</span>
               {softSocketsLocked && (
-                <span className="nb2-soft-locked mono-text"> [фаза 3: стабилизация]</span>
+                <span
+                  className="nb2-soft-badge"
+                  title="Софт-слоты открываются после кода, на фазе стабилизации (VERIFY)."
+                >
+                  ф3 · закрыто
+                </span>
               )}
             </div>
             <div className="nb2-plan-slots">

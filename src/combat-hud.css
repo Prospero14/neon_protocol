@@ -471,80 +471,6 @@
   width: 100%;
   box-sizing: border-box;
 }
-.nb2-ai-status-block {
-  flex-shrink: 0;
-  padding: 0 12px 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.nb2-ai-status-block .nb2-ai-banner {
-  margin: 0;
-}
-.nb2-ai-status-block .nb2-ai-impact-strip {
-  margin: 8px 0 0;
-}
-.nb2-ai-banner {
-  margin: 0 32px;
-  border: 1px solid rgba(255, 64, 96, 0.2);
-  background: rgba(127, 29, 29, 0.1);
-  color: #fda4af;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  font-weight: 900;
-  padding: 8px 14px;
-  text-transform: uppercase;
-}
-.nb2-ai-banner.live {
-  border-color: rgba(255, 64, 96, 0.55);
-  background: rgba(127, 29, 29, 0.24);
-  color: #fecdd3;
-  box-shadow: 0 0 14px rgba(255, 64, 96, 0.25);
-}
-.nb2-ai-impact-strip {
-  margin: 6px 32px 0;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.nb2-opponent-deck-strip,
-.nb2-hint-strip {
-  margin-top: 6px;
-}
-.nb2-ai-impact-strip .chip {
-  font-size: 0.62rem;
-  letter-spacing: 0.09em;
-  font-weight: 900;
-  padding: 4px 8px;
-  border: 1px solid;
-  text-transform: uppercase;
-}
-.nb2-ai-impact-strip .chip.threat { color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.08); }
-.nb2-ai-impact-strip .chip.bug { color: #fb7185; border-color: rgba(251, 113, 133, 0.45); background: rgba(251, 113, 133, 0.08); }
-.nb2-ai-impact-strip .chip.stress { color: #f43f5e; border-color: rgba(244, 63, 94, 0.45); background: rgba(244, 63, 94, 0.08); }
-.nb2-ai-impact-strip .chip.inject { color: #a5b4fc; border-color: rgba(165, 180, 252, 0.45); background: rgba(165, 180, 252, 0.08); }
-.nb2-ai-impact-strip .chip.flash-threat {
-  animation: chip-flash-threat 0.52s steps(2, end) 4;
-}
-.nb2-ai-impact-strip .chip.flash-bug {
-  animation: chip-flash-bug 0.52s steps(2, end) 4;
-}
-.nb2-ai-impact-strip .chip.flash-stress {
-  animation: chip-flash-stress 0.52s steps(2, end) 4;
-}
-@keyframes chip-flash-threat {
-  0%, 100% { background: rgba(251, 191, 36, 0.08); box-shadow: none; }
-  50% { background: rgba(251, 191, 36, 0.38); box-shadow: 0 0 18px rgba(251, 191, 36, 0.9); }
-}
-@keyframes chip-flash-bug {
-  0%, 100% { background: rgba(251, 113, 133, 0.08); box-shadow: none; }
-  50% { background: rgba(251, 113, 133, 0.38); box-shadow: 0 0 18px rgba(251, 113, 133, 0.85); }
-}
-@keyframes chip-flash-stress {
-  0%, 100% { background: rgba(244, 63, 94, 0.08); box-shadow: none; }
-  50% { background: rgba(244, 63, 94, 0.42); box-shadow: 0 0 20px rgba(244, 63, 94, 0.95); }
-}
-
 /* Code editor pipeline */
 .nb2-code-editor {
   width: 100%;
@@ -685,25 +611,33 @@
 /* Planning view (ARCHITECTURE phase) */
 .nb2-planning {
   width: 100%;
+  min-width: 0;
 }
 .nb2-plan-slots {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+  gap: 10px;
   padding: 12px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .nb2-plan-slot {
-  width: 150px;
+  width: auto;
+  min-width: 0;
   height: 82px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(0,10,20,0.6);
-  font-size: 0.85rem;
+  font-size: clamp(0.62rem, 1.8vw, 0.82rem);
   color: #335;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  padding: 4px 6px;
+  overflow: hidden;
+  word-break: break-word;
 }
 .nb2-plan-slot.deployed {
   border-color: rgba(0,212,255,0.3);
@@ -715,12 +649,24 @@
   background: rgba(255,170,0,0.04);
   color: #ffaa00;
 }
-.nb2-soft-locked {
-  margin-left: 8px;
-  font-size: 0.65rem;
-  color: #668;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+.nb2-soft-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  row-gap: 4px;
+}
+.nb2-soft-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #7ad7ff;
+  opacity: 0.85;
+  border: 1px solid rgba(122, 215, 255, 0.25);
+  background: rgba(0, 40, 60, 0.35);
+  padding: 2px 8px;
+  border-radius: 2px;
+  white-space: nowrap;
 }
 .nb2-plan-slot.soft.locked-preview {
   border-style: dashed;

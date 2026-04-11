@@ -91,25 +91,18 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       <NeuralBus 
         currentPhase={state.currentPhase}
         softSocketsLocked={state.currentPhase !== 'VERIFICATION'}
-        skillMode={props.skillMode}
         infraSlots={state.infraSlots}
         softSlots={state.softSlots}
         runtimeRail={state.runtimeRail}
         ramSlotsMax={state.ramSlotsMax}
-        missionTzStepsCount={missionTz.steps.length}
         enemy={state.enemy}
         nextBugAction={state.nextBugAction}
-        lastAiAction={state.lastAiAction}
         isPlayerTurn={state.isPlayerTurn}
-        isAiResolving={state.isAiResolving}
-        lastAiImpact={state.lastAiImpact}
         selectedCard={state.selectedCard}
         playerProgress={state.playerProgress}
         aiProgress={state.aiProgress}
         bugPoints={state.bugPoints}
         aiDeadline={state.aiDeadline}
-        enemyActions={state.enemy?.actions || []}
-        showQuestTutorial={Boolean(props.isFirstCombatQuestTutorial && props.skillMode === 'script-kiddie')}
         onExecuteCardOnSlot={actions.executeCardOnSlot}
       />
       {showFirstQuestMemo && (

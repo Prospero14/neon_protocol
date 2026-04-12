@@ -757,8 +757,19 @@ export function useGameState() {
       setUnlockedDistrictChannels(unlocked);
       setActiveMessengerChannel(nextActive);
       // Load exploits
-      const saved = localStorage.getItem(`neon_exploit_db_${user?.id || 'anon'}`);
-      if (saved) setSolvedChains(JSON.parse(saved));
+      const exploitKey = `neon_exploit_db_${user?.id || 'anon'}`;
+      const saved = localStorage.getItem(exploitKey);
+      if (saved) {
+        try {
+          setSolvedChains(JSON.parse(saved));
+        } catch {
+          try {
+            localStorage.removeItem(exploitKey);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
     }
   }, [user]);
 

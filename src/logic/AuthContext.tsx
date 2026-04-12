@@ -19,8 +19,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('neon_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('neon_user');
+      return savedUser ? (JSON.parse(savedUser) as User) : null;
+    } catch {
+      try {
+        localStorage.removeItem('neon_user');
+        localStorage.removeItem('neon_token');
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('neon_token'));
   const [isLoading] = useState(false);

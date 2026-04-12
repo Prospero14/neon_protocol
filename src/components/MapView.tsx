@@ -1,9 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
 import { DEFAULT_DISTRICT_BLUEPRINT, DEFAULT_DISTRICT_BOUNDARY } from '../logic/mapVisualDefaults';
-import { Search, MousePointer2 } from 'lucide-react';
+import { Search, MousePointer2, X } from 'lucide-react';
 import { type QuestState } from '../logic/questEngine';
+import type { GameClockSnapshot } from '../logic/gameClock';
+import MapRadarRail, { type PoiTypeFilter } from './map/MapRadarRail';
+import './map/MapRadarRail.css';
 import '../blueprints.css';
 
 interface MapViewProps {
@@ -17,6 +21,8 @@ interface MapViewProps {
   objectiveNodeId?: string | null;
   playerBits?: number;
   customSubNodes?: any[]; // To override the district subNodes
+  /** Игровые часы и фаза суток (день/ночь на карте). */
+  gameClock?: GameClockSnapshot | null;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -40,20 +46,25 @@ const MapView: React.FC<MapViewProps> = ({
   objectiveNodeId = null,
   playerBits = 0,
   customSubNodes = null,
+  gameClock = null,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
+  const [poiFilter, setPoiFilter] = useState<PoiTypeFilter>('all');
+  const [cityFilter, setCityFilter] = useState<'all' | 'hub' | 'trade' | 'combat' | 'bar'>('all');
+  const [nodeConnectModalOpen, setNodeConnectModalOpen] = useState(false);
 
   // Zoom State (Pan disabled by USER_REQUEST)
   const [zoom, setZoom] = useState(1);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const poiListRef = useRef<HTMLDivElement>(null);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomSpeed = 0.05;
     const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    setZoom(prev => Math.min(Math.max(prev + delta, 1.0), 1.2));
+    setZoom(prev => Math.min(Math.max(prev + delta, 1.0), 1.45));
   };
 
   const resetView = () => {
@@ -61,111 +72,158 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const activeDistrictBase = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
+  const allSubNodes = useMemo(
+    () => customSubNodes ?? activeDistrictBase.subNodes ?? [],
+    [customSubNodes, activeDistrictBase.subNodes, activeDistrictId]
+  );
+  const filteredSubNodes = useMemo(() => {
+    if (poiFilter === 'all') return allSubNodes;
+    return allSubNodes.filter((s: { type: string }) => s.type === poiFilter);
+  }, [allSubNodes, poiFilter]);
+  const filteredCityNodes = useMemo(() => {
+    if (cityFilter === 'all') return MAP_NODES;
+    return MAP_NODES.filter((n) => n.type === cityFilter);
+  }, [cityFilter]);
+
   const activeDistrict = {
     ...activeDistrictBase,
     boundary: activeDistrictBase.boundary ?? DEFAULT_DISTRICT_BOUNDARY,
     imageSubstrate: activeDistrictBase.imageSubstrate ?? DEFAULT_DISTRICT_BLUEPRINT,
-    subNodes: customSubNodes || activeDistrictBase.subNodes
+    subNodes: allSubNodes,
   };
-  const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
+  const selectedSubNode = allSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
+
+  useEffect(() => {
+    const id = viewMode === 'DISTRICT' ? selectedSubNodeId : selectedNode?.id;
+    if (!id || !poiListRef.current) return;
+    const el = poiListRef.current.querySelector(`[data-poi-id="${id}"]`);
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selectedSubNodeId, selectedNode?.id, viewMode]);
+
+  useEffect(() => {
+    setPoiFilter('all');
+    setCityFilter('all');
+  }, [activeDistrictId, viewMode]);
+
+  useEffect(() => {
+    if (!selectedSubNodeId) return;
+    if (!filteredSubNodes.some((s) => s.id === selectedSubNodeId)) {
+      setSelectedSubNodeId(null);
+    }
+  }, [filteredSubNodes, selectedSubNodeId]);
+
+  useEffect(() => {
+    setNodeConnectModalOpen(false);
+  }, [selectedSubNodeId]);
+
+  useEffect(() => {
+    if (!nodeConnectModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNodeConnectModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [nodeConnectModalOpen]);
 
   const renderSubNodes = React.useMemo(() => {
-    const source = activeDistrict.subNodes || [];
-    const minGap = 11;
+    const source = filteredSubNodes;
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-    const hash = (s: string) => {
-      let h = 2166136261;
-      for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-      }
-      return h >>> 0;
-    };
-
-    const splitMapLabel = (raw: string, maxLine = 18): string[] => {
-      const s = raw.toUpperCase().trim();
-      if (s.length <= maxLine) return [s];
-      const mid = Math.floor(s.length / 2);
-      let cut = s.lastIndexOf(' ', mid);
-      if (cut < 5) cut = s.indexOf(' ', mid);
-      if (cut < 1 || cut >= s.length - 1) cut = mid;
-      const a = s.slice(0, cut).trim();
-      const b = s.slice(cut).trim();
-      if (!b) return [a];
-      return b.length > maxLine ? [a, b.slice(0, maxLine) + '…'] : [a, b];
-    };
 
     type Placed = (typeof source)[number] & {
       rx: number;
       ry: number;
+      labelDx: number;
       nameLines: string[];
       nameFontSize: number;
       labelGap: number;
+      lineStep: number;
+      firstY: number;
+      typeY: number;
+      bw: number;
+      bh: number;
     };
 
+    /** Маркеры остаются в данных чертежа; расстояние «точка → подпись» компактное; крупный шрифт в единицах viewBox. */
+    const LABEL_GAP = 4.05;
     const placed: Placed[] = [];
+
     for (const sn of source) {
-      let rx = sn.x;
-      let ry = sn.y;
-      const seed = hash(sn.id);
-      const baseAngle = (seed % 360) * (Math.PI / 180);
-      for (let iter = 0; iter < 36; iter++) {
-        let collided = false;
-        for (const p of placed) {
-          const dx = rx - p.rx;
-          const dy = ry - p.ry;
-          const dist = Math.hypot(dx, dy);
-          if (dist < minGap) {
-            collided = true;
-            const push = minGap - dist + 1.15;
-            const angle = baseAngle + iter * 0.55;
-            rx += Math.cos(angle) * push;
-            ry += Math.sin(angle) * push;
-          }
-        }
-        rx = clamp(rx, 5, 95);
-        ry = clamp(ry, 5, 95);
-        if (!collided) break;
-      }
-      const nameLines = splitMapLabel(sn.name || '', 16);
-      const longName = (sn.name || '').length > 22;
-      const nameFontSize = longName ? 0.68 : 0.78;
-      /** Всегда под узлом: стабильная привязка, без наслоения на круг. */
-      const labelGap = 11.2 + (seed % 5) * 0.22;
+      const rx = clamp(sn.x, 3, 97);
+      const ry = clamp(sn.y, 3, 97);
+      /** На карте — одна короткая строка; полное имя в реестре справа. */
+      const rawName = (sn.name || '').toUpperCase().trim();
+      const nameLines =
+        rawName.length > 15 ? [`${rawName.slice(0, 14)}…`] : [rawName || '???'];
+      const nameFontSize = 0.76;
+      const lineStep = 1.02;
+      const padTop = 0.52;
+      const padBot = 0.48;
+      const firstY = padTop + nameFontSize * 0.92;
+      const lastNameY = firstY + Math.max(0, nameLines.length - 1) * lineStep;
+      const typeY = lastNameY + 0.88;
+      const longestLine = Math.max(
+        nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
+        sn.type.length + 2
+      );
+      const bw = Math.min(60, 3.0 + longestLine * (nameFontSize * 0.52));
+      const bh = typeY + 0.45 + padBot;
 
       placed.push({
         ...sn,
         rx,
         ry,
+        labelDx: 0,
         nameLines,
         nameFontSize,
-        labelGap,
+        labelGap: LABEL_GAP,
+        lineStep,
+        firstY,
+        typeY,
+        bw,
+        bh,
       });
     }
 
-    for (let pass = 0; pass < 14; pass++) {
+    const pairOverlaps = (a: Placed, b: Placed) => {
+      const ax = a.rx + a.labelDx;
+      const ay = a.ry + a.labelGap + a.bh / 2;
+      const bx = b.rx + b.labelDx;
+      const by = b.ry + b.labelGap + b.bh / 2;
+      const hd = Math.abs(ax - bx);
+      const vd = Math.abs(ay - by);
+      return hd < ((a.bw + b.bw) / 2) * 0.88 && vd < ((a.bh + b.bh) / 2) * 0.88;
+    };
+
+    for (let pass = 0; pass < 20; pass++) {
       for (let i = 0; i < placed.length; i++) {
         for (let j = i + 1; j < placed.length; j++) {
           const a = placed[i];
           const b = placed[j];
-          let dx = b.rx - a.rx;
-          let dy = b.ry - a.ry;
-          const d = Math.hypot(dx, dy) || 0.001;
-          if (d < minGap) {
-            const push = ((minGap - d) * 0.52) / d;
-            dx *= push;
-            dy *= push;
-            a.rx = clamp(a.rx - dx, 5, 95);
-            a.ry = clamp(a.ry - dy, 5, 95);
-            b.rx = clamp(b.rx + dx, 5, 95);
-            b.ry = clamp(b.ry + dy, 5, 95);
+          if (!pairOverlaps(a, b)) continue;
+          const push = 2.1;
+          if (a.rx + a.labelDx <= b.rx + b.labelDx) {
+            a.labelDx -= push;
+            b.labelDx += push;
+          } else {
+            a.labelDx += push;
+            b.labelDx -= push;
           }
+          a.labelDx = clamp(a.labelDx, -18, 18);
+          b.labelDx = clamp(b.labelDx, -18, 18);
         }
       }
     }
 
+    for (const p of placed) {
+      let dx = p.labelDx;
+      const half = p.bw / 2;
+      if (p.rx + dx - half < 2) dx = 2 + half - p.rx;
+      if (p.rx + dx + half > 98) dx = 98 - half - p.rx;
+      p.labelDx = clamp(dx, -18, 18);
+    }
+
     return placed;
-  }, [activeDistrict.subNodes]);
+  }, [filteredSubNodes]);
   const selectedRenderSubNode = renderSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
 
   const getTravelCost = (targetNode: MapNodeData) => {
@@ -174,18 +232,26 @@ const MapView: React.FC<MapViewProps> = ({
     return Math.floor(dist * 2);
   };
 
+  const handlePickSubNode = (id: string) => {
+    if (selectedSubNodeId === id) {
+      setNodeConnectModalOpen(true);
+    } else {
+      setSelectedSubNodeId(id);
+    }
+  };
+
   return (
-    <div className="map-view-v4 no-pan">
-      <header className="map-hdr-v5">
+    <div className={`map-view-v4 no-pan ${gameClock ? `map-phase-${gameClock.phase}` : ''}`}>
+      <header className="map-hdr-v5 map-hdr-v5--radar">
         <div className="hdr-main-area">
           <div className="hdr-micro-label side-fixed">
             GEOGRAPHIC_INDEX // {viewMode === 'DISTRICT' ? `${activeDistrict.name.split(':')[0].toUpperCase()}_СЕТЕВОЙ_РАДАР` : 'МОСКВА_СЕТЕВОЙ_РАДАР'}
           </div>
-          <h1 className="hdr-headline">SELECT_ENGAGEMENT_TARGET</h1>
+          <h1 className="hdr-headline">РАДАР_РАЙОНА</h1>
         </div>
         <div className="hdr-actions-area">
           <div className="hdr-status-row">
-            <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%] </div>
+            <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_[ZOOM:{Math.round(zoom * 100)}%] </div>
             <div className="hdr-actions">
             {viewMode === 'DISTRICT' && isCityMapUnlocked && (
                <button className="map-hdr-btn" onClick={onToggleView}>
@@ -204,12 +270,13 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
       </header>
 
-      <main className="map-body">
+      <main className="map-body map-body--radar-v2">
         <div 
           className="map-canvas-wrap"
           onWheel={handleWheel}
           ref={containerRef}
         >
+          {gameClock && <div className={`map-atmo map-atmo--${gameClock.phase}`} aria-hidden />}
           <svg viewBox="0 0 100 100" className="map-svg" preserveAspectRatio="xMidYMid meet">
             <defs>
               <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
@@ -377,35 +444,41 @@ const MapView: React.FC<MapViewProps> = ({
                        const isSelected = selectedSubNodeId === sn.id;
                        const fillType = NODE_COLORS[sn.type] || '#889';
                        const tagColor = isSelected ? 'var(--neon-cyan)' : fillType;
-                       const lineStep = 1.04;
-                       const padTop = 0.5;
-                       const padBot = 0.44;
-                       const firstY = padTop + sn.nameFontSize * 0.9;
-                       const lastNameY = firstY + Math.max(0, sn.nameLines.length - 1) * lineStep;
-                       const typeY = lastNameY + 0.92;
-                       const longestLine = Math.max(
-                         sn.nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
-                         sn.type.length + 2
-                       );
-                       const bw = Math.min(54, 2.6 + longestLine * (sn.nameFontSize * 0.5));
-                       const bh = typeY + 0.38 + padBot;
-                       const labelTransform = `translate(${sn.rx}, ${sn.ry + sn.labelGap})`;
+                       const { lineStep, firstY, typeY, bw, bh } = sn;
+                       const labelTransform = `translate(${sn.rx + sn.labelDx}, ${sn.ry + sn.labelGap})`;
                        const pillFill = isSelected ? 'rgba(0, 28, 42, 0.94)' : 'rgba(2, 10, 18, 0.92)';
                        const pillStroke = isSelected ? 'rgba(0, 212, 255, 0.45)' : 'rgba(0, 180, 220, 0.22)';
                        const nameFill = isSelected ? '#b8f4ff' : '#e8f2ff';
-                       const txtStroke = { stroke: '#030810', strokeWidth: 0.08, paintOrder: 'stroke fill' as const };
+                       const txtStroke = { stroke: '#030810', strokeWidth: 0.07, paintOrder: 'stroke fill' as const };
                        return (
-                        <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
+                        <g
+                          key={sn.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePickSubNode(sn.id);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
-                          <circle cx={sn.rx} cy={sn.ry} r="0.85" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
+                          <line
+                            x1={sn.rx}
+                            y1={sn.ry + 1.0}
+                            x2={sn.rx + sn.labelDx}
+                            y2={sn.ry + sn.labelGap + 0.08}
+                            stroke="rgba(0, 212, 255, 0.4)"
+                            strokeWidth="0.07"
+                            strokeLinecap="round"
+                            style={{ pointerEvents: 'none' }}
+                          />
+                          <circle cx={sn.rx} cy={sn.ry} r="0.95" fill={isSelected ? '#fff' : NODE_COLORS[sn.type]} />
                           <circle
                             cx={sn.rx}
                             cy={sn.ry}
-                            r="1.35"
+                            r="1.45"
                             fill="none"
                             stroke={isSelected ? '#fff' : NODE_COLORS[sn.type]}
-                            strokeWidth="0.04"
-                            opacity={isSelected ? 0.55 : 0.28}
+                            strokeWidth="0.045"
+                            opacity={isSelected ? 0.55 : 0.32}
                           />
                           
                           <g transform={labelTransform} filter="url(#mapPillShadow)" style={{ pointerEvents: 'none' }}>
@@ -414,11 +487,11 @@ const MapView: React.FC<MapViewProps> = ({
                               y="0"
                               width={bw}
                               height={bh}
-                              rx="0.75"
-                              ry="0.75"
+                              rx="0.85"
+                              ry="0.85"
                               fill={pillFill}
                               stroke={pillStroke}
-                              strokeWidth="0.06"
+                              strokeWidth="0.07"
                             />
                             {sn.nameLines.map((line, li) => (
                               <text
@@ -428,7 +501,7 @@ const MapView: React.FC<MapViewProps> = ({
                                 fontSize={sn.nameFontSize}
                                 fill={nameFill}
                                 textAnchor="middle"
-                                style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.2px' }}
+                                style={{ fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.15px' }}
                                 {...txtStroke}
                               >
                                 {line}
@@ -437,10 +510,10 @@ const MapView: React.FC<MapViewProps> = ({
                             <text
                               x="0"
                               y={typeY}
-                              fontSize="0.38"
+                              fontSize="0.5"
                               fill={tagColor}
                               textAnchor="middle"
-                              style={{ fontFamily: 'monospace', fontWeight: 900, letterSpacing: '1.2px' }}
+                              style={{ fontFamily: 'monospace', fontWeight: 900, letterSpacing: '1.1px' }}
                               {...txtStroke}
                             >
                               {sn.type}
@@ -456,8 +529,36 @@ const MapView: React.FC<MapViewProps> = ({
           </svg>
         </div>
 
-        <aside className="map-info-panel arctic-monolith">
-          {viewMode === 'CITY' && selectedNode ? (
+        <div
+          className={
+            viewMode === 'DISTRICT'
+              ? 'map-radar-column map-radar-column--district-rail-only'
+              : 'map-radar-column'
+          }
+        >
+        <MapRadarRail
+          gameClock={gameClock ?? null}
+          viewMode={viewMode}
+          districtTitle={viewMode === 'DISTRICT' ? (activeDistrict.name.split(':')[0] || 'РАЙОН') : 'МОСКВА'}
+          poiFilter={poiFilter}
+          onPoiFilter={setPoiFilter}
+          cityFilter={cityFilter}
+          onCityFilter={setCityFilter}
+          districtRows={filteredSubNodes}
+          cityRows={filteredCityNodes}
+          selectedSubNodeId={selectedSubNodeId}
+          selectedCityNodeId={selectedNode?.id ?? null}
+          onPickSubNode={handlePickSubNode}
+          onPickCityNode={(node) => {
+            setSelectedNode(node);
+            setSelectedSubNodeId(null);
+          }}
+          objectiveNodeId={objectiveNodeId}
+          listRef={poiListRef}
+        />
+        {viewMode === 'CITY' && (
+        <aside className="map-info-panel arctic-monolith map-info-panel--radar-detail">
+          {selectedNode ? (
             <div className="panel-content animate-slide-in">
               <div className="node-tag" style={{ color: NODE_COLORS[selectedNode.type] }}> {selectedNode.type.toUpperCase()} / TIER_{selectedNode.tier} </div>
               <h1 className="node-title">{selectedNode.name}</h1>
@@ -472,28 +573,6 @@ const MapView: React.FC<MapViewProps> = ({
                 {selectedNode.id === activeDistrictId ? 'ПЕРЕЙТИ_К_РАЙОНУ' : 'ИНИЦИИРОВАТЬ_ПЕРЕМЕЩЕНИЕ'}
               </button>
             </div>
-          ) : selectedSubNode ? (
-            <div className="panel-content animate-slide-in">
-              <div className="node-tag" style={{ color: NODE_COLORS[selectedSubNode.type] }}> {selectedSubNode.type.toUpperCase()} </div>
-              <h1 className="node-title">{selectedSubNode.name}</h1>
-              <div className="tech-briefing">
-                 <div className="brief-label">DATA_STREAM:</div>
-                 <p className="node-desc mono-text">{selectedSubNode.description}</p>
-                 <div className="brief-stats">
-                    <span>SECURITY: {activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span>
-                    <span>PING: STABLE</span>
-                 </div>
-              </div>
-              <button className="btn-engage" onClick={() => {
-                console.group(`[MAP_RADAR] Node Select: ${selectedSubNode.id}`);
-                console.log("Type:", selectedSubNode.type);
-                console.log("Handler Status: OPERATIONAL");
-                console.groupEnd();
-                onNodeSelect(selectedSubNode.id, selectedSubNode.type);
-              }}>
-                 ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
-              </button>
-            </div>
           ) : (
             <div className="no-selection mono-text">
                <MousePointer2 size={32} opacity="0.3" />
@@ -501,13 +580,117 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
         </aside>
+        )}
+        </div>
       </main>
+
+      {typeof document !== 'undefined' &&
+        selectedSubNode &&
+        nodeConnectModalOpen &&
+        createPortal(
+          <div
+            className="map-node-connect-overlay"
+            onClick={() => setNodeConnectModalOpen(false)}
+            role="presentation"
+          >
+            <div
+              className="map-node-connect-modal arctic-monolith"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="map-node-connect-title"
+            >
+              <button
+                type="button"
+                className="map-node-connect-close"
+                onClick={() => setNodeConnectModalOpen(false)}
+                aria-label="Закрыть"
+              >
+                <X size={20} />
+              </button>
+              <div className="node-tag" style={{ color: NODE_COLORS[selectedSubNode.type] }}>
+                {selectedSubNode.type.toUpperCase()}
+              </div>
+              <h2 id="map-node-connect-title" className="map-node-connect-headline">
+                {selectedSubNode.name}
+              </h2>
+              <div className="tech-briefing">
+                <div className="brief-label">DATA_STREAM:</div>
+                <p className="node-desc mono-text">{selectedSubNode.description}</p>
+                <div className="brief-stats">
+                  <span>SECURITY: {activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span>
+                  <span>PING: STABLE</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-engage"
+                onClick={() => {
+                  onNodeSelect(selectedSubNode.id, selectedSubNode.type);
+                  setNodeConnectModalOpen(false);
+                }}
+              >
+                ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
 
       <style>{`
         .map-view-v4 { height: 100%; display: flex; flex-direction: column; background: #000; overflow: hidden; }
+        .map-radar-column--district-rail-only > .map-radar-rail {
+          flex: 1;
+          min-height: 0;
+        }
+        .map-node-connect-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100000;
+          background: rgba(0, 0, 0, 0.78);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .map-node-connect-modal {
+          position: relative;
+          width: min(100%, 420px);
+          max-height: min(88vh, 640px);
+          overflow-y: auto;
+          padding: 28px 24px 24px;
+          border: 1px solid rgba(0, 212, 255, 0.28);
+          box-shadow: 0 0 48px rgba(0, 0, 0, 0.85);
+        }
+        .map-node-connect-close {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: transparent;
+          border: none;
+          color: #889;
+          cursor: pointer;
+          padding: 6px;
+          line-height: 0;
+          border-radius: 4px;
+        }
+        .map-node-connect-close:hover { color: var(--neon-cyan); }
+        .map-node-connect-headline {
+          font-size: 1.35rem;
+          font-weight: 900;
+          color: #fff;
+          margin: 0 0 16px;
+          line-height: 1.2;
+          padding-right: 36px;
+        }
         .map-hdr-v5 {
           height: 100px; display: grid; grid-template-columns: 1fr 340px; 
           background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(188,19,254,0.1);
+        }
+        .map-hdr-v5--radar {
+          height: 64px !important;
+          grid-template-columns: 1fr auto !important;
+          align-items: center;
         }
         .hdr-main-area {
           display: flex; align-items: center; justify-content: center; position: relative;
@@ -538,11 +721,51 @@ const MapView: React.FC<MapViewProps> = ({
         .map-hdr-btn.exit { border-color: rgba(255,255,255,0.1); opacity: 0.7; }
         
         .map-body { flex: 1; display: grid; grid-template-columns: 1fr 340px; overflow: hidden; position: relative; }
+        .map-body--radar-v2 {
+          grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+        }
+        .map-radar-column {
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          min-width: 0;
+          background: linear-gradient(180deg, rgba(4, 10, 20, 0.98) 0%, rgba(0, 4, 12, 1) 100%);
+          border-left: 1px solid rgba(0, 212, 255, 0.14);
+        }
+        .map-info-panel--radar-detail {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          border-left: none !important;
+          padding-top: 16px !important;
+        }
         .map-canvas-wrap { 
           position: relative; background: radial-gradient(circle at 50% 50%, rgba(26,11,46,0.3) 0%, #000 100%); 
           cursor: crosshair; overflow: hidden; 
         }
-        .map-svg { width: 100%; height: 100%; }
+        .map-atmo {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+          transition: opacity 1.2s ease;
+        }
+        .map-atmo--morning {
+          background: linear-gradient(195deg, rgba(255, 220, 180, 0.09) 0%, transparent 45%);
+        }
+        .map-atmo--day {
+          background: radial-gradient(ellipse 90% 45% at 50% 0%, rgba(120, 200, 255, 0.07) 0%, transparent 58%);
+        }
+        .map-atmo--evening {
+          background: linear-gradient(180deg, transparent 35%, rgba(255, 100, 40, 0.1) 100%),
+            linear-gradient(95deg, rgba(60, 30, 10, 0.12) 0%, transparent 45%);
+        }
+        .map-atmo--night {
+          background: radial-gradient(ellipse 110% 85% at 50% 110%, rgba(40, 10, 80, 0.55) 0%, transparent 52%),
+            linear-gradient(180deg, rgba(0, 4, 28, 0.5) 0%, transparent 55%);
+          mix-blend-mode: multiply;
+        }
+        .map-svg { width: 100%; height: 100%; position: relative; z-index: 3; }
         
         .radar-sweep { transform-origin: 50px 50px; animation: radar-rotate 5s linear infinite; }
         @keyframes radar-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -577,7 +800,8 @@ const MapView: React.FC<MapViewProps> = ({
 
         @media (max-width: 1280px) {
           .map-hdr-v5 { grid-template-columns: 1fr 280px; }
-          .map-body { grid-template-columns: 1fr 280px; }
+          .map-body:not(.map-body--radar-v2) { grid-template-columns: 1fr 280px; }
+          .map-body--radar-v2 { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
           .hdr-main-area { justify-content: flex-start; padding-left: 20px; }
           .hdr-micro-label.side-fixed { position: static; transform: none; margin-right: 14px; }
           .hdr-headline { font-size: 1.35rem; }
@@ -589,6 +813,16 @@ const MapView: React.FC<MapViewProps> = ({
           .hdr-actions-area { justify-content: flex-start; padding-right: 0; }
           .hdr-status-row { flex-wrap: wrap; gap: 8px; }
           .map-body { grid-template-columns: 1fr; }
+          .map-body--radar-v2 {
+            grid-template-columns: 1fr;
+            grid-template-rows: minmax(220px, 48vh) auto;
+            overflow-y: auto;
+          }
+          .map-radar-column {
+            border-left: none;
+            border-top: 1px solid rgba(0, 212, 255, 0.12);
+            max-height: none;
+          }
           .map-info-panel { border-left: none; border-top: 1px solid rgba(188,19,254,0.1); max-height: 42vh; overflow-y: auto; }
           .node-title { font-size: 1.4rem; margin-bottom: 12px; }
         }

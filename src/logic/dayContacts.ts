@@ -1,5 +1,6 @@
 import { DialogueBuilder } from './dialogueUtils';
 import type { DialogueTree } from './dialogues';
+import { defaultAwayVisitNodeIdForDistrict } from './mapData';
 import type { NpcProfile } from './world/types';
 
 type DayPhase = 'morning' | 'day' | 'evening';
@@ -78,7 +79,7 @@ export const DAY_CONTACT_PRESENCE: Record<string, DayPresenceConfig> = DAY_SEEDS
     npcId,
     name: seed.npcName,
     homeNodeId: npcId,
-    awayNodeId: seed.id,
+    awayNodeId: defaultAwayVisitNodeIdForDistrict(seed.id),
     awayDistrictId: seed.id,
     awayChance: 1,
     awayNote: 'Дневной контакт ушел на выездную проверку.',

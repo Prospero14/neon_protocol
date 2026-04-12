@@ -22,11 +22,11 @@ export const npc_deck_ai_dialogues = new DialogueBuilder('npc_deck_ai', 'boot_0'
     { text: '[ Вернуться ]', nextId: 'career_intro' }
   ])
   .addNode('roles_menu', 'AIDA-01', 'Специализации определяют твою роль в иерархии. Это не просто код, это влияние на структуру города.', [
-    { text: 'DevOps: Строитель Путей', nextId: 'desc_devops' },
-    { text: 'SysAdmin: Хранитель Уровня', nextId: 'desc_admin' },
-    { text: 'Architect: Визионер Структуры', nextId: 'desc_arch' },
-    { text: 'Project Manager: Вектор Хаоса', nextId: 'desc_pm' },
-    { text: 'QA Tester: Инквизитор Багов', nextId: 'desc_qa' },
+    { text: 'Developer: Поставка кода', nextId: 'desc_coop_dev' },
+    { text: 'QA: Инквизитор багов', nextId: 'desc_qa' },
+    { text: 'Admin: Периметр и инфра', nextId: 'desc_coop_admin' },
+    { text: 'PM: Ритм команды', nextId: 'desc_pm' },
+    { text: 'Architect: Визионер структуры', nextId: 'desc_arch' },
     { text: '[ Вернуться ]', nextId: 'career_intro' }
   ])
   // --- Language descriptions ---
@@ -35,9 +35,9 @@ export const npc_deck_ai_dialogues = new DialogueBuilder('npc_deck_ai', 'boot_0'
   .addNode('desc_kotlin', 'AIDA-01', 'Kotlin: Мобильный Форсаж. Компактный, быстрый, совместимый с Java-стеком GigaBank. Предпочтение мобильных операторов и дронных сетей Митино. Высокий потенциал против крупных корпоративных узлов.', [{ text: 'Ясно.', nextId: 'langs_menu' }])
   .addNode('desc_go', 'AIDA-01', 'Go: Параллельная Реальность. Горутины — это параллельные потоки атаки. Максимальная производительность на многоядерных серверах Перово. Идеален для распределённых атак на несколько портов одновременно.', [{ text: 'Принято.', nextId: 'langs_menu' }])
   .addNode('desc_js', 'AIDA-01', 'JavaScript: Визуальный Хаос. Убийца интерфейсов. Работает везде и уязвим везде. В сети Октября используется нелегально — от взлома рекламных щитов до захвата браузерных нейроинтерфейсов граждан.', [{ text: 'Опасно.', nextId: 'langs_menu' }])
-  // --- Role descriptions ---
-  .addNode('desc_devops', 'AIDA-01', 'DevOps Engineer: Ты строишь конвейеры. Автоматизация развертывания вирусов через CI/CD протоколы.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
-  .addNode('desc_admin', 'AIDA-01', 'System Administrator: Прямой доступ к железу. Управление питанием и полномочия root в твоем секторе.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
+  // --- Role descriptions (кооп: четыре роли + архитектор как вершина пути) ---
+  .addNode('desc_coop_dev', 'AIDA-01', 'Developer: логика и код на шине — как kata, но ведущие к фиче. Оппонент давит ревью и темпом THREAT.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
+  .addNode('desc_coop_admin', 'AIDA-01', 'Admin: сертификаты, балансировка, прокси, фаерволы, карантин. Ты держишь периметр; ИИ бьёт по контуру и стрессу.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
   .addNode('desc_arch', 'AIDA-01', 'System Architect: Высшая каста. Ты не фиксишь баги, ты создаешь законы. Самый сложный путь к вершине.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
   .addNode('desc_pm', 'AIDA-01', 'Project Manager: Управление ресурсами. Твои карты заставляют других работать на тебя. Лидерство — твоё оружие.', [{ text: 'Понятно.', nextId: 'roles_menu' }])
   .addNode('desc_qa', 'AIDA-01', 'QA Tester: Ты видишь изъяны. Твои атаки находят слабые места, превращая чужую уверенность в ошибку.', [{ text: 'Понятно.', nextId: 'roles_menu' }])

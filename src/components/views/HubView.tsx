@@ -7,6 +7,8 @@ import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 import type { MessengerMessage } from '../../logic/hooks/useGameState';
 import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
+import { COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
+import { OCTOBERLINE_HUB_BRACKET_LABEL } from '../../buildInfo';
 
 interface HubViewProps {
   playerName: string;
@@ -30,6 +32,10 @@ interface HubViewProps {
   tutorialCompleted: boolean;
   worldDay: number;
   dayPhase: string;
+  /** Игровое время «ЧЧ:ММ» (ускоренное). */
+  gameTimeLabel: string;
+  /** Короткая метка фазы суток (УТРО/ДЕНЬ/…). */
+  phaseLabelRu: string;
   trustedNpcContacts: string[];
   messengerFeed: MessengerMessage[];
   knownDistrictChannels: string[];
@@ -43,6 +49,12 @@ interface HubViewProps {
   canUnlockChannelByQuest: (districtId: string) => boolean;
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
+  /** Кооп: смена класса (отдельные колоды и прогресс на роль). */
+  sessionMode?: 'solo' | 'coop';
+  coopRole?: CoopRole | null;
+  onSwitchCoopClass?: (role: CoopRole) => void;
+  /** Переключение соло/кооп без перелогина. */
+  onSwitchSessionMode?: (mode: 'solo' | 'coop') => void;
 }
 
 export const HubView: React.FC<HubViewProps> = ({
@@ -64,6 +76,8 @@ export const HubView: React.FC<HubViewProps> = ({
   tutorialCompleted,
   worldDay,
   dayPhase,
+  gameTimeLabel,
+  phaseLabelRu,
   trustedNpcContacts,
   messengerFeed,
   knownDistrictChannels,
@@ -76,7 +90,11 @@ export const HubView: React.FC<HubViewProps> = ({
   onUnlockChannelByQuest,
   canUnlockChannelByQuest,
   onNavigateToView,
-  onNavigateToBarNode
+  onNavigateToBarNode,
+  sessionMode = 'solo',
+  coopRole = null,
+  onSwitchCoopClass,
+  onSwitchSessionMode,
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
   const messengerFeedRef = React.useRef<HTMLDivElement | null>(null);
@@ -182,13 +200,60 @@ export const HubView: React.FC<HubViewProps> = ({
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
         <div className="brand-box">
-          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.11.01 | BUILD_7A_LAYOUT]</span></h1>
+          <h1 className="neon-text glow-green">
+            OCTOBERLINE{' '}
+            <span className="mvp-tag" title={OCTOBERLINE_HUB_BRACKET_LABEL}>
+              [{OCTOBERLINE_HUB_BRACKET_LABEL}]
+            </span>
+          </h1>
           <div className="meta-line mono-text">
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>
             <span className="meta-item"><User size={12} /> {playerName}</span>
             <span className="meta-divider">|</span>
-            <span className="meta-item">DAY {worldDay} / {dayPhase.toUpperCase()}</span>
+            <span className="meta-item" title="Игровые сутки: 12 ч игры ≈ 4 ч реального времени">
+              ДЕНЬ {worldDay} · {gameTimeLabel} · {phaseLabelRu}
+            </span>
+            {onSwitchSessionMode && (
+              <span className="meta-divider">|</span>
+            )}
+            {onSwitchSessionMode && (
+              <span className="meta-item hub-session-toggle" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.58rem', color: '#6a7a8a', letterSpacing: '0.1em' }}>СЕССИЯ</span>
+                <button
+                  type="button"
+                  onClick={() => onSwitchSessionMode('solo')}
+                  style={{
+                    fontSize: '0.58rem',
+                    padding: '2px 8px',
+                    border:
+                      sessionMode === 'solo' ? '1px solid rgba(0, 255, 180, 0.5)' : '1px solid #456',
+                    background: sessionMode === 'solo' ? 'rgba(0, 255, 180, 0.1)' : 'rgba(0,0,0,0.35)',
+                    color: sessionMode === 'solo' ? '#9ff' : '#889',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  SOLO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSwitchSessionMode('coop')}
+                  style={{
+                    fontSize: '0.58rem',
+                    padding: '2px 8px',
+                    border:
+                      sessionMode === 'coop' ? '1px solid rgba(0, 212, 255, 0.55)' : '1px solid #456',
+                    background: sessionMode === 'coop' ? 'rgba(0, 212, 255, 0.12)' : 'rgba(0,0,0,0.35)',
+                    color: sessionMode === 'coop' ? 'var(--neon-cyan)' : '#889',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  CO-OP
+                </button>
+              </span>
+            )}
           </div>
         </div>
         <div className="hub-top-stats">
@@ -222,6 +287,32 @@ export const HubView: React.FC<HubViewProps> = ({
       <div className="hub-grid-v4">
         <div className="hub-col identity">
           <div className="col-header mono-text"><Shield size={14} /> IDENTITY_MODULE</div>
+          {sessionMode === 'coop' && coopRole && onSwitchCoopClass && (
+            <div className="coop-class-strip mono-text" style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: '#789', marginBottom: 6 }}>CO-OP КЛАСС</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {COOP_ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => onSwitchCoopClass(r)}
+                    style={{
+                      fontSize: '0.62rem',
+                      padding: '4px 8px',
+                      border:
+                        r === coopRole ? '1px solid rgba(0, 212, 255, 0.55)' : '1px solid #456',
+                      background: r === coopRole ? 'rgba(0, 212, 255, 0.12)' : 'rgba(0,0,0,0.35)',
+                      color: r === coopRole ? 'var(--neon-cyan)' : '#aab',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {COOP_ROLE_LABELS[r].title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="neon-panel interactive arctic-monolith stat-card-v4" onClick={() => onNavigateToView('CHARACTER')}>
             <div className="card-inner">
               <div className="prof-tag">{classUnlocked ? profession.name : "SCRIPT-KIDDO"}</div>

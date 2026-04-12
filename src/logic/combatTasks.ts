@@ -3,6 +3,8 @@
  * Шаги проверяют, что нужные «конструкции программы» лежат на шине рантайма.
  */
 
+import { generateCoopYardMissionPool } from './coopYardMissions';
+
 export interface TZStep {
   id: string;
   name: string;
@@ -36,7 +38,7 @@ export interface TechnicalTask {
 }
 
 
-export const TZ_LIBRARY: TechnicalTask[] = [
+const TZ_LIBRARY_BASE: TechnicalTask[] = [
   {
     id: 'junior_hello_ai',
     name: 'DRILL: HELLO_MALICIOUS_AI',
@@ -699,3 +701,7 @@ export const TZ_LIBRARY: TechnicalTask[] = [
     ]
   }
 ];
+
+const COOP_YARD_GENERATED = generateCoopYardMissionPool() as TechnicalTask[];
+
+export const TZ_LIBRARY: TechnicalTask[] = [...TZ_LIBRARY_BASE, ...COOP_YARD_GENERATED];

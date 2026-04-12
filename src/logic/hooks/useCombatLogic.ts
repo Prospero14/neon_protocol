@@ -11,6 +11,16 @@ import { getStepCardIds } from '../combatTasks';
 import type { Trait } from '../traits';
 import { BUGS, pickNextBugAction } from '../combatEnemies';
 import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
+import type { CoopRole, SessionMode } from '../sessionMode';
+import {
+  coopAdjustAiDeltas,
+  coopBackgroundNoise,
+  coopChainProgressBonus,
+  coopLaneCodeProgressBump,
+  coopOppositionOpeningLine,
+  coopOutplayExtras,
+  isCoopCombat,
+} from '../coopCombatRole';
 
 export type RailSlotType = 'EMPTY' | 'PLAYER_CODE' | 'BUG_ERROR';
 export interface RailSlot {
@@ -32,6 +42,9 @@ interface UseCombatLogicProps {
   deckRamMb: number;
   isQuestCombat?: boolean;
   isFirstCombatQuestTutorial?: boolean;
+  /** Кооп: роль влияет на входящий урон ИИ, прогресс и т.д. */
+  sessionMode?: SessionMode;
+  coopRole?: CoopRole | null;
 }
 
 interface AiImpactSummary {
@@ -51,8 +64,11 @@ export function useCombatLogic({
   deckCores,
   deckRamMb,
   isQuestCombat,
-  isFirstCombatQuestTutorial
+  isFirstCombatQuestTutorial,
+  sessionMode = 'solo',
+  coopRole = null,
 }: UseCombatLogicProps) {
+  const coopActive = isCoopCombat(sessionMode, coopRole);
   const START_HAND_SIZE = 6;
 
   // --- CORE STATE ---
@@ -204,6 +220,10 @@ export function useCombatLogic({
       addLog('[TUTORIAL] Смотри NEXT_INTENT: это следующее действие оппонента.');
     }
 
+    if (coopActive && coopRole) {
+      addLog(coopOppositionOpeningLine(coopRole));
+    }
+
     if (playerTraits.some(t => t.id === 'hobby_comp_coding')) setRamMaxMb(prev => prev + 512);
     if (playerTraits.some(t => t.id === 'hardware_reclaimer')) setRamMaxMb(prev => prev + 512);
     if (playerTraits.some(t => t.id === 'overclocked')) {
@@ -349,6 +369,11 @@ export function useCombatLogic({
         applyInfraEffect(card);
         setCpu(prev => prev - cost);
         registerPlayDiversity(card);
+        if (coopActive && coopRole === 'admin') {
+          setMitigationBuffer((b) => Math.min(30, b + 2));
+          setStress((s) => Math.max(0, s - 1));
+          addLog('[ROLE:ADMIN] PERIMETER — +2 mitigation, −1 stress.');
+        }
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] INFRA_DEPLOYED: ${card.name}`);
       }
@@ -440,6 +465,11 @@ export function useCombatLogic({
             break;
           default:
             break;
+        }
+        if (coopActive && coopRole === 'pm') {
+          setPlayerProgress((p) => Math.min(100, p + 3));
+          setStress((s) => Math.max(0, s - 2));
+          addLog('[ROLE:PM] STAKEHOLDER_BUFFER — +3% progress, −2 stress.');
         }
         registerPlayDiversity(card);
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
@@ -546,8 +576,15 @@ export function useCombatLogic({
         const newRail = [...runtimeRail];
         newRail[idx] = { type: 'EMPTY', content: null, integrity: 0 };
         setRuntimeRail(newRail);
-        setBugPoints((p) => Math.max(0, p - (outplay ? 3 : 1)));
-        setAiProgress((p) => Math.max(0, p - (outplay ? 14 : 6)));
+        let bugCut = outplay ? 3 : 1;
+        let threatCut = outplay ? 14 : 6;
+        if (coopActive) {
+          const ex = coopOutplayExtras(coopRole!, outplay);
+          bugCut += ex.bugExtra;
+          threatCut += ex.threatExtra;
+        }
+        setBugPoints((p) => Math.max(0, p - bugCut));
+        setAiProgress((p) => Math.max(0, p - threatCut));
         setStress((s) => Math.max(0, s - (outplay ? 10 : 4)));
         if (outplay) {
           addLog(`[OUTPLAY] Попадание в тип сбоя — угроза и стресс срезаны.`);
@@ -625,6 +662,12 @@ export function useCombatLogic({
     newRail[idx] = { type: 'PLAYER_CODE', content: card, integrity: finalIntegrity };
     setRuntimeRail(newRail);
 
+    const laneBump = coopActive ? coopLaneCodeProgressBump(coopRole!) : 0;
+    if (laneBump > 0 && (card.type === 'SYNTAX' || card.type === 'FUNCTION')) {
+      setPlayerProgress((p) => Math.min(100, p + laneBump));
+      addLog(`[ROLE:DEV] LANE_COMMIT +${laneBump}% progress.`);
+    }
+
     // --- EXTENDED CHAIN SYNERGIES ---
     if (idx > 0 && runtimeRail[idx - 1].type === 'PLAYER_CODE') {
       const prev1 = (runtimeRail[idx - 1].content as CombatCard).id;
@@ -685,7 +728,10 @@ export function useCombatLogic({
 
         if (bonusLog) {
           addLog(bonusLog);
-          if (progressBonus > 0) setPlayerProgress(p => Math.min(100, p + progressBonus));
+          if (progressBonus > 0) {
+            const pb = coopActive ? coopChainProgressBonus(coopRole!, progressBonus) : progressBonus;
+            setPlayerProgress((p) => Math.min(100, p + pb));
+          }
           if (stressRelief > 0) setStress(s => Math.max(0, s - stressRelief));
         }
       }
@@ -705,6 +751,10 @@ export function useCombatLogic({
         if (bugIdx !== -1) {
           next[bugIdx] = { type: 'EMPTY', content: null, integrity: 0 };
           addLog('[NULL_PACKET] BUG_ERROR_NEUTRALIZED.');
+          if (coopActive && coopRole === 'qa') {
+            setBugPoints((p) => Math.max(0, p - 1));
+            addLog('[ROLE:QA] TRIAGE — доп. −1 к счётчику багов.');
+          }
         }
         return next;
       });
@@ -754,8 +804,17 @@ export function useCombatLogic({
       nextBugAction.damage > 0
         ? (skillMode === 'script-kiddie' ? Math.max(1, Math.floor(rawDamage * 0.65)) : rawDamage)
         : 0;
+    let effThreat = threatDelta;
+    let effBugs = bugDelta;
+    let effStress = stressDelta;
+    if (coopActive) {
+      const adj = coopAdjustAiDeltas(coopRole!, effThreat, effBugs, effStress);
+      effThreat = adj.threatDelta;
+      effBugs = adj.bugDelta;
+      effStress = adj.stressDelta;
+    }
     setAiProgress((prev) => {
-      const n = Math.min(100, prev + threatDelta);
+      const n = Math.min(100, prev + effThreat);
       if (n >= 100 && prev < 100) {
         queueMicrotask(() => {
           addLog('[CRITICAL] THREAT_MAX — снимай баги; сильный контрплей режет угрозу.');
@@ -764,7 +823,7 @@ export function useCombatLogic({
       }
       return n;
     });
-    setBugPoints(prev => prev + bugDelta);
+    setBugPoints(prev => prev + effBugs);
     if (nextBugAction.spawnId) {
       setRuntimeRail((prev) => {
         const next = [...prev];
@@ -796,8 +855,8 @@ export function useCombatLogic({
       }
     }
     if (nextBugAction.damage > 0) {
-      const absorbed = Math.min(mitigationBuffer, stressDelta);
-      const dmgAfterAbsorb = Math.max(0, stressDelta - absorbed);
+      const absorbed = Math.min(mitigationBuffer, effStress);
+      const dmgAfterAbsorb = Math.max(0, effStress - absorbed);
       if (absorbed > 0) {
         setMitigationBuffer((b) => Math.max(0, b - absorbed));
         addLog(`[GUARD] MITIGATION absorbed ${absorbed} stress.`);
@@ -815,21 +874,21 @@ export function useCombatLogic({
     if (mitigationBuffer > 0) setMitigationBuffer((b) => Math.max(0, b - 2));
     if (
       currentPhase === 'VERIFICATION' &&
-      threatDelta === 0 &&
-      bugDelta === 0 &&
-      stressDelta === 0 &&
+      effThreat === 0 &&
+      effBugs === 0 &&
+      effStress === 0 &&
       !nextBugAction.spawnId &&
       !nextBugAction.injectStatusId
     ) {
       setAiProgress((p) => Math.min(100, p + 4));
       addLog('[AI] PASSIVE_SCAN: +4% THREAT (verification pressure).');
     }
-    addLog(`[AI] ${nextBugAction.name} | threat +${threatDelta}% | bugs +${bugDelta}${stressDelta > 0 ? ` | stress +${stressDelta}` : ''}`);
+    addLog(`[AI] ${nextBugAction.name} | threat +${effThreat}% | bugs +${effBugs}${effStress > 0 ? ` | stress +${effStress}` : ''}`);
     setLastAiAction(nextBugAction);
     setLastAiImpact({
-      stressDelta,
-      threatDelta,
-      bugDelta,
+      stressDelta: effStress,
+      threatDelta: effThreat,
+      bugDelta: effBugs,
       statusInjected: nextBugAction.injectStatusId ?? null,
       ts: Date.now(),
     });
@@ -1083,8 +1142,9 @@ export function useCombatLogic({
         }
         
         const noise = skillMode === 'script-kiddie' ? 3 : 5;
-        setStress((prev) => Math.min(100, prev + noise));
-        addLog(`[WARNING] BACKGROUND_NOISE: +${noise}% STRESS`);
+        const noiseAdj = coopActive ? coopBackgroundNoise(coopRole!, noise) : noise;
+        setStress((prev) => Math.min(100, prev + noiseAdj));
+        addLog(`[WARNING] BACKGROUND_NOISE: +${noiseAdj}% STRESS`);
         if (currentPhase === 'ARCHITECTURE') {
           const nextTurn = planningTurn + 1;
           if (nextTurn >= 2) { setPlanningTurn(0); advancePhase(); } else setPlanningTurn(nextTurn);

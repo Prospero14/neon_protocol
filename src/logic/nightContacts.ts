@@ -1,5 +1,6 @@
 import { DialogueBuilder } from './dialogueUtils';
 import type { DialogueTree } from './dialogues';
+import { defaultAwayVisitNodeIdForDistrict } from './mapData';
 import type { NpcProfile } from './world/types';
 
 type NightPhase = 'night';
@@ -80,7 +81,7 @@ export const NIGHT_CONTACT_PRESENCE: Record<string, NightPresenceConfig> = DISTR
       npcId,
       name: seed.npcName,
       homeNodeId: npcId,
-      awayNodeId: seed.id,
+      awayNodeId: defaultAwayVisitNodeIdForDistrict(seed.id),
       awayDistrictId: seed.id,
       awayChance: 1,
       awayNote: 'Записка в терминале: ушел на периметр, вернусь до рассвета.',

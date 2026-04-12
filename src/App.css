@@ -265,6 +265,8 @@ body, html, #root {
   font-size: 0.8rem;
   opacity: 0.4;
   vertical-align: middle;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .meta-line {

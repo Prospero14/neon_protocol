@@ -1,11 +1,30 @@
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+function gitShortHead(): string | null {
+  try {
+    const out = execSync('git rev-parse --short HEAD', {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    return out || null
+  } catch {
+    return null
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const buildStamp =
     process.env.VITE_BUILD_STAMP ??
-    (mode === 'production' ? `p${Date.now()}` : 'local')
+    (mode === 'production'
+      ? (() => {
+          const g = gitShortHead()
+          const t = Date.now()
+          return g ? `${g}_${t}` : `p${t}`
+        })()
+      : 'local')
 
   return {
     plugins: [react()],

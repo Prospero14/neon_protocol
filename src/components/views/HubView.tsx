@@ -200,7 +200,12 @@ export const HubView: React.FC<HubViewProps> = ({
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
         <div className="brand-box">
-          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[{OCTOBERLINE_HUB_BRACKET_LABEL}]</span></h1>
+          <h1 className="neon-text glow-green">
+            OCTOBERLINE{' '}
+            <span className="mvp-tag" title={OCTOBERLINE_HUB_BRACKET_LABEL}>
+              [{OCTOBERLINE_HUB_BRACKET_LABEL}]
+            </span>
+          </h1>
           <div className="meta-line mono-text">
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>

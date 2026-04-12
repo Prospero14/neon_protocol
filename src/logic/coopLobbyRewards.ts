@@ -82,3 +82,22 @@ export function shouldGrantCoopSegmentReward(
   const segmentIndex = nextC / COOP_SEGMENT_SIZE - 1;
   return { segmentIndex };
 }
+
+/** Множитель ранга для Bits за сегмент (не «золотой дождь»: магазины коопа дорогие). */
+const COOP_TIER_BIT_MULT: Record<SkillMode, number> = {
+  'script-kiddie': 1,
+  junior: 1.12,
+  mid: 1.28,
+  senior: 1.45,
+};
+
+/**
+ * Дополнительные Bits при закрытии сегмента (наряду с картами).
+ * Формула: база растёт с номером сегмента, затем × множитель ранга, floor — целые Bits.
+ */
+export function coopSegmentBitsBonus(tierRank: SkillMode, segmentIndex: number): number {
+  const s = Math.max(0, Math.min(COOP_MILESTONE_MAX_SEGMENTS - 1, segmentIndex));
+  const base = 38 + s * 22;
+  const m = COOP_TIER_BIT_MULT[tierRank] ?? 1;
+  return Math.floor(base * m);
+}

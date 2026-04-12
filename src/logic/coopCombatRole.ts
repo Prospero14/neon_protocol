@@ -32,6 +32,7 @@ export function coopOppositionOpeningLine(role: CoopRole): string {
 /**
  * Модификатор входящих ударов ИИ после расчёта хода аудитора.
  * Developer: чуть сильнее THREAT (ревью кода). QA: слабее баги. Admin: бывший DevOps+админ — танк по периметру. PM: мягче стресс.
+ * Округление: threat чаще ceil (давление не «теряется»), bug/stress — floor (снятие дефектов не завышается).
  */
 export function coopAdjustAiDeltas(
   role: CoopRole,

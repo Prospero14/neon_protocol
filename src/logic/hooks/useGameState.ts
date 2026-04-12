@@ -25,6 +25,7 @@ import { buildStarterDeckForSession } from '../sessionMode';
 import { bossTaskIdForTier, nextCoopTierRank } from '../coopYardRuntime';
 import {
   coopRewardCardIdsForSegment,
+  coopSegmentBitsBonus,
   shouldGrantCoopSegmentReward,
 } from '../coopLobbyRewards';
 import {
@@ -818,6 +819,8 @@ export function useGameState() {
         } else if (role) {
           const grant = shouldGrantCoopSegmentReward(missionTaskId, prev, next, tier);
           if (grant) {
+            const bitBonus = coopSegmentBitsBonus(tier, grant.segmentIndex);
+            setBits((b) => b + bitBonus);
             for (const id of coopRewardCardIdsForSegment(role, grant.segmentIndex)) {
               grantCardById(id);
             }

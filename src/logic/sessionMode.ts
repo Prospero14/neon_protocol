@@ -10,6 +10,8 @@ import {
   DEV_DEFAULT_LIB_PACK,
   LANGUAGE_CORE_IDS,
   LANGUAGE_LIBRARY_PACKS,
+  ROLE_ACCENT_PACKS,
+  ROLE_DEFAULT_ACCENT,
   ROLE_SPECIALTY_IDS,
   type DevLanguageStack,
 } from './decks/deckCatalog';
@@ -146,6 +148,19 @@ function coopStarterIdsWithStack(coopRole: CoopRole, stack: DevLanguageStack): s
   return COOP_STARTER_IDS[coopRole];
 }
 
+/** QA / PM / Admin: specialty + тематический акцент (аналог «библиотеки» у dev) + база роли. */
+function coopStarterIdsWithAccent(role: 'qa' | 'pm' | 'admin'): string[] {
+  const key = ROLE_DEFAULT_ACCENT[role];
+  const pack = ROLE_ACCENT_PACKS[role][key];
+  if (!pack) {
+    return mergeUniqueIdLists([ROLE_SPECIALTY_IDS[role], COOP_STARTER_IDS[role]], MAX_COOP_STARTER_CARDS);
+  }
+  return mergeUniqueIdLists(
+    [ROLE_SPECIALTY_IDS[role], pack.cardIds, COOP_STARTER_IDS[role]],
+    MAX_COOP_STARTER_CARDS
+  );
+}
+
 /**
  * @param devLanguageStack — только для developer: Java/Kotlin/Python/Go. Для qa/pm/admin не задаётся.
  */
@@ -161,7 +176,7 @@ export function buildStarterDeckForSession(
   if (devLanguageStack != null && coopRole === 'developer') {
     ids = coopStarterIdsWithStack(coopRole, devLanguageStack);
   } else if (coopRole === 'admin' || coopRole === 'qa' || coopRole === 'pm') {
-    ids = mergeUniqueIdLists([ROLE_SPECIALTY_IDS[coopRole], COOP_STARTER_IDS[coopRole]], MAX_COOP_STARTER_CARDS);
+    ids = coopStarterIdsWithAccent(coopRole);
   } else {
     ids = COOP_STARTER_IDS[coopRole];
   }

@@ -6,6 +6,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'server/**/*.test.ts'],
+    server: {
+      deps: {
+        inline: ['express', 'supertest', 'mime-db', 'mime-types', 'body-parser', 'raw-body'],
+      },
+    },
   },
 });

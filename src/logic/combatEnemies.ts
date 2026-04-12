@@ -403,6 +403,8 @@ export type AiSelectionContext = {
   phase?: 'ARCHITECTURE' | 'DEVELOPMENT' | 'VERIFICATION' | 'DEPLOYMENT';
   bugPressure?: number;
   playerProgress?: number;
+  /** Детерминированные тесты: источник U(0,1); по умолчанию Math.random. */
+  random?: () => number;
 };
 
 /**
@@ -439,7 +441,8 @@ export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[], ctx?: 
   });
 
   const sum = weights.reduce((s, x) => s + x, 0);
-  let roll = Math.random() * sum;
+  const rnd = ctx?.random ?? Math.random;
+  let roll = rnd() * sum;
   for (let i = 0; i < actions.length; i++) {
     roll -= weights[i];
     if (roll <= 0) return actions[i];

@@ -211,3 +211,86 @@ export const ROLE_SPECIALTY_IDS: Record<'qa' | 'pm' | 'admin', string[]> = {
     'def_validator',
   ],
 };
+
+/**
+ * «Библиотеки» для QA / PM / Admin — тематические пакеты карт (как LANGUAGE_LIBRARY_PACKS у dev).
+ * Стартовая колода в коопе: specialty → выбранный акцент → базовый список роли (см. sessionMode).
+ */
+export const ROLE_ACCENT_PACKS: Record<
+  'qa' | 'pm' | 'admin',
+  Record<string, { title: string; hint: string; cardIds: string[] }>
+> = {
+  qa: {
+    defect_pipeline: {
+      title: 'Defect pipeline',
+      hint: 'Юнит → интеграция → регресс; чистка ICE и null-case.',
+      cardIds: ['react_integration_test', 'react_unit_test', 'react_null_packet', 'react_trace_jam'],
+    },
+    regression_suite: {
+      title: 'Regression / hotfix',
+      hint: 'Повторяемость прогона и откат.',
+      cardIds: ['react_refactoring', 'react_hotfix', 'react_rollback', 'react_emergency_flush'],
+    },
+    perimeter_tests: {
+      title: 'Периметр и валидатор',
+      hint: 'Фаервол, валидатор, маскировка логов.',
+      cardIds: ['react_firewall_patch', 'def_validator', 'react_log_mask', 'react_spoof_id'],
+    },
+    stress_chaos: {
+      title: 'Chaos / стресс',
+      hint: 'Снятие шума и ложных срабатываний.',
+      cardIds: ['react_decoy_ping', 'react_trace_jam', 'soft_patch_drill', 'soft_tactical_breath'],
+    },
+  },
+  pm: {
+    sprint_ops: {
+      title: 'Sprint ops',
+      hint: 'Дедлайн, буферы, фокус команды.',
+      cardIds: ['soft_deadline_trance', 'soft_buffer_flush', 'soft_focus', 'soft_signal_prediction'],
+    },
+    stakeholder_sync: {
+      title: 'Stakeholder / коммуникация',
+      hint: 'Предсказание сигналов и критическое мышление.',
+      cardIds: ['soft_critical_thinking', 'soft_signal_prediction', 'soft_pair_programming', 'soft_ai_ask'],
+    },
+    ceremony_light: {
+      title: 'Церемонии без боли',
+      hint: 'Мягкие инструменты процесса.',
+      cardIds: ['soft_coffee', 'soft_recursive_logic', 'soft_tactical_breath', 'script_ls'],
+    },
+    risk_buffers: {
+      title: 'Риски и исключения',
+      hint: 'Исключения, финализаторы, божественный дебаг как крайний случай.',
+      cardIds: ['soft_throw_ex', 'soft_finally', 'soft_buffer_flush', 'reward_divine_debug'],
+    },
+  },
+  admin: {
+    perimeter_hardening: {
+      title: 'Периметр',
+      hint: 'Прокси, карантин, DNS, VPC.',
+      cardIds: ['infra_safe_proxy', 'infra_quarantine_vm', 'infra_dns_resolver', 'infra_vpc_network'],
+    },
+    cluster_mesh: {
+      title: 'Кластер / mesh',
+      hint: 'Pod, k8s, mesh, горизонталь.',
+      cardIds: ['infra_basic_pod', 'infra_k8s_cluster', 'infra_mesh_relay', 'infra_h_scaling'],
+    },
+    storage_backup: {
+      title: 'Хранилища',
+      hint: 'Реплики, RAID, S3.',
+      cardIds: ['infra_postgres', 'infra_db_cluster', 'infra_raid_array', 'infra_s3_bucket'],
+    },
+    incident_response: {
+      title: 'Инцидент',
+      hint: 'Логи, CI/CD, орбитал — когда горит прод.',
+      cardIds: ['infra_log_aggregator', 'infra_actions_ci', 'infra_cicd', 'infra_orbital_uplink'],
+    },
+  },
+};
+
+/** Дефолтный акцент для кооп-старта (можно позже привязать к выбору игрока). */
+export const ROLE_DEFAULT_ACCENT: Record<'qa' | 'pm' | 'admin', string> = {
+  qa: 'defect_pipeline',
+  pm: 'sprint_ops',
+  admin: 'perimeter_hardening',
+};

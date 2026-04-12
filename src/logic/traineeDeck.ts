@@ -1,7 +1,10 @@
 import type { CombatCard } from './combatCards';
 import { getCardById } from './combatCards';
 
-/** Базовая стартовая колода (соло / дефолт). */
+/**
+ * Базовая стартовая колода (соло / дефолт).
+ * Колоды четырёх кооп-ролей (dev + язык, QA/PM/Admin + акценты) — в sessionMode + decks/deckCatalog.
+ */
 export function buildTraineeDeck(): CombatCard[] {
   const starterIds = [
     'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',

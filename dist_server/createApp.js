@@ -4,6 +4,30 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
+/** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
+function publicGameState(gs) {
+    if (!gs)
+        return null;
+    const snap = gs.clientSnapshot;
+    const fromSnap = typeof snap === 'object' && snap !== null && !Array.isArray(snap) ? { ...snap } : {};
+    const { clientSnapshot: _drop, ...row } = gs;
+    return {
+        ...fromSnap,
+        ...row,
+        stress: gs.stress,
+        maxStress: gs.maxStress,
+        bits: gs.bits,
+        ramPool: gs.ramPool,
+        xp: gs.xp,
+        level: gs.level,
+        activeDeck: gs.activeDeck,
+        inventory: gs.inventory,
+        artifacts: gs.artifacts,
+        completedQuests: gs.completedQuests,
+        reputation: gs.reputation ?? fromSnap.reputation,
+        intel: gs.intel ?? fromSnap.intel,
+    };
+}
 /**
  * HTTP API (auth, sync, coop lobby) + SPA static. Лобби — in-memory на инстанс приложения.
  */
@@ -121,7 +145,11 @@ export function createApp(opts) {
             if (!user || !(await bcrypt.compare(password, user.passwordHash)))
                 return res.status(401).json({ error: 'Fail' });
             const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
-            res.json({ token, user: { id: user.id, username: user.username, gameState: user.gameState } });
+            const rawGs = user.gameState;
+            res.json({
+                token,
+                user: { id: user.id, username: user.username, gameState: publicGameState(rawGs) },
+            });
         }
         catch (_error) {
             res.status(500).json({ error: 'Fail' });
@@ -134,12 +162,24 @@ export function createApp(opts) {
                 return res.status(401).json({ error: 'No token' });
             const token = authHeader.split(' ')[1];
             const decoded = jwt.verify(token, jwtSecret);
-            const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
+            const body = req.body;
+            const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;
             const updatedState = await prisma.gameState.update({
                 where: { userId: decoded.userId },
-                data: { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests },
+                data: {
+                    stress,
+                    maxStress,
+                    bits,
+                    xp,
+                    level,
+                    activeDeck,
+                    inventory,
+                    artifacts,
+                    completedQuests,
+                    clientSnapshot: body,
+                },
             });
-            res.json(updatedState);
+            res.json(publicGameState(updatedState));
         }
         catch (error) {
             console.error('Sync Error:', error);

@@ -7,6 +7,30 @@ import type { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 
+/** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
+function publicGameState(gs: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!gs) return null;
+  const snap = gs.clientSnapshot;
+  const fromSnap = typeof snap === 'object' && snap !== null && !Array.isArray(snap) ? { ...(snap as object) } : {};
+  const { clientSnapshot: _drop, ...row } = gs;
+  return {
+    ...fromSnap,
+    ...row,
+    stress: gs.stress,
+    maxStress: gs.maxStress,
+    bits: gs.bits,
+    ramPool: gs.ramPool,
+    xp: gs.xp,
+    level: gs.level,
+    activeDeck: gs.activeDeck,
+    inventory: gs.inventory,
+    artifacts: gs.artifacts,
+    completedQuests: gs.completedQuests,
+    reputation: gs.reputation ?? (fromSnap as { reputation?: unknown }).reputation,
+    intel: gs.intel ?? (fromSnap as { intel?: unknown }).intel,
+  };
+}
+
 export type CreateAppOptions = {
   prisma: PrismaClient;
   jwtSecret: string;
@@ -150,7 +174,11 @@ export function createApp(opts: CreateAppOptions) {
       const user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
       if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Fail' });
       const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
-      res.json({ token, user: { id: user.id, username: user.username, gameState: user.gameState } });
+      const rawGs = user.gameState as Record<string, unknown> | null;
+      res.json({
+        token,
+        user: { id: user.id, username: user.username, gameState: publicGameState(rawGs) },
+      });
     } catch (_error) {
       res.status(500).json({ error: 'Fail' });
     }
@@ -162,12 +190,24 @@ export function createApp(opts: CreateAppOptions) {
       if (!authHeader) return res.status(401).json({ error: 'No token' });
       const token = authHeader.split(' ')[1];
       const decoded = jwt.verify(token, jwtSecret) as { userId: string };
-      const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = req.body;
+      const body = req.body as Record<string, unknown>;
+      const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;
       const updatedState = await prisma.gameState.update({
         where: { userId: decoded.userId },
-        data: { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests },
+        data: {
+          stress,
+          maxStress,
+          bits,
+          xp,
+          level,
+          activeDeck,
+          inventory,
+          artifacts,
+          completedQuests,
+          clientSnapshot: body as object,
+        } as any,
       });
-      res.json(updatedState);
+      res.json(publicGameState(updatedState as unknown as Record<string, unknown>));
     } catch (error) {
       console.error('Sync Error:', error);
       res.status(401).json({ error: 'Invalid' });

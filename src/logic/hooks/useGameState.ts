@@ -133,6 +133,13 @@ export function useGameState() {
       .catch(() => setUserIp('127.0.0.1 (VPN_ACTIVE)'));
   }, []);
 
+  /** После logout нужно снова подтянуть состояние следующего входа (иначе новый аккаунт видит старый currentView). */
+  useEffect(() => {
+    if (!user) {
+      hasLoadedInitialState.current = false;
+    }
+  }, [user]);
+
   const [currentView, setCurrentView] = useState<ViewType>('CREATION');
   const [lastView, setLastView] = useState<ViewType>('HUB');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
@@ -643,6 +650,8 @@ export function useGameState() {
         setCurrentView(gs.currentView);
       } else if (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId)) {
         setCurrentView('HUB');
+      } else {
+        setCurrentView('CREATION');
       }
 
       if (gs.traits) setTraits(gs.traits);
@@ -903,6 +912,102 @@ export function useGameState() {
       discoveredCardIds,
       devLanguageStack,
       coopSprintConsecutiveLosses,
+      syncGame,
+    ]
+  );
+
+  /** Переключение соло/кооп из хаба без перелогина; профили коопа сохраняются в coopClassProfiles. */
+  const switchSessionMode = useCallback(
+    (next: SessionMode, coopPick?: CoopRole) => {
+      if (next === 'solo') {
+        let mergedProfiles = coopClassProfilesRef.current;
+        if (sessionMode === 'coop' && coopRole) {
+          const snap = serializeCoopClassSave({
+            activeDeck,
+            inventoryUnique,
+            coopTierRank,
+            coopYardCompletedMissionIds,
+            discoveredCardIds,
+            devLanguageStack,
+            coopSprintConsecutiveLosses,
+          });
+          mergedProfiles = { ...coopClassProfilesRef.current, [coopRole]: snap };
+          setCoopClassProfiles(mergedProfiles);
+        }
+        setSessionMode('solo');
+        setCoopRole(null);
+        setDevLanguageStack(null);
+        setCoopStartupName(null);
+        const deck = buildStarterDeckForSession('solo', null, null);
+        setActiveDeck(deck);
+        const invUnique = deck.filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
+        setInventory(invUnique);
+        setDiscoveredCardIds(new Set(invUnique.map((c) => c.id)));
+        invUnique.forEach((c) => discoverCard(c.id));
+        setCurrentView('HUB');
+        setActiveDistrictId(homeDistrictId);
+        setActiveMessengerChannel(homeDistrictId);
+        syncGame({
+          sessionMode: 'solo',
+          coopRole: null,
+          devLanguageStack: null,
+          coopStartupName: null,
+          currentView: 'HUB',
+          activeDistrictId: homeDistrictId,
+          coopClassProfiles: mergedProfiles,
+        });
+        return;
+      }
+
+      if (next === 'coop' && sessionMode === 'coop' && !coopPick) return;
+
+      const role = coopPick ?? coopRole ?? 'developer';
+      const stackForNew = role === 'developer' ? devLanguageStack ?? 'java' : null;
+      const merged = coopClassProfilesRef.current;
+      const loaded = merged[role] ?? defaultCoopClassSave(role, stackForNew);
+      setSessionMode('coop');
+      setCoopRole(role);
+      setCoopClassProfiles({ ...merged, [role]: loaded });
+      const applied = applyCoopClassSave(loaded);
+      setActiveDeck(applied.activeDeck);
+      setInventory(applied.inventory);
+      setCoopTierRank(applied.coopTierRank);
+      setCoopYardCompletedMissionIds(applied.coopYardCompletedMissionIds);
+      setDiscoveredCardIds(applied.discoveredCardIds);
+      if (role === 'developer') setDevLanguageStack(applied.devLanguageStack);
+      else setDevLanguageStack(null);
+      setCoopSprintConsecutiveLosses(applied.coopSprintConsecutiveLosses);
+      applied.activeDeck.forEach((c) => discoverCard(c.id));
+      setCurrentView('COOP_LOBBY');
+      setActiveDistrictId(homeDistrictId);
+      setKnownDistrictChannels((ch) => (ch.includes('coop_yard') ? ch : [...ch, 'coop_yard']));
+      setUnlockedDistrictChannels((ch) => (ch.includes('coop_yard') ? ch : [...ch, 'coop_yard']));
+      syncGame({
+        sessionMode: 'coop',
+        coopRole: role,
+        devLanguageStack: applied.devLanguageStack,
+        coopStartupName: coopStartupName ?? undefined,
+        currentView: 'COOP_LOBBY',
+        activeDistrictId: homeDistrictId,
+        activeMessengerChannel: homeDistrictId,
+        coopTierRank: applied.coopTierRank,
+        coopYardCompletedMissionIds: applied.coopYardCompletedMissionIds,
+        coopSprintConsecutiveLosses: applied.coopSprintConsecutiveLosses,
+        coopClassProfiles: { ...merged, [role]: loaded },
+      });
+    },
+    [
+      sessionMode,
+      coopRole,
+      activeDeck,
+      inventoryUnique,
+      coopTierRank,
+      coopYardCompletedMissionIds,
+      discoveredCardIds,
+      devLanguageStack,
+      coopSprintConsecutiveLosses,
+      homeDistrictId,
+      coopStartupName,
       syncGame,
     ]
   );
@@ -1408,7 +1513,7 @@ export function useGameState() {
     devLanguageStack, setDevLanguageStack,
     coopStartupName, setCoopStartupName,
     coopTierRank, setCoopTierRank,
-    coopYardCompletedMissionIds, registerCoopYardMissionClear, completeCoopSprintLaunch, switchCoopClass,
+    coopYardCompletedMissionIds, registerCoopYardMissionClear, completeCoopSprintLaunch, switchCoopClass, switchSessionMode,
     coopSprintConsecutiveLosses, setCoopSprintConsecutiveLosses,
     coopStartupLiquidated, setCoopStartupLiquidated,
     inventory, setInventory,

@@ -52,6 +52,8 @@ interface HubViewProps {
   sessionMode?: 'solo' | 'coop';
   coopRole?: CoopRole | null;
   onSwitchCoopClass?: (role: CoopRole) => void;
+  /** Переключение соло/кооп без перелогина. */
+  onSwitchSessionMode?: (mode: 'solo' | 'coop') => void;
 }
 
 export const HubView: React.FC<HubViewProps> = ({
@@ -91,6 +93,7 @@ export const HubView: React.FC<HubViewProps> = ({
   sessionMode = 'solo',
   coopRole = null,
   onSwitchCoopClass,
+  onSwitchSessionMode,
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
   const messengerFeedRef = React.useRef<HTMLDivElement | null>(null);
@@ -205,6 +208,46 @@ export const HubView: React.FC<HubViewProps> = ({
             <span className="meta-item" title="Игровые сутки: 12 ч игры ≈ 4 ч реального времени">
               ДЕНЬ {worldDay} · {gameTimeLabel} · {phaseLabelRu}
             </span>
+            {onSwitchSessionMode && (
+              <span className="meta-divider">|</span>
+            )}
+            {onSwitchSessionMode && (
+              <span className="meta-item hub-session-toggle" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.58rem', color: '#6a7a8a', letterSpacing: '0.1em' }}>СЕССИЯ</span>
+                <button
+                  type="button"
+                  onClick={() => onSwitchSessionMode('solo')}
+                  style={{
+                    fontSize: '0.58rem',
+                    padding: '2px 8px',
+                    border:
+                      sessionMode === 'solo' ? '1px solid rgba(0, 255, 180, 0.5)' : '1px solid #456',
+                    background: sessionMode === 'solo' ? 'rgba(0, 255, 180, 0.1)' : 'rgba(0,0,0,0.35)',
+                    color: sessionMode === 'solo' ? '#9ff' : '#889',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  SOLO
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSwitchSessionMode('coop')}
+                  style={{
+                    fontSize: '0.58rem',
+                    padding: '2px 8px',
+                    border:
+                      sessionMode === 'coop' ? '1px solid rgba(0, 212, 255, 0.55)' : '1px solid #456',
+                    background: sessionMode === 'coop' ? 'rgba(0, 212, 255, 0.12)' : 'rgba(0,0,0,0.35)',
+                    color: sessionMode === 'coop' ? 'var(--neon-cyan)' : '#889',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  CO-OP
+                </button>
+              </span>
+            )}
           </div>
         </div>
         <div className="hub-top-stats">

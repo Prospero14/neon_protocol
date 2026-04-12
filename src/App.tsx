@@ -427,6 +427,7 @@ function App() {
         sessionMode={gs.sessionMode}
         coopRole={gs.coopRole}
         onSwitchCoopClass={gs.switchCoopClass}
+        onSwitchSessionMode={gs.switchSessionMode}
       />
     );
   };

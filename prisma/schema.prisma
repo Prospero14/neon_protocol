@@ -34,6 +34,9 @@ model GameState {
   completedQuests Json
   reputation   Json?
   intel        Json?
-  
+
+  /** Полный JSON последнего /game/sync — sessionMode, currentView, activeDistrictId, coop_* и т.д. */
+  clientSnapshot Json?
+
   updatedAt    DateTime    @updatedAt
 }

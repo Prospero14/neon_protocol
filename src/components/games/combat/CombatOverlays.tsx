@@ -6,6 +6,7 @@ import { getStepCardIds } from '../../../logic/combatTasks';
 import type { BugEnemy, IcePersonality } from '../../../logic/combatEnemies';
 import { getOpponentPipelineNarrative } from '../../../logic/combatNarrative';
 import type { SkillMode } from '../../../logic/skillMode';
+import type { CoopSprintReport } from '../../../logic/coopSprint';
 
 const PERSONALITY_COLORS: Record<IcePersonality, string> = {
   TRACER:  '#ff4060',
@@ -39,6 +40,11 @@ interface CombatOverlaysProps {
   stress: number;
   onCloseTzModal: () => void;
   onWin: (bits: number, rank: string, chain: string[], name: string) => void;
+  coopVictoryReport?: CoopSprintReport | null;
+  coopDefeatReport?: CoopSprintReport | null;
+  coopDefeatAttemptIndex?: number;
+  coopMaxAttempts?: number;
+  coopWillLiquidateAfterThisDefeat?: boolean;
 }
 
 const CombatOverlays: React.FC<CombatOverlaysProps> = ({
@@ -54,6 +60,11 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
   stress,
   onCloseTzModal,
   onWin,
+  coopVictoryReport,
+  coopDefeatReport,
+  coopDefeatAttemptIndex,
+  coopMaxAttempts,
+  coopWillLiquidateAfterThisDefeat,
 }) => {
   const opponentStory = showTzModal ? getOpponentPipelineNarrative(skillMode, enemy) : null;
 
@@ -146,6 +157,29 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
                 <span className="gold">{victoryResult.bits} BITS</span>
               </div>
             </div>
+            {coopVictoryReport && (
+              <div className="coop-retro-block">
+                <div className="coop-retro-title">РЕТРОСПЕКТИВА СПРИНТА</div>
+                <p className="coop-retro-summary font-terminal">{coopVictoryReport.summaryLine}</p>
+                <div className="coop-retro-criteria">
+                  <span className="lbl text-amber">ВАША РОЛЬ — КРИТЕРИИ:</span>
+                  {coopVictoryReport.playerCriteria.map((c, i) => (
+                    <div key={i} className="coop-crit-row">
+                      <span>{c.label}</span>
+                      <span className="coop-crit-score">{c.score}</span>
+                      <span className="coop-crit-blur">{c.blurb}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="coop-squad-strip">
+                  {coopVictoryReport.squad.map((s) => (
+                    <span key={s.role} className="coop-squad-pill">
+                      {s.role}:{s.score}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <button className="result-btn green bg-green-90" onClick={() => onWin(victoryResult.bits, missionTz.rank, victoryResult.chain, missionTz.name)}>
               [ CONTINUE_TO_CITY ]
             </button>
@@ -165,11 +199,37 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
                   {!deploymentReport.cpuOk && <div className="stat-row red">ERROR: INSUFFICIENT_CPU</div>}
                   {!deploymentReport.ramOk && <div className="stat-row red">ERROR: BUFFER_OVERFLOW_RAM</div>}
                   {!deploymentReport.slotsOk && <div className="stat-row red">ERROR: INSUFFICIENT_MEMORY_SLOTS</div>}
-                  {deploymentReport.missingSteps.length > 0 && <div className="stat-row red">ERROR: REQUIREMENTS_NOT_MET</div>}
+                  {deploymentReport.missingSteps && deploymentReport.missingSteps.length > 0 && (
+                    <div className="stat-row red">ERROR: REQUIREMENTS_NOT_MET</div>
+                  )}
                   {stress >= 100 && <div className="stat-row red">ERROR: NEURAL_STRESS_OVERLOAD</div>}
                 </>
               )}
+              {typeof coopDefeatAttemptIndex === 'number' && typeof coopMaxAttempts === 'number' && (
+                <div className="stat-row red">
+                  ПОПЫТКА РЕЛИЗА: {coopDefeatAttemptIndex} / {coopMaxAttempts}
+                </div>
+              )}
+              {coopWillLiquidateAfterThisDefeat && (
+                <div className="stat-row red font-terminal">
+                  ПРОВАЛ ПРОДУКТА: стартап будет ликвидирован после выхода.
+                </div>
+              )}
             </div>
+            {coopDefeatReport && (
+              <div className="coop-retro-block coop-retro-block--defeat">
+                <div className="coop-retro-title">ОЦЕНКА ПРИ ПОРАЖЕНИИ</div>
+                <p className="coop-retro-summary font-terminal">{coopDefeatReport.summaryLine}</p>
+                <div className="coop-retro-criteria">
+                  {coopDefeatReport.playerCriteria.map((c, i) => (
+                    <div key={i} className="coop-crit-row">
+                      <span>{c.label}</span>
+                      <span className="coop-crit-score">{c.score}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <button className="result-btn red bg-red-90" onClick={() => onWin(0, missionTz.rank, [], missionTz.name)}>
               [ RETURN_TO_CITY_HUB ]
             </button>

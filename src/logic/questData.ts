@@ -1,7 +1,68 @@
-import { MAP_NODES } from './mapData';
+import { MAP_NODES, type MapNode } from './mapData';
 import { literaryEchoQuest } from './world/literaryEchoes';
 import { NIGHT_QUEST_SEEDS } from './nightContacts';
 import { DAY_QUEST_SEEDS } from './dayContacts';
+
+function districtShortLabel(d: MapNode | undefined, fallbackId: string): string {
+  if (!d) return fallbackId;
+  return d.name?.split(':')[0]?.trim() || d.id;
+}
+
+function findSubNodeOnMap(nodeId: string): { district: MapNode; sub: { id: string; name: string } } | null {
+  for (const d of MAP_NODES) {
+    const sub = d.subNodes?.find((s) => s.id === nodeId);
+    if (sub) return { district: d, sub };
+  }
+  return null;
+}
+
+/** Единая строка навигации для журнала квестов: район и узел на карте. */
+export function buildQuestNavigationLine(q: QuestDefinition): string {
+  const home = MAP_NODES.find((m) => m.id === q.districtId);
+  const homeLabel = districtShortLabel(home, q.districtId);
+
+  if (q.objectiveNodeId) {
+    const hit = findSubNodeOnMap(q.objectiveNodeId);
+    if (hit) {
+      const dl = districtShortLabel(hit.district, hit.district.id);
+      if (hit.district.id === q.districtId) {
+        return `\n\nКуда идти: на карте район «${dl}» → узел «${hit.sub.name}».`;
+      }
+      return `\n\nКуда идти: на карте район «${dl}» → узел «${hit.sub.name}» (цель задания).`;
+    }
+    return `\n\nКуда идти: на карте район «${homeLabel}» → маркер цели «${q.objectiveNodeId}».`;
+  }
+
+  if (q.giverNpcId) {
+    const hit = findSubNodeOnMap(q.giverNpcId);
+    if (hit) {
+      const dl = districtShortLabel(hit.district, hit.district.id);
+      return `\n\nКуда идти: на карте район «${dl}» → «${hit.sub.name}» (заказчик / старт диалога).`;
+    }
+    const nightM = q.giverNpcId.match(/^npc_night_(.+)$/);
+    if (nightM) {
+      const d = MAP_NODES.find((m) => m.id === nightM[1]);
+      const lab = districtShortLabel(d, nightM[1]);
+      return `\n\nКуда идти: на карте район «${lab}» → ночной контакт района (режим ночи), выдай задание через диалог.`;
+    }
+    const dayM = q.giverNpcId.match(/^npc_day_(.+)$/);
+    if (dayM) {
+      const d = MAP_NODES.find((m) => m.id === dayM[1]);
+      const lab = districtShortLabel(d, dayM[1]);
+      return `\n\nКуда идти: на карте район «${lab}» → дневной контакт района, выдай задание через диалог.`;
+    }
+  }
+
+  return `\n\nКуда идти: на карте район «${homeLabel}» — открой узлы района и найди заказчика или цель по трекеру.`;
+}
+
+function attachQuestNavigation(q: QuestDefinition): QuestDefinition {
+  const desc = q.description?.trim() ?? '';
+  if (desc.includes('Куда идти:')) return q;
+  const nav = buildQuestNavigationLine(q);
+  const base = desc.length > 0 ? desc : q.title;
+  return { ...q, description: `${base}${nav}` };
+}
 
 export type QuestType = 'talk' | 'combat' | 'delivery' | 'diagnostics';
 export type QuestDifficulty = 'quick' | 'standard' | 'hard';
@@ -892,8 +953,8 @@ const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
   { id: 'q_teply_stan_combat_wild_node_bug_sweep', title: '[БОЙ] Дикий Узел', districtId: 'teply_stan', giverNpcId: 'npc_sre_recruit', objectiveNodeId: 'combat_wild_node', type: 'combat', difficulty: 'quick', tier: 1 },
   { id: 'q_teply_stan_combat_router_clash_bug_sweep', title: '[БОЙ] Схватка Router', districtId: 'teply_stan', giverNpcId: 'npc_ranger', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'hard', tier: 1 },
 
-  // ── TEPLY STAN: ЛУНАРИОРИ ──
-  { id: 'q_lunariori_catch_bot', title: '[ПИТОМНИК] Поймать дикого бота Δ-5', description: 'Хранительница Лунариори просит поймать молодого бота на опушке у Стыка Роутеров. Используй PING и NULL_PACKET — не навреди.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'quick', tier: 1 },
+  // ── TEPLY STAN: ЛУНАРИФЕЛИН ──
+  { id: 'q_lunariori_catch_bot', title: '[ПИТОМНИК] Поймать дикого бота Δ-5', description: 'Хранительница ЛунариФелин просит поймать молодого бота на опушке у Стыка Роутеров. Используй PING и NULL_PACKET — не навреди.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'quick', tier: 1 },
   { id: 'q_lunariori_repair_bot', title: '[ПИТОМНИК] Починить ботёнка Ру', description: 'Малыш Ру застрял в рекурсивном цикле питания. Нужна карта UNIT_TEST_REACTION и доступ к системному терминалу питомника.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'term_lunariori_registry', type: 'diagnostics', difficulty: 'quick', tier: 1 },
   { id: 'q_lunariori_defend', title: '[ПИТОМНИК] Отбить налёт охотников за железом', description: 'Ночные мародёры пришли за автономными ботами. Останови их до рассвета.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', objectiveNodeId: 'combat_lunariori_defense', type: 'combat', difficulty: 'standard', tier: 1 },
   { id: 'q_lunariori_find_alpha', title: '[ПИТОМНИК] Найти легендарного бота A-0', description: 'Первый бот питомника пропал три месяца назад. Лесной отшельник видел его следы у Митино. Найди координаты — не трогай руками.', districtId: 'teply_stan', giverNpcId: 'npc_lunariori_keeper', type: 'talk', difficulty: 'hard', tier: 2 },
@@ -905,7 +966,7 @@ const DISTRICT_NARRATIVE_QUESTS: QuestDefinition[] = [
   { id: 'q_kin_t_red_team', title: '[SRE] Red Team: Стык Роутеров', description: 'Неофициальный контракт от Kin-T: провести контролируемую атаку на Стык Роутеров и принести отчёт о точках отказа.', districtId: 'teply_stan', giverNpcId: 'npc_kin_t', objectiveNodeId: 'combat_router_clash', type: 'combat', difficulty: 'hard', tier: 2 },
 
   // ── VYKHINO ──
-  { id: 'q_vykhino_combat_cargo_bug_sweep', title: '[БОЙ] Зачистка Карго', districtId: 'vykhino', giverNpcId: 'npc_grey', objectiveNodeId: 'combat_cargo', type: 'combat', difficulty: 'standard', tier: 1 },
+  { id: 'q_vykhino_combat_cargo_bug_sweep', title: '[БОЙ] Зачистка Карго', description: 'Подави нестабильный карго-узел в Выхино и стабилизируй поток.', districtId: 'vykhino', giverNpcId: 'npc_grey', objectiveNodeId: 'combat_cargo', type: 'combat', difficulty: 'standard', tier: 1 },
 
   // ── ACADEMY ──
   { id: 'q_neon_academy_bootcamp', title: '[ТУТОРИАЛ] Учебный Лагерь Оператора', description: 'Пройди вводный инструктаж Профессора Туранова: узнай о NEURAL_RAM, SYSTEM_STRESS и структуре OPERATIONS. Завершение открывает активную деку.', districtId: 'academy', giverNpcId: 'npc_academy_tutor', type: 'talk', difficulty: 'quick', tier: 1, preClassOnly: true },
@@ -939,4 +1000,4 @@ const RAW_QUEST_LIBRARY: QuestDefinition[] = [
   ...buildCombatDistrictQuests(),
 ];
 
-export const QUEST_LIBRARY: QuestDefinition[] = RAW_QUEST_LIBRARY.map(attachQuestLiteraryEcho);
+export const QUEST_LIBRARY: QuestDefinition[] = RAW_QUEST_LIBRARY.map(attachQuestLiteraryEcho).map(attachQuestNavigation);

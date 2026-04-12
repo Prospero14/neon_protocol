@@ -28,10 +28,10 @@ export const teply_stan: WorldDistrict = {
       { id: 'npc_ranger', name: 'Егерь (SRE-патруль)', type: 'npc', description: 'Следит за стабильностью региона. Недолюбливает дикий код.', x: 50, y: 20 },
       { id: 'npc_hermit_forest', name: 'Лесной Отшельник', type: 'npc', description: 'Живет вне сети. Знает тайные тропы.', x: 15, y: 45 },
       { id: 'npc_sre_recruit', name: 'Рекрут Патруля', type: 'npc', description: 'Мечтает о настоящем задании.', x: 75, y: 15 },
-      // ── РОБОПИТОМНИК ЛУНАРИОРИ ───────────────────────────────────────────────
-      { id: 'npc_lunariori_keeper', name: 'Хранительница Лунариори', type: 'npc', description: 'Куратор питомника диких автономных ботов. Говорит о них как о детях.', x: 30, y: 65 },
-      { id: 'combat_lunariori_defense', name: 'ЛУНАРИОРИ: Отражение налёта', type: 'combat', description: 'Налётчики пришли за ботами. Останови их.', x: 40, y: 70 },
-      { id: 'term_lunariori_registry', name: 'Реестр Лунариори', type: 'terminal', description: 'Журнал регистрации всех ботов питомника.', x: 25, y: 75 },
+      // ── РОБОПИТОМНИК ЛУНАРИФЕЛИН ───────────────────────────────────────────────
+      { id: 'npc_lunariori_keeper', name: 'Хранительница ЛунариФелин', type: 'npc', description: 'Куратор питомника диких автономных ботов. Говорит о них как о детях.', x: 30, y: 65 },
+      { id: 'combat_lunariori_defense', name: 'ЛУНАРИФЕЛИН: Отражение налёта', type: 'combat', description: 'Налётчики пришли за ботами. Останови их.', x: 40, y: 70 },
+      { id: 'term_lunariori_registry', name: 'Реестр ЛунариФелин', type: 'terminal', description: 'Журнал регистрации всех ботов питомника.', x: 25, y: 75 },
       // ── KIN-T (GIGACORP SRE) ─────────────────────────────────────────────────
       { id: 'npc_kin_t', name: 'Kin-T [GigaCorp SRE]', type: 'npc', description: 'Старший SRE GigaCorp. Держит SLO на 99.97%. Не терпит cargo-cult операций.', x: 70, y: 55 },
       { id: 'combat_load_test_zone', name: 'Зона нагрузочного теста', type: 'combat', description: 'Стрессовый тест инфраструктуры под максимальной нагрузкой.', x: 80, y: 65 },

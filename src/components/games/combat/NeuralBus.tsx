@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CombatPhase } from '../../../logic/combatPhases';
+import { SDLC_PHASES } from '../../../logic/combatPhases';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { RailSlot } from '../../../logic/hooks/useCombatLogic';
 import type { BugAction, BugEnemy } from '../../../logic/combatEnemies';
@@ -7,6 +8,8 @@ import { problemTypeLabelRu } from '../../../logic/combatCounterplay';
 import { Database, ShieldAlert, Terminal, Lock, ChevronRight } from 'lucide-react';
 
 interface NeuralBusProps {
+  /** Классы темы поля на рабочей зоне (SDLC + код); оппонент/дедлайн — общие. */
+  pipelineFieldClass?: string;
   currentPhase: CombatPhase;
   /** Софт-скиллы кладутся только в фазе стабилизации (после кода). */
   softSocketsLocked: boolean;
@@ -25,11 +28,15 @@ interface NeuralBusProps {
   onExecuteCardOnSlot: (idx: number) => void;
 }
 
+const PHASE_ORDER: CombatPhase[] = ['ARCHITECTURE', 'DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
+
 const NeuralBus: React.FC<NeuralBusProps> = ({
+  pipelineFieldClass = '',
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
   enemy, nextBugAction, isPlayerTurn, selectedCard, playerProgress, aiProgress,
   bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
+  const phaseIndex = PHASE_ORDER.indexOf(currentPhase);
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
   const ENEMY_VISIBLE_SLOTS = 7;
@@ -37,6 +44,8 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
 
   return (
     <main className="nb2">
+      {/* Общая полоса: оппонент, интенты, дедлайн — без перекраски под роль/соло-поле */}
+      <div className="nb2-opponent-lane nb2-opponent-lane--shared">
       {/* ── ENEMY RAIL ── */}
       <div className="nb2-enemy">
         <div className="nb2-enemy-avatar">
@@ -98,45 +107,67 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
           <span>BUGS <strong className={bugPoints > 0 ? 'red' : ''}>{bugPoints}</strong></span>
         </div>
       </div>
+      </div>
 
       {/* ── PIPELINE (CODE EDITOR) ── */}
-      <div className="nb2-pipeline-area">
+      <div className={`nb2-pipeline-area ${pipelineFieldClass}`.trim()}>
+        <div className="nb2-sdlc-rail" role="navigation" aria-label="Фазы цикла разработки">
+          {PHASE_ORDER.map((id, i) => {
+            const cur = phaseIndex;
+            const stepState = i < cur ? 'past' : i === cur ? 'current' : 'future';
+            const rules = SDLC_PHASES[id];
+            return (
+              <div key={id} className={`nb2-sdlc-step nb2-sdlc-step--${stepState}`} title={rules.description}>
+                <span className="nb2-sdlc-num">{i + 1}</span>
+                <span className="nb2-sdlc-name">{rules.name.split(':')[0]?.trim() || id}</span>
+              </div>
+            );
+          })}
+        </div>
         {currentPhase === 'ARCHITECTURE' ? (
           <div className="nb2-planning">
-            <div className="nb2-section-label">INFRA_RESOURCES</div>
-            <div className="nb2-plan-slots">
-              {infraSlots.map((s, i) => (
-                <div key={i} className={`nb2-plan-slot ${s ? 'deployed' : ''}`}>
-                  <span>{s ? s.name : `SLOT_${i + 1}`}</span>
-                </div>
-              ))}
+            <div className="nb2-plan-pipeline-seg nb2-plan-pipeline-seg--infra nb2-plan-pipeline-seg--active">
+              <div className="nb2-section-label">INFRA_RESOURCES</div>
+              <div className="nb2-plan-slots">
+                {infraSlots.map((s, i) => (
+                  <div key={i} className={`nb2-plan-slot ${s ? 'deployed' : ''}`}>
+                    <span>{s ? s.name : `SLOT_${i + 1}`}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="nb2-section-label nb2-soft-section-head" style={{ marginTop: 12 }}>
-              <span>SOFT_SOCKETS</span>
-              {softSocketsLocked && (
-                <span
-                  className="nb2-soft-badge"
-                  title="Софт-слоты открываются после кода, на фазе стабилизации (VERIFY)."
-                >
-                  ф3 · закрыто
-                </span>
-              )}
-            </div>
-            <div className="nb2-plan-slots nb2-plan-slots--soft">
-              {softSlots.map((s, i) => (
-                <div
-                  key={i}
-                  className={`nb2-plan-slot soft ${s ? 'deployed' : ''} ${softSocketsLocked && !s ? 'locked-preview' : ''}`}
-                >
-                  <span>
-                    {s ? s.name : softSocketsLocked ? `LOCKED_${i + 1}` : `SOCKET_${i + 1}`}
+            <div
+              className={`nb2-plan-pipeline-seg nb2-plan-pipeline-seg--soft ${
+                currentPhase === 'VERIFICATION' ? 'nb2-plan-pipeline-seg--active' : 'nb2-plan-pipeline-seg--idle'
+              }`}
+            >
+              <div className="nb2-section-label nb2-soft-section-head" style={{ marginTop: 12 }}>
+                <span>SOFT_SOCKETS</span>
+                {softSocketsLocked && (
+                  <span
+                    className="nb2-soft-badge"
+                    title="Софт-слоты открываются после кода, на фазе стабилизации (VERIFY)."
+                  >
+                    ф3 · закрыто
                   </span>
-                </div>
-              ))}
+                )}
+              </div>
+              <div className="nb2-plan-slots nb2-plan-slots--soft">
+                {softSlots.map((s, i) => (
+                  <div
+                    key={i}
+                    className={`nb2-plan-slot soft ${s ? 'deployed' : ''} ${softSocketsLocked && !s ? 'locked-preview' : ''}`}
+                  >
+                    <span>
+                      {s ? s.name : softSocketsLocked ? `LOCKED_${i + 1}` : `SOCKET_${i + 1}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
-          <div className="nb2-code-editor">
+          <div className="nb2-code-editor nb2-code-editor--phase-wrap">
             <div className="nb2-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>NEURAL_BUS <span className="nb2-caret">█</span></span>
               {currentPhase === 'VERIFICATION' && (

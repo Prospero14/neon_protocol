@@ -188,8 +188,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     Object.values(NPC_PRESENCE_CONFIGS).forEach(config => {
       if (!isNpcAvailableInPhase(config, dayPhase)) return;
       const inConfiguredNode = config.awayNodeId === locationId;
-      const inConfiguredDistrict = config.awayDistrictId === locationDistrict;
-      if (!inConfiguredNode && !inConfiguredDistrict) return;
+      if (!inConfiguredNode) return;
       // Show Petrovich in bar if he's not unlocked OR rolled as AWAY at bar
       const isPetrovichSpecial = config.npcId === 'npc_petrovich' && !isPetrovichHomeUnlocked;
       if (npcPresenceMap[config.npcId] === 'AWAY' || isPetrovichSpecial) {
@@ -226,15 +225,16 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     return Math.abs(h >>> 0);
   };
   const serviceOptionsRaw = finalOptions.filter(o => (o.cost || 0) > 0);
+  const maxServiceTiles = locationId.includes('bar_') ? 8 : 4;
   const serviceOptions = (() => {
-    if (serviceOptionsRaw.length <= 4) return serviceOptionsRaw;
+    if (serviceOptionsRaw.length <= maxServiceTiles) return serviceOptionsRaw;
     const scored = serviceOptionsRaw.map((opt, idx) => ({
       opt,
       idx,
       score: hashSeed(`${locationId}_${currentDay}_${opt.cardRewardId || opt.text}_${idx}`),
     }));
     scored.sort((a, b) => a.score - b.score);
-    return scored.slice(0, 4).map((x) => x.opt);
+    return scored.slice(0, maxServiceTiles).map((x) => x.opt);
   })();
   const primaryOptions = finalOptions.filter(o => !((o.cost || 0) > 0));
 
@@ -278,11 +278,22 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
     return (activeDist && themes[activeDist]?.includes(cardId)) || false;
   };
 
+  /** Убираем зашитую в текст базовую цену — реальная сумма справа (ƀN). */
+  const serviceOptionDisplayLabel = (raw: string) =>
+    raw.replace(/\s*\(\d+\s*Bits\)\s*$/i, '').trim();
+
   const getEffectiveCost = (option: DialogueOption): number => {
     let effectiveCost = option.cost || 0;
     if (effectiveCost <= 0) return 0;
     if (option.effect === 'GIVE_CARD' && option.cardRewardId && isLocalThemed(option.cardRewardId, locationId)) {
       effectiveCost = Math.floor(effectiveCost * 0.85);
+    }
+    // В узлах bar_* меню фиксировано по прайсу в данных (без скрытых надбавок района/репутации).
+    if (locationId.includes('bar_')) {
+      return Math.max(1, effectiveCost);
+    }
+    if (option.effect === 'RESTORE_HP') {
+      return Math.max(1, effectiveCost);
     }
     const combined = regionalMultiplier * vendorMultiplier * reputationMultiplier;
     return Math.max(1, Math.floor(effectiveCost * combined));
@@ -409,7 +420,12 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
                 <div className="service-grid">
                   {serviceOptions.map((opt, idx) => (
                     <button key={idx} className="service-tile interactive" onClick={() => handleOptionClick(opt)}>
-                       <div className="tile-text">{opt.text}</div>
+                       <div className="tile-text">
+                         {serviceOptionDisplayLabel(opt.text)}
+                         {opt.effect === 'RESTORE_HP' && opt.amount ? (
+                           <span className="tile-hp-hint"> +{opt.amount} HP</span>
+                         ) : null}
+                       </div>
                        <div className="tile-price">ƀ{getEffectiveCost(opt)}</div>
                     </button>
                   ))}
@@ -548,6 +564,7 @@ const FixerBarScene: React.FC<FixerBarSceneProps> = ({
           transform: translateY(-2px);
         }
         .tile-text { font-size: 0.8rem; color: #ccc; }
+        .tile-hp-hint { font-size: 0.68rem; color: rgba(180, 220, 255, 0.75); font-weight: normal; }
         .service-tile:hover .tile-text { color: #fff; }
         .tile-price { color: var(--neon-amber); font-weight: bold; font-size: 0.75rem; }
 

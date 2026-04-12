@@ -1,0 +1,8 @@
+﻿git : To https://github.com/Prospero14/neon_protocol.git
+C:\Users\ProsperianSun\AppData\Local\Temp\ps-script-cbd10344-9073-4d37-a3c2-5b4f6bb23b8e.ps1:81 знак:1
++ git -C "e:/.antigravity/neon_protocol" push origin master 2>&1 | Out- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (To https://gith...on_protocol.git:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+   cb7948e..de31a86  master -> master

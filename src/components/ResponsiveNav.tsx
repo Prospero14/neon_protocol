@@ -8,9 +8,11 @@ interface ResponsiveNavProps {
   maxStress: number;
   level: number;
   onLogout?: () => void;
+  /** Строка игровых часов для верхней панели. */
+  gameClockLine?: string;
 }
 
-const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange, hp, maxStress, level, onLogout }) => {
+const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange, hp, maxStress, level, onLogout, gameClockLine }) => {
   const navItems = [
     { id: 'HUB', label: 'БАЗА', icon: Home },
     { id: 'CHARACTER', label: 'ПРОФИЛЬ', icon: User },
@@ -40,6 +42,11 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
         ))}
       </div>
       <div className="nav-stats mono-text">
+        {gameClockLine && (
+          <span className="nav-game-clock" title="Игровое время (12 ч игры = 4 ч реальных)">
+            {gameClockLine}
+          </span>
+        )}
         <span className="nav-hp">STRESS: {Math.round((hp/maxStress)*100)}%</span>
         <span className="nav-lvl">STATUS: {level >= 5 ? 'PROFESSIONAL' : 'SCRIPT-KIDDO'}</span>
         {onLogout && (

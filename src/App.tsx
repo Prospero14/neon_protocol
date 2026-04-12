@@ -10,6 +10,7 @@ import { QUEST_LIBRARY } from './logic/questData';
 import { acceptQuest, markQuestReady, getTrackedQuest } from './logic/questEngine';
 import MapView from './components/MapView';
 import CombatBridge from './components/games/CombatBridge';
+import { shouldLiquidateStartup } from './logic/coopSprint';
 import CharacterCreation from './components/CharacterCreation';
 import CharacterScreen from './components/CharacterScreen';
 import DeckBuilder from './components/DeckBuilder';
@@ -19,14 +20,27 @@ import FixerBarScene from './components/FixerBarScene';
 import QuestLog from './components/QuestLog';
 import IntelView from './components/IntelView';
 import { HubView } from './components/views/HubView';
+import { CoopLobbyView } from './components/CoopLobbyView';
 import { AuthForm } from './components/AuthForm';
 import { IMPLANT_CATALOG } from './logic/hardware';
 import type { ViewType } from './logic/hooks/useGameState';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
 import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
+import { resolveCoopYardTaskIndexInLibrary, isCoopBossUnlocked } from './logic/coopYardRuntime';
 import { NPC_PRESENCE_CONFIGS, isNpcHomeAccessible } from './logic/npcPresence';
 import type { Profession } from './logic/professions';
+
+/** Стабильный индекс 0..modulo-1 от строки (без Math.random в рендере — иначе ТЗ в бою «прыгает» каждый тик часов). */
+function stableIndexFromSeed(seed: string, modulo: number): number {
+  if (modulo <= 0) return 0;
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % modulo;
+}
 
 function App() {
   const gs = useGameState();
@@ -61,10 +75,24 @@ function App() {
         />
       );
     }
+
+    if (gs.currentView === 'COOP_LOBBY' && gs.sessionMode === 'coop' && gs.coopRole) {
+      return (
+        <CoopLobbyView
+          playerDisplayName={gs.playerName}
+          coopRole={gs.coopRole}
+          onLaunchSprint={(startupName, tierRank) => gs.completeCoopSprintLaunch(startupName, tierRank)}
+          onSwitchCoopClass={gs.switchCoopClass}
+        />
+      );
+    }
     
     if (gs.currentView === 'MAP') {
       const district = MAP_NODES.find((n) => n.id === gs.activeDistrictId) ?? MAP_NODES[0];
       const filteredNodes = district.subNodes.filter(node => {
+        if (node.id === 'coop_cp_boss' && !isCoopBossUnlocked(gs.coopYardCompletedMissionIds, gs.coopTierRank)) {
+          return false;
+        }
         if (node.id === 'npc_petrovich' && !gs.isPetrovichHomeUnlocked) return false;
         const presenceCfg = Object.values(NPC_PRESENCE_CONFIGS).find((cfg) => cfg.homeNodeId === node.id);
         if (presenceCfg && !isNpcHomeAccessible(presenceCfg, gs.dayPhase, gs.npcPresenceMap)) return false;
@@ -82,16 +110,32 @@ function App() {
           objectiveNodeId={gs.objectiveNodeId} 
           playerBits={gs.bits} 
           customSubNodes={filteredNodes}
+          gameClock={gs.gameClock}
         />
       );
     }
 
     if (gs.currentView === 'COMBAT') {
+      if (gs.sessionMode === 'coop' && gs.coopStartupLiquidated) {
+        return (
+          <div className="v007-creation-context main-crt" style={{ padding: '48px 24px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+            <h2 className="cc-headline" style={{ marginBottom: 16 }}>СТАРТАП ЛИКВИДИРОВАН</h2>
+            <p className="cc-hint" style={{ marginBottom: 24 }}>
+              Три провальных релиза подряд. Продукт закрыт — начните новый профиль или играйте в соло.
+            </p>
+            <button type="button" className="cc-skill-btn active" onClick={() => gs.setCurrentView('HUB')}>
+              [ В ХАБ ]
+            </button>
+          </div>
+        );
+      }
       const district = MAP_NODES.find((n) => n.id === gs.activeDistrictId) ?? MAP_NODES[0];
       const taskLibrary = gs.activeCombatPack === 'java_spring' ? SPRING_TZ_LIBRARY : TZ_LIBRARY;
       
       let effectiveRank: SkillMode = 'script-kiddie';
-      if (gs.classUnlocked) {
+      if (gs.sessionMode === 'coop') {
+        effectiveRank = gs.coopTierRank;
+      } else if (gs.classUnlocked) {
         if (gs.profession.grade === 'Junior') effectiveRank = 'junior';
         else if (gs.profession.grade === 'Middle') effectiveRank = 'mid';
         else if (gs.profession.grade === 'Senior') effectiveRank = 'senior';
@@ -105,10 +149,20 @@ function App() {
       
       // Поиск конкретной задачи по активной ноде (фикчеру/квесту)
       let idx = safeLibrary.findIndex(t => t.id === gs.activeBarNode);
-      if (idx === -1) {
-        // Если нода не является ID задачи, выбираем рандомную, но СТАБИЛЬНУЮ для этой сессии ноды
-        // (или просто рандомную, если нода пуста)
-        idx = Math.floor(Math.random() * safeLibrary.length);
+      if (idx === -1 && safeLibrary.length > 0) {
+        if (gs.sessionMode === 'coop' && gs.activeDistrictId === 'coop_yard') {
+          idx = resolveCoopYardTaskIndexInLibrary(
+            safeLibrary,
+            gs.activeBarNode,
+            gs.coopYardCompletedMissionIds,
+            gs.coopTierRank
+          );
+        } else {
+          idx = stableIndexFromSeed(
+            `${gs.activeBarNode ?? 'none'}|${gs.activeDistrictId}|${gs.worldDay}|${effectiveRank}`,
+            safeLibrary.length
+          );
+        }
       }
       
       let combatDeck = gs.activeDeck;
@@ -134,11 +188,33 @@ function App() {
           deckCores={gs.deckCores} 
           deckRamMb={gs.deckRamMb} 
           homeDistrictId={gs.homeDistrictId}
+          sessionMode={gs.sessionMode}
+          coopRole={gs.coopRole}
+          fieldWorldDay={gs.worldDay}
+          fieldDistrictId={gs.activeDistrictId || gs.homeDistrictId}
+          fieldBarNode={gs.activeBarNode}
+          coopStartupName={gs.coopStartupName}
+          devLanguageStack={gs.devLanguageStack}
+          coopSprintLossesBeforeBattle={gs.coopSprintConsecutiveLosses}
           isQuestCombat={isQuestCombat}
           isFirstCombatQuestTutorial={isFirstCombatQuestTutorial}
-          onWin={(earned, rank, chain, missionName, updatedDeck) => {
+          onWin={(earned, rank, chain, missionName, updatedDeck, missionTaskId) => {
+            if (gs.sessionMode === 'coop') {
+              if (earned > 0) {
+                gs.setCoopSprintConsecutiveLosses(0);
+                if (gs.activeDistrictId === 'coop_yard' && missionTaskId) {
+                  gs.registerCoopYardMissionClear(missionTaskId);
+                }
+              } else {
+                gs.setCoopSprintConsecutiveLosses((prev) => {
+                  const n = prev + 1;
+                  if (shouldLiquidateStartup(n)) gs.setCoopStartupLiquidated(true);
+                  return n;
+                });
+              }
+            }
             if (updatedDeck) gs.setActiveDeck(updatedDeck);
-            gs.saveSolvedChain(gs.activeBarNode || 'unknown', missionName, chain);
+            gs.saveSolvedChain(missionTaskId || gs.activeBarNode || 'unknown', missionName, chain);
             gs.setBits((prev) => Math.max(0, prev + earned));
             gs.reportCombatRumor(missionName, earned > 0);
             if (earned > 0) {
@@ -150,7 +226,6 @@ function App() {
             if (trackedDef && trackedDef.type === 'combat' && ( !trackedDef.objectiveNodeId || trackedDef.objectiveNodeId === gs.activeBarNode) && earned > 0) { 
               gs.setQuestStates((prev) => markQuestReady(prev, trackedDef.id)); 
             }
-            gs.advanceTime(2);
             gs.setCurrentView('MAP'); 
             gs.setViewMode('DISTRICT');
           }} 
@@ -334,6 +409,8 @@ function App() {
         tutorialCompleted={gs.questStates.some((q) => q.questId === 'q_trainee_exam_practice' && q.status === 'completed')}
         worldDay={gs.worldDay}
         dayPhase={gs.dayPhase}
+        gameTimeLabel={gs.gameClock.timeLabel}
+        phaseLabelRu={gs.gameClock.phaseLabelRu}
         trustedNpcContacts={gs.trustedNpcContacts}
         messengerFeed={gs.messengerFeed}
         knownDistrictChannels={gs.knownDistrictChannels}
@@ -347,11 +424,15 @@ function App() {
         canUnlockChannelByQuest={gs.canUnlockDistrictChannelByQuest}
         onNavigateToView={(view: string) => gs.setCurrentView(view as ViewType)}
         onNavigateToBarNode={(nodeId: string) => { gs.setActiveBarNode(nodeId); gs.setCurrentView('FIXER_BAR'); }}
+        sessionMode={gs.sessionMode}
+        coopRole={gs.coopRole}
+        onSwitchCoopClass={gs.switchCoopClass}
+        onSwitchSessionMode={gs.switchSessionMode}
       />
     );
   };
 
-  const hideNav = ['CREATION', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
+  const hideNav = ['CREATION', 'COOP_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
 
   if (gs.isLoading) return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
   if (!gs.user) return <AuthForm />;
@@ -365,7 +446,8 @@ function App() {
           hp={gs.stress} 
           level={gs.classUnlocked ? 5 : 1} 
           maxStress={gs.maxStress} 
-          onLogout={gs.logout} 
+          onLogout={gs.logout}
+          gameClockLine={`${gs.gameClock.timeLabel} · ${gs.gameClock.phaseLabelRu} · Д${gs.worldDay}`}
         />
       )}
       <main className={`view-container ${hideNav ? 'fullscreen' : ''}`}>

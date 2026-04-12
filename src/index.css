@@ -30,8 +30,16 @@ body {
   width: 100vw;
 }
 
+/* Корень SPA: без этого дочерний React-контент оказывается ПОД ::before/::after (#root) с огромным z-index и может выглядеть как «чёрный экран». */
+#root {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+}
+
 /* 
   CRT ЭФФЕКТ: Специфические слои для атмосферы ретро-футуризма.
+  z-index ниже контента приложения (.app-root получает z-index в App.css).
 */
 
 /* 1. Глобальный оверлей со сканлайнами (горизонтальные полосы) */
@@ -45,7 +53,7 @@ body {
     rgba(0, 0, 0, 0.1) 50%
   );
   background-size: 100% 4px;
-  z-index: 9999;
+  z-index: 0;
   pointer-events: none; /* Пропускаем клики сквось слой */
   animation: scanline 10s linear infinite;
 }
@@ -61,7 +69,7 @@ body {
     transparent 60%, 
     rgba(0, 0, 0, 0.7) 100%
   );
-  z-index: 9998;
+  z-index: 0;
   pointer-events: none;
 }
 

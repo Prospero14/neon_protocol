@@ -8,6 +8,7 @@ import { getDistrictChatterPools } from '../messengerChatterPools';
 import { PROFESSIONS, getProfessionById, type Profession } from '../professions';
 import type { CombatCard } from '../combatCards';
 import { CARD_LIBRARY, getCardById } from '../combatCards';
+import { buildTraineeDeck } from '../traineeDeck';
 import { SPRING_CARD_LIBRARY } from '../springCards';
 import type { QuestState } from '../questEngine';
 import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../questEngine';
@@ -19,9 +20,35 @@ import { rollLoot } from '../lootTables';
 import { ITEM_LIBRARY, getItemById, type GameItem } from '../items';
 import type { NpcDayPhase } from '../npcPresence';
 import { getGameClockSnapshot, MS_PER_GAME_HOUR, type GameClockSnapshot } from '../gameClock';
+import type { SessionMode, CoopRole, DevLanguageStack } from '../sessionMode';
+import { buildStarterDeckForSession } from '../sessionMode';
+import { bossTaskIdForTier, nextCoopTierRank } from '../coopYardRuntime';
+import {
+  coopRewardCardIdsForSegment,
+  shouldGrantCoopSegmentReward,
+} from '../coopLobbyRewards';
+import {
+  COOP_PROFILES_STORAGE_KEY,
+  applyCoopClassSave,
+  defaultCoopClassSave,
+  migrateLegacyCoopToProfiles,
+  serializeCoopClassSave,
+  type CoopClassSave,
+} from '../coopClassProfiles';
 
 
-export type ViewType = 'CREATION' | 'HUB' | 'MAP' | 'COMBAT' | 'CHARACTER' | 'DECK_BUILDER' | 'REFERENCE' | 'FIXER_BAR' | 'QUEST_LOG' | 'INTEL';
+export type ViewType =
+  | 'CREATION'
+  | 'COOP_LOBBY'
+  | 'HUB'
+  | 'MAP'
+  | 'COMBAT'
+  | 'CHARACTER'
+  | 'DECK_BUILDER'
+  | 'REFERENCE'
+  | 'FIXER_BAR'
+  | 'QUEST_LOG'
+  | 'INTEL';
 export interface MessengerMessage {
   id: string;
   from: string;
@@ -41,25 +68,7 @@ export function initialMergedInventory(): CombatCard[] {
   return starterInventoryIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
 }
 
-export const buildTraineeDeck = (): CombatCard[] => {
-  const starterIds = [
-    // SCRIPT — основа кодинга
-    'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
-    'script_ls', 'script_cat', 'script_auth',
-    // SOFT — мягкие скиллы
-    'soft_coffee', 'soft_ai_ask',
-    // INFRA — первое железо
-    'infra_old_hw', 'infra_edge_cache',
-    // REACTION / DEF — покрывают типы сбоя в combatCounterplay (тест, рефакторинг, flush, трасса)
-    'react_unit_test',
-    'react_emergency_flush',
-    'react_trace_jam',
-    'react_firewall_patch',
-    'react_refactoring',
-    'def_validator',
-  ];
-  return starterIds.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
-};
+export { buildTraineeDeck } from '../traineeDeck';
 
 const BASELINE_SCRIPT_IDS = [
   'script_ping', 'script_grep', 'script_wash_logs', 'script_sudo_fix',
@@ -158,6 +167,32 @@ export function useGameState() {
   const [installedImplants, setInstalledImplants] = useState<Array<{ id: string, battlesLeft: number }>>([]);
 
   const [traits, setTraits] = useState<Trait[]>([]);
+  /** Соло или кооп; в коопе выбранная роль задаёт стартовую колоду. */
+  const [sessionMode, setSessionMode] = useState<SessionMode>('solo');
+  const [coopRole, setCoopRole] = useState<CoopRole | null>(null);
+  const [devLanguageStack, setDevLanguageStack] = useState<DevLanguageStack | null>(null);
+  const [coopStartupName, setCoopStartupName] = useState<string | null>(null);
+  /** Ранг миссий полигона (задаёт PM при старте коопа). */
+  const [coopTierRank, setCoopTierRank] = useState<SkillMode>('junior');
+  /** Id завершённых ТЗ coop_yard (включая боссов). */
+  const [coopYardCompletedMissionIds, setCoopYardCompletedMissionIds] = useState<string[]>([]);
+  /** Подряд неудачных кооп-боёв (релизов); победа сбрасывает. */
+  const [coopSprintConsecutiveLosses, setCoopSprintConsecutiveLosses] = useState(0);
+  const [coopStartupLiquidated, setCoopStartupLiquidated] = useState(false);
+  /** Снимки по классам коопа: колода, инвентарь, прогресс полигона (соло не использует). */
+  const [coopClassProfiles, setCoopClassProfiles] = useState<Partial<Record<CoopRole, CoopClassSave>>>({});
+  const coopClassProfilesRef = useRef<Partial<Record<CoopRole, CoopClassSave>>>({});
+  useEffect(() => {
+    coopClassProfilesRef.current = coopClassProfiles;
+  }, [coopClassProfiles]);
+  const coopTierRankRef = useRef(coopTierRank);
+  const coopRoleRef = useRef(coopRole);
+  useEffect(() => {
+    coopTierRankRef.current = coopTierRank;
+  }, [coopTierRank]);
+  useEffect(() => {
+    coopRoleRef.current = coopRole;
+  }, [coopRole]);
   const [inventory, setInventory] = useState<CombatCard[]>(() => initialMergedInventory());
   const [activeDeck, setActiveDeck] = useState<CombatCard[]>(() => buildTraineeDeck());
   const [loot, setLoot] = useState<GameItem[]>([]);
@@ -482,6 +517,15 @@ export function useGameState() {
       traits: traits,
       installedImplants: installedImplants,
       reputation: reputation,
+      sessionMode,
+      coopRole,
+      devLanguageStack,
+      coopStartupName,
+      coopTierRank,
+      coopYardCompletedMissionIds,
+      coopSprintConsecutiveLosses,
+      coopStartupLiquidated,
+      coopClassProfiles: sessionMode === 'coop' ? coopClassProfiles : undefined,
       playerName: playerName,
       isCityMapUnlocked: isCityMapUnlocked,
       isPetrovichHomeUnlocked: isPetrovichHomeUnlocked,
@@ -498,6 +542,7 @@ export function useGameState() {
       unlockedDistrictChannels,
       activeMessengerChannel,
       barContactDistricts,
+      currentView,
       ...overrides
     };
     await syncGameState(state);
@@ -533,11 +578,49 @@ export function useGameState() {
         setActiveDistrictId(gs.homeDistrictId);
       }
 
-      if (gs.activeDeck) {
+      const crEarly =
+        gs.coopRole === 'devops'
+          ? 'admin'
+          : (gs.coopRole as CoopRole | undefined);
+      let skipLegacyDeck = false;
+      let coopProfilesLoaded: Partial<Record<CoopRole, CoopClassSave>> | null = null;
+      if (gs.sessionMode === 'coop' && crEarly && ['developer', 'qa', 'admin', 'pm'].includes(crEarly)) {
+        try {
+          const fromGs = (gs as { coopClassProfiles?: Partial<Record<CoopRole, CoopClassSave>> }).coopClassProfiles;
+          if (fromGs && typeof fromGs === 'object' && Object.keys(fromGs).length > 0) {
+            coopProfilesLoaded = fromGs;
+          } else if (user?.id) {
+            const raw = localStorage.getItem(COOP_PROFILES_STORAGE_KEY(user.id));
+            if (raw) coopProfilesLoaded = JSON.parse(raw) as Partial<Record<CoopRole, CoopClassSave>>;
+          }
+        } catch {
+          coopProfilesLoaded = null;
+        }
+        if (!coopProfilesLoaded || Object.keys(coopProfilesLoaded).length === 0) {
+          coopProfilesLoaded = migrateLegacyCoopToProfiles(gs as any) ?? {};
+        }
+        if (coopProfilesLoaded && Object.keys(coopProfilesLoaded).length > 0) {
+          setCoopClassProfiles(coopProfilesLoaded);
+          const save = coopProfilesLoaded[crEarly];
+          if (save) {
+            const applied = applyCoopClassSave(save);
+            setActiveDeck(applied.activeDeck);
+            setInventory(applied.inventory);
+            setCoopTierRank(applied.coopTierRank);
+            setCoopYardCompletedMissionIds(applied.coopYardCompletedMissionIds);
+            setDiscoveredCardIds(applied.discoveredCardIds);
+            setDevLanguageStack(applied.devLanguageStack);
+            setCoopSprintConsecutiveLosses(applied.coopSprintConsecutiveLosses);
+            skipLegacyDeck = true;
+          }
+        }
+      }
+
+      if (gs.activeDeck && !skipLegacyDeck) {
         const fullDeck = gs.activeDeck.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
         if (fullDeck.length > 0) setActiveDeck(fullDeck);
       }
-      if (gs.inventory) {
+      if (gs.inventory && !skipLegacyDeck) {
         const fullInv = gs.inventory.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
         if (fullInv.length > 0) {
           const migrated = [...fullInv];
@@ -562,6 +645,29 @@ export function useGameState() {
       }
 
       if (gs.traits) setTraits(gs.traits);
+      if (gs.sessionMode === 'solo' || gs.sessionMode === 'coop') setSessionMode(gs.sessionMode);
+      const crRaw = gs.coopRole as string | undefined;
+      const cr =
+        crRaw === 'devops'
+          ? 'admin'
+          : (crRaw as CoopRole | undefined);
+      if (cr && ['developer', 'qa', 'admin', 'pm'].includes(cr)) setCoopRole(cr);
+      if (!skipLegacyDeck) {
+        const ds = gs.devLanguageStack as DevLanguageStack | undefined;
+        if (ds === 'java' || ds === 'kotlin' || ds === 'python' || ds === 'go') setDevLanguageStack(ds);
+      }
+      if (typeof gs.coopStartupName === 'string' && gs.coopStartupName.length > 0) setCoopStartupName(gs.coopStartupName);
+      if (!skipLegacyDeck) {
+        const tr = gs.coopTierRank as SkillMode | undefined;
+        if (tr === 'script-kiddie' || tr === 'junior' || tr === 'mid' || tr === 'senior') setCoopTierRank(tr);
+        if (Array.isArray(gs.coopYardCompletedMissionIds)) {
+          setCoopYardCompletedMissionIds(gs.coopYardCompletedMissionIds.filter((x: unknown) => typeof x === 'string'));
+        }
+        if (typeof gs.coopSprintConsecutiveLosses === 'number' && gs.coopSprintConsecutiveLosses >= 0) {
+          setCoopSprintConsecutiveLosses(gs.coopSprintConsecutiveLosses);
+        }
+      }
+      if (gs.coopStartupLiquidated === true) setCoopStartupLiquidated(true);
       if (gs.installedImplants) setInstalledImplants(gs.installedImplants);
       if (gs.reputation) setReputation(gs.reputation);
       if (gs.playerName && gs.playerName !== 'ID_НЕИЗВЕСТЕН') setPlayerName(gs.playerName);
@@ -574,7 +680,7 @@ export function useGameState() {
       }
       if (gs.deckCores !== undefined) setDeckCores(gs.deckCores);
       if (gs.deckRamMb !== undefined) setDeckRamMb(gs.deckRamMb);
-      if (gs.discoveredCardIds) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
+      if (gs.discoveredCardIds && !skipLegacyDeck) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
       if (typeof gs.clockAnchorMs === 'number' && !Number.isNaN(gs.clockAnchorMs)) {
         setClockAnchorMs(gs.clockAnchorMs);
       } else {
@@ -663,7 +769,9 @@ export function useGameState() {
   }, [
     bits, stress, questStates, traits, reputation, activeDeck, installedImplants, activeDistrictId,
     isCityMapUnlocked, clockAnchorMs, gameClock.worldDay, trustedNpcContacts, messengerFeed, knownDistrictChannels,
-    unlockedDistrictChannels, activeMessengerChannel, barContactDistricts
+    unlockedDistrictChannels, activeMessengerChannel, barContactDistricts,
+    sessionMode, coopRole, devLanguageStack, coopStartupName, coopTierRank, coopYardCompletedMissionIds,
+    coopSprintConsecutiveLosses, coopStartupLiquidated
   ]);
 
   const rewardForQuest = (q: QuestDefinition) => {
@@ -697,13 +805,182 @@ export function useGameState() {
     return initial;
   };
 
-  const handleCreationComplete = (data: { name: string; district: MapNodeData; hobby: Trait; ambition?: Profession }) => {
-    setPlayerName(data.name); 
-    setHomeDistrict(data.district); 
+  const registerCoopYardMissionClear = useCallback(
+    (missionTaskId: string) => {
+      setCoopYardCompletedMissionIds((prev) => {
+        if (prev.includes(missionTaskId)) return prev;
+        const next = [...prev, missionTaskId];
+        const tier = coopTierRankRef.current;
+        const role = coopRoleRef.current;
+        if (missionTaskId === bossTaskIdForTier(tier)) {
+          const nxt = nextCoopTierRank(tier);
+          if (nxt) setCoopTierRank(nxt);
+        } else if (role) {
+          const grant = shouldGrantCoopSegmentReward(missionTaskId, prev, next, tier);
+          if (grant) {
+            for (const id of coopRewardCardIdsForSegment(role, grant.segmentIndex)) {
+              grantCardById(id);
+            }
+          }
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  const completeCoopSprintLaunch = useCallback(
+    (startupName: string, tierRank: SkillMode) => {
+      const trimmed = startupName.trim() || `SQUAD_${playerName.replace(/\s+/g, '_').slice(0, 24)}`;
+      setCoopStartupName(trimmed);
+      if (tierRank === 'script-kiddie' || tierRank === 'junior' || tierRank === 'mid' || tierRank === 'senior') {
+        setCoopTierRank(tierRank);
+      }
+      setActiveDistrictId('coop_yard');
+      setActiveCombatPack('java_core');
+      setActiveMessengerChannel('coop_yard');
+      setCurrentView('MAP');
+      syncGame({
+        coopStartupName: trimmed,
+        coopTierRank: tierRank,
+        activeDistrictId: 'coop_yard',
+        currentView: 'MAP',
+        activeMessengerChannel: 'coop_yard',
+      });
+    },
+    [playerName, syncGame]
+  );
+
+  const switchCoopClass = useCallback(
+    (next: CoopRole) => {
+      if (sessionMode !== 'coop' || !coopRole || next === coopRole) return;
+      const current = serializeCoopClassSave({
+        activeDeck,
+        inventoryUnique,
+        coopTierRank,
+        coopYardCompletedMissionIds,
+        discoveredCardIds,
+        devLanguageStack,
+        coopSprintConsecutiveLosses,
+      });
+      const merged: Partial<Record<CoopRole, CoopClassSave>> = {
+        ...coopClassProfilesRef.current,
+        [coopRole]: current,
+      };
+      const fallbackStack =
+        next === 'developer'
+          ? merged.developer?.devLanguageStack ?? devLanguageStack ?? 'java'
+          : null;
+      const loaded = merged[next] ?? defaultCoopClassSave(next, fallbackStack);
+      setCoopClassProfiles({ ...merged, [next]: loaded });
+      setCoopRole(next);
+      const applied = applyCoopClassSave(loaded);
+      setActiveDeck(applied.activeDeck);
+      setInventory(applied.inventory);
+      setCoopTierRank(applied.coopTierRank);
+      setCoopYardCompletedMissionIds(applied.coopYardCompletedMissionIds);
+      setDiscoveredCardIds(applied.discoveredCardIds);
+      setDevLanguageStack(applied.devLanguageStack);
+      setCoopSprintConsecutiveLosses(applied.coopSprintConsecutiveLosses);
+      syncGame({
+        coopRole: next,
+        devLanguageStack: applied.devLanguageStack,
+        coopTierRank: applied.coopTierRank,
+        coopYardCompletedMissionIds: applied.coopYardCompletedMissionIds,
+        coopClassProfiles: { ...merged, [next]: loaded },
+      });
+    },
+    [
+      sessionMode,
+      coopRole,
+      activeDeck,
+      inventoryUnique,
+      coopTierRank,
+      coopYardCompletedMissionIds,
+      discoveredCardIds,
+      devLanguageStack,
+      coopSprintConsecutiveLosses,
+      syncGame,
+    ]
+  );
+
+  useEffect(() => {
+    if (sessionMode !== 'coop' || !coopRole) return;
+    const t = window.setTimeout(() => {
+      setCoopClassProfiles((prev) => ({
+        ...prev,
+        [coopRole]: serializeCoopClassSave({
+          activeDeck,
+          inventoryUnique,
+          coopTierRank,
+          coopYardCompletedMissionIds,
+          discoveredCardIds,
+          devLanguageStack,
+          coopSprintConsecutiveLosses,
+        }),
+      }));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    sessionMode,
+    coopRole,
+    activeDeck,
+    inventoryUnique,
+    coopTierRank,
+    coopYardCompletedMissionIds,
+    discoveredCardIds,
+    devLanguageStack,
+    coopSprintConsecutiveLosses,
+  ]);
+
+  useEffect(() => {
+    if (!user?.id || sessionMode !== 'coop') return;
+    try {
+      localStorage.setItem(COOP_PROFILES_STORAGE_KEY(user.id), JSON.stringify(coopClassProfiles));
+    } catch {
+      /* ignore */
+    }
+  }, [user?.id, sessionMode, coopClassProfiles]);
+
+  const handleCreationComplete = (data: {
+    name: string;
+    district: MapNodeData;
+    hobby: Trait;
+    ambition?: Profession;
+    sessionMode: SessionMode;
+    coopRole: CoopRole | null;
+    devLanguageStack: DevLanguageStack | null;
+    coopStartupName: string | null;
+    /** Ранг миссий полигона (PM); в соло не используется. */
+    coopTierRank?: SkillMode | null;
+    /** Кооп: после профиля — зона ожидания (чат + пати), не карта. */
+    enterCoopLobby?: boolean;
+  }) => {
+    setPlayerName(data.name);
+    setHomeDistrict(data.district);
     setHomeDistrictId(data.district.id);
-    setActiveDistrictId(data.district.id); 
+    const coopStart = data.sessionMode === 'coop';
+    const enterLobby = coopStart && data.enterCoopLobby === true;
+    setActiveDistrictId(coopStart && !enterLobby ? 'coop_yard' : data.district.id);
     setTraits([data.hobby]);
-    
+    setSessionMode(data.sessionMode);
+    setCoopRole(data.sessionMode === 'coop' ? data.coopRole : null);
+    setDevLanguageStack(data.sessionMode === 'coop' && data.devLanguageStack ? data.devLanguageStack : null);
+    setCoopStartupName(
+      data.sessionMode === 'coop' && data.coopStartupName && !enterLobby ? data.coopStartupName : null
+    );
+    if (data.sessionMode === 'coop') {
+      const tr = data.coopTierRank;
+      if (tr === 'script-kiddie' || tr === 'junior' || tr === 'mid' || tr === 'senior') setCoopTierRank(tr);
+      else setCoopTierRank('junior');
+      setCoopYardCompletedMissionIds([]);
+    } else {
+      setCoopTierRank('junior');
+      setCoopYardCompletedMissionIds([]);
+    }
+    setCoopSprintConsecutiveLosses(0);
+    setCoopStartupLiquidated(false);
+
     const startRep = calculateStartingReputation(data.district.id);
     if (data.hobby.id === 'corporate_contact') { 
       startRep['GIGA_BANK'] += 15; 
@@ -728,33 +1005,87 @@ export function useGameState() {
     setStress(0); 
     setRamPool(initialRam);
     
-    const starterDeck = buildTraineeDeck(); 
+    const starterDeck = buildStarterDeckForSession(
+      data.sessionMode,
+      data.coopRole,
+      data.sessionMode === 'coop' ? data.devLanguageStack : null
+    );
     setActiveDeck(starterDeck);
     starterDeck.forEach((c) => discoverCard(c.id));
+    let coopProfilesForSync: Partial<Record<CoopRole, CoopClassSave>> | undefined;
+    if (coopStart && data.coopRole) {
+      const invUnique = starterDeck.filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
+      setInventory(invUnique);
+      setDiscoveredCardIds(new Set(invUnique.map((c) => c.id)));
+      const initialSave = serializeCoopClassSave({
+        activeDeck: starterDeck,
+        inventoryUnique: invUnique,
+        coopTierRank: 'junior',
+        coopYardCompletedMissionIds: [],
+        discoveredCardIds: new Set(invUnique.map((c) => c.id)),
+        devLanguageStack: data.devLanguageStack ?? null,
+        coopSprintConsecutiveLosses: 0,
+      });
+      coopProfilesForSync = { [data.coopRole]: initialSave };
+      setCoopClassProfiles(coopProfilesForSync);
+    }
     setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
-    setKnownDistrictChannels([data.district.id]);
-    setUnlockedDistrictChannels([data.district.id]);
-    setActiveMessengerChannel(data.district.id);
+    setKnownDistrictChannels(coopStart ? [data.district.id, 'coop_yard'] : [data.district.id]);
+    setUnlockedDistrictChannels(coopStart ? [data.district.id, 'coop_yard'] : [data.district.id]);
+    setActiveMessengerChannel(coopStart && enterLobby ? data.district.id : coopStart ? 'coop_yard' : data.district.id);
     setBarContactDistricts([]);
-    setMessengerFeed([
-      {
-        id: `msg_boot_${Date.now()}`,
-        from: 'SYSTEM',
-        text: `Канал #${data.district.id.toUpperCase()} подключен. Это ваш домашний район.`,
-        channelId: data.district.id
-      }
-    ]);
+    setMessengerFeed(
+      coopStart
+        ? [
+            {
+              id: `msg_boot_${Date.now()}_home`,
+              from: 'SYSTEM',
+              text: `Канал #${data.district.id.toUpperCase()} в резерве — домашний район сохранён.`,
+              channelId: data.district.id
+            },
+            {
+              id: `msg_boot_${Date.now()}_yard`,
+              from: 'SYSTEM',
+              text: 'Полигон CO-OP YARD активен: точки боя по сложности и снабжение на карте района.',
+              channelId: 'coop_yard'
+            }
+          ]
+        : [
+            {
+              id: `msg_boot_${Date.now()}`,
+              from: 'SYSTEM',
+              text: `Канал #${data.district.id.toUpperCase()} подключен. Это ваш домашний район.`,
+              channelId: data.district.id
+            }
+          ]
+    );
     const anchor = Date.now();
     setClockAnchorMs(anchor);
-    setCurrentView('HUB');
+    setCurrentView(enterLobby ? 'COOP_LOBBY' : coopStart ? 'MAP' : 'HUB');
     // Force-write canonical district state to backend to avoid race with async setState.
     syncGame({
       homeDistrictId: data.district.id,
-      activeDistrictId: data.district.id,
-      currentView: 'HUB',
+      activeDistrictId: enterLobby ? data.district.id : coopStart ? 'coop_yard' : data.district.id,
+      currentView: enterLobby ? 'COOP_LOBBY' : coopStart ? 'MAP' : 'HUB',
       viewMode: 'DISTRICT',
       worldDay: 1,
       clockAnchorMs: anchor,
+      sessionMode: data.sessionMode,
+      coopRole: data.sessionMode === 'coop' ? data.coopRole : null,
+      devLanguageStack: data.sessionMode === 'coop' ? data.devLanguageStack : null,
+      coopStartupName: data.sessionMode === 'coop' ? data.coopStartupName : null,
+      coopTierRank:
+        data.sessionMode === 'coop' &&
+        (data.coopTierRank === 'script-kiddie' ||
+          data.coopTierRank === 'junior' ||
+          data.coopTierRank === 'mid' ||
+          data.coopTierRank === 'senior')
+          ? data.coopTierRank
+          : 'junior',
+      coopYardCompletedMissionIds: [],
+      coopSprintConsecutiveLosses: 0,
+      coopStartupLiquidated: false,
+      coopClassProfiles: coopProfilesForSync,
     });
   };
 
@@ -1069,6 +1400,14 @@ export function useGameState() {
     deckRamMb, setDeckRamMb,
     maxImplantSlots, installedImplants, setInstalledImplants,
     traits, setTraits,
+    sessionMode, setSessionMode,
+    coopRole, setCoopRole,
+    devLanguageStack, setDevLanguageStack,
+    coopStartupName, setCoopStartupName,
+    coopTierRank, setCoopTierRank,
+    coopYardCompletedMissionIds, registerCoopYardMissionClear, completeCoopSprintLaunch, switchCoopClass,
+    coopSprintConsecutiveLosses, setCoopSprintConsecutiveLosses,
+    coopStartupLiquidated, setCoopStartupLiquidated,
     inventory, setInventory,
     inventoryUnique,
     activeDeck, setActiveDeck,

@@ -470,12 +470,123 @@
 .nb2-pipeline-area {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 10px 16px 14px;
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* SDLC phase rail — только текущая фаза ярко, прошлые тускло, будущие без акцента */
+.nb2-sdlc-rail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: rgba(0, 6, 14, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+.nb2-sdlc-step {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.nb2-sdlc-step--past {
+  opacity: 0.42;
+}
+.nb2-sdlc-step--past .nb2-sdlc-num {
+  color: #2a8a6a;
+}
+.nb2-sdlc-step--past .nb2-sdlc-name {
+  color: #456;
+}
+.nb2-sdlc-step--future {
+  opacity: 0.32;
+}
+.nb2-sdlc-step--future .nb2-sdlc-num {
+  color: #334;
+}
+.nb2-sdlc-step--future .nb2-sdlc-name {
+  color: #334;
+}
+.nb2-sdlc-step--current {
+  opacity: 1;
+  border-color: rgba(0, 212, 255, 0.55);
+  background: linear-gradient(180deg, rgba(0, 55, 75, 0.55) 0%, rgba(0, 18, 28, 0.9) 100%);
+  box-shadow: 0 0 18px rgba(0, 212, 255, 0.22), inset 0 0 20px rgba(0, 212, 255, 0.06);
+}
+.nb2-sdlc-step--current .nb2-sdlc-num {
+  color: #00d4ff;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+.nb2-sdlc-step--current .nb2-sdlc-name {
+  color: #dff8ff;
+  font-weight: 900;
+}
+.nb2-sdlc-num {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #556;
+}
+.nb2-sdlc-name {
+  font-family: var(--font-mono);
+  font-size: clamp(0.5rem, 1.4vw, 0.62rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #556;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.nb2-plan-pipeline-seg {
+  border-radius: 4px;
+  padding: 4px 0 8px;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+.nb2-plan-pipeline-seg--infra.nb2-plan-pipeline-seg--active .nb2-section-label {
+  color: #aacce8;
+}
+.nb2-plan-pipeline-seg--infra.nb2-plan-pipeline-seg--active {
+  border-left: 3px solid rgba(0, 212, 255, 0.45);
+  padding-left: 10px;
+  margin-left: 0;
+}
+.nb2-plan-pipeline-seg--soft.nb2-plan-pipeline-seg--idle {
+  opacity: 0.48;
+}
+.nb2-plan-pipeline-seg--soft.nb2-plan-pipeline-seg--idle .nb2-soft-section-head > span:first-child {
+  color: #445566 !important;
+}
+.nb2-plan-pipeline-seg--soft.nb2-plan-pipeline-seg--idle .nb2-soft-badge {
+  opacity: 0.45;
+}
+.nb2-plan-pipeline-seg--soft.nb2-plan-pipeline-seg--idle .nb2-plan-slots--soft {
+  background: rgba(0, 10, 20, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+.nb2-plan-pipeline-seg--soft.nb2-plan-pipeline-seg--idle .nb2-plan-slot.soft.locked-preview {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.25);
+  color: #445;
 }
 /* Code editor pipeline */
 .nb2-code-editor {
@@ -483,6 +594,11 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+.nb2-code-editor--phase-wrap {
+  flex: 1;
+  min-height: 0;
+  justify-content: center;
 }
 .nb2-section-label {
   font-size: 0.8rem;
@@ -618,6 +734,12 @@
 .nb2-planning {
   width: 100%;
   min-width: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .nb2-plan-slots {
   display: grid;
@@ -1123,4 +1245,244 @@
 .draft-skip-btn { align-self: center; background: transparent; border: 1px solid #334; color: #445; padding: 12px 32px; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 900; letter-spacing: 2px; cursor: pointer; transition: 0.2s; }
 
 .ml-2 { margin-left: 8px; }
+
+/* ═══ COMBAT FIELD — соло: смена «поля»; кооп: акцент рабочей зоны по роли.
+   Общие: HUD (chb), полоса оппонента/дедлайна (.nb2-opponent-lane--shared) — без ролевого перекраса. ═══ */
+.nb2-opponent-lane--shared {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Фон арены: соло — четыре варианта; кооп — лёгкая оболочка по роли */
+.combat-v2.combat-field-outer--solo.combat-field-solo--circuit {
+  background-color: #050a12;
+  background-image:
+    radial-gradient(ellipse at 28% 18%, rgba(0, 212, 255, 0.09) 0%, transparent 52%),
+    radial-gradient(ellipse at 72% 82%, rgba(0, 255, 200, 0.04) 0%, transparent 48%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 0, 0, 0.08) 1px, rgba(0, 0, 0, 0.08) 2px);
+}
+.combat-v2.combat-field-outer--solo.combat-field-solo--matrix {
+  background-color: #040d0a;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(0, 255, 120, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(34, 197, 94, 0.05) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 255, 80, 0.04) 1px, rgba(0, 255, 80, 0.04) 2px);
+}
+.combat-v2.combat-field-outer--solo.combat-field-solo--shard {
+  background-color: #0a0612;
+  background-image:
+    radial-gradient(ellipse at 20% 70%, rgba(168, 85, 247, 0.11) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 25%, rgba(236, 72, 153, 0.06) 0%, transparent 48%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(0, 0, 0, 0.09) 1px, rgba(0, 0, 0, 0.09) 2px);
+}
+.combat-v2.combat-field-outer--solo.combat-field-solo--pulse {
+  background-color: #0c0610;
+  background-image:
+    radial-gradient(ellipse at 40% 40%, rgba(255, 45, 109, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse at 60% 75%, rgba(255, 100, 80, 0.05) 0%, transparent 45%),
+    repeating-linear-gradient(0deg, transparent 0, transparent 1px, rgba(255, 64, 96, 0.05) 1px, rgba(255, 64, 96, 0.05) 2px);
+}
+
+.combat-v2.combat-field-outer--coop.combat-field-coop-shell--developer {
+  box-shadow: inset 0 0 100px rgba(0, 212, 255, 0.08);
+  background-image:
+    radial-gradient(ellipse at 15% 20%, rgba(0, 212, 255, 0.09) 0%, transparent 45%),
+    radial-gradient(ellipse at 90% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 40%);
+}
+.combat-v2.combat-field-outer--coop.combat-field-coop-shell--qa {
+  box-shadow: inset 0 0 100px rgba(244, 114, 182, 0.09);
+  background-image:
+    radial-gradient(ellipse at 80% 15%, rgba(244, 114, 182, 0.1) 0%, transparent 42%),
+    radial-gradient(ellipse at 10% 90%, rgba(236, 72, 153, 0.05) 0%, transparent 45%);
+}
+.combat-v2.combat-field-outer--coop.combat-field-coop-shell--admin {
+  box-shadow:
+    inset 0 0 100px rgba(74, 222, 128, 0.08),
+    inset 0 0 80px rgba(251, 191, 36, 0.05);
+  background-image:
+    radial-gradient(ellipse at 50% 10%, rgba(74, 222, 128, 0.08) 0%, transparent 48%),
+    radial-gradient(ellipse at 30% 85%, rgba(251, 191, 36, 0.06) 0%, transparent 42%);
+}
+.combat-v2.combat-field-outer--coop.combat-field-coop-shell--pm {
+  box-shadow: inset 0 0 100px rgba(167, 139, 250, 0.09);
+  background-image:
+    radial-gradient(ellipse at 70% 30%, rgba(167, 139, 250, 0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 20% 70%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
+}
+
+/* Подсказка: что оппонент «целит» в вашу роль */
+.coop-opponent-hint {
+  position: fixed;
+  bottom: 96px;
+  left: 12px;
+  z-index: 90;
+  max-width: min(340px, 92vw);
+  padding: 10px 12px;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #b8c4d4;
+  background: rgba(4, 10, 20, 0.88);
+  border: 1px solid rgba(0, 212, 255, 0.22);
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+.coop-opponent-hint__title {
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  color: var(--neon-cyan);
+  margin-bottom: 4px;
+  font-weight: 800;
+}
+.coop-opponent-hint__body {
+  opacity: 0.95;
+}
+
+/* Рабочая зона pipeline: соло совпадает с полем; кооп — явный цвет роли */
+.nb2-pipeline-area.nb2-field--solo-circuit {
+  border-left: 3px solid rgba(0, 212, 255, 0.25);
+  box-shadow: inset 0 0 50px rgba(0, 212, 255, 0.04);
+}
+.nb2-pipeline-area.nb2-field--solo-matrix {
+  border-left: 3px solid rgba(34, 197, 94, 0.35);
+  box-shadow: inset 0 0 50px rgba(34, 197, 94, 0.05);
+}
+.nb2-pipeline-area.nb2-field--solo-shard {
+  border-left: 3px solid rgba(168, 85, 247, 0.35);
+  box-shadow: inset 0 0 50px rgba(168, 85, 247, 0.06);
+}
+.nb2-pipeline-area.nb2-field--solo-pulse {
+  border-left: 3px solid rgba(255, 64, 96, 0.35);
+  box-shadow: inset 0 0 50px rgba(255, 64, 96, 0.05);
+}
+
+.nb2-pipeline-area.nb2-field--coop-developer {
+  border-left: 3px solid rgba(0, 212, 255, 0.45);
+  box-shadow: inset 0 0 55px rgba(0, 212, 255, 0.07);
+}
+.nb2-pipeline-area.nb2-field--coop-qa {
+  border-left: 3px solid rgba(244, 114, 182, 0.45);
+  box-shadow: inset 0 0 55px rgba(244, 114, 182, 0.07);
+}
+.nb2-pipeline-area.nb2-field--coop-admin {
+  border-left: 3px solid rgba(74, 222, 128, 0.45);
+  box-shadow:
+    inset 0 0 55px rgba(74, 222, 128, 0.07),
+    inset 0 0 40px rgba(251, 191, 36, 0.05);
+}
+.nb2-pipeline-area.nb2-field--coop-pm {
+  border-left: 3px solid rgba(167, 139, 250, 0.45);
+  box-shadow: inset 0 0 55px rgba(167, 139, 250, 0.08);
+}
+
+/* Кооп: бриф спринта + ретро в оверлеях */
+.coop-brief-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(2, 6, 16, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.coop-brief-box {
+  max-width: 520px;
+  width: 100%;
+  background: rgba(5, 12, 22, 0.98);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  padding: 22px 24px 20px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.85);
+}
+.coop-brief-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: #678;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.coop-brief-startup {
+  font-size: 1.15rem;
+  font-weight: 1000;
+  color: #00d4ff;
+  margin-bottom: 12px;
+  letter-spacing: 0.06em;
+}
+.coop-brief-body {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: #9ab;
+  margin: 0 0 18px;
+}
+.coop-brief-ack {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid rgba(0, 255, 100, 0.35);
+  color: #00ff6e;
+  font-family: var(--font-mono);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+.coop-brief-ack:hover {
+  background: rgba(0, 255, 100, 0.08);
+}
+
+.coop-retro-block {
+  margin: 14px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 212, 255, 0.15);
+  background: rgba(0, 20, 40, 0.35);
+  text-align: left;
+}
+.coop-retro-block--defeat {
+  border-color: rgba(255, 64, 96, 0.25);
+  background: rgba(40, 5, 10, 0.35);
+}
+.coop-retro-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  color: #7ad7ff;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.coop-retro-summary {
+  font-size: 0.72rem;
+  color: #aab;
+  margin: 0 0 10px;
+  line-height: 1.45;
+}
+.coop-crit-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  font-size: 0.68rem;
+  color: #889;
+  margin-bottom: 6px;
+}
+.coop-crit-score {
+  color: #00d4ff;
+  font-weight: 900;
+}
+.coop-crit-blur {
+  grid-column: 1 / -1;
+  font-size: 0.62rem;
+  color: #556;
+  line-height: 1.35;
+}
+.coop-squad-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.coop-squad-pill {
+  font-size: 0.58rem;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  color: #778;
+}
 

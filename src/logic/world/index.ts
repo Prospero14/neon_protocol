@@ -17,6 +17,7 @@ import { taganka } from './taganka/index';
 import { mitino } from './mitino/index';
 import { academy } from './academy/index';
 import { metro_stub } from './metro_stub/index';
+import { coop_yard } from './coop_yard/index';
 import { punitive_dialogues } from './punitive/dialogues';
 import { NIGHT_CONTACT_DIALOGUES, NIGHT_CONTACT_PROFILES } from '../nightContacts';
 import { DAY_CONTACT_DIALOGUES, DAY_CONTACT_PROFILES } from '../dayContacts';
@@ -45,7 +46,8 @@ const ALL_DISTRICTS: WorldDistrict[] = [
   taganka,
   mitino,
   academy,
-  metro_stub
+  metro_stub,
+  coop_yard
 ];
 
 export const MAP_NODES: MapNode[] = ALL_DISTRICTS.map(d => d.node);

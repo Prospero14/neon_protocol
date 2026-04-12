@@ -7,6 +7,7 @@ import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 import type { MessengerMessage } from '../../logic/hooks/useGameState';
 import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
+import { COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
 
 interface HubViewProps {
   playerName: string;
@@ -47,6 +48,10 @@ interface HubViewProps {
   canUnlockChannelByQuest: (districtId: string) => boolean;
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
+  /** Кооп: смена класса (отдельные колоды и прогресс на роль). */
+  sessionMode?: 'solo' | 'coop';
+  coopRole?: CoopRole | null;
+  onSwitchCoopClass?: (role: CoopRole) => void;
 }
 
 export const HubView: React.FC<HubViewProps> = ({
@@ -82,7 +87,10 @@ export const HubView: React.FC<HubViewProps> = ({
   onUnlockChannelByQuest,
   canUnlockChannelByQuest,
   onNavigateToView,
-  onNavigateToBarNode
+  onNavigateToBarNode,
+  sessionMode = 'solo',
+  coopRole = null,
+  onSwitchCoopClass,
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
   const messengerFeedRef = React.useRef<HTMLDivElement | null>(null);
@@ -230,6 +238,32 @@ export const HubView: React.FC<HubViewProps> = ({
       <div className="hub-grid-v4">
         <div className="hub-col identity">
           <div className="col-header mono-text"><Shield size={14} /> IDENTITY_MODULE</div>
+          {sessionMode === 'coop' && coopRole && onSwitchCoopClass && (
+            <div className="coop-class-strip mono-text" style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: '0.6rem', letterSpacing: '0.12em', color: '#789', marginBottom: 6 }}>CO-OP КЛАСС</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {COOP_ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => onSwitchCoopClass(r)}
+                    style={{
+                      fontSize: '0.62rem',
+                      padding: '4px 8px',
+                      border:
+                        r === coopRole ? '1px solid rgba(0, 212, 255, 0.55)' : '1px solid #456',
+                      background: r === coopRole ? 'rgba(0, 212, 255, 0.12)' : 'rgba(0,0,0,0.35)',
+                      color: r === coopRole ? 'var(--neon-cyan)' : '#aab',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-mono)',
+                    }}
+                  >
+                    {COOP_ROLE_LABELS[r].title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="neon-panel interactive arctic-monolith stat-card-v4" onClick={() => onNavigateToView('CHARACTER')}>
             <div className="card-inner">
               <div className="prof-tag">{classUnlocked ? profession.name : "SCRIPT-KIDDO"}</div>

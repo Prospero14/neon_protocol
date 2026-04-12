@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { MapNodeData } from '../logic/mapData';
 import { MAP_NODES } from '../logic/mapData';
 import { DEFAULT_DISTRICT_BLUEPRINT, DEFAULT_DISTRICT_BOUNDARY } from '../logic/mapVisualDefaults';
-import { Search, MousePointer2 } from 'lucide-react';
+import { Search, MousePointer2, X } from 'lucide-react';
 import { type QuestState } from '../logic/questEngine';
 import type { GameClockSnapshot } from '../logic/gameClock';
+import MapRadarRail, { type PoiTypeFilter } from './map/MapRadarRail';
+import './map/MapRadarRail.css';
 import '../blueprints.css';
 
 interface MapViewProps {
@@ -47,11 +50,15 @@ const MapView: React.FC<MapViewProps> = ({
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
+  const [poiFilter, setPoiFilter] = useState<PoiTypeFilter>('all');
+  const [cityFilter, setCityFilter] = useState<'all' | 'hub' | 'trade' | 'combat' | 'bar'>('all');
+  const [nodeConnectModalOpen, setNodeConnectModalOpen] = useState(false);
 
   // Zoom State (Pan disabled by USER_REQUEST)
   const [zoom, setZoom] = useState(1);
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const poiListRef = useRef<HTMLDivElement>(null);
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
@@ -65,30 +72,62 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const activeDistrictBase = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
+  const allSubNodes = useMemo(
+    () => customSubNodes ?? activeDistrictBase.subNodes ?? [],
+    [customSubNodes, activeDistrictBase.subNodes, activeDistrictId]
+  );
+  const filteredSubNodes = useMemo(() => {
+    if (poiFilter === 'all') return allSubNodes;
+    return allSubNodes.filter((s: { type: string }) => s.type === poiFilter);
+  }, [allSubNodes, poiFilter]);
+  const filteredCityNodes = useMemo(() => {
+    if (cityFilter === 'all') return MAP_NODES;
+    return MAP_NODES.filter((n) => n.type === cityFilter);
+  }, [cityFilter]);
+
   const activeDistrict = {
     ...activeDistrictBase,
     boundary: activeDistrictBase.boundary ?? DEFAULT_DISTRICT_BOUNDARY,
     imageSubstrate: activeDistrictBase.imageSubstrate ?? DEFAULT_DISTRICT_BLUEPRINT,
-    subNodes: customSubNodes || activeDistrictBase.subNodes
+    subNodes: allSubNodes,
   };
-  const selectedSubNode = activeDistrict.subNodes?.find((s) => s.id === selectedSubNodeId) ?? null;
+  const selectedSubNode = allSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
+
+  useEffect(() => {
+    const id = viewMode === 'DISTRICT' ? selectedSubNodeId : selectedNode?.id;
+    if (!id || !poiListRef.current) return;
+    const el = poiListRef.current.querySelector(`[data-poi-id="${id}"]`);
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [selectedSubNodeId, selectedNode?.id, viewMode]);
+
+  useEffect(() => {
+    setPoiFilter('all');
+    setCityFilter('all');
+  }, [activeDistrictId, viewMode]);
+
+  useEffect(() => {
+    if (!selectedSubNodeId) return;
+    if (!filteredSubNodes.some((s) => s.id === selectedSubNodeId)) {
+      setSelectedSubNodeId(null);
+    }
+  }, [filteredSubNodes, selectedSubNodeId]);
+
+  useEffect(() => {
+    setNodeConnectModalOpen(false);
+  }, [selectedSubNodeId]);
+
+  useEffect(() => {
+    if (!nodeConnectModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNodeConnectModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [nodeConnectModalOpen]);
 
   const renderSubNodes = React.useMemo(() => {
-    const source = activeDistrict.subNodes || [];
+    const source = filteredSubNodes;
     const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
-
-    const splitMapLabel = (raw: string, maxLine = 14): string[] => {
-      const s = raw.toUpperCase().trim();
-      if (s.length <= maxLine) return [s];
-      const mid = Math.floor(s.length / 2);
-      let cut = s.lastIndexOf(' ', mid);
-      if (cut < 5) cut = s.indexOf(' ', mid);
-      if (cut < 1 || cut >= s.length - 1) cut = mid;
-      const a = s.slice(0, cut).trim();
-      const b = s.slice(cut).trim();
-      if (!b) return [a];
-      return b.length > maxLine ? [a, b.slice(0, maxLine) + '…'] : [a, b];
-    };
 
     type Placed = (typeof source)[number] & {
       rx: number;
@@ -111,15 +150,17 @@ const MapView: React.FC<MapViewProps> = ({
     for (const sn of source) {
       const rx = clamp(sn.x, 3, 97);
       const ry = clamp(sn.y, 3, 97);
-      const nameLines = splitMapLabel(sn.name || '', 14);
-      const longName = (sn.name || '').length > 20;
-      const nameFontSize = longName ? 0.82 : 0.95;
-      const lineStep = 1.22;
-      const padTop = 0.58;
-      const padBot = 0.52;
+      /** На карте — одна короткая строка; полное имя в реестре справа. */
+      const rawName = (sn.name || '').toUpperCase().trim();
+      const nameLines =
+        rawName.length > 15 ? [`${rawName.slice(0, 14)}…`] : [rawName || '???'];
+      const nameFontSize = 0.76;
+      const lineStep = 1.02;
+      const padTop = 0.52;
+      const padBot = 0.48;
       const firstY = padTop + nameFontSize * 0.92;
       const lastNameY = firstY + Math.max(0, nameLines.length - 1) * lineStep;
-      const typeY = lastNameY + 1.05;
+      const typeY = lastNameY + 0.88;
       const longestLine = Math.max(
         nameLines.reduce((acc, l) => Math.max(acc, l.length), 0),
         sn.type.length + 2
@@ -182,7 +223,7 @@ const MapView: React.FC<MapViewProps> = ({
     }
 
     return placed;
-  }, [activeDistrict.subNodes]);
+  }, [filteredSubNodes]);
   const selectedRenderSubNode = renderSubNodes.find((s) => s.id === selectedSubNodeId) ?? null;
 
   const getTravelCost = (targetNode: MapNodeData) => {
@@ -191,27 +232,26 @@ const MapView: React.FC<MapViewProps> = ({
     return Math.floor(dist * 2);
   };
 
+  const handlePickSubNode = (id: string) => {
+    if (selectedSubNodeId === id) {
+      setNodeConnectModalOpen(true);
+    } else {
+      setSelectedSubNodeId(id);
+    }
+  };
+
   return (
     <div className={`map-view-v4 no-pan ${gameClock ? `map-phase-${gameClock.phase}` : ''}`}>
-      <header className="map-hdr-v5">
+      <header className="map-hdr-v5 map-hdr-v5--radar">
         <div className="hdr-main-area">
           <div className="hdr-micro-label side-fixed">
             GEOGRAPHIC_INDEX // {viewMode === 'DISTRICT' ? `${activeDistrict.name.split(':')[0].toUpperCase()}_СЕТЕВОЙ_РАДАР` : 'МОСКВА_СЕТЕВОЙ_РАДАР'}
           </div>
-          <h1 className="hdr-headline">SELECT_ENGAGEMENT_TARGET</h1>
+          <h1 className="hdr-headline">РАДАР_РАЙОНА</h1>
         </div>
         <div className="hdr-actions-area">
           <div className="hdr-status-row">
-            {gameClock && (
-              <div className="hdr-game-clock mono-text" title="Игровое время: 12 ч в игре = 4 ч в реальности. Сутки цикличны.">
-                <span className="hdr-clock-time">{gameClock.timeLabel}</span>
-                <span className="hdr-clock-sep"> · </span>
-                <span className="hdr-clock-phase">{gameClock.phaseLabelRu}</span>
-                <span className="hdr-clock-sep"> · </span>
-                <span className="hdr-clock-day">ДЕНЬ {gameClock.worldDay}</span>
-              </div>
-            )}
-            <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_АКТИВНО_[ZOOM:{Math.round(zoom * 100)}%] </div>
+            <div className="hdr-tech-meta pulse-opacity"> // СКАНИРОВАНИЕ_[ZOOM:{Math.round(zoom * 100)}%] </div>
             <div className="hdr-actions">
             {viewMode === 'DISTRICT' && isCityMapUnlocked && (
                <button className="map-hdr-btn" onClick={onToggleView}>
@@ -230,12 +270,13 @@ const MapView: React.FC<MapViewProps> = ({
         </div>
       </header>
 
-      <main className="map-body">
+      <main className="map-body map-body--radar-v2">
         <div 
           className="map-canvas-wrap"
           onWheel={handleWheel}
           ref={containerRef}
         >
+          {gameClock && <div className={`map-atmo map-atmo--${gameClock.phase}`} aria-hidden />}
           <svg viewBox="0 0 100 100" className="map-svg" preserveAspectRatio="xMidYMid meet">
             <defs>
               <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
@@ -410,7 +451,14 @@ const MapView: React.FC<MapViewProps> = ({
                        const nameFill = isSelected ? '#b8f4ff' : '#e8f2ff';
                        const txtStroke = { stroke: '#030810', strokeWidth: 0.07, paintOrder: 'stroke fill' as const };
                        return (
-                        <g key={sn.id} onClick={(e) => { e.stopPropagation(); setSelectedSubNodeId(sn.id); }} style={{ cursor: 'pointer' }}>
+                        <g
+                          key={sn.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePickSubNode(sn.id);
+                          }}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <circle cx={sn.rx} cy={sn.ry} r="5" fill="transparent" />
                           <line
                             x1={sn.rx}
@@ -481,8 +529,36 @@ const MapView: React.FC<MapViewProps> = ({
           </svg>
         </div>
 
-        <aside className="map-info-panel arctic-monolith">
-          {viewMode === 'CITY' && selectedNode ? (
+        <div
+          className={
+            viewMode === 'DISTRICT'
+              ? 'map-radar-column map-radar-column--district-rail-only'
+              : 'map-radar-column'
+          }
+        >
+        <MapRadarRail
+          gameClock={gameClock ?? null}
+          viewMode={viewMode}
+          districtTitle={viewMode === 'DISTRICT' ? (activeDistrict.name.split(':')[0] || 'РАЙОН') : 'МОСКВА'}
+          poiFilter={poiFilter}
+          onPoiFilter={setPoiFilter}
+          cityFilter={cityFilter}
+          onCityFilter={setCityFilter}
+          districtRows={filteredSubNodes}
+          cityRows={filteredCityNodes}
+          selectedSubNodeId={selectedSubNodeId}
+          selectedCityNodeId={selectedNode?.id ?? null}
+          onPickSubNode={handlePickSubNode}
+          onPickCityNode={(node) => {
+            setSelectedNode(node);
+            setSelectedSubNodeId(null);
+          }}
+          objectiveNodeId={objectiveNodeId}
+          listRef={poiListRef}
+        />
+        {viewMode === 'CITY' && (
+        <aside className="map-info-panel arctic-monolith map-info-panel--radar-detail">
+          {selectedNode ? (
             <div className="panel-content animate-slide-in">
               <div className="node-tag" style={{ color: NODE_COLORS[selectedNode.type] }}> {selectedNode.type.toUpperCase()} / TIER_{selectedNode.tier} </div>
               <h1 className="node-title">{selectedNode.name}</h1>
@@ -497,28 +573,6 @@ const MapView: React.FC<MapViewProps> = ({
                 {selectedNode.id === activeDistrictId ? 'ПЕРЕЙТИ_К_РАЙОНУ' : 'ИНИЦИИРОВАТЬ_ПЕРЕМЕЩЕНИЕ'}
               </button>
             </div>
-          ) : selectedSubNode ? (
-            <div className="panel-content animate-slide-in">
-              <div className="node-tag" style={{ color: NODE_COLORS[selectedSubNode.type] }}> {selectedSubNode.type.toUpperCase()} </div>
-              <h1 className="node-title">{selectedSubNode.name}</h1>
-              <div className="tech-briefing">
-                 <div className="brief-label">DATA_STREAM:</div>
-                 <p className="node-desc mono-text">{selectedSubNode.description}</p>
-                 <div className="brief-stats">
-                    <span>SECURITY: {activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span>
-                    <span>PING: STABLE</span>
-                 </div>
-              </div>
-              <button className="btn-engage" onClick={() => {
-                console.group(`[MAP_RADAR] Node Select: ${selectedSubNode.id}`);
-                console.log("Type:", selectedSubNode.type);
-                console.log("Handler Status: OPERATIONAL");
-                console.groupEnd();
-                onNodeSelect(selectedSubNode.id, selectedSubNode.type);
-              }}>
-                 ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
-              </button>
-            </div>
           ) : (
             <div className="no-selection mono-text">
                <MousePointer2 size={32} opacity="0.3" />
@@ -526,24 +580,117 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
         </aside>
+        )}
+        </div>
       </main>
 
+      {typeof document !== 'undefined' &&
+        selectedSubNode &&
+        nodeConnectModalOpen &&
+        createPortal(
+          <div
+            className="map-node-connect-overlay"
+            onClick={() => setNodeConnectModalOpen(false)}
+            role="presentation"
+          >
+            <div
+              className="map-node-connect-modal arctic-monolith"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="map-node-connect-title"
+            >
+              <button
+                type="button"
+                className="map-node-connect-close"
+                onClick={() => setNodeConnectModalOpen(false)}
+                aria-label="Закрыть"
+              >
+                <X size={20} />
+              </button>
+              <div className="node-tag" style={{ color: NODE_COLORS[selectedSubNode.type] }}>
+                {selectedSubNode.type.toUpperCase()}
+              </div>
+              <h2 id="map-node-connect-title" className="map-node-connect-headline">
+                {selectedSubNode.name}
+              </h2>
+              <div className="tech-briefing">
+                <div className="brief-label">DATA_STREAM:</div>
+                <p className="node-desc mono-text">{selectedSubNode.description}</p>
+                <div className="brief-stats">
+                  <span>SECURITY: {activeDistrict.tier > 2 ? 'HIGH' : 'LOW'}</span>
+                  <span>PING: STABLE</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-engage"
+                onClick={() => {
+                  onNodeSelect(selectedSubNode.id, selectedSubNode.type);
+                  setNodeConnectModalOpen(false);
+                }}
+              >
+                ПОДКЛЮЧИТЬСЯ_К_УЗЛУ
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
       <style>{`
-        .hdr-game-clock {
-          font-size: 0.72rem; font-weight: 800; letter-spacing: 0.12em;
-          color: var(--neon-cyan); text-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
-          white-space: nowrap;
-        }
-        .hdr-clock-time { color: #e8f8ff; font-variant-numeric: tabular-nums; }
-        .hdr-clock-phase { color: var(--neon-amber); opacity: 0.95; }
-        .hdr-clock-day { color: #8899aa; font-size: 0.68rem; }
-        .map-view-v4.map-phase-night .map-canvas-wrap { filter: brightness(0.74) saturate(0.9) hue-rotate(-4deg); }
-        .map-view-v4.map-phase-evening .map-canvas-wrap { filter: brightness(0.88) saturate(0.96); }
-        .map-view-v4.map-phase-morning .map-canvas-wrap { filter: brightness(0.96) saturate(0.98); }
         .map-view-v4 { height: 100%; display: flex; flex-direction: column; background: #000; overflow: hidden; }
+        .map-radar-column--district-rail-only > .map-radar-rail {
+          flex: 1;
+          min-height: 0;
+        }
+        .map-node-connect-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100000;
+          background: rgba(0, 0, 0, 0.78);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .map-node-connect-modal {
+          position: relative;
+          width: min(100%, 420px);
+          max-height: min(88vh, 640px);
+          overflow-y: auto;
+          padding: 28px 24px 24px;
+          border: 1px solid rgba(0, 212, 255, 0.28);
+          box-shadow: 0 0 48px rgba(0, 0, 0, 0.85);
+        }
+        .map-node-connect-close {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: transparent;
+          border: none;
+          color: #889;
+          cursor: pointer;
+          padding: 6px;
+          line-height: 0;
+          border-radius: 4px;
+        }
+        .map-node-connect-close:hover { color: var(--neon-cyan); }
+        .map-node-connect-headline {
+          font-size: 1.35rem;
+          font-weight: 900;
+          color: #fff;
+          margin: 0 0 16px;
+          line-height: 1.2;
+          padding-right: 36px;
+        }
         .map-hdr-v5 {
           height: 100px; display: grid; grid-template-columns: 1fr 340px; 
           background: rgba(0,0,0,0.9); border-bottom: 1px solid rgba(188,19,254,0.1);
+        }
+        .map-hdr-v5--radar {
+          height: 64px !important;
+          grid-template-columns: 1fr auto !important;
+          align-items: center;
         }
         .hdr-main-area {
           display: flex; align-items: center; justify-content: center; position: relative;
@@ -574,11 +721,51 @@ const MapView: React.FC<MapViewProps> = ({
         .map-hdr-btn.exit { border-color: rgba(255,255,255,0.1); opacity: 0.7; }
         
         .map-body { flex: 1; display: grid; grid-template-columns: 1fr 340px; overflow: hidden; position: relative; }
+        .map-body--radar-v2 {
+          grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+        }
+        .map-radar-column {
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          min-width: 0;
+          background: linear-gradient(180deg, rgba(4, 10, 20, 0.98) 0%, rgba(0, 4, 12, 1) 100%);
+          border-left: 1px solid rgba(0, 212, 255, 0.14);
+        }
+        .map-info-panel--radar-detail {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          border-left: none !important;
+          padding-top: 16px !important;
+        }
         .map-canvas-wrap { 
           position: relative; background: radial-gradient(circle at 50% 50%, rgba(26,11,46,0.3) 0%, #000 100%); 
           cursor: crosshair; overflow: hidden; 
         }
-        .map-svg { width: 100%; height: 100%; }
+        .map-atmo {
+          position: absolute;
+          inset: 0;
+          z-index: 2;
+          pointer-events: none;
+          transition: opacity 1.2s ease;
+        }
+        .map-atmo--morning {
+          background: linear-gradient(195deg, rgba(255, 220, 180, 0.09) 0%, transparent 45%);
+        }
+        .map-atmo--day {
+          background: radial-gradient(ellipse 90% 45% at 50% 0%, rgba(120, 200, 255, 0.07) 0%, transparent 58%);
+        }
+        .map-atmo--evening {
+          background: linear-gradient(180deg, transparent 35%, rgba(255, 100, 40, 0.1) 100%),
+            linear-gradient(95deg, rgba(60, 30, 10, 0.12) 0%, transparent 45%);
+        }
+        .map-atmo--night {
+          background: radial-gradient(ellipse 110% 85% at 50% 110%, rgba(40, 10, 80, 0.55) 0%, transparent 52%),
+            linear-gradient(180deg, rgba(0, 4, 28, 0.5) 0%, transparent 55%);
+          mix-blend-mode: multiply;
+        }
+        .map-svg { width: 100%; height: 100%; position: relative; z-index: 3; }
         
         .radar-sweep { transform-origin: 50px 50px; animation: radar-rotate 5s linear infinite; }
         @keyframes radar-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -613,7 +800,8 @@ const MapView: React.FC<MapViewProps> = ({
 
         @media (max-width: 1280px) {
           .map-hdr-v5 { grid-template-columns: 1fr 280px; }
-          .map-body { grid-template-columns: 1fr 280px; }
+          .map-body:not(.map-body--radar-v2) { grid-template-columns: 1fr 280px; }
+          .map-body--radar-v2 { grid-template-columns: minmax(0, 1fr) minmax(260px, 340px); }
           .hdr-main-area { justify-content: flex-start; padding-left: 20px; }
           .hdr-micro-label.side-fixed { position: static; transform: none; margin-right: 14px; }
           .hdr-headline { font-size: 1.35rem; }
@@ -625,6 +813,16 @@ const MapView: React.FC<MapViewProps> = ({
           .hdr-actions-area { justify-content: flex-start; padding-right: 0; }
           .hdr-status-row { flex-wrap: wrap; gap: 8px; }
           .map-body { grid-template-columns: 1fr; }
+          .map-body--radar-v2 {
+            grid-template-columns: 1fr;
+            grid-template-rows: minmax(220px, 48vh) auto;
+            overflow-y: auto;
+          }
+          .map-radar-column {
+            border-left: none;
+            border-top: 1px solid rgba(0, 212, 255, 0.12);
+            max-height: none;
+          }
           .map-info-panel { border-left: none; border-top: 1px solid rgba(188,19,254,0.1); max-height: 42vh; overflow-y: auto; }
           .node-title { font-size: 1.4rem; margin-bottom: 12px; }
         }

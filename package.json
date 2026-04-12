@@ -10,8 +10,11 @@
     "build:full": "npx prisma generate && npm run build",
     "start": "node dist_server/index.js",
     "lint": "eslint .",
+    "check:npc-dialogues": "node scripts/check-npc-dialogue-coverage.mjs",
     "test:world": "node --max-old-space-size=4096 --loader ts-node/esm scripts/validate-dialogues.ts",
     "test:quests": "node --max-old-space-size=2048 --loader ts-node/esm scripts/validate-quests.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -46,6 +49,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^3.2.4"
   }
 }

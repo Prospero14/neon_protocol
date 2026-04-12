@@ -175,6 +175,218 @@ app.post('/neon_v1/game/sync', async (req, res) => {
   }
 });
 
+// --- COOP LOBBY (in-memory; один инстанс сервера) ---
+const LOBBY_TTL_MS = 50_000;
+const MAX_PARTY = 4;
+const MAX_CHAT = 120;
+
+type LobbyEntry = {
+  userId: string;
+  clientUsername: string;
+  displayName: string;
+  coopRole: string;
+  lastSeen: number;
+  partyId: string | null;
+};
+
+const lobbyByUser = new Map<string, LobbyEntry>();
+const parties = new Map<string, { id: string; hostId: string; memberIds: string[] }>();
+const chatLog: Array<{
+  id: string;
+  userId: string;
+  displayName: string;
+  coopRole: string;
+  text: string;
+  ts: number;
+}> = [];
+
+function lobbyAuth(req: Request): { userId: string } | null {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return null;
+    const token = authHeader.split(' ')[1];
+    return jwt.verify(token, JWT_SECRET) as { userId: string };
+  } catch {
+    return null;
+  }
+}
+
+function pruneLobbyUsers() {
+  const now = Date.now();
+  for (const [uid, u] of lobbyByUser) {
+    if (now - u.lastSeen > LOBBY_TTL_MS) {
+      lobbyByUser.delete(uid);
+      const p = u.partyId ? parties.get(u.partyId) : null;
+      if (p) {
+        p.memberIds = p.memberIds.filter((id) => id !== uid);
+        if (p.memberIds.length === 0) parties.delete(p.id);
+        else if (p.hostId === uid) {
+          p.hostId = p.memberIds[0];
+        }
+      }
+    }
+  }
+}
+
+function serializeParty(partyId: string | null, selfId: string) {
+  if (!partyId) return null;
+  const p = parties.get(partyId);
+  if (!p) return null;
+  return {
+    id: p.id,
+    hostId: p.hostId,
+    isHost: p.hostId === selfId,
+    members: p.memberIds.map((mid) => {
+      const u = lobbyByUser.get(mid);
+      return {
+        userId: mid,
+        displayName: u?.displayName ?? mid,
+        coopRole: u?.coopRole ?? '?',
+        clientUsername: u?.clientUsername ?? '',
+      };
+    }),
+  };
+}
+
+app.post('/neon_v1/coop/heartbeat', (req, res) => {
+  const auth = lobbyAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const { displayName, coopRole, clientUsername } = req.body as Record<string, unknown>;
+  if (typeof displayName !== 'string' || !displayName.trim()) {
+    return res.status(400).json({ error: 'displayName required' });
+  }
+  const role = typeof coopRole === 'string' ? coopRole : 'developer';
+  const cname = typeof clientUsername === 'string' ? clientUsername : '';
+  pruneLobbyUsers();
+  const prev = lobbyByUser.get(auth.userId);
+  lobbyByUser.set(auth.userId, {
+    userId: auth.userId,
+    clientUsername: cname,
+    displayName: displayName.trim().slice(0, 48),
+    coopRole: role,
+    lastSeen: Date.now(),
+    partyId: prev?.partyId ?? null,
+  });
+  const online = [...lobbyByUser.entries()]
+    .filter(([id]) => id !== auth.userId)
+    .map(([id, u]) => ({
+      userId: id,
+      displayName: u.displayName,
+      coopRole: u.coopRole,
+      clientUsername: u.clientUsername,
+    }));
+  res.json({
+    ok: true,
+    online,
+    party: serializeParty(lobbyByUser.get(auth.userId)?.partyId ?? null, auth.userId),
+    chat: chatLog.slice(-40),
+  });
+});
+
+app.get('/neon_v1/coop/state', (req, res) => {
+  const auth = lobbyAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  pruneLobbyUsers();
+  const me = lobbyByUser.get(auth.userId);
+  const online = [...lobbyByUser.entries()]
+    .filter(([id]) => id !== auth.userId)
+    .map(([id, u]) => ({
+      userId: id,
+      displayName: u.displayName,
+      coopRole: u.coopRole,
+      clientUsername: u.clientUsername,
+    }));
+  res.json({
+    online,
+    party: serializeParty(me?.partyId ?? null, auth.userId),
+    chat: chatLog.slice(-40),
+  });
+});
+
+app.post('/neon_v1/coop/chat', (req, res) => {
+  const auth = lobbyAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const { text } = req.body as { text?: string };
+  if (typeof text !== 'string' || !text.trim()) return res.status(400).json({ error: 'text' });
+  const me = lobbyByUser.get(auth.userId);
+  if (!me) return res.status(400).json({ error: 'Heartbeat first' });
+  const entry = {
+    id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    userId: auth.userId,
+    displayName: me.displayName,
+    coopRole: me.coopRole,
+    text: text.trim().slice(0, 500),
+    ts: Date.now(),
+  };
+  chatLog.push(entry);
+  while (chatLog.length > MAX_CHAT) chatLog.shift();
+  res.json({ ok: true, message: entry });
+});
+
+app.post('/neon_v1/coop/invite', (req, res) => {
+  const auth = lobbyAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  const { targetDisplayName } = req.body as { targetDisplayName?: string };
+  if (typeof targetDisplayName !== 'string' || !targetDisplayName.trim()) {
+    return res.status(400).json({ error: 'targetDisplayName' });
+  }
+  pruneLobbyUsers();
+  const me = lobbyByUser.get(auth.userId);
+  if (!me) return res.status(400).json({ error: 'Heartbeat first' });
+  const needle = targetDisplayName.trim().toLowerCase();
+  let targetId: string | null = null;
+  for (const [id, u] of lobbyByUser) {
+    if (id === auth.userId) continue;
+    if (u.displayName.toLowerCase() === needle) {
+      targetId = id;
+      break;
+    }
+  }
+  if (!targetId) return res.status(404).json({ error: 'Player not online' });
+  const target = lobbyByUser.get(targetId);
+  if (!target) return res.status(404).json({ error: 'Gone' });
+  if (target.partyId && target.partyId !== me.partyId) {
+    return res.status(400).json({ error: 'Target in another party' });
+  }
+
+  let partyId = me.partyId;
+  if (!partyId) {
+    partyId = `party_${auth.userId}_${Date.now()}`;
+    parties.set(partyId, { id: partyId, hostId: auth.userId, memberIds: [auth.userId] });
+    me.partyId = partyId;
+  }
+  const party = parties.get(partyId);
+  if (!party) return res.status(500).json({ error: 'party' });
+  if (party.memberIds.length >= MAX_PARTY) return res.status(400).json({ error: 'Party full' });
+  if (!party.memberIds.includes(targetId)) {
+    if (target.partyId && target.partyId !== partyId) {
+      return res.status(400).json({ error: 'Target in another party' });
+    }
+    party.memberIds.push(targetId);
+    target.partyId = partyId;
+  }
+  res.json({ ok: true, party: serializeParty(partyId, auth.userId) });
+});
+
+app.post('/neon_v1/coop/party/leave', (req, res) => {
+  const auth = lobbyAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No token' });
+  pruneLobbyUsers();
+  const me = lobbyByUser.get(auth.userId);
+  if (!me?.partyId) return res.json({ ok: true, party: null });
+  const p = parties.get(me.partyId);
+  if (p) {
+    p.memberIds = p.memberIds.filter((id) => id !== auth.userId);
+    if (p.memberIds.length === 0) {
+      parties.delete(p.id);
+    } else if (p.hostId === auth.userId) {
+      p.hostId = p.memberIds[0];
+    }
+  }
+  me.partyId = null;
+  res.json({ ok: true, party: null });
+});
+
 // --- 4. STATIC FILES AND SPA ---
 
 const DIST = path.join(process.cwd(), 'dist');

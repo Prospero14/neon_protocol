@@ -16,3 +16,14 @@ export type { CombatPack };
 
 // Consolidating all districts from the new modular structure
 export const MAP_NODES: MapNode[] = MODULAR_MAP_NODES;
+
+/** Subnode id where a «wandering» NPC meets the player when AWAY (bar preferred). */
+export function defaultAwayVisitNodeIdForDistrict(districtId: string): string {
+  const d = MAP_NODES.find((m) => m.id === districtId);
+  if (!d?.subNodes?.length) return districtId;
+  const bar = d.subNodes.find((s) => s.type === 'bar');
+  if (bar) return bar.id;
+  const term = d.subNodes.find((s) => s.type === 'terminal');
+  if (term) return term.id;
+  return d.subNodes[0].id;
+}

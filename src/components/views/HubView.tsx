@@ -8,6 +8,7 @@ import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 import type { MessengerMessage } from '../../logic/hooks/useGameState';
 import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
 import { COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
+import { OCTOBERLINE_HUB_BRACKET_LABEL } from '../../buildInfo';
 
 interface HubViewProps {
   playerName: string;
@@ -199,7 +200,7 @@ export const HubView: React.FC<HubViewProps> = ({
     <div className="hub-v4-view animate-float">
       <header className="hub-header-v4">
         <div className="brand-box">
-          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[ОКТЯБРЬСКАЯ_ЛИНИЯ_0.11.01 | BUILD_7A_LAYOUT]</span></h1>
+          <h1 className="neon-text glow-green">OCTOBERLINE <span className="mvp-tag">[{OCTOBERLINE_HUB_BRACKET_LABEL}]</span></h1>
           <div className="meta-line mono-text">
             <span className="meta-item"><MapPin size={12} /> {homeDistrict?.name.split(':')[0] || 'SAFE_HOUSE_04'}</span>
             <span className="meta-divider">|</span>

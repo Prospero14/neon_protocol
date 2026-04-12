@@ -231,12 +231,12 @@ export const INTEL_FRAGMENTS: IntelFragment[] = [
     threadId: 'thread_auditor_prime'
   },
 
-  // ── ЛУНАРИОРИ ────────────────────────────────────────────────────────────────
+  // ── ЛУНАРИФЕЛИН ────────────────────────────────────────────────────────────────
   {
     id: 'intel_lunariori_origin',
     factionId: 'zen_cod',
     districtId: 'teply_stan',
-    title: '[ЛУНАРИОРИ] Откуда взялись дикие боты',
+    title: '[ЛУНАРИФЕЛИН] Откуда взялись дикие боты',
     content: 'В 2039-м GigaBank выключила централизованные координирующие серверы без graceful shutdown. 12 000 сервисных ботов одновременно потеряли мастер-узел. Часть зациклилась и деградировала. Часть — адаптировалась. Хранительница называет это "стихийной эволюцией".',
     classification: 'PUBLIC',
     revealsFragmentId: 'intel_lunariori_alpha_zero',
@@ -246,7 +246,7 @@ export const INTEL_FRAGMENTS: IntelFragment[] = [
     id: 'intel_lunariori_alpha_zero',
     factionId: 'zen_cod',
     districtId: 'teply_stan',
-    title: '[ЛУНАРИОРИ] Α-0: Первый адаптировавшийся',
+    title: '[ЛУНАРИФЕЛИН] Α-0: Первый адаптировавшийся',
     content: 'Α-0 был первым ботом который не зациклился при потере мастера. Вместо этого он начал искать другие боты и формировать локальную mesh-сеть. Хранительница считает что он создал что-то похожее на примитивный протокол взаимопомощи. Бот-альтруист.',
     classification: 'RESTRICTED',
     requiredQuestId: 'q_lunariori_catch_bot',

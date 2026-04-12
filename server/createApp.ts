@@ -1,5 +1,5 @@
 import express from 'express';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
@@ -354,8 +354,28 @@ export function createApp(opts: CreateAppOptions) {
   });
 
   const DIST = path.join(process.cwd(), 'dist');
-  app.use('/assets', express.static(path.join(DIST, 'assets')));
-  app.use(express.static(DIST));
+  const sendHtmlNoCache = (res: Response, file: string) => {
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    res.sendFile(file);
+  };
+
+  app.use(
+    '/assets',
+    express.static(path.join(DIST, 'assets'), {
+      setHeaders: (res) => {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      },
+    }),
+  );
+  app.use(
+    express.static(DIST, {
+      setHeaders: (_res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          _res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        }
+      },
+    }),
+  );
 
   const indexPath = fs.existsSync(path.join(DIST, 'index.html'))
     ? path.join(DIST, 'index.html')
@@ -363,7 +383,7 @@ export function createApp(opts: CreateAppOptions) {
 
   app.get('/', (_req, res) => {
     if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
+      sendHtmlNoCache(res, indexPath);
     } else {
       res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/');
     }
@@ -372,7 +392,7 @@ export function createApp(opts: CreateAppOptions) {
   app.get(/.*/, (req, res) => {
     if (req.path.startsWith('/neon_v1')) return res.status(404).json({ error: 'Not found' });
     if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath);
+      sendHtmlNoCache(res, indexPath);
     } else {
       res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/');
     }

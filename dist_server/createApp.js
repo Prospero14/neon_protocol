@@ -102,7 +102,12 @@ export function createApp(opts) {
     });
     app.post('/neon_v1/auth/register', async (req, res) => {
         try {
-            const { username, password } = req.body;
+            const body = (req.body ?? {});
+            const username = typeof body.username === 'string' ? body.username.trim() : '';
+            const password = typeof body.password === 'string' ? body.password : '';
+            if (!username || !password) {
+                return res.status(400).json({ error: 'Identity creation failed. Invalid credentials.' });
+            }
             const hashedPassword = await bcrypt.hash(password, 10);
             const starterDeck = [
                 { id: 'script_ping', count: 1 },
@@ -140,7 +145,11 @@ export function createApp(opts) {
     });
     app.post('/neon_v1/auth/login', async (req, res) => {
         try {
-            const { username, password } = req.body;
+            const body = (req.body ?? {});
+            const username = typeof body.username === 'string' ? body.username.trim() : '';
+            const password = typeof body.password === 'string' ? body.password : '';
+            if (!username || !password)
+                return res.status(401).json({ error: 'Fail' });
             const user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
             if (!user || !(await bcrypt.compare(password, user.passwordHash)))
                 return res.status(401).json({ error: 'Fail' });

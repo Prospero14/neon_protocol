@@ -11,6 +11,12 @@ export const AuthForm: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        const cleanUsername = username.trim();
+        const cleanPassword = password;
+        if (!cleanUsername || !cleanPassword) {
+            setError('Введите логин и пароль.');
+            return;
+        }
         
         const endpoint = isLogin ? '/neon_v1/auth/login' : '/neon_v1/auth/register';
         
@@ -18,7 +24,7 @@ export const AuthForm: React.FC = () => {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username: cleanUsername, password: cleanPassword })
             });
             
             const contentType = response.headers.get('content-type');

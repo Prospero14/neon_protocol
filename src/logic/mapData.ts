@@ -19,7 +19,8 @@ export const MAP_NODES: MapNode[] = MODULAR_MAP_NODES;
 
 /** Subnode id where a «wandering» NPC meets the player when AWAY (bar preferred). */
 export function defaultAwayVisitNodeIdForDistrict(districtId: string): string {
-  const d = MAP_NODES.find((m) => m.id === districtId);
+  const safeMapNodes: MapNode[] = Array.isArray(MAP_NODES) ? MAP_NODES : [];
+  const d = safeMapNodes.find((m) => m.id === districtId);
   const nodes = Array.isArray(d?.subNodes) ? d.subNodes : [];
   if (nodes.length === 0) return districtId;
   const bar = nodes.find((s) => s.type === 'bar');

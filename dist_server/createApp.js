@@ -143,7 +143,9 @@ export function createApp(opts) {
         }
         catch (error) {
             console.error('Registration Error:', error);
-            const msg = error.code === 'P2002' ? 'Identity already exists.' : 'Identity creation failed. Subsystem error.';
+            const msg = error.code === 'P2002'
+                ? 'Такой логин уже есть. Войдите или выберите другой логин.'
+                : 'Не удалось создать аккаунт (ошибка сервера).';
             res.status(400).json({ error: msg });
         }
     });
@@ -153,7 +155,7 @@ export function createApp(opts) {
             const username = typeof body.username === 'string' ? body.username.trim() : '';
             const password = typeof body.password === 'string' ? body.password : '';
             if (!username || !password)
-                return res.status(401).json({ error: 'Fail' });
+                return res.status(401).json({ error: 'Неверный логин или пароль.' });
             let user;
             try {
                 user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
@@ -187,7 +189,7 @@ export function createApp(opts) {
                 });
             }
             if (!user || !(await bcrypt.compare(password, user.passwordHash)))
-                return res.status(401).json({ error: 'Fail' });
+                return res.status(401).json({ error: 'Неверный логин или пароль.' });
             const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
             const rawGs = user.gameState;
             res.json({
@@ -196,7 +198,7 @@ export function createApp(opts) {
             });
         }
         catch (_error) {
-            res.status(500).json({ error: 'Fail' });
+            res.status(500).json({ error: 'Ошибка входа. Попробуйте позже.' });
         }
     });
     app.post('/neon_v1/game/sync', async (req, res) => {

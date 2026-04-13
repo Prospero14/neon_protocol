@@ -173,7 +173,10 @@ export function createApp(opts: CreateAppOptions) {
       res.status(201).json({ message: 'User created' });
     } catch (error: any) {
       console.error('Registration Error:', error);
-      const msg = error.code === 'P2002' ? 'Identity already exists.' : 'Identity creation failed. Subsystem error.';
+      const msg =
+        error.code === 'P2002'
+          ? 'Такой логин уже есть. Войдите или выберите другой логин.'
+          : 'Не удалось создать аккаунт (ошибка сервера).';
       res.status(400).json({ error: msg });
     }
   });
@@ -183,7 +186,7 @@ export function createApp(opts: CreateAppOptions) {
       const body = (req.body ?? {}) as Record<string, unknown>;
       const username = typeof body.username === 'string' ? body.username.trim() : '';
       const password = typeof body.password === 'string' ? body.password : '';
-      if (!username || !password) return res.status(401).json({ error: 'Fail' });
+      if (!username || !password) return res.status(401).json({ error: 'Неверный логин или пароль.' });
       let user: any;
       try {
         user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
@@ -214,7 +217,8 @@ export function createApp(opts: CreateAppOptions) {
           },
         });
       }
-      if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Fail' });
+      if (!user || !(await bcrypt.compare(password, user.passwordHash)))
+        return res.status(401).json({ error: 'Неверный логин или пароль.' });
       const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
       const rawGs = user.gameState as Record<string, unknown> | null;
       res.json({
@@ -222,7 +226,7 @@ export function createApp(opts: CreateAppOptions) {
         user: { id: user.id, username: user.username, gameState: publicGameState(rawGs) },
       });
     } catch (_error) {
-      res.status(500).json({ error: 'Fail' });
+      res.status(500).json({ error: 'Ошибка входа. Попробуйте позже.' });
     }
   });
 

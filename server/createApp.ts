@@ -31,6 +31,11 @@ function publicGameState(gs: Record<string, unknown> | null): Record<string, unk
   };
 }
 
+function hasMissingClientSnapshotColumn(error: unknown): boolean {
+  const msg = String((error as { message?: unknown })?.message ?? error ?? '');
+  return msg.includes('no such column') && msg.includes('clientSnapshot');
+}
+
 export type CreateAppOptions = {
   prisma: PrismaClient;
   jwtSecret: string;
@@ -179,7 +184,36 @@ export function createApp(opts: CreateAppOptions) {
       const username = typeof body.username === 'string' ? body.username.trim() : '';
       const password = typeof body.password === 'string' ? body.password : '';
       if (!username || !password) return res.status(401).json({ error: 'Fail' });
-      const user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
+      let user: any;
+      try {
+        user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
+      } catch (e) {
+        if (!hasMissingClientSnapshotColumn(e)) throw e;
+        // Legacy /data DB on host can miss clientSnapshot until migration is applied.
+        user = await prisma.user.findUnique({
+          where: { username },
+          include: {
+            gameState: {
+              select: {
+                id: true,
+                userId: true,
+                bits: true,
+                xp: true,
+                level: true,
+                ramPool: true,
+                stress: true,
+                maxStress: true,
+                activeDeck: true,
+                inventory: true,
+                artifacts: true,
+                completedQuests: true,
+                reputation: true,
+                intel: true,
+              },
+            },
+          },
+        });
+      }
       if (!user || !(await bcrypt.compare(password, user.passwordHash))) return res.status(401).json({ error: 'Fail' });
       const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
       const rawGs = user.gameState as Record<string, unknown> | null;
@@ -200,21 +234,40 @@ export function createApp(opts: CreateAppOptions) {
       const decoded = jwt.verify(token, jwtSecret) as { userId: string };
       const body = req.body as Record<string, unknown>;
       const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;
-      const updatedState = await prisma.gameState.update({
-        where: { userId: decoded.userId },
-        data: {
-          stress,
-          maxStress,
-          bits,
-          xp,
-          level,
-          activeDeck,
-          inventory,
-          artifacts,
-          completedQuests,
-          clientSnapshot: body as object,
-        } as any,
-      });
+      let updatedState: unknown;
+      try {
+        updatedState = await prisma.gameState.update({
+          where: { userId: decoded.userId },
+          data: {
+            stress,
+            maxStress,
+            bits,
+            xp,
+            level,
+            activeDeck,
+            inventory,
+            artifacts,
+            completedQuests,
+            clientSnapshot: body as object,
+          } as any,
+        });
+      } catch (e) {
+        if (!hasMissingClientSnapshotColumn(e)) throw e;
+        updatedState = await prisma.gameState.update({
+          where: { userId: decoded.userId },
+          data: {
+            stress,
+            maxStress,
+            bits,
+            xp,
+            level,
+            activeDeck,
+            inventory,
+            artifacts,
+            completedQuests,
+          } as any,
+        });
+      }
       res.json(publicGameState(updatedState as unknown as Record<string, unknown>));
     } catch (error) {
       console.error('Sync Error:', error);

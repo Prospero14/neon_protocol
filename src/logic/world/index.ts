@@ -50,17 +50,24 @@ const ALL_DISTRICTS: WorldDistrict[] = [
   coop_yard
 ];
 
+const SAFE_DAY_CONTACT_PROFILES = Array.isArray(DAY_CONTACT_PROFILES) ? DAY_CONTACT_PROFILES : [];
+const SAFE_NIGHT_CONTACT_PROFILES = Array.isArray(NIGHT_CONTACT_PROFILES) ? NIGHT_CONTACT_PROFILES : [];
+const SAFE_DAY_CONTACT_DIALOGUES =
+  DAY_CONTACT_DIALOGUES && typeof DAY_CONTACT_DIALOGUES === 'object' ? DAY_CONTACT_DIALOGUES : {};
+const SAFE_NIGHT_CONTACT_DIALOGUES =
+  NIGHT_CONTACT_DIALOGUES && typeof NIGHT_CONTACT_DIALOGUES === 'object' ? NIGHT_CONTACT_DIALOGUES : {};
+
 export const MAP_NODES: MapNode[] = ALL_DISTRICTS.map(d => d.node);
 
 export const NPC_LIBRARY: NpcProfile[] = [
   ...ALL_DISTRICTS.flatMap(d => d.npcs),
-  ...DAY_CONTACT_PROFILES,
-  ...NIGHT_CONTACT_PROFILES
+  ...SAFE_DAY_CONTACT_PROFILES,
+  ...SAFE_NIGHT_CONTACT_PROFILES
 ];
 
 export const DIALOGUE_TREES: Record<string, DialogueTree> = {
   ...ALL_DISTRICTS.reduce((acc, d) => ({ ...acc, ...d.dialogues }), {}),
-  ...DAY_CONTACT_DIALOGUES,
-  ...NIGHT_CONTACT_DIALOGUES,
+  ...SAFE_DAY_CONTACT_DIALOGUES,
+  ...SAFE_NIGHT_CONTACT_DIALOGUES,
   ...punitive_dialogues
 };

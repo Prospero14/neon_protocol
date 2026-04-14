@@ -28,11 +28,19 @@ function publicGameState(gs) {
         intel: gs.intel ?? fromSnap.intel,
     };
 }
+/** SQLite: `no such column`. Prisma 7 + driver adapter: `P2022`, «does not exist», `ColumnNotFound`. */
 function hasMissingColumn(error, columnName) {
-    const msg = String(error?.message ?? error ?? '');
-    if (!msg.includes('no such column'))
+    const err = error;
+    const msg = String(err.message ?? error ?? '');
+    const metaCol = String(err.meta?.column_name ?? '');
+    const haystack = `${msg}\n${metaCol}`;
+    const sqlite = msg.includes('no such column');
+    const prismaMissing = err.code === 'P2022' || msg.includes('does not exist') || msg.includes('ColumnNotFound');
+    if (!sqlite && !prismaMissing)
         return false;
-    return columnName ? msg.includes(columnName) : true;
+    if (!columnName)
+        return true;
+    return haystack.includes(columnName);
 }
 /** Единый JSON для ошибок neon_v1: текст для человека + стабильный `code` для клиента/логов. */
 function sendApiError(res, status, code, message) {

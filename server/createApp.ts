@@ -31,10 +31,20 @@ function publicGameState(gs: Record<string, unknown> | null): Record<string, unk
   };
 }
 
+/** SQLite: `no such column`. Prisma 7 + driver adapter: `P2022`, «does not exist», `ColumnNotFound`. */
 function hasMissingColumn(error: unknown, columnName?: string): boolean {
-  const msg = String((error as { message?: unknown })?.message ?? error ?? '');
-  if (!msg.includes('no such column')) return false;
-  return columnName ? msg.includes(columnName) : true;
+  const err = error as { code?: string; message?: unknown; meta?: { column_name?: unknown } };
+  const msg = String(err.message ?? error ?? '');
+  const metaCol = String(err.meta?.column_name ?? '');
+  const haystack = `${msg}\n${metaCol}`;
+
+  const sqlite = msg.includes('no such column');
+  const prismaMissing =
+    err.code === 'P2022' || msg.includes('does not exist') || msg.includes('ColumnNotFound');
+
+  if (!sqlite && !prismaMissing) return false;
+  if (!columnName) return true;
+  return haystack.includes(columnName);
 }
 
 /** Единый JSON для ошибок neon_v1: текст для человека + стабильный `code` для клиента/логов. */

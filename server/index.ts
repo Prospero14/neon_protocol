@@ -39,6 +39,13 @@ function runMigrateDeploySync(): void {
     });
     console.log('[NEON_BOOT] prisma migrate deploy: ok');
   } catch (e) {
+    const msg = String((e as { message?: unknown })?.message ?? e ?? '');
+    // Existing production SQLite can be non-empty without migration history.
+    // In this case Prisma returns P3005; app can continue with runtime fallbacks.
+    if (msg.includes('P3005')) {
+      console.warn('[NEON_BOOT] prisma migrate deploy skipped: P3005 (existing non-empty DB baseline)');
+      return;
+    }
     console.error('[NEON_BOOT] prisma migrate deploy failed:', e);
   }
 }

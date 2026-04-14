@@ -14,6 +14,19 @@ export function getCardLibs(card: CombatCard): CardLibTag[] {
   return card.libs ?? [];
 }
 
+/**
+ * Карта относится к «Java-стеку» конструктора: явный java, legacy без поля language,
+ * либо нейтральные utility/infra с language: 'none' (но не shell/script-трек).
+ */
+function isJavaStackCard(card: CombatCard): boolean {
+  const lang = card.language;
+  if (lang === 'java' || lang === undefined) return true;
+  if (lang !== 'none') return false;
+  if (card.id.startsWith('script_') || card.type === 'SCRIPT') return false;
+  if (card.tags.includes('script')) return false;
+  return true;
+}
+
 export function cardMatchesJavaStack(
   card: CombatCard,
   opts: { 
@@ -27,7 +40,7 @@ export function cardMatchesJavaStack(
 
   // Shell selector must only expose real script cards, not generic "language: none" cards.
   const isScript = card.id.startsWith('script_') || card.type === 'SCRIPT';
-  const isJava = card.language === 'java';
+  const isJava = isJavaStackCard(card);
 
   const libs = getCardLibs(card);
   const isVanilla = libs.length === 0;

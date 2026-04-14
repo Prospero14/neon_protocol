@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CombatPhase } from '../../../logic/combatPhases';
-import { SDLC_PHASES } from '../../../logic/combatPhases';
+import { SDLC_PHASES, SDLC_PHASE_IDS_FULL } from '../../../logic/combatPhases';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { RailSlot } from '../../../logic/hooks/useCombatLogic';
 import type { BugAction, BugEnemy } from '../../../logic/combatEnemies';
@@ -10,6 +10,8 @@ import { Database, ShieldAlert, Terminal, Lock, ChevronRight } from 'lucide-reac
 interface NeuralBusProps {
   /** Классы темы поля на рабочей зоне (SDLC + код); оппонент/дедлайн — общие. */
   pipelineFieldClass?: string;
+  /** Порядок фаз на рельсе (кооп dev/qa/pm — без ARCHITECTURE). */
+  phaseOrder?: CombatPhase[];
   currentPhase: CombatPhase;
   /** Софт-скиллы кладутся только в фазе стабилизации (после кода). */
   softSocketsLocked: boolean;
@@ -28,15 +30,14 @@ interface NeuralBusProps {
   onExecuteCardOnSlot: (idx: number) => void;
 }
 
-const PHASE_ORDER: CombatPhase[] = ['ARCHITECTURE', 'DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
-
 const NeuralBus: React.FC<NeuralBusProps> = ({
   pipelineFieldClass = '',
+  phaseOrder = SDLC_PHASE_IDS_FULL,
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
   enemy, nextBugAction, isPlayerTurn, selectedCard, playerProgress, aiProgress,
   bugPoints, aiDeadline, onExecuteCardOnSlot
 }) => {
-  const phaseIndex = PHASE_ORDER.indexOf(currentPhase);
+  const phaseIndex = Math.max(0, phaseOrder.indexOf(currentPhase));
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
   const ENEMY_VISIBLE_SLOTS = 7;
@@ -112,7 +113,7 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
       {/* ── PIPELINE (CODE EDITOR) ── */}
       <div className={`nb2-pipeline-area ${pipelineFieldClass}`.trim()}>
         <div className="nb2-sdlc-rail" role="navigation" aria-label="Фазы цикла разработки">
-          {PHASE_ORDER.map((id, i) => {
+          {phaseOrder.map((id, i) => {
             const cur = phaseIndex;
             const stepState = i < cur ? 'past' : i === cur ? 'current' : 'future';
             const rules = SDLC_PHASES[id];
@@ -124,6 +125,11 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
             );
           })}
         </div>
+        {phaseOrder.length < SDLC_PHASE_IDS_FULL.length && (
+          <p className="nb2-sdlc-coop-caption">
+            INFRA/снабжение — зона admin в общем цикле команды; ваш клиент в этом спринте без отдельной фазы снабжения.
+          </p>
+        )}
         {currentPhase === 'ARCHITECTURE' ? (
           <div className="nb2-planning">
             <div className="nb2-plan-pipeline-seg nb2-plan-pipeline-seg--infra nb2-plan-pipeline-seg--active">

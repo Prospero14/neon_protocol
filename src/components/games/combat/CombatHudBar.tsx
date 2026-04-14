@@ -1,9 +1,11 @@
 import React from 'react';
 import { ShieldAlert, Zap, Database, FileCode2, Terminal } from 'lucide-react';
 import type { CombatPhase } from '../../../logic/combatPhases';
-import { SDLC_PHASES } from '../../../logic/combatPhases';
+import { SDLC_PHASE_IDS_FULL } from '../../../logic/combatPhases';
 
 interface CombatHudBarProps {
+  /** Точки фаз в HUD (кооп без admin — короче). */
+  phaseOrder?: CombatPhase[];
   currentPhase: CombatPhase;
   stress: number;
   cpu: number;
@@ -22,6 +24,7 @@ interface CombatHudBarProps {
 }
 
 const CombatHudBar: React.FC<CombatHudBarProps> = ({
+  phaseOrder = SDLC_PHASE_IDS_FULL,
   currentPhase, stress, cpu, cpuMax, ramMaxMb, lastLog, lastAiActionName, nextIntentName, isPlayerTurn = true, tzName,
   playerProgress, aiProgress, onShowTzModal
 }) => {
@@ -31,8 +34,7 @@ const CombatHudBar: React.FC<CombatHudBarProps> = ({
       : lastAiActionName
         ? `LAST: ${lastAiActionName}`
         : lastLog || '> idle';
-  const phases = Object.keys(SDLC_PHASES) as CombatPhase[];
-  const phaseIdx = phases.indexOf(currentPhase);
+  const phaseIdx = Math.max(0, phaseOrder.indexOf(currentPhase));
   const stressColor = stress > 70 ? '#ff4060' : stress > 40 ? '#ffaa00' : '#a855f7';
 
   return (
@@ -40,7 +42,7 @@ const CombatHudBar: React.FC<CombatHudBarProps> = ({
       {/* Phase dots */}
       <div className="chb-phase">
         <div className="chb-dots">
-          {phases.map((_, i) => (
+          {phaseOrder.map((_, i) => (
             <span key={i} className={`chb-dot ${i < phaseIdx ? 'done' : i === phaseIdx ? 'now' : ''}`} />
           ))}
         </div>

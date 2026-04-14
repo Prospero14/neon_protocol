@@ -2,7 +2,25 @@
  * Определение фаз жизненного цикла разработки (SDLC) в бою.
  */
 
+import type { CoopRole, SessionMode } from './sessionMode';
+
 export type CombatPhase = 'ARCHITECTURE' | 'DEVELOPMENT' | 'VERIFICATION' | 'DEPLOYMENT';
+
+/** Полный цикл (4 фазы). Кооп dev/qa/pm пропускают ARCHITECTURE — INFRA ведёт только admin в общей модели команды. */
+export const SDLC_PHASE_IDS_FULL: CombatPhase[] = ['ARCHITECTURE', 'DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
+
+/** Порядок фаз на рельсе HUD: у коопа без admin — три фазы без отдельного снабжения. */
+export function sdlcRailPhaseOrder(sessionMode: SessionMode, coopRole: CoopRole | null): CombatPhase[] {
+  if (sessionMode === 'coop' && coopRole && coopRole !== 'admin') {
+    return ['DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
+  }
+  return SDLC_PHASE_IDS_FULL;
+}
+
+/** Кооп-роли кроме admin не играют фазу ARCHITECTURE (старт сразу с DEVELOPMENT). */
+export function coopSkipsArchitecturePhase(sessionMode: SessionMode, coopRole: CoopRole | null): boolean {
+  return sessionMode === 'coop' && Boolean(coopRole) && coopRole !== 'admin';
+}
 
 export interface PhaseRules {
   id: CombatPhase;

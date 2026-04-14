@@ -14,6 +14,7 @@ import {
   getCoopBriefTz,
 } from '../../logic/coopSprint';
 import { coopOpponentHintBody, coopOpponentHintTitle } from '../../logic/coopOpponentHints';
+import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
 
 // UI Components — new layout
@@ -65,6 +66,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const sessionMode = props.sessionMode ?? 'solo';
   const coopRole = props.coopRole ?? null;
+  const railPhases = sdlcRailPhaseOrder(sessionMode, coopRole);
   const fieldWorldDay = props.fieldWorldDay ?? 1;
   const fieldDistrictId = props.fieldDistrictId ?? props.homeDistrictId ?? 'altufyevo';
   const soloVariant = resolveSoloFieldVariant(fieldWorldDay, fieldDistrictId, props.fieldBarNode);
@@ -185,6 +187,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       )}
       {/* ── TOP HUD BAR ── */}
       <CombatHudBar
+        phaseOrder={railPhases}
         currentPhase={state.currentPhase}
         stress={state.stress}
         cpu={state.cpu}
@@ -203,6 +206,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       {/* ── ARENA (full width) ── */}
       <NeuralBus 
         pipelineFieldClass={pipelineFieldClass}
+        phaseOrder={railPhases}
         currentPhase={state.currentPhase}
         softSocketsLocked={state.currentPhase !== 'VERIFICATION'}
         infraSlots={state.infraSlots}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import type { CombatPhase } from '../combatPhases';
-import { SDLC_PHASES } from '../combatPhases';
+import { SDLC_PHASES, coopSkipsArchitecturePhase } from '../combatPhases';
 import { isInfraDrawCard, isStabilizationDrawCard, isStaticCodeCardType } from '../combatFlow';
 import type { CombatCard } from '../combatCards';
 import { getCardById } from '../combatCards';
@@ -69,10 +69,13 @@ export function useCombatLogic({
   coopRole = null,
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
+  const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
   const START_HAND_SIZE = 6;
 
   // --- CORE STATE ---
-  const [currentPhase, setCurrentPhase] = useState<CombatPhase>('ARCHITECTURE');
+  const [currentPhase, setCurrentPhase] = useState<CombatPhase>(() =>
+    skipArchitecture ? 'DEVELOPMENT' : 'ARCHITECTURE',
+  );
   const [playerProgress, setPlayerProgress] = useState(0);
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
@@ -121,7 +124,7 @@ export function useCombatLogic({
   const [lastAiImpact, setLastAiImpact] = useState<AiImpactSummary | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [canAdvancePhase, setCanAdvancePhase] = useState(false);
-  const [phaseIntro, setPhaseIntro] = useState<string | null>('ARCHITECTURE');
+  const [phaseIntro, setPhaseIntro] = useState<string | null>(() => (skipArchitecture ? 'DEVELOPMENT' : 'ARCHITECTURE'));
 
   const [cardsPlayedThisTurn, setCardsPlayedThisTurn] = useState(0);
   const [clearedBugsThisTurn, setClearedBugsThisTurn] = useState(0);
@@ -194,25 +197,33 @@ export function useCombatLogic({
     cardFamiliesRef.current = new Set();
     familyMilestoneRef.current = { t3: false, t5: false };
 
-    const infraPile = [...activeDeck.filter(isInfraDrawCard)].sort(() => Math.random() - 0.5);
-    if (infraPile.length === 0) {
-      // Fail-safe: бой не должен разваливаться, если в деке случайно нет INFRA карт.
-      setCpuMax((p) => p + 1);
-      setCpu((p) => p + 1);
-      setRamMaxMb((p) => p + 512);
-      addLog('[SYSTEM] EMERGENCY_INFRA_BOOT: +1 CPU, +512 MiB RAM');
+    if (skipArchitecture) {
+      setHand([]);
+      setDeck([]);
+      setDiscard((prev) => [...prev, ...activeDeck.filter(isInfraDrawCard)]);
+      addLog('[SYSTEM] COOP: фаза INFRA на стороне ADMIN — ваш клиент стартует с ПАЗЗЛ КОДА.');
+    } else {
+      const infraPile = [...activeDeck.filter(isInfraDrawCard)].sort(() => Math.random() - 0.5);
+      if (infraPile.length === 0) {
+        // Fail-safe: бой не должен разваливаться, если в деке случайно нет INFRA карт.
+        setCpuMax((p) => p + 1);
+        setCpu((p) => p + 1);
+        setRamMaxMb((p) => p + 512);
+        addLog('[SYSTEM] EMERGENCY_INFRA_BOOT: +1 CPU, +512 MiB RAM');
+      }
+      const n = Math.min(START_HAND_SIZE, infraPile.length);
+      setHand(infraPile.slice(0, n));
+      setDeck(infraPile.slice(n));
+      addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
     }
-    const n = Math.min(START_HAND_SIZE, infraPile.length);
-    setHand(infraPile.slice(0, n));
-    setDeck(infraPile.slice(n));
 
     stabilizationQueueRef.current = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
 
-    if (enemy) setNextBugAction(pickNextBugAction(enemy, [], { phase: currentPhase, bugPressure: 0, playerProgress: 0 }));
+    const bootPhase: CombatPhase = skipArchitecture ? 'DEVELOPMENT' : 'ARCHITECTURE';
+    if (enemy) setNextBugAction(pickNextBugAction(enemy, [], { phase: bootPhase, bugPressure: 0, playerProgress: 0 }));
 
     addLog('[SYSTEM] BOOT_SEQUENCE... [OK]');
-    addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
-    addLog(`[SYSTEM] PHASE_${currentPhase}_ACTIVE.`);
+    addLog(`[SYSTEM] PHASE_${bootPhase}_ACTIVE.`);
     if (isFirstCombatQuestTutorial && skillMode === 'script-kiddie') {
       addLog('[TUTORIAL] Цель: PROJECT 100% до THREAT 100%.');
       addLog('[TUTORIAL] DEVELOPMENT: выкладывай код в шину и собирай прогресс.');
@@ -231,7 +242,7 @@ export function useCombatLogic({
       setCpu(prev => prev + 1);
     }
 
-    setPhaseIntro(currentPhase);
+    setPhaseIntro(bootPhase);
     setTimeout(() => setPhaseIntro(null), 2500);
   }, []);
 
@@ -261,6 +272,12 @@ export function useCombatLogic({
   useEffect(() => {
     const rules = SDLC_PHASES[currentPhase];
     if (currentPhase === 'ARCHITECTURE') {
+      // В коопе только admin ведёт снабжение; COMPILE после заполнения контура (не «в один клик»).
+      if (coopActive && coopRole === 'admin') {
+        const filled = infraSlots.filter(Boolean).length;
+        setCanAdvancePhase(filled >= 6);
+        return;
+      }
       setCanAdvancePhase(true);
       return;
     }
@@ -297,7 +314,7 @@ export function useCombatLogic({
       return;
     }
     setCanAdvancePhase(true);
-  }, [currentPhase, playerProgress, missionTz, runtimeRail]);
+  }, [currentPhase, playerProgress, missionTz, runtimeRail, infraSlots, coopActive, coopRole]);
 
   const drawCards = (count: number) => {
     if (currentPhase === 'DEVELOPMENT') return;
@@ -1146,8 +1163,13 @@ export function useCombatLogic({
         setStress((prev) => Math.min(100, prev + noiseAdj));
         addLog(`[WARNING] BACKGROUND_NOISE: +${noiseAdj}% STRESS`);
         if (currentPhase === 'ARCHITECTURE') {
+          // Admin в коопе не уходит с INFRA по таймеру — только COMPILE после заполнения слотов.
+          if (coopActive && coopRole === 'admin') return;
           const nextTurn = planningTurn + 1;
-          if (nextTurn >= 2) { setPlanningTurn(0); advancePhase(); } else setPlanningTurn(nextTurn);
+          if (nextTurn >= 2) {
+            setPlanningTurn(0);
+            advancePhase();
+          } else setPlanningTurn(nextTurn);
         }
       }, 800);
     }, 500);

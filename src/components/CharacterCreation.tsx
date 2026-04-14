@@ -264,28 +264,6 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                     </div>
                   </div>
                   {name.trim() && <div className="cc-enter-hint">PRESS [ENTER] TO AUTHORIZE</div>}
-                  <div className="cc-skill-selector" style={{ marginTop: 14, marginBottom: 8 }}>
-                    <div className="cc-label-micro" style={{ marginBottom: 6 }}>
-                      SESSION /// выберите до шага SESSION или на шаге 2
-                    </div>
-                    <button
-                      type="button"
-                      className={`cc-skill-btn ${sessionMode === 'solo' ? 'active' : ''}`}
-                      onClick={() => {
-                        setSessionMode('solo');
-                        setCoopRole(null);
-                      }}
-                    >
-                      SOLO
-                    </button>
-                    <button
-                      type="button"
-                      className={`cc-skill-btn ${sessionMode === 'coop' ? 'active' : ''}`}
-                      onClick={() => setSessionMode('coop')}
-                    >
-                      COOP
-                    </button>
-                  </div>
                   <p className="cc-hint">Ваш ID будет использован для подписи кода в московских сетях.</p>
                 </div>
               )}

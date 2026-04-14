@@ -81,7 +81,9 @@ function App() {
         <CoopLobbyView
           playerDisplayName={gs.playerName}
           coopRole={gs.coopRole}
-          onLaunchSprint={(startupName, tierRank) => gs.completeCoopSprintLaunch(startupName, tierRank)}
+          onLaunchSprint={(startupName, tierRank, opts) =>
+            gs.completeCoopSprintLaunch(startupName, tierRank, opts)
+          }
           onSwitchCoopClass={gs.switchCoopClass}
         />
       );
@@ -196,6 +198,7 @@ function App() {
           coopStartupName={gs.coopStartupName}
           devLanguageStack={gs.devLanguageStack}
           coopSprintLossesBeforeBattle={gs.coopSprintConsecutiveLosses}
+          coopSquadFill={gs.coopSquadFill}
           isQuestCombat={isQuestCombat}
           isFirstCombatQuestTutorial={isFirstCombatQuestTutorial}
           onWin={(earned, rank, chain, missionName, updatedDeck, missionTaskId) => {

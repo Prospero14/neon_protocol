@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import type { CombatPhase } from '../combatPhases';
-import { SDLC_PHASES, coopSkipsArchitecturePhase } from '../combatPhases';
+import { SDLC_COOP_PARALLEL_ALLOWED_TYPES, SDLC_PHASES, coopSkipsArchitecturePhase } from '../combatPhases';
 import { isInfraDrawCard, isStabilizationDrawCard, isStaticCodeCardType } from '../combatFlow';
 import type { CombatCard } from '../combatCards';
 import { getCardById } from '../combatCards';
@@ -12,6 +12,8 @@ import type { Trait } from '../traits';
 import { BUGS, pickNextBugAction } from '../combatEnemies';
 import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
 import type { CoopRole, SessionMode } from '../sessionMode';
+import type { CoopSquadFill } from '../coopTeamFlow';
+import { rollSyntheticSquadAssist } from '../coopTeamFlow';
 import {
   coopAdjustAiDeltas,
   coopBackgroundNoise,
@@ -45,6 +47,8 @@ interface UseCombatLogicProps {
   /** Кооп: роль влияет на входящий урон ИИ, прогресс и т.д. */
   sessionMode?: SessionMode;
   coopRole?: CoopRole | null;
+  /** Кооп: пати людей — без симуляции ходов ботов на этом клиенте. */
+  coopSquadFill?: CoopSquadFill;
 }
 
 interface AiImpactSummary {
@@ -67,6 +71,7 @@ export function useCombatLogic({
   isFirstCombatQuestTutorial,
   sessionMode = 'solo',
   coopRole = null,
+  coopSquadFill = 'synthetic_bots',
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
@@ -138,6 +143,21 @@ export function useCombatLogic({
   /** Уникальные CombatCard.type за бой — бонус за «широкий тулчейн». */
   const cardFamiliesRef = useRef<Set<string>>(new Set());
   const familyMilestoneRef = useRef({ t3: false, t5: false });
+  /** Снимок метрик после коммита стейта — для assist ботов в конце хода ИИ. */
+  const combatCoopAssistRef = useRef({
+    stress: 0,
+    railBugCount: 0,
+    playerProgress: 0,
+    infraFilled: 0,
+  });
+  useLayoutEffect(() => {
+    combatCoopAssistRef.current = {
+      stress,
+      railBugCount: runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
+      playerProgress,
+      infraFilled: infraSlots.filter(Boolean).length,
+    };
+  }, [stress, runtimeRail, playerProgress, infraSlots]);
 
   // --- DERIVED ---
   const ramSlotsMax = useMemo(() => {
@@ -157,6 +177,13 @@ export function useCombatLogic({
   );
 
   const filteredHand = useMemo(() => {
+    /** Кооп: палитра кода + одноразовые скрипты + рука одновременно (параллельные стадии). */
+    if (coopActive) {
+      const p = codingPalette.map((c, i) => ({ card: c, source: 'palette' as const, idx: i }));
+      const s = scriptPool.map((c, i) => ({ card: c, source: 'script_pool' as const, idx: i }));
+      const h = hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
+      return [...p, ...s, ...h];
+    }
     if (currentPhase === 'DEVELOPMENT') {
       const p = codingPalette.map((c, i) => ({ card: c, source: 'palette' as const, idx: i }));
       const s = scriptPool.map((c, i) => ({ card: c, source: 'script_pool' as const, idx: i }));
@@ -166,7 +193,7 @@ export function useCombatLogic({
       return hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
     }
     return [];
-  }, [currentPhase, hand, codingPalette, scriptPool]);
+  }, [coopActive, currentPhase, hand, codingPalette, scriptPool]);
 
   const addLog = useCallback((msg: string) => setLog(prev => [msg, ...prev].slice(0, 15)), []);
 
@@ -197,7 +224,14 @@ export function useCombatLogic({
     cardFamiliesRef.current = new Set();
     familyMilestoneRef.current = { t3: false, t5: false };
 
-    if (skipArchitecture) {
+    if (skipArchitecture && coopActive && (coopRole === 'qa' || coopRole === 'pm')) {
+      const stab = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
+      const n = Math.min(START_HAND_SIZE, stab.length);
+      setHand(stab.slice(0, n));
+      setDeck(stab.slice(n));
+      setDiscard((prev) => [...prev, ...activeDeck.filter(isInfraDrawCard)]);
+      addLog('[SYSTEM] COOP: параллельный цикл — рука из стабилизации; инфра команды в сбросе.');
+    } else if (skipArchitecture) {
       setHand([]);
       setDeck([]);
       setDiscard((prev) => [...prev, ...activeDeck.filter(isInfraDrawCard)]);
@@ -317,7 +351,7 @@ export function useCombatLogic({
   }, [currentPhase, playerProgress, missionTz, runtimeRail, infraSlots, coopActive, coopRole]);
 
   const drawCards = (count: number) => {
-    if (currentPhase === 'DEVELOPMENT') return;
+    if (currentPhase === 'DEVELOPMENT' && !coopActive) return;
     setHand((prevHand) => {
       const newHand = [...prevHand];
       let currentDeck = [...deck];
@@ -325,11 +359,13 @@ export function useCombatLogic({
       for (let i = 0; i < count; i++) {
         if (currentDeck.length === 0) {
           const recycle = currentDiscard.filter((c) =>
-            currentPhase === 'VERIFICATION'
-              ? isStabilizationDrawCard(c)
-              : currentPhase === 'ARCHITECTURE'
-                ? isInfraDrawCard(c)
-                : false
+            coopActive
+              ? isInfraDrawCard(c) || isStabilizationDrawCard(c)
+              : currentPhase === 'VERIFICATION'
+                ? isStabilizationDrawCard(c)
+                : currentPhase === 'ARCHITECTURE'
+                  ? isInfraDrawCard(c)
+                  : false
           );
           if (recycle.length === 0) break;
           currentDeck = [...recycle].sort(() => Math.random() - 0.5);
@@ -369,7 +405,8 @@ export function useCombatLogic({
     }
 
     const rules = SDLC_PHASES[currentPhase];
-    if (!rules.allowedTypes.includes(card.type)) {
+    const allowedList = coopActive ? SDLC_COOP_PARALLEL_ALLOWED_TYPES : rules.allowedTypes;
+    if (!allowedList.includes(card.type)) {
       addLog(`[DENIED] ${card.type}_NOT_ALLOWED_IN_${currentPhase}`);
       return;
     }
@@ -495,7 +532,7 @@ export function useCombatLogic({
       return;
     }
 
-    if (currentPhase === 'VERIFICATION' && (card.type === 'SYNTAX' || card.type === 'FUNCTION')) {
+    if (!coopActive && currentPhase === 'VERIFICATION' && (card.type === 'SYNTAX' || card.type === 'FUNCTION')) {
       addLog(`[DENIED] CODE_FREEZE_ACTIVE. NO_NEW_CODE_IN_VERIFICATION.`);
       return;
     }
@@ -628,7 +665,8 @@ export function useCombatLogic({
       } else addLog(`[DENIED] CANNOT_PATCH_WITH_THIS_CARD.`);
       return;
     }
-    const looksLikePatch = currentPhase === 'VERIFICATION' && (card.type === 'REACTION' || card.type === 'DEFENSIVE');
+    const looksLikePatch =
+      (currentPhase === 'VERIFICATION' || coopActive) && (card.type === 'REACTION' || card.type === 'DEFENSIVE');
     if (slot.type !== 'EMPTY' && !looksLikePatch) return;
 
     if (looksLikePatch && slot.type === 'EMPTY') {
@@ -1139,6 +1177,31 @@ export function useCombatLogic({
       }
       setTimeout(() => {
         setIsAiResolving(false);
+        if (
+          coopActive &&
+          coopRole &&
+          coopSquadFill === 'synthetic_bots' &&
+          currentPhase !== 'ARCHITECTURE' &&
+          executed
+        ) {
+          const snap = combatCoopAssistRef.current;
+          const assist = rollSyntheticSquadAssist({
+            playerRole: coopRole,
+            bugSlotsOnRail: snap.railBugCount,
+            stress: snap.stress,
+            infraFilledSlots: snap.infraFilled,
+            playerProgress: snap.playerProgress,
+          });
+          if (assist) {
+            assist.logs.forEach((line) => addLog(line));
+            if (assist.bugDelta) setBugPoints((p) => Math.max(0, p + assist.bugDelta));
+            if (assist.stressDelta) setStress((s) => Math.min(100, Math.max(0, s + assist.stressDelta)));
+            if (assist.mitigationDelta)
+              setMitigationBuffer((b) => Math.max(0, b + assist.mitigationDelta));
+            if (assist.progressDelta)
+              setPlayerProgress((p) => Math.min(100, Math.max(0, p + assist.progressDelta)));
+          }
+        }
         setIsPlayerTurn(true); setCpu(cpuMax); drawCards(hadCleanCounterplay ? 2 : 1);
         if (hadCleanCounterplay) addLog('[TEMPO] Clean counterplay last turn: +1 extra draw.');
         if (enemy) {

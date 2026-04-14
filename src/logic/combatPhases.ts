@@ -66,3 +66,15 @@ export const SDLC_PHASES: Record<CombatPhase, PhaseRules> = {
     nextPhaseId: null,
   },
 };
+
+/**
+ * Кооп: стадии идут параллельно — в бою разрешены типы из снабжения + кода + стабилизации одновременно
+ * (колода игрока и так ролевая).
+ */
+export const SDLC_COOP_PARALLEL_ALLOWED_TYPES: readonly string[] = Array.from(
+  new Set([
+    ...SDLC_PHASES.ARCHITECTURE.allowedTypes,
+    ...SDLC_PHASES.DEVELOPMENT.allowedTypes,
+    ...SDLC_PHASES.VERIFICATION.allowedTypes,
+  ])
+);

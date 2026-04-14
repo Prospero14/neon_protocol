@@ -1318,12 +1318,24 @@
     radial-gradient(ellipse at 20% 70%, rgba(139, 92, 246, 0.06) 0%, transparent 50%);
 }
 
-/* Подсказка: что оппонент «целит» в вашу роль */
-.coop-opponent-hint {
+/* Кооп: подсказка по роли + сводка команды */
+.coop-combat-dock {
   position: fixed;
   bottom: 96px;
   left: 12px;
   z-index: 90;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: min(960px, 96vw);
+  pointer-events: none;
+}
+
+/* Подсказка: что оппонент «целит» в вашу роль */
+.coop-opponent-hint {
+  position: relative;
+  flex: 0 1 min(340px, 52vw);
   max-width: min(340px, 92vw);
   padding: 10px 12px;
   font-size: 0.68rem;
@@ -1332,8 +1344,118 @@
   background: rgba(4, 10, 20, 0.88);
   border: 1px solid rgba(0, 212, 255, 0.22);
   border-radius: 4px;
-  pointer-events: none;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+.coop-team-sitrep {
+  flex: 1 1 280px;
+  min-width: 0;
+  max-width: min(400px, 44vw);
+  max-height: min(220px, 38vh);
+  overflow: auto;
+  padding: 8px 10px;
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: #aebcca;
+  background: rgba(6, 12, 22, 0.9);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.coop-team-sitrep__head {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: #c4b5fd;
+  margin-bottom: 6px;
+  font-weight: 800;
+}
+.coop-team-sitrep__roles {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.coop-team-sitrep__role {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.coop-team-sitrep__role--you {
+  color: #e0f2fe;
+}
+.coop-team-sitrep__role-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.coop-team-sitrep__tag {
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+.coop-team-sitrep__tag--you {
+  color: #22d3ee;
+  font-weight: 800;
+}
+.coop-team-sitrep__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+}
+.coop-team-sitrep__span2 {
+  grid-column: 1 / -1;
+}
+.coop-team-sitrep__k {
+  display: block;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+.coop-team-sitrep__v {
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.coop-team-sitrep__plan {
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+  padding-top: 6px;
+}
+.coop-team-sitrep__plan-title {
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: #f472b6;
+  margin-bottom: 4px;
+  font-weight: 800;
+}
+.coop-team-sitrep__plan-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.coop-team-sitrep__plan-v {
+  color: #cbd5e1;
+  word-break: break-word;
+}
+.coop-team-sitrep__plan-muted {
+  color: #64748b;
+  font-style: italic;
+}
+.coop-team-sitrep__pm-hint {
+  margin: 6px 0 0;
+  font-size: 0.58rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+.coop-team-sitrep__foot {
+  margin: 8px 0 0;
+  font-size: 0.55rem;
+  color: #64748b;
+  line-height: 1.3;
 }
 .coop-opponent-hint__title {
   font-size: 0.58rem;

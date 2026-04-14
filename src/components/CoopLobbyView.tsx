@@ -13,12 +13,13 @@ import {
   type CoopLobbyParty,
 } from '../logic/coopLobbyApi';
 import { CoopRoleBadge } from './CoopRoleBadge';
+import type { CoopSquadFill } from '../logic/coopTeamFlow';
 import { Radio, Users, Send, Play, LogOut, Bot } from 'lucide-react';
 
 type Props = {
   playerDisplayName: string;
   coopRole: CoopRole;
-  onLaunchSprint: (startupName: string, tierRank: SkillMode) => void;
+  onLaunchSprint: (startupName: string, tierRank: SkillMode, opts?: { coopSquadFill: CoopSquadFill }) => void;
   onSwitchCoopClass: (role: CoopRole) => void;
 };
 
@@ -32,7 +33,7 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   const [err, setErr] = useState<string | null>(null);
   const [startupName, setStartupName] = useState('');
   const [tierRank, setTierRank] = useState<SkillMode>('junior');
-  /** Локально: показать «пати» из ботов — на сервер не ходит; в бою всё равно один клиент vs ИИ, отчёт спринта — squadSyntheticScores. */
+  /** Локально: подсветка «союзники-боты» (один клиент); при живой пати сбрасывается. */
   const [syntheticSquad, setSyntheticSquad] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -102,7 +103,9 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
       iAmPm && startupName.trim()
         ? startupName.trim().slice(0, 48)
         : `SQUAD_${playerDisplayName.replace(/\s+/g, '_').slice(0, 24)}`;
-    onLaunchSprint(name, tierRank);
+    const coopSquadFill: CoopSquadFill =
+      party && party.members.length > 1 ? 'live_party' : 'synthetic_bots';
+    onLaunchSprint(name, tierRank, { coopSquadFill });
   };
 
   return (

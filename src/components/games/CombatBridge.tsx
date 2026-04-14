@@ -3,6 +3,7 @@ import type { Trait } from '../../logic/traits';
 import type { CombatCard } from '../../logic/combatCards';
 import type { TechnicalTask } from '../../logic/combatTasks';
 import type { CoopRole, DevLanguageStack, SessionMode } from '../../logic/sessionMode';
+import type { CoopSquadFill } from '../../logic/coopTeamFlow';
 import {
   getCombatFieldOuterClass,
   getPipelineFieldClass,
@@ -23,6 +24,7 @@ import NeuralBus from './combat/NeuralBus';
 import HandControls from './combat/HandControls';
 import CombatOverlays from './combat/CombatOverlays';
 import DraftPanel from './combat/DraftPanel';
+import { CoopTeamSitrep } from './combat/CoopTeamSitrep';
 
 // Styles
 import '../../styles/CombatAnimations.css';
@@ -58,6 +60,8 @@ interface CombatBridgeProps {
   coopStartupName?: string | null;
   devLanguageStack?: DevLanguageStack | null;
   coopSprintLossesBeforeBattle?: number;
+  /** Пати людей vs симуляция союзников на одном клиенте. */
+  coopSquadFill?: CoopSquadFill;
 }
 
 const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
@@ -89,9 +93,11 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   } | null>(null);
 
   // Core Logic Hook
+  const coopSquadFill = props.coopSquadFill ?? 'synthetic_bots';
   const { state, actions } = useCombatLogic({
     ...props,
-    missionTz
+    missionTz,
+    coopSquadFill,
   });
 
   const handleCombatWin = (bits: number, rank: string, chain: string[], name: string) => {
@@ -163,9 +169,24 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   return (
     <div className={`combat-v2 ${combatFieldOuterClass} ${state.stress > 70 ? 'screen-glitch' : ''}`}>
       {sessionMode === 'coop' && coopRole && (
-        <div className="coop-opponent-hint" aria-live="polite">
-          <div className="coop-opponent-hint__title">{coopOpponentHintTitle(coopRole)}</div>
-          <div className="coop-opponent-hint__body">{coopOpponentHintBody(coopRole)}</div>
+        <div className="coop-combat-dock" aria-live="polite">
+          <div className="coop-opponent-hint">
+            <div className="coop-opponent-hint__title">{coopOpponentHintTitle(coopRole)}</div>
+            <div className="coop-opponent-hint__body">{coopOpponentHintBody(coopRole)}</div>
+          </div>
+          <CoopTeamSitrep
+            coopRole={coopRole}
+            squadFill={coopSquadFill}
+            stress={state.stress}
+            bugPoints={state.bugPoints}
+            playerProgress={state.playerProgress}
+            aiDeadline={state.aiDeadline}
+            aiProgress={state.aiProgress}
+            mitigationBuffer={state.mitigationBuffer}
+            infraFilled={state.infraSlots.filter(Boolean).length}
+            nextIntentName={state.nextBugAction?.name ?? null}
+            lastAiActionName={state.lastAiAction?.name ?? null}
+          />
         </div>
       )}
       {sessionMode === 'coop' && showCoopBrief && props.coopStartupName?.trim() && (

@@ -31,9 +31,10 @@ function publicGameState(gs: Record<string, unknown> | null): Record<string, unk
   };
 }
 
-function hasMissingClientSnapshotColumn(error: unknown): boolean {
+function hasMissingColumn(error: unknown, columnName?: string): boolean {
   const msg = String((error as { message?: unknown })?.message ?? error ?? '');
-  return msg.includes('no such column') && msg.includes('clientSnapshot');
+  if (!msg.includes('no such column')) return false;
+  return columnName ? msg.includes(columnName) : true;
 }
 
 /** Единый JSON для ошибок neon_v1: текст для человека + стабильный `code` для клиента/логов. */
@@ -201,8 +202,8 @@ export function createApp(opts: CreateAppOptions) {
       try {
         user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
       } catch (e) {
-        if (!hasMissingClientSnapshotColumn(e)) throw e;
-        // Legacy /data DB on host can miss clientSnapshot until migration is applied.
+        if (!hasMissingColumn(e)) throw e;
+        // Legacy /data DB on host can miss part of new GameState columns.
         user = await prisma.user.findUnique({
           where: { username },
           include: {
@@ -220,8 +221,6 @@ export function createApp(opts: CreateAppOptions) {
                 inventory: true,
                 artifacts: true,
                 completedQuests: true,
-                reputation: true,
-                intel: true,
               },
             },
           },
@@ -235,7 +234,8 @@ export function createApp(opts: CreateAppOptions) {
         token,
         user: { id: user.id, username: user.username, gameState: publicGameState(rawGs) },
       });
-    } catch (_error) {
+    } catch (error) {
+      console.error('Login Error:', error);
       sendApiError(res, 500, 'LOGIN_SERVER', 'Ошибка входа. Попробуйте позже.');
     }
   });
@@ -266,7 +266,7 @@ export function createApp(opts: CreateAppOptions) {
           } as any,
         });
       } catch (e) {
-        if (!hasMissingClientSnapshotColumn(e)) throw e;
+        if (!hasMissingColumn(e, 'clientSnapshot')) throw e;
         updatedState = await prisma.gameState.update({
           where: { userId: decoded.userId },
           data: {

@@ -346,6 +346,9 @@ function App() {
           skillMode={gs.skillMode} 
           inventoryUnique={gs.inventoryUnique} 
           activeDeck={gs.activeDeck} 
+          sessionMode={gs.sessionMode}
+          coopRole={gs.coopRole}
+          devLanguageStack={gs.devLanguageStack}
           onUpdateDeck={gs.setActiveDeck} 
           onViewChange={(v, id) => { 
             gs.setLastView(gs.currentView); 

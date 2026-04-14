@@ -34,7 +34,7 @@ export const COOP_ROLE_LABELS: Record<CoopRole, { title: string; blurb: string }
   developer: {
     title: 'DEVELOPER',
     blurb:
-      'Код и логика (в духе kata/LeetCode): шина, цепочки, прогресс фичи. ИИ давит на ревью и темп поставки.',
+      'Код и логика: стек на выбор (Java / Kotlin / Python / Go), шина и цепочки. ИИ давит на ревью и темп поставки.',
   },
   qa: {
     title: 'QA',

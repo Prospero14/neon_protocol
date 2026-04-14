@@ -1,6 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import type { CardLibTag, CombatCard } from '../logic/combatCards';
-import { cardMatchesJavaStack, LIB_TAG_LABELS } from '../logic/cardStack';
+import { cardMatchesJavaStack, cardPassesCategoryChips, LIB_TAG_LABELS } from '../logic/cardStack';
+import type { SessionMode, CoopRole } from '../logic/sessionMode';
+import type { DevLanguageStack } from '../logic/decks/deckCatalog';
+import {
+  DEVELOPER_STACK_BROWSE_IDS,
+  DEVELOPER_STACKS_UNION_IDS,
+  DEV_LANGUAGE_LABELS,
+} from '../logic/decks/deckCatalog';
 import CyberCard from './CyberCard';
 import { Database, LayoutGrid, ArrowRight, Shield } from 'lucide-react';
 import type { SkillMode } from '../logic/skillMode';
@@ -17,6 +24,10 @@ interface DeckBuilderProps {
   onViewChange: (v: any, id?: string) => void;
   onBack?: () => void;
   classUnlocked?: boolean;
+  sessionMode?: SessionMode;
+  coopRole?: CoopRole | null;
+  /** В коопе как разработчик — фильтр списка по каталогу выбранного стека (Java/Kotlin/Python/Go). */
+  devLanguageStack?: DevLanguageStack | null;
 }
 
 const DeckBuilder: React.FC<DeckBuilderProps> = ({
@@ -26,6 +37,9 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
   onUpdateDeck,
   onViewChange,
   classUnlocked = false,
+  sessionMode = 'solo',
+  coopRole = null,
+  devLanguageStack = null,
 }) => {
   const beginner = skillMode === 'junior';
   const [activeTargetDeck, setActiveTargetDeck] = useState<'DEV' | 'AUX'>('DEV');
@@ -34,6 +48,11 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const [enabledLibs, setEnabledLibs] = useState<Set<CardLibTag>>(() => new Set());
   const [enabledCats, setEnabledCats] = useState<Set<string>>(() => new Set());
   const [sortBy, setSortBy] = useState<'name' | 'cost'>('name');
+
+  const stackBrowseIds = useMemo(() => {
+    if (sessionMode !== 'coop' || coopRole !== 'developer' || !devLanguageStack) return null;
+    return DEVELOPER_STACK_BROWSE_IDS[devLanguageStack];
+  }, [sessionMode, coopRole, devLanguageStack]);
 
   const toggleLanguage = (lang: 'java' | 'script') => {
     setSelectedLanguage(prev => prev === lang ? null : lang);
@@ -70,7 +89,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const filteredInventory = useMemo(() => {
     const opts = { includeVanilla, enabledLibs, enabledCats, selectedLanguage };
     let filtered = browsePool;
-    
+
     // Script-Kiddo Gating: Only show entry-level modules until profession is unlocked
     if (!classUnlocked) {
       filtered = filtered.filter(c =>
@@ -82,14 +101,32 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
         c.type === 'INFRASTRUCTURE'
       );
     }
-    
-    filtered = filtered.filter((c) => cardMatchesJavaStack(c, opts));
-    
+
+    if (stackBrowseIds) {
+      filtered = filtered.filter((c) => {
+        if (stackBrowseIds.has(c.id)) return true;
+        if (!DEVELOPER_STACKS_UNION_IDS.has(c.id)) return true;
+        return false;
+      });
+      filtered = filtered.filter((c) => cardPassesCategoryChips(c, enabledCats, selectedLanguage));
+    } else {
+      filtered = filtered.filter((c) => cardMatchesJavaStack(c, opts));
+    }
+
     return [...filtered].sort((a, b) => {
       if (sortBy === 'cost') return a.cost - b.cost;
       return a.name.localeCompare(b.name);
     });
-  }, [browsePool, includeVanilla, enabledLibs, enabledCats, sortBy, classUnlocked, selectedLanguage]);
+  }, [
+    browsePool,
+    includeVanilla,
+    enabledLibs,
+    enabledCats,
+    sortBy,
+    classUnlocked,
+    selectedLanguage,
+    stackBrowseIds,
+  ]);
 
   const devTypes = ['SYNTAX', 'FUNCTION', 'NETWORK', 'SCRIPT'];
   const auxTypes = ['SOFT', 'HARD', 'DEFENSIVE', 'REACTION', 'INFRASTRUCTURE', 'STATUS'];
@@ -128,6 +165,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   /** Блокируем сетку только если выбран Java с классом, но не включены ни vanilla, ни библиотеки, ни категории. */
   const filterInactive =
+    !stackBrowseIds &&
     classUnlocked &&
     selectedLanguage === 'java' &&
     !includeVanilla &&
@@ -136,6 +174,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const activeFilterSummary = useMemo(() => {
     const parts: string[] = [];
+    if (stackBrowseIds && devLanguageStack) parts.push(DEV_LANGUAGE_LABELS[devLanguageStack].title);
     if (selectedLanguage === 'script') parts.push('Shell');
     if (selectedLanguage === 'java') parts.push('Java');
     if (classUnlocked && selectedLanguage === 'java' && includeVanilla) parts.push('Vanilla/core');
@@ -145,7 +184,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     if (enabledCats.has('tests')) parts.push('COUNTER');
     if (enabledCats.has('syntax')) parts.push('CODE');
     return parts;
-  }, [selectedLanguage, classUnlocked, includeVanilla, enabledLibs, enabledCats]);
+  }, [stackBrowseIds, devLanguageStack, selectedLanguage, classUnlocked, includeVanilla, enabledLibs, enabledCats]);
 
   return (
     <div className="deck-v4-view">
@@ -156,8 +195,17 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <h3>КОНСТРУКТОР_КОЛОДЫ</h3>
             {beginner && (
               <p className="deck-subtitle mono-text">
-                Включите «ванильный Java» для чистого языка; отметьте библиотеки — Spring, сеть, Collections — чтобы
-                их карты появились в списке. Бой Spring-узла требует Spring в колоде.
+                {stackBrowseIds && devLanguageStack ? (
+                  <>
+                    Кооп · разработчик · {DEV_LANGUAGE_LABELS[devLanguageStack].title}: в каталоге только модули вашего
+                    стека; чипы INFRA / SOFT / COUNTER сужают список.
+                  </>
+                ) : (
+                  <>
+                    Включите «ванильный Java» для чистого языка; отметьте библиотеки — Spring, сеть, Collections — чтобы
+                    их карты появились в списке. Бой Spring-узла требует Spring в колоде.
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -165,40 +213,54 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       </header>
 
       <div className="deck-stack-filters neon-panel">
-        <div className="stack-filter-row sh-row">
-          <span className="filter-label mono-text">СКРИПТИНГ</span>
-          <div className="lib-chips">
-            <button 
-              type="button" 
-              className={`lib-chip lang sh ${selectedLanguage === 'script' ? 'on' : ''}`}
-              onClick={() => toggleLanguage('script')}
-            >
-              SH (Shell)
-            </button>
+        {stackBrowseIds && devLanguageStack ? (
+          <div className="stack-filter-row">
+            <span className="filter-label mono-text gold">СТЕК</span>
+            <div className="lib-chips mono-text" style={{ padding: '6px 0', color: 'var(--neon-cyan)' }}>
+              {DEV_LANGUAGE_LABELS[devLanguageStack].title}
+              <span style={{ marginLeft: 8, opacity: 0.75, fontSize: '0.7rem' }}>
+                — каталог стека; награды вне общего JVM/Python/Go-пула не скрываются
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="stack-filter-row sh-row">
+              <span className="filter-label mono-text">СКРИПТИНГ</span>
+              <div className="lib-chips">
+                <button
+                  type="button"
+                  className={`lib-chip lang sh ${selectedLanguage === 'script' ? 'on' : ''}`}
+                  onClick={() => toggleLanguage('script')}
+                >
+                  SH (Shell)
+                </button>
+              </div>
+            </div>
 
-        <div className="stack-filter-row java-row">
-          <span className="filter-label mono-text gold">ЯЗЫК</span>
-          <div className="lib-chips">
-            <button 
-              type="button" 
-              className={`lib-chip lang java ${selectedLanguage === 'java' ? 'on' : ''}`}
-              onClick={() => toggleLanguage('java')}
-            >
-              JAVA
-            </button>
-            {selectedLanguage === 'java' && classUnlocked && (
-               <button 
-                type="button" 
-                className={`lib-chip core mini ${includeVanilla ? 'on' : ''}`} 
-                onClick={() => setIncludeVanilla(!includeVanilla)}
-              >
-                CORE_LIB
-              </button>
-            )}
-          </div>
-        </div>
+            <div className="stack-filter-row java-row">
+              <span className="filter-label mono-text gold">ЯЗЫК</span>
+              <div className="lib-chips">
+                <button
+                  type="button"
+                  className={`lib-chip lang java ${selectedLanguage === 'java' ? 'on' : ''}`}
+                  onClick={() => toggleLanguage('java')}
+                >
+                  JAVA
+                </button>
+                {selectedLanguage === 'java' && classUnlocked && (
+                  <button
+                    type="button"
+                    className={`lib-chip core mini ${includeVanilla ? 'on' : ''}`}
+                    onClick={() => setIncludeVanilla(!includeVanilla)}
+                  >
+                    CORE_LIB
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="stack-filter-row cats-row">
           <span className="filter-label mono-text">КАТЕГОРИИ</span>
@@ -230,7 +292,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
         </div>
         
-        {selectedLanguage === 'java' && classUnlocked && (
+        {!stackBrowseIds && selectedLanguage === 'java' && classUnlocked && (
           <div className="stack-filter-row libs-row">
             <span className="filter-label mono-text">БИБЛИОТЕКИ</span>
             <div className="lib-chips">

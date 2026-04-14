@@ -27,6 +27,35 @@ function isJavaStackCard(card: CombatCard): boolean {
   return true;
 }
 
+/** Чипы INFRA / SOFT / COUNTER / CODE (без полного стек-фильтра ванили и библиотек). */
+export function cardPassesCategoryChips(
+  card: CombatCard,
+  enabledCats: Set<string>,
+  selectedLanguage: 'java' | 'script' | null
+): boolean {
+  if (enabledCats.size === 0) return true;
+  if (card.type === 'STATUS') return false;
+
+  const isScript = card.id.startsWith('script_') || card.type === 'SCRIPT';
+  const isJava = isJavaStackCard(card);
+
+  const isInfra = card.type === 'INFRASTRUCTURE' || card.type === 'HARD';
+  const isSoft = card.type === 'SOFT';
+  const isTest = card.type === 'REACTION' || card.type === 'DEFENSIVE';
+  const isSyntax = card.type === 'SYNTAX' || card.type === 'FUNCTION' || card.type === 'NETWORK' || card.type === 'SCRIPT';
+
+  if (enabledCats.has('infra') && isInfra) return true;
+  if (enabledCats.has('soft') && isSoft) return true;
+  if (enabledCats.has('tests') && isTest) return true;
+  if (enabledCats.has('syntax') && isSyntax) {
+    if (selectedLanguage === 'java') return isJava;
+    if (selectedLanguage === 'script') return isScript;
+    return true;
+  }
+  if (selectedLanguage === 'script' && isScript) return true;
+  return false;
+}
+
 export function cardMatchesJavaStack(
   card: CombatCard,
   opts: { 
@@ -57,16 +86,7 @@ export function cardMatchesJavaStack(
   // Пока включена хотя бы одна категория: карта проходит, если совпадает с ЛЮБЫМ включённым чипом
   // (инфра, софт, контр) и/или с выбранным стеком (Shell показывает script-карты вместе с категориями).
   if (anyCatActive) {
-    if (opts.enabledCats.has('infra') && isInfra) return true;
-    if (opts.enabledCats.has('soft') && isSoft) return true;
-    if (opts.enabledCats.has('tests') && isTest) return true;
-    if (opts.enabledCats.has('syntax') && isSyntax) {
-      if (opts.selectedLanguage === 'java') return isJava;
-      if (opts.selectedLanguage === 'script') return isScript;
-      return true;
-    }
-    if (opts.selectedLanguage === 'script' && isScript) return true;
-    return false;
+    return cardPassesCategoryChips(card, opts.enabledCats, opts.selectedLanguage);
   }
 
   // 2. Language Filter Logic (when category chips are not active)

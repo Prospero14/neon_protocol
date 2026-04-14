@@ -178,6 +178,30 @@ export const LANGUAGE_LIBRARY_PACKS: Record<
   },
 };
 
+function buildDeveloperStackBrowseIdSet(stack: DevLanguageStack): Set<string> {
+  const out = new Set<string>(LANGUAGE_CORE_IDS[stack]);
+  for (const pack of Object.values(LANGUAGE_LIBRARY_PACKS[stack])) {
+    for (const id of pack.cardIds) out.add(id);
+  }
+  return out;
+}
+
+/** Ядро + все пакеты каталога для стека разработчика (кооп): фильтр конструктора колоды. */
+export const DEVELOPER_STACK_BROWSE_IDS: Record<DevLanguageStack, ReadonlySet<string>> = {
+  java: buildDeveloperStackBrowseIdSet('java'),
+  kotlin: buildDeveloperStackBrowseIdSet('kotlin'),
+  python: buildDeveloperStackBrowseIdSet('python'),
+  go: buildDeveloperStackBrowseIdSet('go'),
+};
+
+/** Объединение каталогов четырёх стеков — чтобы не скрывать награды вне «чужого» JVM/Python/Go. */
+export const DEVELOPER_STACKS_UNION_IDS: ReadonlySet<string> = new Set<string>([
+  ...DEVELOPER_STACK_BROWSE_IDS.java,
+  ...DEVELOPER_STACK_BROWSE_IDS.kotlin,
+  ...DEVELOPER_STACK_BROWSE_IDS.python,
+  ...DEVELOPER_STACK_BROWSE_IDS.go,
+]);
+
 /** QA / PM / Admin — явная связь: QA = реакции+тесты; PM = soft; Admin = script+infra+права. */
 export const ROLE_SPECIALTY_IDS: Record<'qa' | 'pm' | 'admin', string[]> = {
   qa: [

@@ -13,7 +13,7 @@ import {
   type CoopLobbyParty,
 } from '../logic/coopLobbyApi';
 import { CoopRoleBadge } from './CoopRoleBadge';
-import { Radio, Users, Send, Play, LogOut } from 'lucide-react';
+import { Radio, Users, Send, Play, LogOut, Bot } from 'lucide-react';
 
 type Props = {
   playerDisplayName: string;
@@ -32,7 +32,13 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   const [err, setErr] = useState<string | null>(null);
   const [startupName, setStartupName] = useState('');
   const [tierRank, setTierRank] = useState<SkillMode>('junior');
+  /** Локально: показать «пати» из ботов — на сервер не ходит; в бою всё равно один клиент vs ИИ, отчёт спринта — squadSyntheticScores. */
+  const [syntheticSquad, setSyntheticSquad] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (party) setSyntheticSquad(false);
+  }, [party]);
 
   const beat = useCallback(async () => {
     if (!token) return;
@@ -128,87 +134,103 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
         </header>
 
         <div className="coop-lobby-grid">
-          <section className="coop-lobby-panel coop-lobby-chat">
-            <div className="coop-lobby-panel-head">GLOBAL // CHAT</div>
-            <div className="coop-lobby-chat-log">
-              {chat.map((m) => (
-                <div key={m.id} className="coop-lobby-chat-line">
-                  <CoopRoleBadge role={m.coopRole} size={12} />
-                  <span className="coop-lobby-chat-name">{m.displayName}</span>
-                  <span className="coop-lobby-chat-text">{m.text}</span>
-                </div>
-              ))}
-              {chat.length === 0 && <div className="coop-lobby-empty">Нет сообщений. Напишите что-нибудь.</div>}
-            </div>
-            <div className="coop-lobby-chat-input-row">
-              <input
-                className="coop-lobby-input"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && sendChat()}
-                placeholder="Сообщение в общий канал..."
-                maxLength={500}
-              />
-              <button type="button" className="coop-lobby-send" onClick={sendChat}>
-                <Send size={18} />
-              </button>
-            </div>
-          </section>
+          <div className="coop-lobby-main-col">
+            <section className="coop-lobby-panel">
+              <div className="coop-lobby-panel-head">ONLINE</div>
+              <ul className="coop-lobby-list">
+                {online.map((u) => (
+                  <li key={u.userId} className="coop-lobby-list-item">
+                    <CoopRoleBadge role={u.coopRole} size={14} />
+                    <span>{u.displayName}</span>
+                    <span className="coop-lobby-dim">{u.clientUsername ? `@${u.clientUsername}` : ''}</span>
+                  </li>
+                ))}
+                {online.length === 0 && <li className="coop-lobby-empty">Пока никого, кроме вас.</li>}
+              </ul>
 
-          <section className="coop-lobby-panel">
-            <div className="coop-lobby-panel-head">ONLINE</div>
-            <ul className="coop-lobby-list">
-              {online.map((u) => (
-                <li key={u.userId} className="coop-lobby-list-item">
-                  <CoopRoleBadge role={u.coopRole} size={14} />
-                  <span>{u.displayName}</span>
-                  <span className="coop-lobby-dim">{u.clientUsername ? `@${u.clientUsername}` : ''}</span>
-                </li>
-              ))}
-              {online.length === 0 && <li className="coop-lobby-empty">Пока никого, кроме вас.</li>}
-            </ul>
-
-            <div className="coop-lobby-panel-head" style={{ marginTop: 16 }}>
-              <Users size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-              ПАТИ
-            </div>
-            {party ? (
-              <>
-                <ul className="coop-lobby-list">
-                  {party.members.map((m) => (
-                    <li key={m.userId} className="coop-lobby-list-item">
-                      <CoopRoleBadge role={m.coopRole} size={14} />
-                      <span>{m.displayName}</span>
-                      {m.userId === party.hostId && <span className="coop-lobby-tag">HOST</span>}
-                      <span className="coop-lobby-dim">{COOP_ROLE_LABELS[m.coopRole as CoopRole]?.title ?? m.coopRole}</span>
+              <div className="coop-lobby-panel-head" style={{ marginTop: 16 }}>
+                <Users size={14} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                ПАТИ
+              </div>
+              {party ? (
+                <>
+                  <ul className="coop-lobby-list">
+                    {party.members.map((m) => (
+                      <li key={m.userId} className="coop-lobby-list-item">
+                        <CoopRoleBadge role={m.coopRole} size={14} />
+                        <span>{m.displayName}</span>
+                        {m.userId === party.hostId && <span className="coop-lobby-tag">HOST</span>}
+                        <span className="coop-lobby-dim">{COOP_ROLE_LABELS[m.coopRole as CoopRole]?.title ?? m.coopRole}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button type="button" className="coop-lobby-secondary" onClick={leave}>
+                    <LogOut size={16} style={{ marginRight: 6 }} />
+                    Выйти из пати
+                  </button>
+                </>
+              ) : syntheticSquad ? (
+                <>
+                  <p className="coop-lobby-hint">
+                    Слоты заполнены ботами: на полигоне вы один за клиент, ИИ — оппонент; в ретро спринта подмешиваются синтетические оценки остальных ролей.
+                  </p>
+                  <ul className="coop-lobby-list">
+                    <li className="coop-lobby-list-item">
+                      <CoopRoleBadge role={coopRole} size={14} />
+                      <span>{playerDisplayName}</span>
+                      <span className="coop-lobby-tag">HOST</span>
+                      <span className="coop-lobby-dim">{COOP_ROLE_LABELS[coopRole].title}</span>
                     </li>
-                  ))}
-                </ul>
-                <button type="button" className="coop-lobby-secondary" onClick={leave}>
-                  <LogOut size={16} style={{ marginRight: 6 }} />
-                  Выйти из пати
+                    {COOP_ROLES.filter((r) => r !== coopRole).map((r) => (
+                      <li key={r} className="coop-lobby-list-item coop-lobby-bot-row">
+                        <CoopRoleBadge role={r} size={14} />
+                        <span>SYN_{COOP_ROLE_LABELS[r].title}</span>
+                        <span className="coop-lobby-tag coop-lobby-tag--bot">
+                          <Bot size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                          BOT
+                        </span>
+                        <span className="coop-lobby-dim">{COOP_ROLE_LABELS[r].title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="coop-lobby-hint">
+                  Пати пуста: пригласите игрока по игровому имени (точное совпадение) или включите ботов ниже.
+                </p>
+              )}
+
+              {!party && (
+                <label className="coop-lobby-bot-toggle">
+                  <input
+                    type="checkbox"
+                    checked={syntheticSquad}
+                    onChange={(e) => {
+                      setSyntheticSquad(e.target.checked);
+                      setErr(null);
+                    }}
+                  />
+                  <span>Играть с ботами вместо живых игроков</span>
+                </label>
+              )}
+
+              <div className="coop-lobby-invite">
+                <input
+                  className="coop-lobby-input"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="Игровой ник в сети"
+                  maxLength={48}
+                  disabled={syntheticSquad}
+                />
+                <button type="button" className="coop-lobby-primary" onClick={invite} disabled={syntheticSquad}>
+                  Пригласить
                 </button>
-              </>
-            ) : (
-              <p className="coop-lobby-hint">Пати пуста. Пригласите игрока по игровому имени (точное совпадение).</p>
-            )}
+              </div>
+              {err && <div className="coop-lobby-err">{err}</div>}
+            </section>
 
-            <div className="coop-lobby-invite">
-              <input
-                className="coop-lobby-input"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                placeholder="Игровой ник в сети"
-                maxLength={48}
-              />
-              <button type="button" className="coop-lobby-primary" onClick={invite}>
-                Пригласить
-              </button>
-            </div>
-            {err && <div className="coop-lobby-err">{err}</div>}
-          </section>
-
-          <section className="coop-lobby-panel coop-lobby-launch">
+            <section className="coop-lobby-panel coop-lobby-launch">
             <div className="coop-lobby-panel-head">СПРИНТ (ведёт PM)</div>
             {iAmPm ? (
               <>
@@ -253,7 +275,36 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
             </button>
             <p className="coop-lobby-micro">
               Каждые 5 миссий ранга — пак карт для вашей роли (в т.ч. Spring-ветка для dev). После 25 — BOSS, затем следующий ранг.
+              {syntheticSquad && !party && ' Боты не ходят в общий чат — только вы.'}
             </p>
+          </section>
+          </div>
+
+          <section className="coop-lobby-panel coop-lobby-chat coop-lobby-chat--aside">
+            <div className="coop-lobby-panel-head">GLOBAL // CHAT</div>
+            <div className="coop-lobby-chat-log">
+              {chat.map((m) => (
+                <div key={m.id} className="coop-lobby-chat-line">
+                  <CoopRoleBadge role={m.coopRole} size={12} />
+                  <span className="coop-lobby-chat-name">{m.displayName}</span>
+                  <span className="coop-lobby-chat-text">{m.text}</span>
+                </div>
+              ))}
+              {chat.length === 0 && <div className="coop-lobby-empty">Нет сообщений. Напишите что-нибудь.</div>}
+            </div>
+            <div className="coop-lobby-chat-input-row">
+              <input
+                className="coop-lobby-input"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendChat()}
+                placeholder="Сообщение в общий канал..."
+                maxLength={500}
+              />
+              <button type="button" className="coop-lobby-send" onClick={sendChat}>
+                <Send size={18} />
+              </button>
+            </div>
           </section>
         </div>
       </div>

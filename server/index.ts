@@ -35,18 +35,23 @@ function runMigrateDeploySync(): void {
     execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
       cwd: process.cwd(),
       env: { ...process.env },
-      stdio: 'inherit',
+      stdio: 'pipe',
+      encoding: 'utf8',
     });
     console.log('[NEON_BOOT] prisma migrate deploy: ok');
   } catch (e) {
-    const msg = String((e as { message?: unknown })?.message ?? e ?? '');
+    const err = e as { message?: unknown; stdout?: unknown; stderr?: unknown };
+    const msg = String(err.message ?? e ?? '');
+    const stdout = String(err.stdout ?? '');
+    const stderr = String(err.stderr ?? '');
+    const prismaOutput = `${stdout}\n${stderr}\n${msg}`;
     // Existing production SQLite can be non-empty without migration history.
     // In this case Prisma returns P3005; app can continue with runtime fallbacks.
-    if (msg.includes('P3005')) {
+    if (prismaOutput.includes('P3005') || prismaOutput.includes('The database schema is not empty')) {
       console.warn('[NEON_BOOT] prisma migrate deploy skipped: P3005 (existing non-empty DB baseline)');
       return;
     }
-    console.error('[NEON_BOOT] prisma migrate deploy failed:', e);
+    console.error('[NEON_BOOT] prisma migrate deploy failed:', stderr || msg);
   }
 }
 

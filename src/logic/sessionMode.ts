@@ -8,6 +8,8 @@ import { getCardById } from './combatCards';
 import { buildTraineeDeck } from './traineeDeck';
 import {
   DEV_DEFAULT_LIB_PACK,
+  DEVELOPER_STACK_BROWSE_IDS,
+  DEVELOPER_STACKS_UNION_IDS,
   LANGUAGE_CORE_IDS,
   LANGUAGE_LIBRARY_PACKS,
   ROLE_ACCENT_PACKS,
@@ -34,26 +36,28 @@ export const COOP_ROLE_LABELS: Record<CoopRole, { title: string; blurb: string }
   developer: {
     title: 'DEVELOPER',
     blurb:
-      'Код и логика: стек на выбор (Java / Kotlin / Python / Go), шина и цепочки. ИИ давит на ревью и темп поставки.',
+      'Код и терминал по выбранному стеку (Java / Kotlin / Python / Go); без инфры, софта и тестовых реакций — это зоны других ролей. ИИ давит на ревью и темп.',
   },
   qa: {
     title: 'QA',
-    blurb: 'Снятие багов разных классов, реакции и верификация. ИИ чаще давит дефектами и «ICE» на шине.',
+    blurb:
+      'Реакции и тестовая обвязка: юнит, интеграция, валидатор (REACTION / DEFENSIVE — только QA). ИИ давит дефектами и ICE.',
   },
   admin: {
     title: 'ADMIN',
     blurb:
-      'Инфраструктура: серты, балансировка, прокси, фаерволы, карантин. ИИ бьёт по периметру и стрессу чуть мягче, чем по коду.',
+      'Периметр и инфра: shell, прокси, кластеры, карантин (карты инфры и скриптов — только эта роль). ИИ бьёт по периметру.',
   },
   pm: {
     title: 'PM',
     blurb:
-      'Agile-софт: кофе, фокус, парное программирование, буферы. Поддержка команды картами процесса; ИИ давит дедлайном и шумом.',
+      'Процесс и софт-скиллы: дедлайны, буферы, фокус команды (карты SOFT — только PM). ИИ давит сроками и шумом.',
   },
 };
 
 /** Стартовые id карт по роли (Script-Kiddo / Junior, совместимо с ранним боем). */
 const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
+  /** Код и терминал: без инфры, софта, реакций и DEFENSIVE. */
   developer: [
     'script_ls',
     'script_cat',
@@ -61,13 +65,14 @@ const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
     'script_auth',
     'script_rm',
     'script_wash_logs',
-    'soft_coffee',
-    'soft_ai_ask',
-    'infra_old_hw',
-    'react_refactoring',
-    'react_unit_test',
-    'react_emergency_flush',
+    'syntax_package',
+    'syntax_class_decl',
+    'syntax_if',
+    'fn_sysout_print',
+    'syntax_try_catch',
+    'syntax_foreach',
   ],
+  /** Только REACTION + DEFENSIVE. */
   qa: [
     'react_unit_test',
     'react_emergency_flush',
@@ -75,13 +80,13 @@ const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
     'react_trace_jam',
     'react_null_packet',
     'def_validator',
-    'script_grep',
-    'script_cat',
-    'script_ping',
-    'soft_coffee',
-    'soft_ai_ask',
     'react_refactoring',
+    'react_integration_test',
+    'react_hotfix',
+    'react_decoy_ping',
+    'react_log_mask',
   ],
+  /** Только SCRIPT + INFRASTRUCTURE (периметр, shell). */
   admin: [
     'script_ping',
     'script_ssh',
@@ -91,32 +96,29 @@ const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
     'script_auth',
     'script_chmod',
     'script_rm',
+    'script_wash_logs',
+    'script_ls',
     'infra_old_hw',
     'infra_edge_cache',
     'infra_safe_proxy',
     'infra_dns_resolver',
     'infra_basic_pod',
     'infra_quarantine_vm',
-    'script_wash_logs',
-    'script_ls',
-    'soft_coffee',
-    'react_firewall_patch',
-    'react_trace_jam',
-    'def_validator',
   ],
+  /** Только SOFT. */
   pm: [
     'soft_coffee',
     'soft_ai_ask',
     'soft_focus',
     'soft_pair_programming',
     'soft_buffer_flush',
-    'script_ls',
-    'script_cat',
-    'script_auth',
-    'infra_old_hw',
-    'react_unit_test',
-    'def_validator',
-    'script_ping',
+    'soft_critical_thinking',
+    'soft_signal_prediction',
+    'soft_deadline_trance',
+    'soft_recursive_logic',
+    'soft_async_request',
+    'soft_throw_ex',
+    'soft_finally',
   ],
 };
 
@@ -181,4 +183,47 @@ export function buildStarterDeckForSession(
     ids = COOP_STARTER_IDS[coopRole];
   }
   return ids.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
+}
+
+function mergeCoopNonDevCatalogIds(role: 'qa' | 'pm' | 'admin'): Set<string> {
+  const out = new Set<string>(COOP_STARTER_IDS[role]);
+  for (const id of ROLE_SPECIALTY_IDS[role]) out.add(id);
+  for (const pack of Object.values(ROLE_ACCENT_PACKS[role])) {
+    for (const id of pack.cardIds) out.add(id);
+  }
+  return out;
+}
+
+/** Каталог конструктора / наград: все id, доступные роли QA в коопе. */
+export const COOP_QA_CATALOG_IDS: ReadonlySet<string> = mergeCoopNonDevCatalogIds('qa');
+
+/** Каталог конструктора / наград: все id, доступные роли PM в коопе. */
+export const COOP_PM_CATALOG_IDS: ReadonlySet<string> = mergeCoopNonDevCatalogIds('pm');
+
+/** Каталог конструктора / наград: все id, доступные роли Admin в коопе. */
+export const COOP_ADMIN_CATALOG_IDS: ReadonlySet<string> = mergeCoopNonDevCatalogIds('admin');
+
+/** Объединение QA+PM+Admin: награды вне этих трёх каталогов в конструкторе не скрываются. */
+export const COOP_NON_DEV_CATALOG_UNION_IDS: ReadonlySet<string> = new Set<string>([
+  ...COOP_QA_CATALOG_IDS,
+  ...COOP_PM_CATALOG_IDS,
+  ...COOP_ADMIN_CATALOG_IDS,
+]);
+
+/** Каталог карт для конструктора колоды в коопе по роли (разработчик — по языковому стеку). */
+export function getCoopRoleCatalogIds(
+  role: CoopRole,
+  devLanguageStack: DevLanguageStack | null
+): ReadonlySet<string> {
+  if (role === 'developer') {
+    return DEVELOPER_STACK_BROWSE_IDS[devLanguageStack ?? 'java'];
+  }
+  if (role === 'qa') return COOP_QA_CATALOG_IDS;
+  if (role === 'pm') return COOP_PM_CATALOG_IDS;
+  return COOP_ADMIN_CATALOG_IDS;
+}
+
+/** Объединение каталогов для «чужих» dev-стеков vs награды вне стека. */
+export function getCoopDeckCatalogUnionIds(role: CoopRole): ReadonlySet<string> {
+  return role === 'developer' ? DEVELOPER_STACKS_UNION_IDS : COOP_NON_DEV_CATALOG_UNION_IDS;
 }

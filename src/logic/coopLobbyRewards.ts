@@ -37,7 +37,7 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
       ['react_trace_jam', 'def_validator'],
       ['react_firewall_patch', 'react_refactoring'],
       ['react_emergency_flush', 'react_unit_test'],
-      ['script_grep', 'script_cat'],
+      ['react_spoof_id', 'react_log_mask'],
       ['react_integration_test', 'react_firewall_patch'],
     ];
     return qa[s] ?? qa[0];
@@ -49,7 +49,7 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
       ['infra_mesh_relay', 'infra_basic_pod'],
       ['script_chmod', 'script_rm'],
       ['infra_edge_cache', 'infra_old_hw'],
-      ['react_firewall_patch', 'def_validator'],
+      ['infra_log_aggregator', 'infra_actions_ci'],
     ];
     return ad[s] ?? ad[0];
   }
@@ -58,9 +58,9 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
       ['soft_deadline_trance', 'soft_signal_prediction'],
       ['soft_critical_thinking', 'soft_buffer_flush'],
       ['soft_pair_programming', 'soft_focus'],
-      ['react_unit_test', 'script_ls'],
+      ['soft_tactical_breath', 'soft_patch_drill'],
       ['soft_coffee', 'soft_ai_ask'],
-      ['soft_deadline_trance', 'soft_buffer_flush'],
+      ['soft_recursive_logic', 'soft_async_request'],
     ];
     return pm[s] ?? pm[0];
   }

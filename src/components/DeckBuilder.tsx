@@ -2,12 +2,9 @@ import React, { useMemo, useState } from 'react';
 import type { CardLibTag, CombatCard } from '../logic/combatCards';
 import { cardMatchesJavaStack, cardPassesCategoryChips, LIB_TAG_LABELS } from '../logic/cardStack';
 import type { SessionMode, CoopRole } from '../logic/sessionMode';
+import { getCoopDeckCatalogUnionIds, getCoopRoleCatalogIds } from '../logic/sessionMode';
 import type { DevLanguageStack } from '../logic/decks/deckCatalog';
-import {
-  DEVELOPER_STACK_BROWSE_IDS,
-  DEVELOPER_STACKS_UNION_IDS,
-  DEV_LANGUAGE_LABELS,
-} from '../logic/decks/deckCatalog';
+import { DEV_LANGUAGE_LABELS } from '../logic/decks/deckCatalog';
 import CyberCard from './CyberCard';
 import { Database, LayoutGrid, ArrowRight, Shield } from 'lucide-react';
 import type { SkillMode } from '../logic/skillMode';
@@ -49,10 +46,15 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
   const [enabledCats, setEnabledCats] = useState<Set<string>>(() => new Set());
   const [sortBy, setSortBy] = useState<'name' | 'cost'>('name');
 
-  const stackBrowseIds = useMemo(() => {
-    if (sessionMode !== 'coop' || coopRole !== 'developer' || !devLanguageStack) return null;
-    return DEVELOPER_STACK_BROWSE_IDS[devLanguageStack];
+  const coopCatalogIds = useMemo(() => {
+    if (sessionMode !== 'coop' || !coopRole) return null;
+    return getCoopRoleCatalogIds(coopRole, devLanguageStack);
   }, [sessionMode, coopRole, devLanguageStack]);
+
+  const coopCatalogUnionIds = useMemo(() => {
+    if (sessionMode !== 'coop' || !coopRole) return null;
+    return getCoopDeckCatalogUnionIds(coopRole);
+  }, [sessionMode, coopRole]);
 
   const toggleLanguage = (lang: 'java' | 'script') => {
     setSelectedLanguage(prev => prev === lang ? null : lang);
@@ -90,8 +92,8 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     const opts = { includeVanilla, enabledLibs, enabledCats, selectedLanguage };
     let filtered = browsePool;
 
-    // Script-Kiddo Gating: Only show entry-level modules until profession is unlocked
-    if (!classUnlocked) {
+    // Script-Kiddo Gating: в соло до разблокировки класса; в коопе колода уже ролевая — без этой маски.
+    if (!classUnlocked && !(sessionMode === 'coop' && coopRole)) {
       filtered = filtered.filter(c =>
         c.grade === 'Script-Kiddo' ||
         c.type === 'SCRIPT' ||
@@ -102,10 +104,10 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       );
     }
 
-    if (stackBrowseIds) {
+    if (coopCatalogIds && coopCatalogUnionIds) {
       filtered = filtered.filter((c) => {
-        if (stackBrowseIds.has(c.id)) return true;
-        if (!DEVELOPER_STACKS_UNION_IDS.has(c.id)) return true;
+        if (coopCatalogIds.has(c.id)) return true;
+        if (!coopCatalogUnionIds.has(c.id)) return true;
         return false;
       });
       filtered = filtered.filter((c) => cardPassesCategoryChips(c, enabledCats, selectedLanguage));
@@ -125,22 +127,40 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     sortBy,
     classUnlocked,
     selectedLanguage,
-    stackBrowseIds,
+    coopCatalogIds,
+    coopCatalogUnionIds,
+    sessionMode,
+    coopRole,
   ]);
 
   const devTypes = ['SYNTAX', 'FUNCTION', 'NETWORK', 'SCRIPT'];
   const auxTypes = ['SOFT', 'HARD', 'DEFENSIVE', 'REACTION', 'INFRASTRUCTURE', 'STATUS'];
 
+  /** В коопе одна вкладка колоды: допустимые типы по роли (админ: SCRIPT + INFRA). */
+  const coopSingleDeckTypes = useMemo(() => {
+    if (sessionMode !== 'coop' || !coopRole) return null;
+    switch (coopRole) {
+      case 'developer':
+        return new Set<string>(['SYNTAX', 'FUNCTION', 'NETWORK', 'SCRIPT']);
+      case 'qa':
+        return new Set<string>(['REACTION', 'DEFENSIVE']);
+      case 'pm':
+        return new Set<string>(['SOFT']);
+      case 'admin':
+        return new Set<string>(['SCRIPT', 'INFRASTRUCTURE']);
+      default:
+        return null;
+    }
+  }, [sessionMode, coopRole]);
+
   const addCard = (card: CombatCard, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Validation
-    if (activeTargetDeck === 'DEV' && !devTypes.includes(card.type)) {
-      // Shoud be handled by UI disabling, but for safety:
-      return;
-    }
-    if (activeTargetDeck === 'AUX' && !auxTypes.includes(card.type)) {
-      return;
+
+    if (coopSingleDeckTypes) {
+      if (!coopSingleDeckTypes.has(card.type)) return;
+    } else {
+      if (activeTargetDeck === 'DEV' && !devTypes.includes(card.type)) return;
+      if (activeTargetDeck === 'AUX' && !auxTypes.includes(card.type)) return;
     }
 
     const count = activeDeck.filter(c => c.id === card.id).length;
@@ -165,7 +185,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   /** Блокируем сетку только если выбран Java с классом, но не включены ни vanilla, ни библиотеки, ни категории. */
   const filterInactive =
-    !stackBrowseIds &&
+    !coopCatalogIds &&
     classUnlocked &&
     selectedLanguage === 'java' &&
     !includeVanilla &&
@@ -174,7 +194,15 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
 
   const activeFilterSummary = useMemo(() => {
     const parts: string[] = [];
-    if (stackBrowseIds && devLanguageStack) parts.push(DEV_LANGUAGE_LABELS[devLanguageStack].title);
+    if (coopCatalogIds && coopRole === 'developer' && devLanguageStack) {
+      parts.push(DEV_LANGUAGE_LABELS[devLanguageStack].title);
+    } else if (coopCatalogIds && coopRole === 'qa') {
+      parts.push('QA');
+    } else if (coopCatalogIds && coopRole === 'pm') {
+      parts.push('PM');
+    } else if (coopCatalogIds && coopRole === 'admin') {
+      parts.push('ADMIN');
+    }
     if (selectedLanguage === 'script') parts.push('Shell');
     if (selectedLanguage === 'java') parts.push('Java');
     if (classUnlocked && selectedLanguage === 'java' && includeVanilla) parts.push('Vanilla/core');
@@ -184,7 +212,16 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     if (enabledCats.has('tests')) parts.push('COUNTER');
     if (enabledCats.has('syntax')) parts.push('CODE');
     return parts;
-  }, [stackBrowseIds, devLanguageStack, selectedLanguage, classUnlocked, includeVanilla, enabledLibs, enabledCats]);
+  }, [
+    coopCatalogIds,
+    coopRole,
+    devLanguageStack,
+    selectedLanguage,
+    classUnlocked,
+    includeVanilla,
+    enabledLibs,
+    enabledCats,
+  ]);
 
   return (
     <div className="deck-v4-view">
@@ -195,11 +232,20 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
             <h3>КОНСТРУКТОР_КОЛОДЫ</h3>
             {beginner && (
               <p className="deck-subtitle mono-text">
-                {stackBrowseIds && devLanguageStack ? (
-                  <>
-                    Кооп · разработчик · {DEV_LANGUAGE_LABELS[devLanguageStack].title}: в каталоге только модули вашего
-                    стека; чипы INFRA / SOFT / COUNTER сужают список.
-                  </>
+                {coopCatalogIds && coopRole ? (
+                  coopRole === 'developer' ? (
+                    <>
+                      Кооп · разработчик ·{' '}
+                      {DEV_LANGUAGE_LABELS[devLanguageStack ?? 'java'].title}: каталог вашего стека; чипы INFRA / SOFT /
+                      COUNTER сужают список.
+                    </>
+                  ) : coopRole === 'qa' ? (
+                    <>Кооп · QA: только реакции и тестовая обвязка (REACTION / DEFENSIVE); чипы категорий сужают список.</>
+                  ) : coopRole === 'pm' ? (
+                    <>Кооп · PM: только SOFT; чипы категорий сужают список.</>
+                  ) : (
+                    <>Кооп · Admin: только shell и инфраструктура; чипы категорий сужают список.</>
+                  )
                 ) : (
                   <>
                     Включите «ванильный Java» для чистого языка; отметьте библиотеки — Spring, сеть, Collections — чтобы
@@ -213,14 +259,29 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       </header>
 
       <div className="deck-stack-filters neon-panel">
-        {stackBrowseIds && devLanguageStack ? (
+        {coopCatalogIds && coopRole ? (
           <div className="stack-filter-row">
-            <span className="filter-label mono-text gold">СТЕК</span>
+            <span className="filter-label mono-text gold">РОЛЬ</span>
             <div className="lib-chips mono-text" style={{ padding: '6px 0', color: 'var(--neon-cyan)' }}>
-              {DEV_LANGUAGE_LABELS[devLanguageStack].title}
-              <span style={{ marginLeft: 8, opacity: 0.75, fontSize: '0.7rem' }}>
-                — каталог стека; награды вне общего JVM/Python/Go-пула не скрываются
-              </span>
+              {coopRole === 'developer' && (
+                <>
+                  {DEV_LANGUAGE_LABELS[devLanguageStack ?? 'java'].title}
+                  <span style={{ marginLeft: 8, opacity: 0.75, fontSize: '0.7rem' }}>
+                    — каталог стека; награды вне общего JVM/Python/Go-пула не скрываются
+                  </span>
+                </>
+              )}
+              {coopRole === 'qa' && (
+                <span>
+                  QA · REACTION / DEFENSIVE — каталог роли; награды вне пула QA/PM/Admin не скрываются
+                </span>
+              )}
+              {coopRole === 'pm' && (
+                <span>PM · SOFT — каталог роли; награды вне пула QA/PM/Admin не скрываются</span>
+              )}
+              {coopRole === 'admin' && (
+                <span>ADMIN · SCRIPT / INFRA — каталог роли; награды вне пула QA/PM/Admin не скрываются</span>
+              )}
             </div>
           </div>
         ) : (
@@ -292,7 +353,7 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           </div>
         </div>
         
-        {!stackBrowseIds && selectedLanguage === 'java' && classUnlocked && (
+        {!coopCatalogIds && selectedLanguage === 'java' && classUnlocked && (
           <div className="stack-filter-row libs-row">
             <span className="filter-label mono-text">БИБЛИОТЕКИ</span>
             <div className="lib-chips">
@@ -428,8 +489,10 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           {!filterInactive ? (
             filteredInventory.map((card, idx) => {
               const count = activeDeck.filter((c) => c.id === card.id).length;
-              const isWrongDeck = (activeTargetDeck === 'DEV' && !devTypes.includes(card.type)) || 
-                                 (activeTargetDeck === 'AUX' && !auxTypes.includes(card.type));
+              const isWrongDeck = coopSingleDeckTypes
+                ? !coopSingleDeckTypes.has(card.type)
+                : (activeTargetDeck === 'DEV' && !devTypes.includes(card.type)) ||
+                  (activeTargetDeck === 'AUX' && !auxTypes.includes(card.type));
               
               return (
                 <div
@@ -475,16 +538,33 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
       </div>
 
       <div className="active-deck-pane neon-panel">
-        <div className="pane-header deck-switcher">
-          <div className={`deck-tab ${activeTargetDeck === 'DEV' ? 'active' : ''}`} onClick={() => setActiveTargetDeck('DEV')}>
-            <Database size={14} />
-            <span>DEV_DECK</span>
+        {coopSingleDeckTypes ? (
+          <div className="pane-header deck-switcher">
+            <div
+              className="deck-tab active"
+              style={{ cursor: 'default', flex: 1, justifyContent: 'center', gap: 8 }}
+            >
+              <LayoutGrid size={14} />
+              <span>
+                {coopRole === 'developer' && 'КОЛОДА_РАЗРАБОТЧИКА'}
+                {coopRole === 'qa' && 'КОЛОДА_QA'}
+                {coopRole === 'pm' && 'КОЛОДА_PM'}
+                {coopRole === 'admin' && 'КОЛОДА_ADMIN'}
+              </span>
+            </div>
           </div>
-          <div className={`deck-tab ${activeTargetDeck === 'AUX' ? 'active' : ''}`} onClick={() => setActiveTargetDeck('AUX')}>
-            <Shield size={14} />
-            <span>AUX_DECK</span>
+        ) : (
+          <div className="pane-header deck-switcher">
+            <div className={`deck-tab ${activeTargetDeck === 'DEV' ? 'active' : ''}`} onClick={() => setActiveTargetDeck('DEV')}>
+              <Database size={14} />
+              <span>DEV_DECK</span>
+            </div>
+            <div className={`deck-tab ${activeTargetDeck === 'AUX' ? 'active' : ''}`} onClick={() => setActiveTargetDeck('AUX')}>
+              <Shield size={14} />
+              <span>AUX_DECK</span>
+            </div>
           </div>
-        </div>
+        )}
         <div className="pane-header secondary">
           <ArrowRight size={14} />
           <span>СНАРЯЖЕНИЕ ({activeDeck.length}/30)</span>
@@ -493,8 +573,10 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
           {Array.from(new Set(activeDeck.map(c => c.id))).map(id => {
             const card = activeDeck.find(c => c.id === id)!;
             const count = activeDeck.filter(c => c.id === id).length;
-            const belongsToCurrent = (activeTargetDeck === 'DEV' && devTypes.includes(card.type)) || 
-                                     (activeTargetDeck === 'AUX' && auxTypes.includes(card.type));
+            const belongsToCurrent = coopSingleDeckTypes
+              ? coopSingleDeckTypes.has(card.type)
+              : (activeTargetDeck === 'DEV' && devTypes.includes(card.type)) ||
+                (activeTargetDeck === 'AUX' && auxTypes.includes(card.type));
             
             if (!belongsToCurrent) return null; // Only show cards belonging to the active tab phase in the side list? 
                                                 // Or show all but highlighting? Let's show all and highlight.

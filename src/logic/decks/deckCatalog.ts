@@ -202,17 +202,21 @@ export const DEVELOPER_STACKS_UNION_IDS: ReadonlySet<string> = new Set<string>([
   ...DEVELOPER_STACK_BROWSE_IDS.go,
 ]);
 
-/** QA / PM / Admin — явная связь: QA = реакции+тесты; PM = soft; Admin = script+infra+права. */
+/** QA / PM / Admin — взаимоисключающие пулы: QA = реакции+DEFENSIVE; PM = SOFT; Admin = SCRIPT+INFRA (+HARD в картах инфры). */
 export const ROLE_SPECIALTY_IDS: Record<'qa' | 'pm' | 'admin', string[]> = {
   qa: [
     'react_unit_test',
     'react_integration_test',
     'react_firewall_patch',
     'def_validator',
-    'script_grep',
-    'script_cat',
-    'soft_coffee',
-    'soft_ai_ask',
+    'react_trace_jam',
+    'react_null_packet',
+    'react_refactoring',
+    'react_emergency_flush',
+    'react_hotfix',
+    'react_rollback',
+    'react_spoof_id',
+    'react_log_mask',
   ],
   pm: [
     'soft_deadline_trance',
@@ -220,19 +224,32 @@ export const ROLE_SPECIALTY_IDS: Record<'qa' | 'pm' | 'admin', string[]> = {
     'soft_critical_thinking',
     'soft_pair_programming',
     'soft_buffer_flush',
-    'script_ls',
-    'script_cat',
-    'react_unit_test',
+    'soft_coffee',
+    'soft_ai_ask',
+    'soft_focus',
+    'soft_recursive_logic',
+    'soft_async_request',
+    'soft_throw_ex',
+    'soft_finally',
+    'soft_tactical_breath',
+    'soft_patch_drill',
   ],
   admin: [
     'script_sudo_fix',
     'script_chmod',
     'script_auth',
     'script_rm',
+    'script_ping',
+    'script_ssh',
+    'script_curl',
+    'script_nc',
+    'script_ls',
+    'script_cat',
+    'script_grep',
     'infra_quarantine_vm',
     'infra_vpc_network',
-    'react_firewall_patch',
-    'def_validator',
+    'infra_safe_proxy',
+    'infra_dns_resolver',
   ],
 };
 
@@ -263,7 +280,7 @@ export const ROLE_ACCENT_PACKS: Record<
     stress_chaos: {
       title: 'Chaos / стресс',
       hint: 'Снятие шума и ложных срабатываний.',
-      cardIds: ['react_decoy_ping', 'react_trace_jam', 'soft_patch_drill', 'soft_tactical_breath'],
+      cardIds: ['react_decoy_ping', 'react_trace_jam', 'react_spoof_id', 'react_emergency_flush'],
     },
   },
   pm: {
@@ -280,7 +297,7 @@ export const ROLE_ACCENT_PACKS: Record<
     ceremony_light: {
       title: 'Церемонии без боли',
       hint: 'Мягкие инструменты процесса.',
-      cardIds: ['soft_coffee', 'soft_recursive_logic', 'soft_tactical_breath', 'script_ls'],
+      cardIds: ['soft_coffee', 'soft_recursive_logic', 'soft_tactical_breath', 'soft_buffer_flush'],
     },
     risk_buffers: {
       title: 'Риски и исключения',

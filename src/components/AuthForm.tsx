@@ -37,7 +37,15 @@ export const AuthForm: React.FC = () => {
                 throw new Error(`Server returned non-JSON: ${text.slice(0, 50)}... [Status ${response.status}]`);
             }
             
-            if (!response.ok) throw new Error(data.error || 'Identity initialization failed.');
+            if (!response.ok) {
+                const msg =
+                    typeof data?.error === 'string' && data.error.trim()
+                        ? data.error
+                        : 'Ошибка авторизации.';
+                const code = typeof data?.code === 'string' && data.code.trim() ? data.code : '';
+                const parts = [msg, `HTTP ${response.status}`, code].filter(Boolean);
+                throw new Error(parts.join(' · '));
+            }
             
             if (isLogin) {
                 login(data.token, data.user);

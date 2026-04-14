@@ -62,11 +62,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         body: JSON.stringify(state)
       });
-      if (response.ok) {
-        const updatedUser = { ...user!, gameState: state };
-        setUser(updatedUser);
-        localStorage.setItem('neon_user', JSON.stringify(updatedUser));
+      if (!response.ok) {
+        let errBody: { error?: unknown; code?: unknown } = {};
+        try {
+          const ct = response.headers.get('content-type');
+          if (ct?.includes('application/json')) errBody = await response.json();
+        } catch {
+          /* ignore */
+        }
+        const msg =
+          typeof errBody.error === 'string' && errBody.error.trim()
+            ? errBody.error
+            : response.statusText || 'Sync failed';
+        const code = typeof errBody.code === 'string' ? errBody.code : '';
+        console.error('Failed to sync game state:', msg, 'HTTP', response.status, code || '(no code)');
+        if (response.status === 401 || code === 'SYNC_INVALID_TOKEN' || code === 'SYNC_NO_TOKEN') {
+          logout();
+        }
+        return;
       }
+      const updatedUser = { ...user!, gameState: state };
+      setUser(updatedUser);
+      localStorage.setItem('neon_user', JSON.stringify(updatedUser));
     } catch (error) {
       console.error('Failed to sync game state:', error);
     }

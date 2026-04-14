@@ -32,6 +32,10 @@ function hasMissingClientSnapshotColumn(error) {
     const msg = String(error?.message ?? error ?? '');
     return msg.includes('no such column') && msg.includes('clientSnapshot');
 }
+/** Единый JSON для ошибок neon_v1: текст для человека + стабильный `code` для клиента/логов. */
+function sendApiError(res, status, code, message) {
+    res.status(status).json({ error: message, code });
+}
 /**
  * HTTP API (auth, sync, coop lobby) + SPA static. Лобби — in-memory на инстанс приложения.
  */
@@ -110,7 +114,7 @@ export function createApp(opts) {
             const username = typeof body.username === 'string' ? body.username.trim() : '';
             const password = typeof body.password === 'string' ? body.password : '';
             if (!username || !password) {
-                return res.status(400).json({ error: 'Identity creation failed. Invalid credentials.' });
+                return sendApiError(res, 400, 'REGISTER_INVALID_INPUT', 'Укажите логин и пароль.');
             }
             const hashedPassword = await bcrypt.hash(password, 10);
             const starterDeck = [
@@ -143,10 +147,10 @@ export function createApp(opts) {
         }
         catch (error) {
             console.error('Registration Error:', error);
-            const msg = error.code === 'P2002'
-                ? 'Такой логин уже есть. Войдите или выберите другой логин.'
-                : 'Не удалось создать аккаунт (ошибка сервера).';
-            res.status(400).json({ error: msg });
+            if (error.code === 'P2002') {
+                return sendApiError(res, 400, 'REGISTER_DUPLICATE', 'Такой логин уже есть. Войдите или выберите другой логин.');
+            }
+            return sendApiError(res, 400, 'REGISTER_FAILED', 'Не удалось создать аккаунт (ошибка сервера).');
         }
     });
     app.post('/neon_v1/auth/login', async (req, res) => {
@@ -155,7 +159,7 @@ export function createApp(opts) {
             const username = typeof body.username === 'string' ? body.username.trim() : '';
             const password = typeof body.password === 'string' ? body.password : '';
             if (!username || !password)
-                return res.status(401).json({ error: 'Неверный логин или пароль.' });
+                return sendApiError(res, 401, 'LOGIN_REJECTED', 'Неверный логин или пароль.');
             let user;
             try {
                 user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
@@ -189,7 +193,7 @@ export function createApp(opts) {
                 });
             }
             if (!user || !(await bcrypt.compare(password, user.passwordHash)))
-                return res.status(401).json({ error: 'Неверный логин или пароль.' });
+                return sendApiError(res, 401, 'LOGIN_REJECTED', 'Неверный логин или пароль.');
             const token = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: '24h' });
             const rawGs = user.gameState;
             res.json({
@@ -198,14 +202,14 @@ export function createApp(opts) {
             });
         }
         catch (_error) {
-            res.status(500).json({ error: 'Ошибка входа. Попробуйте позже.' });
+            sendApiError(res, 500, 'LOGIN_SERVER', 'Ошибка входа. Попробуйте позже.');
         }
     });
     app.post('/neon_v1/game/sync', async (req, res) => {
         try {
             const authHeader = req.headers.authorization;
             if (!authHeader)
-                return res.status(401).json({ error: 'No token' });
+                return sendApiError(res, 401, 'SYNC_NO_TOKEN', 'Нет токена авторизации.');
             const token = authHeader.split(' ')[1];
             const decoded = jwt.verify(token, jwtSecret);
             const body = req.body;
@@ -250,16 +254,20 @@ export function createApp(opts) {
         }
         catch (error) {
             console.error('Sync Error:', error);
-            res.status(401).json({ error: 'Invalid' });
+            const name = error?.name ?? '';
+            if (name === 'JsonWebTokenError' || name === 'TokenExpiredError' || name === 'NotBeforeError') {
+                return sendApiError(res, 401, 'SYNC_INVALID_TOKEN', 'Токен недействителен или истёк.');
+            }
+            return sendApiError(res, 500, 'SYNC_FAILED', 'Не удалось сохранить прогресс.');
         }
     });
     app.post('/neon_v1/coop/heartbeat', (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
-            return res.status(401).json({ error: 'No token' });
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
         const { displayName, coopRole, clientUsername } = req.body;
         if (typeof displayName !== 'string' || !displayName.trim()) {
-            return res.status(400).json({ error: 'displayName required' });
+            return sendApiError(res, 400, 'COOP_DISPLAY_NAME_REQUIRED', 'Укажите displayName.');
         }
         const role = typeof coopRole === 'string' ? coopRole : 'developer';
         const cname = typeof clientUsername === 'string' ? clientUsername : '';
@@ -291,7 +299,7 @@ export function createApp(opts) {
     app.get('/neon_v1/coop/state', (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
-            return res.status(401).json({ error: 'No token' });
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
         pruneLobbyUsers();
         const me = lobbyByUser.get(auth.userId);
         const online = [...lobbyByUser.entries()]
@@ -311,13 +319,13 @@ export function createApp(opts) {
     app.post('/neon_v1/coop/chat', (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
-            return res.status(401).json({ error: 'No token' });
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
         const { text } = req.body;
         if (typeof text !== 'string' || !text.trim())
-            return res.status(400).json({ error: 'text' });
+            return sendApiError(res, 400, 'COOP_CHAT_TEXT_REQUIRED', 'Укажите текст сообщения.');
         const me = lobbyByUser.get(auth.userId);
         if (!me)
-            return res.status(400).json({ error: 'Heartbeat first' });
+            return sendApiError(res, 400, 'COOP_HEARTBEAT_FIRST', 'Сначала отправьте heartbeat.');
         const entry = {
             id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             userId: auth.userId,
@@ -334,15 +342,15 @@ export function createApp(opts) {
     app.post('/neon_v1/coop/invite', (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
-            return res.status(401).json({ error: 'No token' });
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
         const { targetDisplayName } = req.body;
         if (typeof targetDisplayName !== 'string' || !targetDisplayName.trim()) {
-            return res.status(400).json({ error: 'targetDisplayName' });
+            return sendApiError(res, 400, 'COOP_TARGET_DISPLAY_NAME_REQUIRED', 'Укажите targetDisplayName.');
         }
         pruneLobbyUsers();
         const me = lobbyByUser.get(auth.userId);
         if (!me)
-            return res.status(400).json({ error: 'Heartbeat first' });
+            return sendApiError(res, 400, 'COOP_HEARTBEAT_FIRST', 'Сначала отправьте heartbeat.');
         const needle = targetDisplayName.trim().toLowerCase();
         let targetId = null;
         for (const [id, u] of lobbyByUser) {
@@ -354,12 +362,12 @@ export function createApp(opts) {
             }
         }
         if (!targetId)
-            return res.status(404).json({ error: 'Player not online' });
+            return sendApiError(res, 404, 'COOP_PLAYER_NOT_ONLINE', 'Игрок не в сети.');
         const target = lobbyByUser.get(targetId);
         if (!target)
-            return res.status(404).json({ error: 'Gone' });
+            return sendApiError(res, 404, 'COOP_TARGET_GONE', 'Игрок уже недоступен.');
         if (target.partyId && target.partyId !== me.partyId) {
-            return res.status(400).json({ error: 'Target in another party' });
+            return sendApiError(res, 400, 'COOP_TARGET_IN_PARTY', 'Игрок уже в другой группе.');
         }
         let partyId = me.partyId;
         if (!partyId) {
@@ -369,12 +377,12 @@ export function createApp(opts) {
         }
         const party = parties.get(partyId);
         if (!party)
-            return res.status(500).json({ error: 'party' });
+            return sendApiError(res, 500, 'COOP_PARTY_INTERNAL', 'Ошибка группы.');
         if (party.memberIds.length >= MAX_PARTY)
-            return res.status(400).json({ error: 'Party full' });
+            return sendApiError(res, 400, 'COOP_PARTY_FULL', 'Группа заполнена.');
         if (!party.memberIds.includes(targetId)) {
             if (target.partyId && target.partyId !== partyId) {
-                return res.status(400).json({ error: 'Target in another party' });
+                return sendApiError(res, 400, 'COOP_TARGET_IN_PARTY', 'Игрок уже в другой группе.');
             }
             party.memberIds.push(targetId);
             target.partyId = partyId;
@@ -384,7 +392,7 @@ export function createApp(opts) {
     app.post('/neon_v1/coop/party/leave', (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
-            return res.status(401).json({ error: 'No token' });
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
         pruneLobbyUsers();
         const me = lobbyByUser.get(auth.userId);
         if (!me?.partyId)
@@ -432,7 +440,7 @@ export function createApp(opts) {
     });
     app.get(/.*/, (req, res) => {
         if (req.path.startsWith('/neon_v1'))
-            return res.status(404).json({ error: 'Not found' });
+            return sendApiError(res, 404, 'API_NOT_FOUND', 'Маршрут не найден.');
         if (fs.existsSync(indexPath)) {
             sendHtmlNoCache(res, indexPath);
         }

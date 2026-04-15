@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { Trait } from '../../logic/traits';
 import type { CombatCard } from '../../logic/combatCards';
 import type { TechnicalTask } from '../../logic/combatTasks';
@@ -17,6 +17,12 @@ import {
 import { coopOpponentHintBody, coopOpponentHintTitle } from '../../logic/coopOpponentHints';
 import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
+import { useAuth } from '../../logic/AuthContext';
+import {
+  coopMatchEventsSource,
+  coopMatchFetchState,
+  type CoopMatchState,
+} from '../../logic/coopLobbyApi';
 
 // UI Components — new layout
 import CombatHudBar from './combat/CombatHudBar';
@@ -62,6 +68,8 @@ interface CombatBridgeProps {
   coopSprintLossesBeforeBattle?: number;
   /** Пати людей vs симуляция союзников на одном клиенте. */
   coopSquadFill?: CoopSquadFill;
+  /** Сетевой matchId для живой пати (серверный общий state). */
+  coopMatchId?: string | null;
 }
 
 const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
@@ -94,6 +102,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   // Core Logic Hook
   const coopSquadFill = props.coopSquadFill ?? 'synthetic_bots';
+  const { token, user } = useAuth();
+  const [netMatch, setNetMatch] = useState<CoopMatchState | null>(null);
+  const sseRef = useRef<EventSource | null>(null);
   const { state, actions } = useCombatLogic({
     ...props,
     missionTz,
@@ -166,6 +177,80 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   const defeatAttemptIndex = lossesBefore + 1;
   const coopWillLiquidateAfterThisDefeat = defeatAttemptIndex >= COOP_SPRINT_MAX_ATTEMPTS;
 
+  useEffect(() => {
+    const matchId = props.coopMatchId ?? null;
+    if (coopSquadFill !== 'live_party' || !matchId || !token) {
+      setNetMatch(null);
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+      return;
+    }
+    let alive = true;
+    const load = async () => {
+      const m = await coopMatchFetchState(token, matchId);
+      if (!alive || !m) return;
+      setNetMatch(m);
+    };
+    load();
+    const poll = window.setInterval(load, 4000);
+    try {
+      const src = coopMatchEventsSource(token, matchId);
+      sseRef.current = src;
+      src.addEventListener('match_update', (evt) => {
+        try {
+          const payload = JSON.parse((evt as MessageEvent).data) as { event?: { seq?: number } };
+          if (payload?.event?.seq) {
+            setNetMatch((prev) =>
+              prev ? { ...prev, seq: Math.max(prev.seq, payload.event?.seq ?? prev.seq) } : prev
+            );
+            void load();
+          }
+        } catch {
+          // ignore malformed frame
+        }
+      });
+      src.onerror = () => {
+        src.close();
+        sseRef.current = null;
+      };
+    } catch {
+      // fallback to polling only
+    }
+    return () => {
+      alive = false;
+      window.clearInterval(poll);
+      if (sseRef.current) {
+        sseRef.current.close();
+        sseRef.current = null;
+      }
+    };
+  }, [coopSquadFill, props.coopMatchId, token]);
+
+  const sitrepStats = useMemo(() => {
+    if (coopSquadFill !== 'live_party' || !netMatch) {
+      return {
+        stress: state.stress,
+        bugPoints: state.bugPoints,
+        playerProgress: state.playerProgress,
+        aiDeadline: state.aiDeadline,
+        aiProgress: state.aiProgress,
+        mitigationBuffer: state.mitigationBuffer,
+        infraFilled: state.infraSlots.filter(Boolean).length,
+      };
+    }
+    return {
+      stress: netMatch.shared.stress,
+      bugPoints: netMatch.shared.bugPressure,
+      playerProgress: netMatch.shared.projectProgress,
+      aiDeadline: netMatch.shared.deadlineTicks,
+      aiProgress: 100 - netMatch.shared.infraReliability,
+      mitigationBuffer: netMatch.shared.infraReliability,
+      infraFilled: Math.max(0, Math.min(8, Math.floor((netMatch.shared.infraResources / 100) * 8))),
+    };
+  }, [coopSquadFill, netMatch, state]);
+
   return (
     <div className={`combat-v2 ${combatFieldOuterClass} ${state.stress > 70 ? 'screen-glitch' : ''}`}>
       {sessionMode === 'coop' && coopRole && (
@@ -177,15 +262,21 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
           <CoopTeamSitrep
             coopRole={coopRole}
             squadFill={coopSquadFill}
-            stress={state.stress}
-            bugPoints={state.bugPoints}
-            playerProgress={state.playerProgress}
-            aiDeadline={state.aiDeadline}
-            aiProgress={state.aiProgress}
-            mitigationBuffer={state.mitigationBuffer}
-            infraFilled={state.infraSlots.filter(Boolean).length}
+            stress={sitrepStats.stress}
+            bugPoints={sitrepStats.bugPoints}
+            playerProgress={sitrepStats.playerProgress}
+            aiDeadline={sitrepStats.aiDeadline}
+            aiProgress={sitrepStats.aiProgress}
+            mitigationBuffer={sitrepStats.mitigationBuffer}
+            infraFilled={sitrepStats.infraFilled}
             nextIntentName={state.nextBugAction?.name ?? null}
-            lastAiActionName={state.lastAiAction?.name ?? null}
+            lastAiActionName={
+              netMatch && coopSquadFill === 'live_party'
+                ? `MATCH #${netMatch.id.slice(-8)} · turn ${netMatch.shared.turn} · active ${netMatch.shared.activeRole}${
+                    user?.id ? ` · me ${netMatch.roleByUserId[user.id] ?? '?'}` : ''
+                  }`
+                : (state.lastAiAction?.name ?? null)
+            }
           />
         </div>
       )}

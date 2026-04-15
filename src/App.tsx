@@ -199,6 +199,7 @@ function App() {
           devLanguageStack={gs.devLanguageStack}
           coopSprintLossesBeforeBattle={gs.coopSprintConsecutiveLosses}
           coopSquadFill={gs.coopSquadFill}
+          coopMatchId={gs.coopMatchId}
           isQuestCombat={isQuestCombat}
           isFirstCombatQuestTutorial={isFirstCombatQuestTutorial}
           onWin={(earned, rank, chain, missionName, updatedDeck, missionTaskId) => {

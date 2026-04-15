@@ -3,10 +3,13 @@ import type { CoopRole } from '../../../logic/sessionMode';
 import { COOP_ROLE_LABELS } from '../../../logic/sessionMode';
 import type { CoopSquadFill } from '../../../logic/coopTeamFlow';
 import { CoopRoleBadge } from '../../CoopRoleBadge';
+import type { CoopMatchSharedState } from '../../../logic/coopLobbyApi';
 
 type Props = {
   coopRole: CoopRole;
   squadFill: CoopSquadFill;
+  matchActiveRole?: string | null;
+  isMyTurn?: boolean;
   stress: number;
   bugPoints: number;
   playerProgress: number;
@@ -16,6 +19,7 @@ type Props = {
   infraFilled: number;
   nextIntentName: string | null;
   lastAiActionName: string | null;
+  matchShared?: CoopMatchSharedState | null;
 };
 
 const roleLabel = (r: CoopRole) => COOP_ROLE_LABELS[r].title;
@@ -23,6 +27,8 @@ const roleLabel = (r: CoopRole) => COOP_ROLE_LABELS[r].title;
 export const CoopTeamSitrep: React.FC<Props> = ({
   coopRole,
   squadFill,
+  matchActiveRole = null,
+  isMyTurn = false,
   stress,
   bugPoints,
   playerProgress,
@@ -32,6 +38,7 @@ export const CoopTeamSitrep: React.FC<Props> = ({
   infraFilled,
   nextIntentName,
   lastAiActionName,
+  matchShared = null,
 }) => {
   const slots = (['developer', 'qa', 'admin', 'pm'] as CoopRole[]).map((r) => ({
     role: r,
@@ -42,6 +49,15 @@ export const CoopTeamSitrep: React.FC<Props> = ({
   return (
     <aside className="coop-team-sitrep mono-text" aria-label="Сводка команды и общий поток">
       <div className="coop-team-sitrep__head">КОМАНДА // ОБЩИЙ ПОТОК</div>
+      {squadFill === 'live_party' && matchActiveRole && (
+        <div className="coop-team-sitrep__plan-row" style={{ marginBottom: 8 }}>
+          <span className="coop-team-sitrep__k">АКТИВНАЯ РОЛЬ</span>
+          <span className="coop-team-sitrep__plan-v">
+            {COOP_ROLE_LABELS[matchActiveRole as CoopRole]?.title ?? matchActiveRole}
+            {isMyTurn ? ' · ВАШ ХОД' : ''}
+          </span>
+        </div>
+      )}
       <ul className="coop-team-sitrep__roles">
         {slots.map(({ role, you, remote }) => (
           <li key={role} className={`coop-team-sitrep__role ${you ? 'coop-team-sitrep__role--you' : ''}`}>
@@ -103,10 +119,34 @@ export const CoopTeamSitrep: React.FC<Props> = ({
           <div className="coop-team-sitrep__plan-muted">Ожидание сигнала ИИ…</div>
         )}
         {coopRole === 'pm' && (
-          <p className="coop-team-sitrep__pm-hint">
-            PM: здесь видно, куда бьёт оппонент по всей команде; ваши SOFT-карты разгружают стресс и подталкивают
-            прогресс.
-          </p>
+          <>
+            <p className="coop-team-sitrep__pm-hint">
+              PM: здесь видно, куда бьёт оппонент по всей команде; ваши SOFT-карты разгружают стресс и подталкивают
+              прогресс.
+            </p>
+            {squadFill === 'live_party' && matchShared && (
+              <div className="coop-team-sitrep__pm-radar">
+                {(Object.keys(COOP_ROLE_LABELS) as CoopRole[]).map((role) => {
+                  const rs = Math.max(0, Math.min(100, matchShared.roleStress[role] ?? 0));
+                  const rp = Math.max(0, Math.min(100, matchShared.roleTaskProgress[role] ?? 0));
+                  return (
+                    <div key={role} className="coop-team-sitrep__pm-row">
+                      <span className="coop-team-sitrep__pm-role">{COOP_ROLE_LABELS[role].title}</span>
+                      <div className="coop-team-sitrep__pm-bars">
+                        <div className="coop-team-sitrep__pm-bar-wrap">
+                          <div className="coop-team-sitrep__pm-bar coop-team-sitrep__pm-bar--stress" style={{ width: `${rs}%` }} />
+                        </div>
+                        <div className="coop-team-sitrep__pm-bar-wrap">
+                          <div className="coop-team-sitrep__pm-bar coop-team-sitrep__pm-bar--progress" style={{ width: `${rp}%` }} />
+                        </div>
+                      </div>
+                      <span className="coop-team-sitrep__pm-values">S{rs}/P{rp}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
       {squadFill === 'synthetic_bots' && (

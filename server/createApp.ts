@@ -102,6 +102,8 @@ export function createApp(opts: CreateAppOptions) {
     projectProgress: number;
     turn: number;
     activeRole: string;
+    roleStress: Record<string, number>;
+    roleTaskProgress: Record<string, number>;
   };
   type CoopMatchEvent = {
     seq: number;
@@ -577,6 +579,18 @@ export function createApp(opts: CreateAppOptions) {
         projectProgress: 0,
         turn: 1,
         activeRole: 'admin',
+        roleStress: {
+          admin: 0,
+          developer: 0,
+          qa: 0,
+          pm: 0,
+        },
+        roleTaskProgress: {
+          admin: 0,
+          developer: 0,
+          qa: 0,
+          pm: 0,
+        },
       },
       events: [],
       seq: 0,
@@ -665,6 +679,10 @@ export function createApp(opts: CreateAppOptions) {
       typeof body.payload === 'object' && body.payload !== null && !Array.isArray(body.payload)
         ? (body.payload as Record<string, unknown>)
         : {};
+    const expectedSeq =
+      typeof body.expectedSeq === 'number' && Number.isFinite(body.expectedSeq)
+        ? Math.max(0, Math.floor(body.expectedSeq))
+        : null;
     if (!matchId) return sendApiError(res, 400, 'COOP_MATCH_ID_REQUIRED', 'Укажите matchId.');
     if (!action) return sendApiError(res, 400, 'COOP_ACTION_REQUIRED', 'Укажите action.');
     const match = matches.get(matchId);
@@ -672,6 +690,14 @@ export function createApp(opts: CreateAppOptions) {
     if (match.status === 'finished') return sendApiError(res, 409, 'COOP_MATCH_FINISHED', 'Матч уже завершён.');
     if (!match.memberIds.includes(auth.userId)) {
       return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+    }
+    if (expectedSeq != null && expectedSeq !== match.seq) {
+      return sendApiError(
+        res,
+        409,
+        'COOP_MATCH_SEQ_MISMATCH',
+        `Состояние уже обновлено другим действием (server_seq=${match.seq}, client_seq=${expectedSeq}).`,
+      );
     }
     const role = match.roleByUserId[auth.userId] ?? 'developer';
     if (match.shared.activeRole !== role && action !== 'apply_pm_support') {
@@ -695,33 +721,83 @@ export function createApp(opts: CreateAppOptions) {
     if (action === 'apply_admin_infra') {
       const reliabilityUp = Math.max(0, Math.min(20, Number(payload.reliabilityUp ?? 0)));
       const resourcesDown = Math.max(0, Math.min(20, Number(payload.resourcesDown ?? 0)));
+      const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 2)));
       match.shared.infraReliability = Math.min(100, match.shared.infraReliability + reliabilityUp);
       match.shared.infraResources = Math.max(0, match.shared.infraResources - resourcesDown);
-      pushMatchEvent(match, action, auth.userId, { reliabilityUp, resourcesDown });
+      match.shared.roleTaskProgress.admin = Math.min(100, match.shared.roleTaskProgress.admin + reliabilityUp);
+      match.shared.roleStress.admin = Math.min(100, match.shared.roleStress.admin + stressUp);
+      match.shared.stress = Math.min(
+        100,
+        Math.round(
+          (match.shared.roleStress.admin +
+            match.shared.roleStress.developer +
+            match.shared.roleStress.qa +
+            match.shared.roleStress.pm) / 4
+        )
+      );
+      pushMatchEvent(match, action, auth.userId, { reliabilityUp, resourcesDown, stressUp });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_dev_progress') {
       const progressUp = Math.max(0, Math.min(25, Number(payload.progressUp ?? 0)));
       const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 0)));
       match.shared.projectProgress = Math.min(100, match.shared.projectProgress + progressUp);
-      match.shared.stress = Math.min(100, match.shared.stress + stressUp);
+      match.shared.roleTaskProgress.developer = Math.min(100, match.shared.roleTaskProgress.developer + progressUp);
+      match.shared.roleStress.developer = Math.min(100, match.shared.roleStress.developer + stressUp);
+      match.shared.stress = Math.min(
+        100,
+        Math.round(
+          (match.shared.roleStress.admin +
+            match.shared.roleStress.developer +
+            match.shared.roleStress.qa +
+            match.shared.roleStress.pm) / 4
+        )
+      );
       pushMatchEvent(match, action, auth.userId, { progressUp, stressUp });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_qa_defense') {
       const bugsDown = Math.max(0, Math.min(20, Number(payload.bugsDown ?? 0)));
       const relUp = Math.max(0, Math.min(10, Number(payload.reliabilityUp ?? 0)));
+      const stressDown = Math.max(0, Math.min(15, Number(payload.stressDown ?? 3)));
       match.shared.bugPressure = Math.max(0, match.shared.bugPressure - bugsDown);
       match.shared.infraReliability = Math.min(100, match.shared.infraReliability + relUp);
-      pushMatchEvent(match, action, auth.userId, { bugsDown, reliabilityUp: relUp });
+      match.shared.roleTaskProgress.qa = Math.min(100, match.shared.roleTaskProgress.qa + bugsDown);
+      match.shared.roleStress.qa = Math.max(0, match.shared.roleStress.qa - stressDown);
+      match.shared.stress = Math.min(
+        100,
+        Math.round(
+          (match.shared.roleStress.admin +
+            match.shared.roleStress.developer +
+            match.shared.roleStress.qa +
+            match.shared.roleStress.pm) / 4
+        )
+      );
+      pushMatchEvent(match, action, auth.userId, { bugsDown, reliabilityUp: relUp, stressDown });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_pm_support') {
       const stressDown = Math.max(0, Math.min(20, Number(payload.stressDown ?? 0)));
       const deadlineUp = Math.max(0, Math.min(3, Number(payload.deadlineUp ?? 0)));
-      match.shared.stress = Math.max(0, match.shared.stress - stressDown);
+      const targetRole =
+        typeof payload.targetRole === 'string' &&
+        ['admin', 'developer', 'qa', 'pm'].includes(payload.targetRole)
+          ? payload.targetRole
+          : 'developer';
+      match.shared.roleTaskProgress.pm = Math.min(100, match.shared.roleTaskProgress.pm + deadlineUp * 10);
+      match.shared.roleStress.pm = Math.max(0, match.shared.roleStress.pm - Math.max(1, Math.floor(stressDown / 2)));
+      match.shared.roleStress[targetRole] = Math.max(0, match.shared.roleStress[targetRole] - stressDown);
+      match.shared.stress = Math.min(
+        100,
+        Math.round(
+          (match.shared.roleStress.admin +
+            match.shared.roleStress.developer +
+            match.shared.roleStress.qa +
+            match.shared.roleStress.pm) / 4
+        )
+      );
       match.shared.deadlineTicks = Math.min(40, match.shared.deadlineTicks + deadlineUp);
-      pushMatchEvent(match, action, auth.userId, { stressDown, deadlineUp });
+      pushMatchEvent(match, action, auth.userId, { stressDown, deadlineUp, targetRole });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'finish_match') {

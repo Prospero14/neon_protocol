@@ -19,6 +19,7 @@ import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
 import { useAuth } from '../../logic/AuthContext';
 import {
+  coopMatchAction,
   coopMatchEventsSource,
   coopMatchFetchState,
   type CoopMatchState,
@@ -99,6 +100,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     name: string;
     taskId: string;
   } | null>(null);
+  const [endTurnPending, setEndTurnPending] = useState(false);
 
   // Core Logic Hook
   const coopSquadFill = props.coopSquadFill ?? 'synthetic_bots';
@@ -250,6 +252,24 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       infraFilled: Math.max(0, Math.min(8, Math.floor((netMatch.shared.infraResources / 100) * 8))),
     };
   }, [coopSquadFill, netMatch, state]);
+  const livePartyMode = coopSquadFill === 'live_party' && Boolean(netMatch && token);
+  const isMyRoleTurn = livePartyMode && Boolean(coopRole && netMatch?.shared.activeRole === coopRole);
+  const liveActionGateOpen = (!livePartyMode || isMyRoleTurn) && !endTurnPending;
+
+  const handleEndTurn = async () => {
+    if (endTurnPending) return;
+    if (livePartyMode && netMatch && token) {
+      setEndTurnPending(true);
+      try {
+        const updated = await coopMatchAction(token, netMatch.id, 'end_turn', {}, netMatch.seq);
+        if (updated) setNetMatch(updated);
+      } finally {
+        setEndTurnPending(false);
+      }
+      return;
+    }
+    actions.endTurn();
+  };
 
   return (
     <div className={`combat-v2 ${combatFieldOuterClass} ${state.stress > 70 ? 'screen-glitch' : ''}`}>
@@ -262,6 +282,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
           <CoopTeamSitrep
             coopRole={coopRole}
             squadFill={coopSquadFill}
+            matchActiveRole={netMatch?.shared.activeRole ?? null}
+            isMyTurn={isMyRoleTurn}
+            matchShared={netMatch?.shared ?? null}
             stress={sitrepStats.stress}
             bugPoints={sitrepStats.bugPoints}
             playerProgress={sitrepStats.playerProgress}
@@ -371,13 +394,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         filteredHand={state.filteredHand}
         fullHand={state.hand}
         selectedCard={state.selectedCard}
-        isPlayerTurn={state.isPlayerTurn}
+        isPlayerTurn={state.isPlayerTurn && liveActionGateOpen}
         cpu={state.cpu}
         stress={state.stress}
         canAdvancePhase={state.canAdvancePhase}
         getEffectiveCost={actions.getEffectiveCost}
         onCardSelect={actions.handleCardSelect}
-        onEndTurn={actions.endTurn}
+        onEndTurn={handleEndTurn}
         onOverclock={actions.handleOverclock}
         onAdvancePhase={actions.advancePhase}
         onTerminate={() => actions.setShowDefeat(true)}

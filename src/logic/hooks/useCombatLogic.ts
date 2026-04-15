@@ -229,13 +229,11 @@ export function useCombatLogic({
       const n = Math.min(START_HAND_SIZE, stab.length);
       setHand(stab.slice(0, n));
       setDeck(stab.slice(n));
-      setDiscard((prev) => [...prev, ...activeDeck.filter(isInfraDrawCard)]);
-      addLog('[SYSTEM] COOP: параллельный цикл — рука из стабилизации; инфра команды в сбросе.');
+      addLog('[SYSTEM] COOP: параллельный цикл — рука из стабилизации (роль QA/PM).');
     } else if (skipArchitecture) {
       setHand([]);
       setDeck([]);
-      setDiscard((prev) => [...prev, ...activeDeck.filter(isInfraDrawCard)]);
-      addLog('[SYSTEM] COOP: фаза INFRA на стороне ADMIN — ваш клиент стартует с ПАЗЗЛ КОДА.');
+      addLog('[SYSTEM] COOP: старт с ПАЗЗЛ КОДА (роль Developer).');
     } else {
       const infraPile = [...activeDeck.filter(isInfraDrawCard)].sort(() => Math.random() - 0.5);
       if (infraPile.length === 0) {

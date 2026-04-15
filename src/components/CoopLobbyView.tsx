@@ -8,6 +8,8 @@ import {
   coopLobbyInvite,
   coopLobbyLeaveParty,
   coopLobbySendChat,
+  coopMatchCreate,
+  coopMatchJoin,
   type CoopLobbyChatMessage,
   type CoopLobbyOnlineUser,
   type CoopLobbyParty,
@@ -19,7 +21,11 @@ import { Radio, Users, Send, Play, LogOut, Bot } from 'lucide-react';
 type Props = {
   playerDisplayName: string;
   coopRole: CoopRole;
-  onLaunchSprint: (startupName: string, tierRank: SkillMode, opts?: { coopSquadFill: CoopSquadFill }) => void;
+  onLaunchSprint: (
+    startupName: string,
+    tierRank: SkillMode,
+    opts?: { coopSquadFill: CoopSquadFill; coopMatchId?: string | null }
+  ) => void;
   onSwitchCoopClass: (role: CoopRole) => void;
 };
 
@@ -35,6 +41,7 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   const [tierRank, setTierRank] = useState<SkillMode>('junior');
   /** Локально: подсветка «союзники-боты» (один клиент); при живой пати сбрасывается. */
   const [syntheticSquad, setSyntheticSquad] = useState(false);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -51,6 +58,7 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
     if (data) {
       setOnline(data.online);
       setParty(data.party);
+      setActiveMatchId(data.activeMatchId);
       setChat(data.chat);
     }
   }, [token, playerDisplayName, coopRole, user?.username]);
@@ -94,7 +102,7 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   const partyHasPm = party?.members.some((m) => m.coopRole === 'pm');
   const iAmPm = coopRole === 'pm';
 
-  const launch = () => {
+  const launch = async () => {
     if (iAmPm && !startupName.trim()) {
       setErr('Введите название стартапа (роль PM).');
       return;
@@ -105,7 +113,26 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
         : `SQUAD_${playerDisplayName.replace(/\s+/g, '_').slice(0, 24)}`;
     const coopSquadFill: CoopSquadFill =
       party && party.members.length > 1 ? 'live_party' : 'synthetic_bots';
-    onLaunchSprint(name, tierRank, { coopSquadFill });
+    let coopMatchId: string | null = null;
+    if (token && coopSquadFill === 'live_party' && party) {
+      const iAmHost = party.hostId === user?.id;
+      if (iAmHost) {
+        const m = await coopMatchCreate(token);
+        if (!m) {
+          setErr('Не удалось создать общий матч для пати.');
+          return;
+        }
+        coopMatchId = m.id;
+      } else if (activeMatchId) {
+        const joined = await coopMatchJoin(token, activeMatchId);
+        if (!joined) {
+          setErr('Хост ещё не открыл общий матч. Повторите через пару секунд.');
+          return;
+        }
+        coopMatchId = joined.id;
+      }
+    }
+    onLaunchSprint(name, tierRank, { coopSquadFill, coopMatchId });
   };
 
   return (

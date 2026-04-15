@@ -76,10 +76,10 @@ export const LANGUAGE_CORE_IDS: Record<DevLanguageStack, string[]> = {
     'script_nc',
     'script_curl',
     'script_ssh',
-    'infra_docker',
-    'infra_basic_pod',
-    'infra_mesh_relay',
-    'infra_log_aggregator',
+    'script_auth',
+    'script_chmod',
+    'script_ls',
+    'script_grep',
   ],
 };
 
@@ -92,12 +92,12 @@ export const LANGUAGE_LIBRARY_PACKS: Record<
     spring_web: {
       title: 'Spring / Web',
       hint: 'REST, сервисный слой, JPA-репозиторий (как Spring Data).',
-      cardIds: ['lib_spring_repo', 'infra_postgres', 'infra_redis', 'infra_lb_nginx'],
+      cardIds: ['lib_spring_repo', 'lib_lombok_data', 'mid_stream_map', 'mid_stream_collect'],
     },
     build_ci: {
       title: 'Сборка и CI',
       hint: 'Lombok, Actions, GitHub-стиль пайплайна.',
-      cardIds: ['lib_lombok_data', 'lib_lombok_builder', 'infra_actions_ci', 'infra_cicd'],
+      cardIds: ['lib_lombok_data', 'lib_lombok_builder', 'script_grep', 'script_wash_logs'],
     },
     streams_data: {
       title: 'Stream / Collections',
@@ -107,19 +107,19 @@ export const LANGUAGE_LIBRARY_PACKS: Record<
     observability: {
       title: 'Наблюдаемость',
       hint: 'Метрики, логи, CDN — как Prometheus/Grafana в проде.',
-      cardIds: ['infra_prometheus', 'infra_log_aggregator', 'infra_cdn_edge', 'infra_s3_bucket'],
+      cardIds: ['mid_stream_filter', 'mid_stream_collect', 'script_cat', 'script_grep'],
     },
   },
   kotlin: {
     jvm_interop: {
       title: 'JVM + Gradle vibe',
       hint: 'Общие JVM-карты + CI; Kotlin живёт рядом с Java-стеком.',
-      cardIds: ['syntax_try_catch', 'mid_optional', 'infra_actions_ci', 'lib_commons_blank'],
+      cardIds: ['syntax_try_catch', 'mid_optional', 'script_auth', 'lib_commons_blank'],
     },
     android_net: {
       title: 'Сеть и туннели',
       hint: 'SSH/CURL как типичные инструменты мобильного/бэка.',
-      cardIds: ['script_ssh', 'script_curl', 'script_auth', 'infra_safe_proxy'],
+      cardIds: ['script_ssh', 'script_curl', 'script_auth', 'script_ping'],
     },
     concurrency_soft: {
       title: 'Асинхронность / софт',
@@ -146,12 +146,12 @@ export const LANGUAGE_LIBRARY_PACKS: Record<
     sched_net: {
       title: 'Cron и сеть',
       hint: 'Планировщики и ping/diagnostics.',
-      cardIds: ['script_cron', 'script_ping', 'script_nc', 'infra_dns_resolver'],
+      cardIds: ['script_cron', 'script_ping', 'script_nc', 'script_auth'],
     },
     infra_cloud: {
       title: 'Облако / S3',
       hint: 'Объектное хранилище и границы сети.',
-      cardIds: ['infra_s3_bucket', 'infra_vpc_network', 'infra_edge_cache', 'infra_cdn_edge'],
+      cardIds: ['script_scp', 'script_wash_logs', 'script_chmod', 'script_curl'],
     },
   },
   go: {
@@ -163,17 +163,17 @@ export const LANGUAGE_LIBRARY_PACKS: Record<
     containers: {
       title: 'Контейнеры',
       hint: 'Docker / pod — как у типичного Go-сервиса.',
-      cardIds: ['infra_docker', 'infra_basic_pod', 'infra_k8s_cluster', 'infra_h_scaling'],
+      cardIds: ['script_chmod', 'script_rm', 'script_ls', 'script_cat'],
     },
     storage: {
       title: 'Хранилища',
       hint: 'Postgres/Redis как стандартный стек.',
-      cardIds: ['infra_postgres', 'infra_redis', 'infra_db_cluster', 'infra_raid_array'],
+      cardIds: ['script_cat', 'script_grep', 'script_sed', 'script_ls'],
     },
     deploy: {
       title: 'Деплой',
       hint: 'CI/CD и mesh.',
-      cardIds: ['infra_actions_ci', 'infra_cicd', 'infra_mesh_relay', 'infra_orbital_uplink'],
+      cardIds: ['script_auth', 'script_ssh', 'script_wash_logs', 'script_chmod'],
     },
   },
 };

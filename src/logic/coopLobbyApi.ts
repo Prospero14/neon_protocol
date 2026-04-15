@@ -30,6 +30,37 @@ export type CoopLobbyChatMessage = {
   ts: number;
 };
 
+export type CoopMatchSharedState = {
+  stress: number;
+  infraReliability: number;
+  infraResources: number;
+  deadlineTicks: number;
+  bugPressure: number;
+  projectProgress: number;
+  turn: number;
+  activeRole: string;
+};
+
+export type CoopMatchState = {
+  id: string;
+  partyId: string;
+  hostId: string;
+  status: 'pending' | 'active' | 'finished';
+  createdAt: number;
+  updatedAt: number;
+  memberIds: string[];
+  roleByUserId: Record<string, string>;
+  shared: CoopMatchSharedState;
+  seq: number;
+  recentEvents: Array<{
+    seq: number;
+    ts: number;
+    type: string;
+    actorUserId: string | null;
+    payload: Record<string, unknown>;
+  }>;
+};
+
 async function parseJson(res: Response) {
   const t = await res.text();
   try {
@@ -45,6 +76,7 @@ export async function coopLobbyHeartbeat(
 ): Promise<{
   online: CoopLobbyOnlineUser[];
   party: CoopLobbyParty | null;
+  activeMatchId: string | null;
   chat: CoopLobbyChatMessage[];
 } | null> {
   const res = await fetch('/neon_v1/coop/heartbeat', {
@@ -60,6 +92,7 @@ export async function coopLobbyHeartbeat(
   return {
     online: data.online ?? [],
     party: data.party ?? null,
+    activeMatchId: typeof data.activeMatchId === 'string' ? data.activeMatchId : null,
     chat: data.chat ?? [],
   };
 }
@@ -67,6 +100,7 @@ export async function coopLobbyHeartbeat(
 export async function coopLobbyFetchState(token: string): Promise<{
   online: CoopLobbyOnlineUser[];
   party: CoopLobbyParty | null;
+  activeMatchId: string | null;
   chat: CoopLobbyChatMessage[];
 } | null> {
   const res = await fetch('/neon_v1/coop/state', {
@@ -77,6 +111,7 @@ export async function coopLobbyFetchState(token: string): Promise<{
   return {
     online: data.online ?? [],
     party: data.party ?? null,
+    activeMatchId: typeof data.activeMatchId === 'string' ? data.activeMatchId : null,
     chat: data.chat ?? [],
   };
 }
@@ -113,4 +148,62 @@ export async function coopLobbyLeaveParty(token: string): Promise<boolean> {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.ok;
+}
+
+export async function coopMatchCreate(token: string): Promise<CoopMatchState | null> {
+  const res = await fetch('/neon_v1/coop/match/create', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.match ?? null) as CoopMatchState | null;
+}
+
+export async function coopMatchJoin(token: string, matchId: string): Promise<CoopMatchState | null> {
+  const res = await fetch('/neon_v1/coop/match/join', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ matchId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.match ?? null) as CoopMatchState | null;
+}
+
+export async function coopMatchFetchState(token: string, matchId: string): Promise<CoopMatchState | null> {
+  const qp = new URLSearchParams({ matchId });
+  const res = await fetch(`/neon_v1/coop/match/state?${qp.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.match ?? null) as CoopMatchState | null;
+}
+
+export async function coopMatchAction(
+  token: string,
+  matchId: string,
+  action: string,
+  payload: Record<string, unknown> = {}
+): Promise<CoopMatchState | null> {
+  const res = await fetch('/neon_v1/coop/match/action', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ matchId, action, payload }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.match ?? null) as CoopMatchState | null;
+}
+
+export function coopMatchEventsSource(token: string, matchId: string): EventSource {
+  const qp = new URLSearchParams({ matchId, token });
+  return new EventSource(`/neon_v1/coop/match/events?${qp.toString()}`);
 }

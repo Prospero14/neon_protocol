@@ -22,12 +22,12 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
   const s = Math.max(0, Math.min(COOP_MILESTONE_MAX_SEGMENTS - 1, segmentIndex));
   if (role === 'developer') {
     const devRot: string[][] = [
-      ['lib_spring_repo', 'infra_postgres'],
-      ['lib_lombok_data', 'infra_actions_ci'],
+      ['lib_spring_repo', 'script_curl'],
+      ['lib_lombok_data', 'script_auth'],
       ['mid_stream_map', 'mid_stream_filter'],
-      ['infra_prometheus', 'infra_log_aggregator'],
-      ['infra_redis', 'infra_lb_nginx'],
-      ['mid_stream_collect', 'infra_cdn_edge'],
+      ['mid_stream_collect', 'script_grep'],
+      ['lib_commons_blank', 'script_wash_logs'],
+      ['mid_stream_collect', 'script_scp'],
     ];
     return devRot[s] ?? devRot[0];
   }

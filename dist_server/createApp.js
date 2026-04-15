@@ -60,12 +60,62 @@ export function createApp(opts) {
     const lobbyByUser = new Map();
     const parties = new Map();
     const chatLog = [];
+    const matches = new Map();
+    const matchByPartyId = new Map();
+    const matchSseByMatchId = new Map();
+    function pushMatchEvent(match, type, actorUserId, payload) {
+        match.seq += 1;
+        const evt = {
+            seq: match.seq,
+            ts: Date.now(),
+            type,
+            actorUserId,
+            payload,
+        };
+        match.events.push(evt);
+        if (match.events.length > 200)
+            match.events.splice(0, match.events.length - 200);
+        match.updatedAt = evt.ts;
+        const listeners = matchSseByMatchId.get(match.id);
+        if (listeners && listeners.size > 0) {
+            const frame = `event: match_update\ndata: ${JSON.stringify({ matchId: match.id, event: evt })}\n\n`;
+            for (const res of listeners) {
+                try {
+                    res.write(frame);
+                }
+                catch {
+                    // ignore broken stream
+                }
+            }
+        }
+    }
+    function compactMatchView(match) {
+        return {
+            id: match.id,
+            partyId: match.partyId,
+            hostId: match.hostId,
+            status: match.status,
+            createdAt: match.createdAt,
+            updatedAt: match.updatedAt,
+            memberIds: match.memberIds,
+            roleByUserId: match.roleByUserId,
+            shared: match.shared,
+            seq: match.seq,
+            recentEvents: match.events.slice(-30),
+        };
+    }
     function lobbyAuth(req) {
         try {
             const authHeader = req.headers.authorization;
-            if (!authHeader)
+            const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+            const bodyToken = req.body && typeof req.body === 'object' && typeof req.body.token === 'string'
+                ? req.body.token
+                : null;
+            const token = (authHeader && authHeader.split(' ')[1]) ||
+                queryToken ||
+                bodyToken;
+            if (!token)
                 return null;
-            const token = authHeader.split(' ')[1];
             return jwt.verify(token, jwtSecret);
         }
         catch {
@@ -302,6 +352,12 @@ export function createApp(opts) {
             ok: true,
             online,
             party: serializeParty(lobbyByUser.get(auth.userId)?.partyId ?? null, auth.userId),
+            activeMatchId: (() => {
+                const pid = lobbyByUser.get(auth.userId)?.partyId;
+                if (!pid)
+                    return null;
+                return matchByPartyId.get(pid) ?? null;
+            })(),
             chat: chatLog.slice(-40),
         });
     });
@@ -322,6 +378,7 @@ export function createApp(opts) {
         res.json({
             online,
             party: serializeParty(me?.partyId ?? null, auth.userId),
+            activeMatchId: me?.partyId ? (matchByPartyId.get(me.partyId) ?? null) : null,
             chat: chatLog.slice(-40),
         });
     });
@@ -418,6 +475,213 @@ export function createApp(opts) {
         }
         me.partyId = null;
         res.json({ ok: true, party: null });
+    });
+    app.post('/neon_v1/coop/match/create', (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        pruneLobbyUsers();
+        const me = lobbyByUser.get(auth.userId);
+        if (!me?.partyId)
+            return sendApiError(res, 400, 'COOP_PARTY_REQUIRED', 'Сначала соберите группу.');
+        const party = parties.get(me.partyId);
+        if (!party)
+            return sendApiError(res, 400, 'COOP_PARTY_REQUIRED', 'Группа не найдена.');
+        if (party.hostId !== auth.userId) {
+            return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может запускать общий бой.');
+        }
+        const existingId = matchByPartyId.get(party.id);
+        if (existingId) {
+            const existing = matches.get(existingId);
+            if (existing && existing.status !== 'finished') {
+                return res.json({ ok: true, match: compactMatchView(existing), reused: true });
+            }
+        }
+        const roleByUserId = {};
+        for (const uid of party.memberIds) {
+            roleByUserId[uid] = lobbyByUser.get(uid)?.coopRole ?? 'developer';
+        }
+        const match = {
+            id: `match_${party.id}_${Date.now().toString(36)}`,
+            partyId: party.id,
+            hostId: auth.userId,
+            status: 'pending',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            memberIds: [...party.memberIds],
+            roleByUserId,
+            shared: {
+                stress: 0,
+                infraReliability: 60,
+                infraResources: 50,
+                deadlineTicks: 20,
+                bugPressure: 0,
+                projectProgress: 0,
+                turn: 1,
+                activeRole: 'admin',
+            },
+            events: [],
+            seq: 0,
+        };
+        matches.set(match.id, match);
+        matchByPartyId.set(party.id, match.id);
+        pushMatchEvent(match, 'match_created', auth.userId, { memberIds: match.memberIds });
+        res.json({ ok: true, match: compactMatchView(match), reused: false });
+    });
+    app.post('/neon_v1/coop/match/join', (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        const body = (req.body ?? {});
+        const matchId = typeof body.matchId === 'string' ? body.matchId : '';
+        if (!matchId)
+            return sendApiError(res, 400, 'COOP_MATCH_ID_REQUIRED', 'Укажите matchId.');
+        const match = matches.get(matchId);
+        if (!match)
+            return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Матч не найден.');
+        if (!match.memberIds.includes(auth.userId)) {
+            return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+        }
+        if (match.status === 'pending') {
+            const allSeen = match.memberIds.every((uid) => lobbyByUser.has(uid));
+            if (allSeen) {
+                match.status = 'active';
+                pushMatchEvent(match, 'match_activated', auth.userId, { readyMembers: match.memberIds.length });
+            }
+        }
+        res.json({ ok: true, match: compactMatchView(match) });
+    });
+    app.get('/neon_v1/coop/match/state', (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        const matchId = typeof req.query.matchId === 'string' ? req.query.matchId : '';
+        if (!matchId)
+            return sendApiError(res, 400, 'COOP_MATCH_ID_REQUIRED', 'Укажите matchId.');
+        const match = matches.get(matchId);
+        if (!match)
+            return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Матч не найден.');
+        if (!match.memberIds.includes(auth.userId)) {
+            return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+        }
+        res.json({ ok: true, match: compactMatchView(match) });
+    });
+    app.get('/neon_v1/coop/match/events', (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        const matchId = typeof req.query.matchId === 'string' ? req.query.matchId : '';
+        if (!matchId)
+            return sendApiError(res, 400, 'COOP_MATCH_ID_REQUIRED', 'Укажите matchId.');
+        const match = matches.get(matchId);
+        if (!match)
+            return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Матч не найден.');
+        if (!match.memberIds.includes(auth.userId)) {
+            return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+        }
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders?.();
+        const listeners = matchSseByMatchId.get(matchId) ?? new Set();
+        listeners.add(res);
+        matchSseByMatchId.set(matchId, listeners);
+        res.write(`event: hello\ndata: ${JSON.stringify({ matchId, seq: match.seq })}\n\n`);
+        const hb = setInterval(() => {
+            try {
+                res.write(`event: ping\ndata: ${Date.now()}\n\n`);
+            }
+            catch {
+                // ignore
+            }
+        }, 15_000);
+        req.on('close', () => {
+            clearInterval(hb);
+            const bucket = matchSseByMatchId.get(matchId);
+            if (!bucket)
+                return;
+            bucket.delete(res);
+            if (bucket.size === 0)
+                matchSseByMatchId.delete(matchId);
+        });
+    });
+    app.post('/neon_v1/coop/match/action', (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        const body = (req.body ?? {});
+        const matchId = typeof body.matchId === 'string' ? body.matchId : '';
+        const action = typeof body.action === 'string' ? body.action : '';
+        const payload = typeof body.payload === 'object' && body.payload !== null && !Array.isArray(body.payload)
+            ? body.payload
+            : {};
+        if (!matchId)
+            return sendApiError(res, 400, 'COOP_MATCH_ID_REQUIRED', 'Укажите matchId.');
+        if (!action)
+            return sendApiError(res, 400, 'COOP_ACTION_REQUIRED', 'Укажите action.');
+        const match = matches.get(matchId);
+        if (!match)
+            return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Матч не найден.');
+        if (match.status === 'finished')
+            return sendApiError(res, 409, 'COOP_MATCH_FINISHED', 'Матч уже завершён.');
+        if (!match.memberIds.includes(auth.userId)) {
+            return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+        }
+        const role = match.roleByUserId[auth.userId] ?? 'developer';
+        if (match.shared.activeRole !== role && action !== 'apply_pm_support') {
+            return sendApiError(res, 409, 'COOP_ROLE_TURN_DENIED', `Сейчас ход роли ${match.shared.activeRole}; ваш класс ${role}.`);
+        }
+        if (action === 'end_turn') {
+            const order = ['admin', 'developer', 'qa', 'pm'];
+            const curr = order.indexOf(match.shared.activeRole);
+            const next = order[(curr + 1 + order.length) % order.length];
+            match.shared.activeRole = next;
+            match.shared.turn += 1;
+            match.shared.deadlineTicks = Math.max(0, match.shared.deadlineTicks - 1);
+            pushMatchEvent(match, action, auth.userId, { fromRole: role, nextRole: next });
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'apply_admin_infra') {
+            const reliabilityUp = Math.max(0, Math.min(20, Number(payload.reliabilityUp ?? 0)));
+            const resourcesDown = Math.max(0, Math.min(20, Number(payload.resourcesDown ?? 0)));
+            match.shared.infraReliability = Math.min(100, match.shared.infraReliability + reliabilityUp);
+            match.shared.infraResources = Math.max(0, match.shared.infraResources - resourcesDown);
+            pushMatchEvent(match, action, auth.userId, { reliabilityUp, resourcesDown });
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'apply_dev_progress') {
+            const progressUp = Math.max(0, Math.min(25, Number(payload.progressUp ?? 0)));
+            const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 0)));
+            match.shared.projectProgress = Math.min(100, match.shared.projectProgress + progressUp);
+            match.shared.stress = Math.min(100, match.shared.stress + stressUp);
+            pushMatchEvent(match, action, auth.userId, { progressUp, stressUp });
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'apply_qa_defense') {
+            const bugsDown = Math.max(0, Math.min(20, Number(payload.bugsDown ?? 0)));
+            const relUp = Math.max(0, Math.min(10, Number(payload.reliabilityUp ?? 0)));
+            match.shared.bugPressure = Math.max(0, match.shared.bugPressure - bugsDown);
+            match.shared.infraReliability = Math.min(100, match.shared.infraReliability + relUp);
+            pushMatchEvent(match, action, auth.userId, { bugsDown, reliabilityUp: relUp });
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'apply_pm_support') {
+            const stressDown = Math.max(0, Math.min(20, Number(payload.stressDown ?? 0)));
+            const deadlineUp = Math.max(0, Math.min(3, Number(payload.deadlineUp ?? 0)));
+            match.shared.stress = Math.max(0, match.shared.stress - stressDown);
+            match.shared.deadlineTicks = Math.min(40, match.shared.deadlineTicks + deadlineUp);
+            pushMatchEvent(match, action, auth.userId, { stressDown, deadlineUp });
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'finish_match') {
+            if (auth.userId !== match.hostId) {
+                return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может закрыть матч.');
+            }
+            match.status = 'finished';
+            pushMatchEvent(match, action, auth.userId, {});
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        return sendApiError(res, 400, 'COOP_ACTION_UNKNOWN', `Неизвестное действие: ${action}.`);
     });
     const DIST = path.join(process.cwd(), 'dist');
     const sendHtmlNoCache = (res, file) => {

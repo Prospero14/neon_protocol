@@ -117,6 +117,12 @@ export const CoopTeamSitrep: React.FC<Props> = ({
           <span className="coop-team-sitrep__k">MITIGATION</span>
           <span className="coop-team-sitrep__v">{mitigationBuffer}</span>
         </div>
+        {squadFill === 'live_party' && matchShared && (
+          <div>
+            <span className="coop-team-sitrep__k">INTENSITY</span>
+            <span className="coop-team-sitrep__v">T{matchShared.missionIntensityTier} / {matchShared.missionStepTarget} steps</span>
+          </div>
+        )}
         <div className="coop-team-sitrep__span2">
           <span className="coop-team-sitrep__k">ИНФРА (слотов занято)</span>
           <span className="coop-team-sitrep__v">{infraFilled}/8</span>
@@ -227,6 +233,11 @@ export const CoopTeamSitrep: React.FC<Props> = ({
                 {line}
               </div>
             ))}
+          </div>
+        )}
+        {squadFill === 'live_party' && matchShared && (
+          <div className="coop-team-sitrep__support-line">
+            PRESSURE +BUG {matchShared.pressurePulse.bug} / +STRESS {matchShared.pressurePulse.stress} / -INFRA {matchShared.pressurePulse.infra}
           </div>
         )}
         {squadFill === 'live_party' && matchShared?.lastReleaseCheck && (

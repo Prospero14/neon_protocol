@@ -35,6 +35,12 @@ export interface TechnicalTask {
   districtId?: string; // Optional: restrict task to a specific district
   minLevel?: number; // E.g. 1 (10 exploits), 2 (20 exploits) inside the grade
   resistanceType?: 'ENCRYPTED' | 'AUTH_LOCKED'; // Forces specific bypass cards
+  /** Источник контента: базовая библиотека/полигон/внешний адаптированный пул. */
+  source?: 'base' | 'coop_yard' | 'codewars';
+  /** Тематический трек задачи (algo/network/infra/testing/business и т.д.). */
+  track?: string;
+  /** Интенсивность кооп-окна, влияющая на pressure в сетевом матче. */
+  intensityTier?: 1 | 2 | 3 | 4;
 }
 
 

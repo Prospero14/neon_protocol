@@ -46,6 +46,13 @@ export type CoopMatchSharedState = {
   parallelWindowMs: number;
   parallelWindowEndsAt: number;
   queuedIntents: number;
+  missionStepTarget: number;
+  missionIntensityTier: number;
+  pressurePulse: {
+    bug: number;
+    stress: number;
+    infra: number;
+  };
   lastReleaseCheck: {
     ok: boolean;
     ts: number;

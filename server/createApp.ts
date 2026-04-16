@@ -109,6 +109,13 @@ export function createApp(opts: CreateAppOptions) {
     parallelWindowMs: number;
     parallelWindowEndsAt: number;
     queuedIntents: number;
+    missionStepTarget: number;
+    missionIntensityTier: number;
+    pressurePulse: {
+      bug: number;
+      stress: number;
+      infra: number;
+    };
     lastReleaseCheck: {
       ok: boolean;
       ts: number;
@@ -309,6 +316,19 @@ export function createApp(opts: CreateAppOptions) {
     }
     match.intentQueue = [];
     match.shared.queuedIntents = 0;
+    const intensity = Math.max(1, Math.min(4, Math.floor(match.shared.missionIntensityTier || 1)));
+    const missionSteps = Math.max(1, Math.floor(match.shared.missionStepTarget || 8));
+    const longRunFactor = Math.max(1, Math.floor((missionSteps - 8) / 2));
+    const bugPulse = Math.max(0, intensity + Math.floor(longRunFactor / 3));
+    const stressPulse = Math.max(0, Math.floor(intensity / 2) + Math.floor(longRunFactor / 4));
+    const infraPulse = Math.max(0, Math.floor((intensity - 1) / 2) + Math.floor(longRunFactor / 5));
+    match.shared.bugPressure = Math.min(100, match.shared.bugPressure + bugPulse);
+    match.shared.infraReliability = Math.max(0, match.shared.infraReliability - infraPulse);
+    match.shared.roleStress.qa = Math.min(100, match.shared.roleStress.qa + stressPulse);
+    match.shared.roleStress.admin = Math.min(100, match.shared.roleStress.admin + stressPulse);
+    match.shared.roleStress.pm = Math.min(100, match.shared.roleStress.pm + stressPulse);
+    match.shared.pressurePulse = { bug: bugPulse, stress: stressPulse, infra: infraPulse };
+    recomputeTeamStress(match);
     const order = ['admin', 'developer', 'qa', 'pm'];
     for (const r of order) {
       const prev = match.shared.supportCooldownByRole[r] ?? 0;
@@ -318,7 +338,13 @@ export function createApp(opts: CreateAppOptions) {
     match.shared.deadlineTicks = Math.max(0, match.shared.deadlineTicks - 1);
     match.shared.activeRole = 'parallel';
     match.shared.parallelWindowEndsAt = Date.now() + match.shared.parallelWindowMs;
-    pushMatchEvent(match, 'parallel_window_resolved', byUserId, { applied, intents: intents.length });
+    pushMatchEvent(match, 'parallel_window_resolved', byUserId, {
+      applied,
+      intents: intents.length,
+      pressurePulse: match.shared.pressurePulse,
+      missionIntensityTier: match.shared.missionIntensityTier,
+      missionStepTarget: match.shared.missionStepTarget,
+    });
   }
 
   function checkReleaseResult(match: CoopMatch): { ok: boolean; note: string } {
@@ -762,6 +788,9 @@ export function createApp(opts: CreateAppOptions) {
         parallelWindowMs: 15000,
         parallelWindowEndsAt: Date.now() + 15000,
         queuedIntents: 0,
+        missionStepTarget: 8,
+        missionIntensityTier: 1,
+        pressurePulse: { bug: 0, stress: 0, infra: 0 },
         lastReleaseCheck: null,
       },
       events: [],
@@ -945,6 +974,13 @@ export function createApp(opts: CreateAppOptions) {
         if (match.intentQueue.some((q) => q.clientActionId === clientActionId)) {
           return sendApiError(res, 409, 'COOP_DUPLICATE_ACTION', 'Действие уже принято.');
         }
+        const missionStepTarget = Math.max(1, Math.floor(Number(payload.missionStepTarget ?? match.shared.missionStepTarget ?? 8)));
+        const missionIntensityTier = Math.max(
+          1,
+          Math.min(4, Math.floor(Number(payload.missionIntensityTier ?? match.shared.missionIntensityTier ?? 1))),
+        );
+        match.shared.missionStepTarget = missionStepTarget;
+        match.shared.missionIntensityTier = missionIntensityTier;
         match.intentQueue.push({
           clientActionId,
           ts: Date.now(),
@@ -954,7 +990,13 @@ export function createApp(opts: CreateAppOptions) {
           payload,
         });
         match.shared.queuedIntents = match.intentQueue.length;
-        pushMatchEvent(match, 'intent_queued', auth.userId, { action, clientActionId, role });
+        pushMatchEvent(match, 'intent_queued', auth.userId, {
+          action,
+          clientActionId,
+          role,
+          missionStepTarget,
+          missionIntensityTier,
+        });
         return res.json({ ok: true, match: compactMatchView(match) });
       }
     }

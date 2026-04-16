@@ -280,6 +280,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   }, [netMatch, coopSquadFill]);
   const livePartyMode = coopSquadFill === 'live_party' && Boolean(netMatch && token);
   const isParallelWindow = livePartyMode && netMatch?.shared.mode === 'parallel_window';
+  const missionStepTarget = Math.max(1, missionTz.steps.length);
+  const missionIntensityTier = Math.max(1, Math.min(4, missionStepTarget >= 16 ? 4 : missionStepTarget >= 12 ? 3 : missionStepTarget >= 10 ? 2 : 1));
+  const missionMetaPayload = { missionStepTarget, missionIntensityTier };
   const isMyRoleTurn =
     livePartyMode &&
     Boolean(coopRole && (isParallelWindow || netMatch?.shared.activeRole === coopRole));
@@ -303,12 +306,12 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         const payload =
           isParallelWindow
             ? coopRole === 'developer'
-              ? { progressUp: 10, stressUp: 4 }
+              ? { progressUp: 10, stressUp: 4, ...missionMetaPayload }
               : coopRole === 'qa'
-                ? { bugsDown: 7, reliabilityUp: 3, stressDown: 4, targetRole: 'developer' }
+                ? { bugsDown: 7, reliabilityUp: 3, stressDown: 4, targetRole: 'developer', ...missionMetaPayload }
                 : coopRole === 'admin'
-                  ? { reliabilityUp: 8, resourcesDown: 4, stressUp: 2, targetRole: 'developer' }
-                  : { stressDown: 9, deadlineUp: 1, targetRole: 'developer' }
+                  ? { reliabilityUp: 8, resourcesDown: 4, stressUp: 2, targetRole: 'developer', ...missionMetaPayload }
+                  : { stressDown: 9, deadlineUp: 1, targetRole: 'developer', ...missionMetaPayload }
             : {};
         const updated = await coopMatchAction(
           token,
@@ -355,7 +358,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         token,
         netMatch.id,
         'apply_pm_support',
-        { targetRole, stressDown: 9, deadlineUp: 1 },
+        { targetRole, stressDown: 9, deadlineUp: 1, ...missionMetaPayload },
           netMatch.seq,
           `pm_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
       );
@@ -374,7 +377,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         token,
         netMatch.id,
         'apply_qa_defense',
-        { targetRole, bugsDown: 7, reliabilityUp: 3, stressDown: 4 },
+        { targetRole, bugsDown: 7, reliabilityUp: 3, stressDown: 4, ...missionMetaPayload },
           netMatch.seq,
           `qa_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
       );
@@ -393,7 +396,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         token,
         netMatch.id,
         'apply_admin_infra',
-        { targetRole, reliabilityUp: 8, resourcesDown: 4, stressUp: 2 },
+        { targetRole, reliabilityUp: 8, resourcesDown: 4, stressUp: 2, ...missionMetaPayload },
           netMatch.seq,
           `ops_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
       );

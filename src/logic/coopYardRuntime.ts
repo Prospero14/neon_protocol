@@ -5,6 +5,7 @@
 import type { TechnicalTask } from './combatTasks';
 import {
   COOP_NODE_MISSION_SLICES,
+  COOP_YARD_JUNIOR_INTRO_MISSIONS,
   COOP_YARD_MISSIONS_PER_TIER,
 } from './coopYardMissions';
 import type { SkillMode } from './skillMode';
@@ -39,6 +40,11 @@ export function countCoopTierMissionsCleared(completedIds: string[], tierRank: S
 
 export function isCoopBossUnlocked(completedIds: string[], tierRank: SkillMode): boolean {
   return countCoopTierMissionsCleared(completedIds, tierRank) >= COOP_YARD_MISSIONS_PER_TIER;
+}
+
+export function isCoopCodewarsStageUnlocked(completedIds: string[], tierRank: SkillMode): boolean {
+  if (tierRank !== 'junior') return true;
+  return countCoopTierMissionsCleared(completedIds, tierRank) >= COOP_YARD_JUNIOR_INTRO_MISSIONS;
 }
 
 export function nextCoopTierRank(rank: SkillMode): SkillMode | null {

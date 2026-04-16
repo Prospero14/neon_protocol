@@ -414,9 +414,15 @@ export function createApp(opts) {
     app.post('/neon_v1/game/sync', async (req, res) => {
         try {
             const authHeader = req.headers.authorization;
-            if (!authHeader)
+            const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+            const bodyToken = req.body && typeof req.body === 'object' && typeof req.body.token === 'string'
+                ? req.body.token
+                : null;
+            const token = (authHeader && authHeader.split(' ')[1]) ||
+                queryToken ||
+                bodyToken;
+            if (!token)
                 return sendApiError(res, 401, 'SYNC_NO_TOKEN', 'Нет токена авторизации.');
-            const token = authHeader.split(' ')[1];
             const decoded = jwt.verify(token, jwtSecret);
             const body = req.body;
             const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;

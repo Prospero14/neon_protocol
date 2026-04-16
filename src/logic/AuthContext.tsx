@@ -76,7 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : response.statusText || 'Sync failed';
         const code = typeof errBody.code === 'string' ? errBody.code : '';
         console.error('Failed to sync game state:', msg, 'HTTP', response.status, code || '(no code)');
-        if (response.status === 401 || code === 'SYNC_INVALID_TOKEN' || code === 'SYNC_NO_TOKEN') {
+        // Only hard-logout on confirmed invalid token.
+        if (response.status === 401 && code === 'SYNC_INVALID_TOKEN') {
           logout();
         }
         return;

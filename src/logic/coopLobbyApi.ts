@@ -41,6 +41,16 @@ export type CoopMatchSharedState = {
   activeRole: string;
   roleStress: Record<string, number>;
   roleTaskProgress: Record<string, number>;
+  supportCooldownByRole: Record<string, number>;
+  mode: 'sequential' | 'parallel_window';
+  parallelWindowMs: number;
+  parallelWindowEndsAt: number;
+  queuedIntents: number;
+  lastReleaseCheck: {
+    ok: boolean;
+    ts: number;
+    note: string;
+  } | null;
 };
 
 export type CoopMatchState = {
@@ -191,11 +201,15 @@ export async function coopMatchAction(
   matchId: string,
   action: string,
   payload: Record<string, unknown> = {},
-  expectedSeq?: number
+  expectedSeq?: number,
+  clientActionId?: string
 ): Promise<CoopMatchState | null> {
   const body: Record<string, unknown> = { matchId, action, payload };
   if (typeof expectedSeq === 'number' && Number.isFinite(expectedSeq)) {
     body.expectedSeq = Math.max(0, Math.floor(expectedSeq));
+  }
+  if (typeof clientActionId === 'string' && clientActionId.trim()) {
+    body.clientActionId = clientActionId.trim();
   }
   const res = await fetch('/neon_v1/coop/match/action', {
     method: 'POST',

@@ -515,6 +515,94 @@ export function useCombatLogic({
             setStress((s) => Math.min(100, s + 4));
             addLog('[SOFT] DEADLINE_TRANCE: +1 CPU, +1 draw, +4 stress');
             break;
+          case 'soft_agile_ceremony':
+          case 'soft_daily_sync':
+          case 'soft_retro_action':
+          case 'soft_backlog_refine':
+          case 'soft_sprint_goal':
+            setPlayerProgress((p) => Math.min(100, p + 6));
+            setStress((s) => Math.max(0, s - 3));
+            setMitigationBuffer((b) => Math.min(30, b + 2));
+            addLog('[SOFT] FLOW_SYNC: +6 project, -3 stress, +2 mitigation');
+            break;
+          case 'soft_pizza_party':
+          case 'soft_team_health':
+            setStress((s) => Math.max(0, s - 12));
+            setMitigationBuffer((b) => Math.min(30, b + 4));
+            addLog('[SOFT] MORALE_BOOST: -12 stress, +4 mitigation');
+            break;
+          case 'soft_scope_cut':
+          case 'soft_release_train':
+          case 'soft_risk_register':
+          case 'soft_kpi_dashboard':
+            setAiDeadline((d) => Math.min(20, d + 1));
+            setAiProgress((p) => Math.max(0, p - 4));
+            addLog('[SOFT] TIMEBOX_DEFENSE: +1 deadline, -4 threat');
+            break;
+          case 'soft_stakeholder_alignment':
+          case 'soft_priority_matrix':
+          case 'soft_unblock_channel':
+            drawCards(2);
+            setCpu((c) => Math.min(cpuMax + 2, c + 1));
+            setStress((s) => Math.max(0, s - 2));
+            addLog('[SOFT] TEAM_SYNC: draw +2, +1 CPU, -2 stress');
+            break;
+          case 'soft_dev_pairing':
+            setPlayerProgress((p) => Math.min(100, p + 10));
+            setCpu((c) => Math.min(cpuMax + 2, c + 1));
+            addLog('[SOFT] DEV_PAIRING: +10 project, +1 CPU');
+            break;
+          case 'soft_qa_handoff':
+            setBugPoints((p) => Math.max(0, p - 7));
+            setMitigationBuffer((b) => Math.min(30, b + 3));
+            addLog('[SOFT] QA_HANDOFF: bugs -7, +3 mitigation');
+            break;
+          case 'soft_ops_priority':
+            setMitigationBuffer((b) => Math.min(30, b + 8));
+            setAiProgress((p) => Math.max(0, p - 4));
+            addLog('[SOFT] OPS_PRIORITY: +8 mitigation, threat -4');
+            break;
+          case 'soft_cross_team_sync':
+            setPlayerProgress((p) => Math.min(100, p + 6));
+            setBugPoints((p) => Math.max(0, p - 4));
+            setStress((s) => Math.max(0, s - 5));
+            addLog('[SOFT] CROSS_TEAM_SYNC: +6 project, bugs -4, stress -5');
+            break;
+          case 'soft_release_freeze':
+            setAiProgress((p) => Math.max(0, p - 9));
+            setAiDeadline((d) => Math.min(20, d + 1));
+            setStress((s) => Math.max(0, s - 3));
+            addLog('[SOFT] RELEASE_FREEZE: threat -9, +1 deadline, stress -3');
+            break;
+          case 'soft_support_rotation':
+            drawCards(2);
+            setStress((s) => Math.max(0, s - 8));
+            setMitigationBuffer((b) => Math.min(30, b + 2));
+            addLog('[SOFT] SUPPORT_ROTATION: draw +2, stress -8, +2 mitigation');
+            break;
+          case 'soft_crisis_room':
+            setAiProgress((p) => Math.max(0, p - 10));
+            setBugPoints((p) => Math.max(0, p - 6));
+            setStress((s) => Math.max(0, s - 6));
+            addLog('[SOFT] CRISIS_ROOM: threat -10, bugs -6, stress -6');
+            break;
+          case 'soft_business_case':
+            setAiProgress((p) => Math.max(0, p - 7));
+            setPlayerProgress((p) => Math.min(100, p + 5));
+            addLog('[SOFT] BUSINESS_CASE: threat -7, project +5');
+            break;
+          case 'soft_hard_tradeoff':
+            setPlayerProgress((p) => Math.min(100, p + 12));
+            setBugPoints((p) => Math.max(0, p - 2));
+            setStress((s) => Math.min(100, s + 5));
+            addLog('[SOFT] HARD_TRADEOFF: +12 project, -2 bugs, +5 stress');
+            break;
+          case 'soft_wip_limit':
+            setBugPoints((p) => Math.max(0, p - 5));
+            setStress((s) => Math.max(0, s - 6));
+            setMitigationBuffer((b) => Math.min(30, b + 3));
+            addLog('[SOFT] WIP_LIMIT: bugs -5, stress -6, +3 mitigation');
+            break;
           default:
             break;
         }
@@ -621,7 +709,11 @@ export function useCombatLogic({
     const slot = runtimeRail[idx];
 
     if (slot.type === 'BUG_ERROR') {
-      const canDestroyIce = card.type === 'DEFENSIVE' || card.type === 'REACTION' || (card.type === 'SCRIPT' && (card.id === 'script_ping' || card.id === 'script_auth'));
+      const canDestroyIce =
+        card.type === 'DEFENSIVE' ||
+        card.type === 'REACTION' ||
+        (card.type === 'SCRIPT' && (card.id === 'script_ping' || card.id === 'script_auth')) ||
+        (coopActive && coopRole === 'pm' && card.type === 'SOFT');
       if (canDestroyIce) {
         const bugPayload = slot.content as BugAction;
         const outplay = isOutplayCounter(card, bugPayload.problemType);

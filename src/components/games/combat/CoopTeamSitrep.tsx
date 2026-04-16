@@ -20,6 +20,15 @@ type Props = {
   nextIntentName: string | null;
   lastAiActionName: string | null;
   matchShared?: CoopMatchSharedState | null;
+  onPmSupportTarget?: ((targetRole: CoopRole) => void) | null;
+  pmSupportBusy?: boolean;
+  onQaSupportTarget?: ((targetRole: CoopRole) => void) | null;
+  qaSupportBusy?: boolean;
+  onAdminSupportTarget?: ((targetRole: CoopRole) => void) | null;
+  adminSupportBusy?: boolean;
+  supportFeed?: string[];
+  onPmReleaseCheck?: (() => void) | null;
+  pmReleaseBusy?: boolean;
 };
 
 const roleLabel = (r: CoopRole) => COOP_ROLE_LABELS[r].title;
@@ -39,7 +48,19 @@ export const CoopTeamSitrep: React.FC<Props> = ({
   nextIntentName,
   lastAiActionName,
   matchShared = null,
+  onPmSupportTarget = null,
+  pmSupportBusy = false,
+  onQaSupportTarget = null,
+  qaSupportBusy = false,
+  onAdminSupportTarget = null,
+  adminSupportBusy = false,
+  supportFeed = [],
+  onPmReleaseCheck = null,
+  pmReleaseBusy = false,
 }) => {
+  const pmCd = Math.max(0, Math.floor(matchShared?.supportCooldownByRole?.pm ?? 0));
+  const qaCd = Math.max(0, Math.floor(matchShared?.supportCooldownByRole?.qa ?? 0));
+  const adminCd = Math.max(0, Math.floor(matchShared?.supportCooldownByRole?.admin ?? 0));
   const slots = (['developer', 'qa', 'admin', 'pm'] as CoopRole[]).map((r) => ({
     role: r,
     you: r === coopRole,
@@ -146,7 +167,72 @@ export const CoopTeamSitrep: React.FC<Props> = ({
                 })}
               </div>
             )}
+            {squadFill === 'live_party' && onPmSupportTarget && (
+              <div className="coop-team-sitrep__pm-actions">
+                <button type="button" className="coop-team-sitrep__pm-btn" disabled={pmSupportBusy || pmCd > 0} onClick={() => onPmSupportTarget('developer')}>
+                  SUPPORT DEV{pmCd > 0 ? ` [CD:${pmCd}]` : ''}
+                </button>
+                <button type="button" className="coop-team-sitrep__pm-btn" disabled={pmSupportBusy || pmCd > 0} onClick={() => onPmSupportTarget('qa')}>
+                  SUPPORT QA{pmCd > 0 ? ` [CD:${pmCd}]` : ''}
+                </button>
+                <button type="button" className="coop-team-sitrep__pm-btn" disabled={pmSupportBusy || pmCd > 0} onClick={() => onPmSupportTarget('admin')}>
+                  SUPPORT ADMIN{pmCd > 0 ? ` [CD:${pmCd}]` : ''}
+                </button>
+              </div>
+            )}
+            {squadFill === 'live_party' && onPmReleaseCheck && (
+              <div className="coop-team-sitrep__pm-actions" style={{ marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="coop-team-sitrep__pm-btn"
+                  disabled={pmReleaseBusy}
+                  onClick={onPmReleaseCheck}
+                >
+                  RELEASE_CHECK
+                </button>
+              </div>
+            )}
           </>
+        )}
+        {coopRole === 'qa' && squadFill === 'live_party' && onQaSupportTarget && (
+          <div className="coop-team-sitrep__pm-actions">
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={qaSupportBusy || qaCd > 0} onClick={() => onQaSupportTarget('developer')}>
+              QA{'->'}DEV{qaCd > 0 ? ` [CD:${qaCd}]` : ''}
+            </button>
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={qaSupportBusy || qaCd > 0} onClick={() => onQaSupportTarget('admin')}>
+              QA{'->'}ADMIN{qaCd > 0 ? ` [CD:${qaCd}]` : ''}
+            </button>
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={qaSupportBusy || qaCd > 0} onClick={() => onQaSupportTarget('pm')}>
+              QA{'->'}PM{qaCd > 0 ? ` [CD:${qaCd}]` : ''}
+            </button>
+          </div>
+        )}
+        {coopRole === 'admin' && squadFill === 'live_party' && onAdminSupportTarget && (
+          <div className="coop-team-sitrep__pm-actions">
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={adminSupportBusy || adminCd > 0} onClick={() => onAdminSupportTarget('developer')}>
+              OPS{'->'}DEV{adminCd > 0 ? ` [CD:${adminCd}]` : ''}
+            </button>
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={adminSupportBusy || adminCd > 0} onClick={() => onAdminSupportTarget('qa')}>
+              OPS{'->'}QA{adminCd > 0 ? ` [CD:${adminCd}]` : ''}
+            </button>
+            <button type="button" className="coop-team-sitrep__pm-btn" disabled={adminSupportBusy || adminCd > 0} onClick={() => onAdminSupportTarget('pm')}>
+              OPS{'->'}PM{adminCd > 0 ? ` [CD:${adminCd}]` : ''}
+            </button>
+          </div>
+        )}
+        {squadFill === 'live_party' && supportFeed.length > 0 && (
+          <div className="coop-team-sitrep__support-feed">
+            {supportFeed.slice(0, 3).map((line, idx) => (
+              <div key={`${idx}_${line}`} className="coop-team-sitrep__support-line">
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
+        {squadFill === 'live_party' && matchShared?.lastReleaseCheck && (
+          <div className={`coop-team-sitrep__support-line ${matchShared.lastReleaseCheck.ok ? '' : 'coop-team-sitrep__support-line--bad'}`}>
+            {matchShared.lastReleaseCheck.note}
+          </div>
         )}
       </div>
       {squadFill === 'synthetic_bots' && (

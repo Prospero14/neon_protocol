@@ -6,7 +6,13 @@
  * visualType: ICE | AI | DEVELOPER — подсказка для UI и текстов; имя/id карточки задаёт конкретную маску.
  */
 
-export type BugProblemType = 'FATIGUE' | 'TECH_DEBT' | 'SYNTAX_ERROR' | 'LOGIC_GAP' | 'MEMORY_LEAK';
+export type BugProblemType =
+  | 'FATIGUE'
+  | 'TECH_DEBT'
+  | 'SYNTAX_ERROR'
+  | 'LOGIC_GAP'
+  | 'MEMORY_LEAK'
+  | 'BUSINESS_RISK';
 
 export interface BugAction {
   id: string;
@@ -198,7 +204,9 @@ export const BUGS: BugEnemy[] = [
         progressPoints: 15,
         bugPoints: 5,
         damage: 0,
-        problemType: 'FATIGUE'
+        problemType: 'BUSINESS_RISK',
+        injectStatusId: 'status_deprecated',
+        injectDestination: 'discard'
       },
       {
         id: 'vag_blocker',
@@ -209,6 +217,15 @@ export const BUGS: BugEnemy[] = [
         damage: 5,
         problemType: 'LOGIC_GAP',
         spawnId: 'bug_card_glitch'
+      },
+      {
+        id: 'vag_budget_cut',
+        name: 'Budget Cut',
+        description: 'Бизнес режет бюджет спринта: растёт дедлайн-давление и фоновые баги.',
+        progressPoints: 18,
+        bugPoints: 8,
+        damage: 6,
+        problemType: 'BUSINESS_RISK'
       }
     ]
   },

@@ -33,12 +33,12 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
   }
   if (role === 'qa') {
     const qa: string[][] = [
-      ['react_integration_test', 'react_null_packet'],
-      ['react_trace_jam', 'def_validator'],
-      ['react_firewall_patch', 'react_refactoring'],
-      ['react_emergency_flush', 'react_unit_test'],
-      ['react_spoof_id', 'react_log_mask'],
-      ['react_integration_test', 'react_firewall_patch'],
+      ['react_contract_test', 'def_smoke_suite'],
+      ['react_schema_fence', 'def_ci_gate'],
+      ['react_bug_repro', 'react_root_cause'],
+      ['react_flaky_quarantine', 'react_property_fuzz'],
+      ['def_canary_assert', 'react_perf_budget'],
+      ['react_race_detector', 'def_release_candidate'],
     ];
     return qa[s] ?? qa[0];
   }
@@ -55,12 +55,12 @@ export function coopRewardCardIdsForSegment(role: CoopRole, segmentIndex: number
   }
   if (role === 'pm') {
     const pm: string[][] = [
-      ['soft_deadline_trance', 'soft_signal_prediction'],
-      ['soft_critical_thinking', 'soft_buffer_flush'],
-      ['soft_pair_programming', 'soft_focus'],
-      ['soft_tactical_breath', 'soft_patch_drill'],
-      ['soft_coffee', 'soft_ai_ask'],
-      ['soft_recursive_logic', 'soft_async_request'],
+      ['soft_daily_sync', 'soft_sprint_goal'],
+      ['soft_agile_ceremony', 'soft_backlog_refine'],
+      ['soft_scope_cut', 'soft_release_train'],
+      ['soft_stakeholder_alignment', 'soft_business_case'],
+      ['soft_pizza_party', 'soft_team_health'],
+      ['soft_crisis_room', 'soft_risk_register'],
     ];
     return pm[s] ?? pm[0];
   }

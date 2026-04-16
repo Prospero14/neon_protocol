@@ -1492,6 +1492,39 @@
   font-size: 0.5rem;
   color: #94a3b8;
 }
+.coop-team-sitrep__pm-actions {
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+}
+.coop-team-sitrep__pm-btn {
+  pointer-events: auto;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(30, 41, 59, 0.75);
+  color: #c4b5fd;
+  font-size: 0.48rem;
+  letter-spacing: 0.06em;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.coop-team-sitrep__pm-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.coop-team-sitrep__support-feed {
+  margin-top: 6px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+  padding-top: 5px;
+  display: grid;
+  gap: 3px;
+}
+.coop-team-sitrep__support-line {
+  font-size: 0.5rem;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
 .coop-team-sitrep__foot {
   margin: 8px 0 0;
   font-size: 0.55rem;

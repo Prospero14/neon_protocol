@@ -104,6 +104,24 @@ export function createApp(opts: CreateAppOptions) {
     activeRole: string;
     roleStress: Record<string, number>;
     roleTaskProgress: Record<string, number>;
+    supportCooldownByRole: Record<string, number>;
+    mode: 'sequential' | 'parallel_window';
+    parallelWindowMs: number;
+    parallelWindowEndsAt: number;
+    queuedIntents: number;
+    lastReleaseCheck: {
+      ok: boolean;
+      ts: number;
+      note: string;
+    } | null;
+  };
+  type CoopMatchIntent = {
+    clientActionId: string;
+    ts: number;
+    userId: string;
+    role: string;
+    action: string;
+    payload: Record<string, unknown>;
   };
   type CoopMatchEvent = {
     seq: number;
@@ -123,6 +141,7 @@ export function createApp(opts: CreateAppOptions) {
     roleByUserId: Record<string, string>;
     shared: CoopMatchSharedState;
     events: CoopMatchEvent[];
+    intentQueue: CoopMatchIntent[];
     seq: number;
   };
   const matches = new Map<string, CoopMatch>();
@@ -173,6 +192,148 @@ export function createApp(opts: CreateAppOptions) {
       seq: match.seq,
       recentEvents: match.events.slice(-30),
     };
+  }
+
+  function recomputeTeamStress(match: CoopMatch) {
+    match.shared.stress = Math.min(
+      100,
+      Math.round(
+        (match.shared.roleStress.admin +
+          match.shared.roleStress.developer +
+          match.shared.roleStress.qa +
+          match.shared.roleStress.pm) / 4
+      )
+    );
+  }
+
+  function normalizeTargetRole(payload: Record<string, unknown>): 'admin' | 'developer' | 'qa' | 'pm' | null {
+    if (typeof payload.targetRole === 'string' && ['admin', 'developer', 'qa', 'pm'].includes(payload.targetRole)) {
+      return payload.targetRole as 'admin' | 'developer' | 'qa' | 'pm';
+    }
+    return null;
+  }
+
+  function applyMatchIntent(match: CoopMatch, intent: CoopMatchIntent): { ok: boolean; reason?: string } {
+    const payload = intent.payload ?? {};
+    const role = intent.role;
+    const targetRole = normalizeTargetRole(payload);
+
+    if (intent.action === 'apply_admin_infra') {
+      if (role !== 'admin') return { ok: false, reason: 'ROLE_DENIED' };
+      if ((match.shared.supportCooldownByRole.admin ?? 0) > 0) return { ok: false, reason: 'COOLDOWN' };
+      const reliabilityUp = Math.max(0, Math.min(20, Number(payload.reliabilityUp ?? 8)));
+      const resourcesDown = Math.max(0, Math.min(20, Number(payload.resourcesDown ?? 4)));
+      const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 2)));
+      match.shared.infraReliability = Math.min(100, match.shared.infraReliability + reliabilityUp);
+      match.shared.infraResources = Math.max(0, match.shared.infraResources - resourcesDown);
+      match.shared.roleTaskProgress.admin = Math.min(100, match.shared.roleTaskProgress.admin + reliabilityUp);
+      if (targetRole && targetRole !== 'admin') {
+        match.shared.roleTaskProgress[targetRole] = Math.min(
+          100,
+          (match.shared.roleTaskProgress[targetRole] ?? 0) + Math.max(2, Math.floor(reliabilityUp / 2))
+        );
+        match.shared.roleStress[targetRole] = Math.max(0, (match.shared.roleStress[targetRole] ?? 0) - 2);
+      }
+      match.shared.roleStress.admin = Math.min(100, match.shared.roleStress.admin + stressUp);
+      match.shared.supportCooldownByRole.admin = 1;
+      recomputeTeamStress(match);
+      pushMatchEvent(match, intent.action, intent.userId, { reliabilityUp, resourcesDown, stressUp, targetRole });
+      return { ok: true };
+    }
+
+    if (intent.action === 'apply_qa_defense') {
+      if (role !== 'qa') return { ok: false, reason: 'ROLE_DENIED' };
+      if ((match.shared.supportCooldownByRole.qa ?? 0) > 0) return { ok: false, reason: 'COOLDOWN' };
+      const bugsDown = Math.max(0, Math.min(20, Number(payload.bugsDown ?? 7)));
+      const relUp = Math.max(0, Math.min(10, Number(payload.reliabilityUp ?? 3)));
+      const stressDown = Math.max(0, Math.min(15, Number(payload.stressDown ?? 4)));
+      match.shared.bugPressure = Math.max(0, match.shared.bugPressure - bugsDown);
+      match.shared.infraReliability = Math.min(100, match.shared.infraReliability + relUp);
+      match.shared.roleTaskProgress.qa = Math.min(100, match.shared.roleTaskProgress.qa + bugsDown);
+      if (targetRole && targetRole !== 'qa') {
+        match.shared.roleTaskProgress[targetRole] = Math.min(
+          100,
+          (match.shared.roleTaskProgress[targetRole] ?? 0) + Math.max(2, Math.floor(bugsDown / 3))
+        );
+      }
+      match.shared.roleStress.qa = Math.max(0, match.shared.roleStress.qa - stressDown);
+      match.shared.supportCooldownByRole.qa = 1;
+      recomputeTeamStress(match);
+      pushMatchEvent(match, intent.action, intent.userId, { bugsDown, reliabilityUp: relUp, stressDown, targetRole });
+      return { ok: true };
+    }
+
+    if (intent.action === 'apply_pm_support') {
+      if (role !== 'pm') return { ok: false, reason: 'ROLE_DENIED' };
+      if ((match.shared.supportCooldownByRole.pm ?? 0) > 0) return { ok: false, reason: 'COOLDOWN' };
+      const stressDown = Math.max(0, Math.min(20, Number(payload.stressDown ?? 9)));
+      const deadlineUp = Math.max(0, Math.min(3, Number(payload.deadlineUp ?? 1)));
+      const pmTargetRole = targetRole ?? 'developer';
+      match.shared.roleTaskProgress.pm = Math.min(100, match.shared.roleTaskProgress.pm + deadlineUp * 10);
+      match.shared.roleStress.pm = Math.max(0, match.shared.roleStress.pm - Math.max(1, Math.floor(stressDown / 2)));
+      match.shared.roleStress[pmTargetRole] = Math.max(0, match.shared.roleStress[pmTargetRole] - stressDown);
+      match.shared.deadlineTicks = Math.min(40, match.shared.deadlineTicks + deadlineUp);
+      match.shared.supportCooldownByRole.pm = 1;
+      recomputeTeamStress(match);
+      pushMatchEvent(match, intent.action, intent.userId, { stressDown, deadlineUp, targetRole: pmTargetRole });
+      return { ok: true };
+    }
+
+    if (intent.action === 'apply_dev_progress') {
+      if (role !== 'developer') return { ok: false, reason: 'ROLE_DENIED' };
+      const progressUp = Math.max(0, Math.min(25, Number(payload.progressUp ?? 10)));
+      const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 4)));
+      match.shared.projectProgress = Math.min(100, match.shared.projectProgress + progressUp);
+      match.shared.roleTaskProgress.developer = Math.min(100, match.shared.roleTaskProgress.developer + progressUp);
+      match.shared.roleStress.developer = Math.min(100, match.shared.roleStress.developer + stressUp);
+      recomputeTeamStress(match);
+      pushMatchEvent(match, intent.action, intent.userId, { progressUp, stressUp });
+      return { ok: true };
+    }
+
+    return { ok: false, reason: 'UNKNOWN_ACTION' };
+  }
+
+  function resolveParallelWindow(match: CoopMatch, byUserId: string) {
+    // deterministic: FIFO by arrival timestamp, one intent per role per window
+    const acceptedRoles = new Set<string>();
+    const intents = [...match.intentQueue].sort((a, b) => a.ts - b.ts);
+    let applied = 0;
+    for (const intent of intents) {
+      if (acceptedRoles.has(intent.role)) continue;
+      const r = applyMatchIntent(match, intent);
+      if (r.ok) {
+        acceptedRoles.add(intent.role);
+        applied += 1;
+      }
+    }
+    match.intentQueue = [];
+    match.shared.queuedIntents = 0;
+    const order = ['admin', 'developer', 'qa', 'pm'];
+    for (const r of order) {
+      const prev = match.shared.supportCooldownByRole[r] ?? 0;
+      if (prev > 0) match.shared.supportCooldownByRole[r] = prev - 1;
+    }
+    match.shared.turn += 1;
+    match.shared.deadlineTicks = Math.max(0, match.shared.deadlineTicks - 1);
+    match.shared.activeRole = 'parallel';
+    match.shared.parallelWindowEndsAt = Date.now() + match.shared.parallelWindowMs;
+    pushMatchEvent(match, 'parallel_window_resolved', byUserId, { applied, intents: intents.length });
+  }
+
+  function checkReleaseResult(match: CoopMatch): { ok: boolean; note: string } {
+    const progressOk = match.shared.projectProgress >= 85;
+    const bugsOk = match.shared.bugPressure <= 10;
+    const stressOk = match.shared.stress <= 70;
+    const infraOk = match.shared.infraReliability >= 55;
+    const deadlineOk = match.shared.deadlineTicks > 0;
+    const ok = progressOk && bugsOk && stressOk && infraOk && deadlineOk;
+    const note = ok
+      ? 'RELEASE_OK: команда закрыла окно качества и срока.'
+      : `RELEASE_FAIL: ${progressOk ? '' : 'progress<85 '} ${bugsOk ? '' : 'bugs>10 '} ${stressOk ? '' : 'stress>70 '} ${
+          infraOk ? '' : 'infra<55 '
+        }${deadlineOk ? '' : 'deadline=0 '}`.trim();
+    return { ok, note };
   }
 
   function lobbyAuth(req: Request): { userId: string } | null {
@@ -591,8 +752,20 @@ export function createApp(opts: CreateAppOptions) {
           qa: 0,
           pm: 0,
         },
+        supportCooldownByRole: {
+          admin: 0,
+          developer: 0,
+          qa: 0,
+          pm: 0,
+        },
+        mode: 'parallel_window',
+        parallelWindowMs: 15000,
+        parallelWindowEndsAt: Date.now() + 15000,
+        queuedIntents: 0,
+        lastReleaseCheck: null,
       },
       events: [],
+      intentQueue: [],
       seq: 0,
     };
     matches.set(match.id, match);
@@ -619,6 +792,13 @@ export function createApp(opts: CreateAppOptions) {
         pushMatchEvent(match, 'match_activated', auth.userId, { readyMembers: match.memberIds.length });
       }
     }
+    if (
+      match.shared.mode === 'parallel_window' &&
+      match.status === 'active' &&
+      Date.now() >= match.shared.parallelWindowEndsAt
+    ) {
+      resolveParallelWindow(match, auth.userId);
+    }
     res.json({ ok: true, match: compactMatchView(match) });
   });
 
@@ -631,6 +811,13 @@ export function createApp(opts: CreateAppOptions) {
     if (!match) return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Матч не найден.');
     if (!match.memberIds.includes(auth.userId)) {
       return sendApiError(res, 403, 'COOP_MATCH_MEMBER_REQUIRED', 'Вы не входите в состав этого матча.');
+    }
+    if (
+      match.shared.mode === 'parallel_window' &&
+      match.status === 'active' &&
+      Date.now() >= match.shared.parallelWindowEndsAt
+    ) {
+      resolveParallelWindow(match, auth.userId);
     }
     res.json({ ok: true, match: compactMatchView(match) });
   });
@@ -700,13 +887,76 @@ export function createApp(opts: CreateAppOptions) {
       );
     }
     const role = match.roleByUserId[auth.userId] ?? 'developer';
-    if (match.shared.activeRole !== role && action !== 'apply_pm_support') {
+    const targetRole =
+      typeof payload.targetRole === 'string' &&
+      ['admin', 'developer', 'qa', 'pm'].includes(payload.targetRole)
+        ? payload.targetRole
+        : null;
+    if (match.shared.mode === 'sequential' && match.shared.activeRole !== role && action !== 'apply_pm_support') {
       return sendApiError(
         res,
         409,
         'COOP_ROLE_TURN_DENIED',
         `Сейчас ход роли ${match.shared.activeRole}; ваш класс ${role}.`,
       );
+    }
+    if (match.shared.mode === 'parallel_window') {
+      if (action === 'release_check') {
+        if (role !== 'pm') return sendApiError(res, 403, 'COOP_PM_ONLY', 'Release-check доступен только PM.');
+        const roleSet = new Set(match.memberIds.map((uid) => match.roleByUserId[uid]).filter(Boolean));
+        const queuedSet = new Set(match.intentQueue.map((q) => q.role));
+        for (const r of roleSet) {
+          if (!queuedSet.has(r)) {
+            return sendApiError(
+              res,
+              409,
+              'COOP_RELEASE_NOT_READY',
+              `Окно не готово: роль ${r} ещё не отправила действие.`,
+            );
+          }
+        }
+        resolveParallelWindow(match, auth.userId);
+        const rr = checkReleaseResult(match);
+        match.shared.lastReleaseCheck = { ok: rr.ok, ts: Date.now(), note: rr.note };
+        pushMatchEvent(match, 'release_checked', auth.userId, { ok: rr.ok, note: rr.note });
+        return res.json({ ok: true, match: compactMatchView(match) });
+      }
+      if (action === 'resolve_window') {
+        if (auth.userId !== match.hostId && Date.now() < match.shared.parallelWindowEndsAt) {
+          return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может досрочно завершить окно.');
+        }
+        resolveParallelWindow(match, auth.userId);
+        return res.json({ ok: true, match: compactMatchView(match) });
+      }
+      if (
+        action === 'apply_admin_infra' ||
+        action === 'apply_qa_defense' ||
+        action === 'apply_pm_support' ||
+        action === 'apply_dev_progress'
+      ) {
+        if (Date.now() >= match.shared.parallelWindowEndsAt) {
+          resolveParallelWindow(match, auth.userId);
+          return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        const clientActionId =
+          typeof body.clientActionId === 'string' && body.clientActionId.trim()
+            ? body.clientActionId.trim()
+            : `${auth.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        if (match.intentQueue.some((q) => q.clientActionId === clientActionId)) {
+          return sendApiError(res, 409, 'COOP_DUPLICATE_ACTION', 'Действие уже принято.');
+        }
+        match.intentQueue.push({
+          clientActionId,
+          ts: Date.now(),
+          userId: auth.userId,
+          role,
+          action,
+          payload,
+        });
+        match.shared.queuedIntents = match.intentQueue.length;
+        pushMatchEvent(match, 'intent_queued', auth.userId, { action, clientActionId, role });
+        return res.json({ ok: true, match: compactMatchView(match) });
+      }
     }
     if (action === 'end_turn') {
       const order = ['admin', 'developer', 'qa', 'pm'];
@@ -715,17 +965,35 @@ export function createApp(opts: CreateAppOptions) {
       match.shared.activeRole = next;
       match.shared.turn += 1;
       match.shared.deadlineTicks = Math.max(0, match.shared.deadlineTicks - 1);
+      for (const r of order) {
+        const prev = match.shared.supportCooldownByRole[r] ?? 0;
+        if (prev > 0) match.shared.supportCooldownByRole[r] = prev - 1;
+      }
       pushMatchEvent(match, action, auth.userId, { fromRole: role, nextRole: next });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_admin_infra') {
+      if ((match.shared.supportCooldownByRole.admin ?? 0) > 0) {
+        return sendApiError(res, 409, 'COOP_SUPPORT_COOLDOWN', 'ADMIN support еще на перезарядке.');
+      }
       const reliabilityUp = Math.max(0, Math.min(20, Number(payload.reliabilityUp ?? 0)));
       const resourcesDown = Math.max(0, Math.min(20, Number(payload.resourcesDown ?? 0)));
       const stressUp = Math.max(0, Math.min(15, Number(payload.stressUp ?? 2)));
       match.shared.infraReliability = Math.min(100, match.shared.infraReliability + reliabilityUp);
       match.shared.infraResources = Math.max(0, match.shared.infraResources - resourcesDown);
       match.shared.roleTaskProgress.admin = Math.min(100, match.shared.roleTaskProgress.admin + reliabilityUp);
+      if (targetRole && targetRole !== 'admin') {
+        match.shared.roleTaskProgress[targetRole] = Math.min(
+          100,
+          (match.shared.roleTaskProgress[targetRole] ?? 0) + Math.max(2, Math.floor(reliabilityUp / 2))
+        );
+        match.shared.roleStress[targetRole] = Math.max(
+          0,
+          (match.shared.roleStress[targetRole] ?? 0) - 2
+        );
+      }
       match.shared.roleStress.admin = Math.min(100, match.shared.roleStress.admin + stressUp);
+      match.shared.supportCooldownByRole.admin = 1;
       match.shared.stress = Math.min(
         100,
         Math.round(
@@ -735,7 +1003,7 @@ export function createApp(opts: CreateAppOptions) {
             match.shared.roleStress.pm) / 4
         )
       );
-      pushMatchEvent(match, action, auth.userId, { reliabilityUp, resourcesDown, stressUp });
+      pushMatchEvent(match, action, auth.userId, { reliabilityUp, resourcesDown, stressUp, targetRole });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_dev_progress') {
@@ -757,13 +1025,23 @@ export function createApp(opts: CreateAppOptions) {
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_qa_defense') {
+      if ((match.shared.supportCooldownByRole.qa ?? 0) > 0) {
+        return sendApiError(res, 409, 'COOP_SUPPORT_COOLDOWN', 'QA support еще на перезарядке.');
+      }
       const bugsDown = Math.max(0, Math.min(20, Number(payload.bugsDown ?? 0)));
       const relUp = Math.max(0, Math.min(10, Number(payload.reliabilityUp ?? 0)));
       const stressDown = Math.max(0, Math.min(15, Number(payload.stressDown ?? 3)));
       match.shared.bugPressure = Math.max(0, match.shared.bugPressure - bugsDown);
       match.shared.infraReliability = Math.min(100, match.shared.infraReliability + relUp);
       match.shared.roleTaskProgress.qa = Math.min(100, match.shared.roleTaskProgress.qa + bugsDown);
+      if (targetRole && targetRole !== 'qa') {
+        match.shared.roleTaskProgress[targetRole] = Math.min(
+          100,
+          (match.shared.roleTaskProgress[targetRole] ?? 0) + Math.max(2, Math.floor(bugsDown / 3))
+        );
+      }
       match.shared.roleStress.qa = Math.max(0, match.shared.roleStress.qa - stressDown);
+      match.shared.supportCooldownByRole.qa = 1;
       match.shared.stress = Math.min(
         100,
         Math.round(
@@ -773,20 +1051,19 @@ export function createApp(opts: CreateAppOptions) {
             match.shared.roleStress.pm) / 4
         )
       );
-      pushMatchEvent(match, action, auth.userId, { bugsDown, reliabilityUp: relUp, stressDown });
+      pushMatchEvent(match, action, auth.userId, { bugsDown, reliabilityUp: relUp, stressDown, targetRole });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'apply_pm_support') {
+      if ((match.shared.supportCooldownByRole.pm ?? 0) > 0) {
+        return sendApiError(res, 409, 'COOP_SUPPORT_COOLDOWN', 'PM support еще на перезарядке.');
+      }
       const stressDown = Math.max(0, Math.min(20, Number(payload.stressDown ?? 0)));
       const deadlineUp = Math.max(0, Math.min(3, Number(payload.deadlineUp ?? 0)));
-      const targetRole =
-        typeof payload.targetRole === 'string' &&
-        ['admin', 'developer', 'qa', 'pm'].includes(payload.targetRole)
-          ? payload.targetRole
-          : 'developer';
+      const pmTargetRole = targetRole ?? 'developer';
       match.shared.roleTaskProgress.pm = Math.min(100, match.shared.roleTaskProgress.pm + deadlineUp * 10);
       match.shared.roleStress.pm = Math.max(0, match.shared.roleStress.pm - Math.max(1, Math.floor(stressDown / 2)));
-      match.shared.roleStress[targetRole] = Math.max(0, match.shared.roleStress[targetRole] - stressDown);
+      match.shared.roleStress[pmTargetRole] = Math.max(0, match.shared.roleStress[pmTargetRole] - stressDown);
       match.shared.stress = Math.min(
         100,
         Math.round(
@@ -797,7 +1074,8 @@ export function createApp(opts: CreateAppOptions) {
         )
       );
       match.shared.deadlineTicks = Math.min(40, match.shared.deadlineTicks + deadlineUp);
-      pushMatchEvent(match, action, auth.userId, { stressDown, deadlineUp, targetRole });
+      match.shared.supportCooldownByRole.pm = 1;
+      pushMatchEvent(match, action, auth.userId, { stressDown, deadlineUp, targetRole: pmTargetRole });
       return res.json({ ok: true, match: compactMatchView(match) });
     }
     if (action === 'finish_match') {

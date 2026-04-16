@@ -101,6 +101,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     taskId: string;
   } | null>(null);
   const [endTurnPending, setEndTurnPending] = useState(false);
+  const [pmSupportPending, setPmSupportPending] = useState(false);
+  const [qaSupportPending, setQaSupportPending] = useState(false);
+  const [adminSupportPending, setAdminSupportPending] = useState(false);
+  const [pmReleasePending, setPmReleasePending] = useState(false);
 
   // Core Logic Hook
   const coopSquadFill = props.coopSquadFill ?? 'synthetic_bots';
@@ -252,8 +256,33 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       infraFilled: Math.max(0, Math.min(8, Math.floor((netMatch.shared.infraResources / 100) * 8))),
     };
   }, [coopSquadFill, netMatch, state]);
+  const supportFeed = useMemo(() => {
+    if (!netMatch || coopSquadFill !== 'live_party') return [];
+    return netMatch.recentEvents
+      .filter(
+        (e) =>
+          e.type === 'apply_pm_support' ||
+          e.type === 'apply_qa_defense' ||
+          e.type === 'apply_admin_infra' ||
+          e.type === 'release_checked'
+      )
+      .slice(-6)
+      .reverse()
+      .map((e) => {
+        if (e.type === 'release_checked') {
+          return `[RELEASE] ${e.payload?.ok ? 'OK' : 'FAIL'}: ${typeof e.payload?.note === 'string' ? e.payload.note : ''}`;
+        }
+        const actorRole = e.actorUserId ? netMatch.roleByUserId[e.actorUserId] ?? '?' : '?';
+        const targetRole =
+          typeof e.payload?.targetRole === 'string' ? e.payload.targetRole : null;
+        return `[SYNC] ${actorRole.toUpperCase()} support${targetRole ? ` -> ${targetRole.toUpperCase()}` : ''}`;
+      });
+  }, [netMatch, coopSquadFill]);
   const livePartyMode = coopSquadFill === 'live_party' && Boolean(netMatch && token);
-  const isMyRoleTurn = livePartyMode && Boolean(coopRole && netMatch?.shared.activeRole === coopRole);
+  const isParallelWindow = livePartyMode && netMatch?.shared.mode === 'parallel_window';
+  const isMyRoleTurn =
+    livePartyMode &&
+    Boolean(coopRole && (isParallelWindow || netMatch?.shared.activeRole === coopRole));
   const liveActionGateOpen = (!livePartyMode || isMyRoleTurn) && !endTurnPending;
 
   const handleEndTurn = async () => {
@@ -261,7 +290,34 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     if (livePartyMode && netMatch && token) {
       setEndTurnPending(true);
       try {
-        const updated = await coopMatchAction(token, netMatch.id, 'end_turn', {}, netMatch.seq);
+        const actionName =
+          isParallelWindow
+            ? coopRole === 'developer'
+              ? 'apply_dev_progress'
+              : coopRole === 'qa'
+                ? 'apply_qa_defense'
+                : coopRole === 'admin'
+                  ? 'apply_admin_infra'
+                  : 'apply_pm_support'
+            : 'end_turn';
+        const payload =
+          isParallelWindow
+            ? coopRole === 'developer'
+              ? { progressUp: 10, stressUp: 4 }
+              : coopRole === 'qa'
+                ? { bugsDown: 7, reliabilityUp: 3, stressDown: 4, targetRole: 'developer' }
+                : coopRole === 'admin'
+                  ? { reliabilityUp: 8, resourcesDown: 4, stressUp: 2, targetRole: 'developer' }
+                  : { stressDown: 9, deadlineUp: 1, targetRole: 'developer' }
+            : {};
+        const updated = await coopMatchAction(
+          token,
+          netMatch.id,
+          actionName,
+          payload,
+          netMatch.seq,
+          `intent_${coopRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+        );
         if (updated) setNetMatch(updated);
       } finally {
         setEndTurnPending(false);
@@ -269,6 +325,82 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       return;
     }
     actions.endTurn();
+  };
+
+  const handlePmReleaseCheck = async () => {
+    if (pmReleasePending) return;
+    if (!livePartyMode || !netMatch || !token || coopRole !== 'pm' || !isParallelWindow) return;
+    setPmReleasePending(true);
+    try {
+      const updated = await coopMatchAction(
+        token,
+        netMatch.id,
+        'release_check',
+        {},
+        netMatch.seq,
+        `release_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      );
+      if (updated) setNetMatch(updated);
+    } finally {
+      setPmReleasePending(false);
+    }
+  };
+
+  const handlePmSupportTarget = async (targetRole: CoopRole) => {
+    if (pmSupportPending) return;
+    if (!livePartyMode || !netMatch || !token || coopRole !== 'pm') return;
+    setPmSupportPending(true);
+    try {
+      const updated = await coopMatchAction(
+        token,
+        netMatch.id,
+        'apply_pm_support',
+        { targetRole, stressDown: 9, deadlineUp: 1 },
+          netMatch.seq,
+          `pm_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      );
+      if (updated) setNetMatch(updated);
+    } finally {
+      setPmSupportPending(false);
+    }
+  };
+
+  const handleQaSupportTarget = async (targetRole: CoopRole) => {
+    if (qaSupportPending) return;
+    if (!livePartyMode || !netMatch || !token || coopRole !== 'qa') return;
+    setQaSupportPending(true);
+    try {
+      const updated = await coopMatchAction(
+        token,
+        netMatch.id,
+        'apply_qa_defense',
+        { targetRole, bugsDown: 7, reliabilityUp: 3, stressDown: 4 },
+          netMatch.seq,
+          `qa_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      );
+      if (updated) setNetMatch(updated);
+    } finally {
+      setQaSupportPending(false);
+    }
+  };
+
+  const handleAdminSupportTarget = async (targetRole: CoopRole) => {
+    if (adminSupportPending) return;
+    if (!livePartyMode || !netMatch || !token || coopRole !== 'admin') return;
+    setAdminSupportPending(true);
+    try {
+      const updated = await coopMatchAction(
+        token,
+        netMatch.id,
+        'apply_admin_infra',
+        { targetRole, reliabilityUp: 8, resourcesDown: 4, stressUp: 2 },
+          netMatch.seq,
+          `ops_${targetRole}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      );
+      if (updated) setNetMatch(updated);
+    } finally {
+      setAdminSupportPending(false);
+    }
   };
 
   return (
@@ -285,6 +417,15 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
             matchActiveRole={netMatch?.shared.activeRole ?? null}
             isMyTurn={isMyRoleTurn}
             matchShared={netMatch?.shared ?? null}
+            onPmSupportTarget={coopRole === 'pm' && livePartyMode && isMyRoleTurn ? handlePmSupportTarget : null}
+            pmSupportBusy={pmSupportPending}
+            onPmReleaseCheck={coopRole === 'pm' && livePartyMode && isParallelWindow ? handlePmReleaseCheck : null}
+            pmReleaseBusy={pmReleasePending}
+            onQaSupportTarget={coopRole === 'qa' && livePartyMode && isMyRoleTurn ? handleQaSupportTarget : null}
+            qaSupportBusy={qaSupportPending}
+            onAdminSupportTarget={coopRole === 'admin' && livePartyMode && isMyRoleTurn ? handleAdminSupportTarget : null}
+            adminSupportBusy={adminSupportPending}
+            supportFeed={supportFeed}
             stress={sitrepStats.stress}
             bugPoints={sitrepStats.bugPoints}
             playerProgress={sitrepStats.playerProgress}

@@ -13,6 +13,24 @@ const TEST_IDS = new Set([
   'sp_mock_mvc',
 ]);
 const DEFENSIVE_IDS = new Set(['def_validator']);
+const PM_BUSINESS_IDS = new Set([
+  'soft_agile_ceremony',
+  'soft_daily_sync',
+  'soft_retro_action',
+  'soft_scope_cut',
+  'soft_stakeholder_alignment',
+  'soft_risk_register',
+  'soft_release_train',
+  'soft_backlog_refine',
+  'soft_priority_matrix',
+  'soft_team_health',
+  'soft_crisis_room',
+  'soft_business_case',
+  'soft_kpi_dashboard',
+  'soft_wip_limit',
+  'soft_sprint_goal',
+  'soft_unblock_channel',
+]);
 
 /** Сильный контр: карта тематически бьёт в тип проблемы на шине. */
 export function isOutplayCounter(card: CombatCard, problemType: BugProblemType | undefined): boolean {
@@ -32,6 +50,9 @@ export function isOutplayCounter(card: CombatCard, problemType: BugProblemType |
   if (card.type === 'SCRIPT') {
     if (problemType === 'LOGIC_GAP' && (card.id === 'script_auth' || card.id === 'script_ping')) return true;
   }
+  if (card.type === 'SOFT') {
+    if (problemType === 'BUSINESS_RISK' && PM_BUSINESS_IDS.has(card.id)) return true;
+  }
   return false;
 }
 
@@ -42,6 +63,7 @@ export function problemTypeLabelRu(pt: BugProblemType): string {
     SYNTAX_ERROR: 'синтаксис / контракт',
     LOGIC_GAP: 'логика / ветвление',
     MEMORY_LEAK: 'утечка / ресурсы',
+    BUSINESS_RISK: 'бизнес-риск / скоуп',
   };
   return m[pt] ?? pt;
 }

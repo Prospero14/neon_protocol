@@ -602,6 +602,259 @@ export const CARD_LIBRARY: CombatCard[] = [
     cost: 0, power: 0, integrity: 5,
     description: '[PANIC] Аварийный сброс буфера. Сброси текущую руку мгновенно — возьми 4 новые карты и сними -8 стресс. Только в крайнем случае.',
     language: 'none', tags: ['reaction', 'script']
+  },
+  {
+    id: 'react_contract_test', name: 'CONTRACT_TEST', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 4, integrity: 10,
+    description: 'Проверка API-контрактов. Срезает баги интерфейсов и ловит несовместимые ответы.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_snapshot_guard', name: 'SNAPSHOT_GUARD', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 3, integrity: 11,
+    description: 'Снимок ожидаемого состояния UI/ответа. Отбивает регресс в критичных точках.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_schema_fence', name: 'SCHEMA_FENCE', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 4, integrity: 12,
+    description: 'Ограждение схемы данных. Режет ошибки несовместимых миграций и payload.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_load_probe', name: 'LOAD_PROBE', type: 'REACTION', grade: 'Middle',
+    cost: 1, power: 5, integrity: 8,
+    description: 'Нагрузочный щуп. Выявляет деградацию до прод-аварии.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_soak_test', name: 'SOAK_TEST', type: 'REACTION', grade: 'Middle',
+    cost: 1, power: 5, integrity: 10,
+    description: 'Длительный прогон. Выдавливает накопленные сбои и утечки.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_property_fuzz', name: 'PROPERTY_FUZZ', type: 'REACTION', grade: 'Middle',
+    cost: 1, power: 6, integrity: 8,
+    description: 'Fuzz/Property based. Ловит редкие edge-case до того, как их использует ИИ.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_mock_server', name: 'MOCK_SERVER', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 3, integrity: 12,
+    description: 'Изоляция внешних зависимостей. Стабилизирует тестовый контур.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_flaky_quarantine', name: 'FLAKY_QUARANTINE', type: 'REACTION', grade: 'Middle',
+    cost: 1, power: 4, integrity: 11,
+    description: 'Карантин флаки-тестов. Убирает шум и возвращает сигнал по качеству.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_boundary_case', name: 'BOUNDARY_CASE', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 4, integrity: 10,
+    description: 'Проверка границ входа. Закрывает частый источник production-багов.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_perf_budget', name: 'PERF_BUDGET', type: 'REACTION', grade: 'Middle',
+    cost: 1, power: 5, integrity: 9,
+    description: 'Бюджет производительности. Блокирует тихую деградацию и таймауты.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_race_detector', name: 'RACE_DETECTOR', type: 'REACTION', grade: 'Senior',
+    cost: 1, power: 6, integrity: 9,
+    description: 'Детектор гонок/конкурентности. Ловит трудно-воспроизводимые дефекты.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_mutation_suite', name: 'MUTATION_SUITE', type: 'REACTION', grade: 'Senior',
+    cost: 1, power: 6, integrity: 8,
+    description: 'Мутационный набор. Проверяет реальную силу тестов и выбивает ложную уверенность.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'def_ci_gate', name: 'CI_GATE', type: 'DEFENSIVE', grade: 'Junior',
+    cost: 1, power: 2, integrity: 18,
+    description: 'Защитный шлюз качества. Не пропускает сомнительные изменения в релиз.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'def_smoke_suite', name: 'SMOKE_SUITE', type: 'DEFENSIVE', grade: 'Junior',
+    cost: 1, power: 3, integrity: 16,
+    description: 'Смоук-пак на критический путь. Быстрый ранний сигнал о поломке.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'def_release_candidate', name: 'RELEASE_CANDIDATE_CHECK', type: 'DEFENSIVE', grade: 'Middle',
+    cost: 1, power: 4, integrity: 17,
+    description: 'Полная проверка RC перед выкладкой. Снижает риск ночного отката.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'def_canary_assert', name: 'CANARY_ASSERT', type: 'DEFENSIVE', grade: 'Middle',
+    cost: 1, power: 4, integrity: 16,
+    description: 'Канареечная валидация в малом трафике. Локализует сбой до взрыва.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_bug_repro', name: 'BUG_REPRO', type: 'REACTION', grade: 'Junior',
+    cost: 1, power: 4, integrity: 9,
+    description: 'Шаги воспроизведения. Переводит хаос в конкретный и лечимый баг.',
+    language: 'none', tags: ['reaction']
+  },
+  {
+    id: 'react_root_cause', name: 'ROOT_CAUSE_PINPOINT', type: 'REACTION', grade: 'Senior',
+    cost: 1, power: 6, integrity: 8,
+    description: 'Поиск первопричины. Закрывает класс дефекта, а не симптом.',
+    language: 'none', tags: ['reaction']
+  },
+
+  {
+    id: 'soft_agile_ceremony', name: 'AGILE_CEREMONY', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 14,
+    description: 'Короткий sync ритуал. Упорядочивает поток задач и снижает хаос команды.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_daily_sync', name: 'DAILY_SYNC', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 13,
+    description: 'Ежедневный апдейт статуса. Ускоряет координацию и снимает часть тревоги.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_retro_action', name: 'RETRO_ACTIONS', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 13,
+    description: 'Ретро с action items. Повышает качество следующего цикла.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_pizza_party', name: 'PIZZA_PARTY', type: 'SOFT', grade: 'Script-Kiddo',
+    cost: 0, power: 0, integrity: 11,
+    description: 'Командный буст морали. Сильно снижает стресс и возвращает фокус.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_scope_cut', name: 'SCOPE_CUT', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Срез неключевого scope. Позволяет успеть в срок без перегрева.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_stakeholder_alignment', name: 'STAKEHOLDER_ALIGNMENT', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Выравнивание ожиданий бизнеса. Снижает внешний шум и конфликты.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_risk_register', name: 'RISK_REGISTER', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Реестр рисков и план B. Гасит внезапные провалы по дедлайну.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_release_train', name: 'RELEASE_TRAIN', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Релизный поезд по расписанию. Поддерживает регулярность и ритм поставки.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_backlog_refine', name: 'BACKLOG_REFINE', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 11,
+    description: 'Уточнение backlog. Убирает двусмысленность и ускоряет execution.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_priority_matrix', name: 'PRIORITY_MATRIX', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 11,
+    description: 'Матрица приоритетов. Команда тратит усилия туда, где максимальная отдача.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_team_health', name: 'TEAM_HEALTH_CHECK', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Проверка состояния команды. Предотвращает срыв из-за выгорания.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_crisis_room', name: 'CRISIS_ROOM', type: 'SOFT', grade: 'Senior',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Антикризисная комната. Концентрирует фокус на тушении ключевых рисков.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_business_case', name: 'BUSINESS_CASE_DEFENSE', type: 'SOFT', grade: 'Senior',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Защита бизнес-кейса. Снимает внешнее давление и удерживает курс релиза.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_kpi_dashboard', name: 'KPI_DASHBOARD', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 11,
+    description: 'Прозрачные метрики спринта. Ранний сигнал отклонений до критической фазы.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_hard_tradeoff', name: 'HARD_TRADEOFF', type: 'SOFT', grade: 'Senior',
+    cost: 1, power: 0, integrity: 9,
+    description: 'Сложный управленческий trade-off. Ускоряет поставку ценой локального напряжения.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_wip_limit', name: 'WIP_LIMIT', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 12,
+    description: 'Ограничение параллельной работы. Снижает баги и стресс из-за переключений.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_sprint_goal', name: 'SPRINT_GOAL_LOCK', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 11,
+    description: 'Единая цель спринта. Синхронизирует команду на конкретном результате.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_unblock_channel', name: 'UNBLOCK_CHANNEL', type: 'SOFT', grade: 'Junior',
+    cost: 1, power: 0, integrity: 11,
+    description: 'Разблокировка коммуникации. Ускоряет отклик QA и Admin на проблемы.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_dev_pairing', name: 'DEV_PAIRING', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Точечная поддержка разработчика: фокус на критическом блокере и ускорение поставки.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_qa_handoff', name: 'QA_HANDOFF', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Чёткий handoff в тестирование. Снижает регресс и очищает путь к релизу.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_ops_priority', name: 'OPS_PRIORITY', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Приоритезация операций. Дает администратору окно для укрепления контура.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_cross_team_sync', name: 'CROSS_TEAM_SYNC', type: 'SOFT', grade: 'Senior',
+    cost: 1, power: 0, integrity: 9,
+    description: 'Синхронизация всех треков команды. Балансирует стресс, прогресс и угрозу.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_release_freeze', name: 'RELEASE_FREEZE', type: 'SOFT', grade: 'Senior',
+    cost: 1, power: 0, integrity: 8,
+    description: 'Временный freeze перед выкладкой. Снижает бизнес-риски и шум релиза.',
+    language: 'none', tags: ['utility']
+  },
+  {
+    id: 'soft_support_rotation', name: 'SUPPORT_ROTATION', type: 'SOFT', grade: 'Middle',
+    cost: 1, power: 0, integrity: 10,
+    description: 'Ротация нагрузки в команде. Снимает перегрев и сохраняет темп.',
+    language: 'none', tags: ['utility']
   }
 ];
 

@@ -23,6 +23,8 @@ interface MapViewProps {
   customSubNodes?: any[]; // To override the district subNodes
   /** Игровые часы и фаза суток (день/ночь на карте). */
   gameClock?: GameClockSnapshot | null;
+  /** Кооп: id субнод для лёгкой подсветки в реестре (бой полигона). */
+  coopCombatHighlightIds?: string[] | null;
 }
 
 const NODE_COLORS: Record<string, string> = {
@@ -47,6 +49,7 @@ const MapView: React.FC<MapViewProps> = ({
   playerBits = 0,
   customSubNodes = null,
   gameClock = null,
+  coopCombatHighlightIds = null,
 }) => {
   const [selectedNode, setSelectedNode] = useState<MapNodeData | null>(null);
   const [selectedSubNodeId, setSelectedSubNodeId] = useState<string | null>(null);
@@ -554,6 +557,11 @@ const MapView: React.FC<MapViewProps> = ({
             setSelectedSubNodeId(null);
           }}
           objectiveNodeId={objectiveNodeId}
+          highlightPoiIds={
+            coopCombatHighlightIds && coopCombatHighlightIds.length > 0
+              ? new Set(coopCombatHighlightIds)
+              : null
+          }
           listRef={poiListRef}
         />
         {viewMode === 'CITY' && (

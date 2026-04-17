@@ -41,9 +41,15 @@ export const DEV_DEFAULT_LIB_PACK: Record<DevLanguageStack, string> = {
 
 /** Ядро языка — базовые карты «под стек» (реальные id в библиотеке). */
 export const LANGUAGE_CORE_IDS: Record<DevLanguageStack, string[]> = {
+  /** Минимальный «скелет» Java + вход в коллекции/stream — нужен для джун-миссий и конструктора коопа. */
   java: [
+    'syntax_package',
     'syntax_class_decl',
     'syntax_main_method',
+    'syntax_list_init',
+    'syntax_if',
+    'syntax_foreach',
+    'fn_sysout_print',
     'syntax_try_catch',
     'fn_map_put',
     'mid_stream_init',

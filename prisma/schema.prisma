@@ -13,6 +13,20 @@ model User {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   gameState    GameState?
+  coopStartupScore CoopStartupScore?
+}
+
+/** Лучший результат игрока в рейтинге стартапов коопа (для GET /neon_v1/coop/startup-rankings). */
+model CoopStartupScore {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startupName     String
+  score           Int
+  tierRank        String
+  missionsCleared Int      @default(0)
+  bits            Int      @default(0)
+  updatedAt       DateTime @updatedAt
 }
 
 model GameState {

@@ -53,7 +53,8 @@ export const coop_yard: WorldDistrict = {
         id: 'coop_cp_boss',
         name: 'Ворота релиза (BOSS)',
         type: 'combat',
-        description: 'Открываются после 25 миссий текущего ранга на полигоне.',
+        description:
+          'Junior: после 15 миссий полигона. Остальные тиры: после 25. Тогда открывается переход на следующий ранг.',
         x: 50,
         y: 50
       },

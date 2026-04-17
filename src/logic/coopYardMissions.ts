@@ -31,7 +31,25 @@ interface GenTask {
 
 const RANKS: Rank[] = ['script-kiddie', 'junior', 'mid', 'senior'];
 const PER_RANK = 25;
+
+/** Сколько обычных миссий junior нужно закрыть, чтобы открыть босса и перейти на mid (остальные тиры — полный PER_RANK). */
+export const COOP_JUNIOR_MISSIONS_FOR_BOSS = 15;
+
 const JUNIOR_INTRO_MISSIONS = 10;
+
+/** Тексты для UI: первые 10 junior-миссий полигона (id coop_yard_ju_001 … 010). Сами шаги берутся из JUNIOR_INTRO_CHAINS по round-robin. */
+const JUNIOR_INTRO_DESCRIPTIONS: Record<number, string> = {
+  1: '[Банк / junior] Микросервис: сумма дневных операций по списку сумм. Пустой список → итог 0. Выложи карты на шину строго по шагам ТЗ.',
+  2: '[Банк / junior] Карта счёта + коллекции: подготовь структуру данных и методы доступа (цепочка из шаблона 2).',
+  3: '[Банк / junior] Ветвления и коллекции: обработка условий и обход (цепочка из шаблона 3).',
+  4: '[Банк / junior] Снова полный проход: пакет → класс → потоки → вывод (шаблон 1, повтор с новым seed).',
+  5: '[Банк / junior] Интеграционный скелет: класс, сеть, лог (шаблон 2).',
+  6: '[Банк / junior] Условия, коллекции, выходные значения (шаблон 3).',
+  7: '[Банк / junior] Повтор полного Java-прохода (шаблон 1).',
+  8: '[Банк / junior] Карта/сеть/логи (шаблон 2).',
+  9: '[Банк / junior] Ветвления и возвраты (шаблон 3).',
+  10: '[Банк / junior] Финал онбординга: длинная цепочка перед катами Codewars (шаблон 1).',
+};
 
 const STEP_TARGET: Record<Rank, number> = {
   'script-kiddie': 10,
@@ -50,15 +68,15 @@ const RANK_FALLBACK_CARD: Record<Rank, string> = {
 const JUNIOR_INTRO_CHAINS: TZStep[][] = [
   [
     /** Два допустимых id на шаг — вариативность джун-онбординга без смены id квестов. */
-    { id: 'a', name: 'PACKAGE', requiredCardIds: ['syntax_package', 'syntax_list_init'] },
+    { id: 'a', name: 'PACKAGE', requiredCardIds: ['syntax_package', 'syntax_class_decl'] },
     { id: 'b', name: 'CLASS', requiredCardIds: ['syntax_class_decl', 'syntax_set_init'] },
-    { id: 'c', name: 'MAIN', requiredCardIds: ['syntax_main_method', 'syntax_try_catch'] },
+    { id: 'c', name: 'MAIN', requiredCardIds: ['syntax_main_method', 'syntax_method_decl'] },
     { id: 'd', name: 'METHOD', requiredCardIds: ['syntax_method_decl', 'syntax_try_catch'] },
     { id: 'e', name: 'IF_GUARD', requiredCardIds: ['syntax_if', 'syntax_foreach'] },
     { id: 'f', name: 'LOOP', requiredCardIds: ['syntax_foreach', 'syntax_if'] },
     { id: 'g', name: 'STREAM_INIT', requiredCardIds: ['mid_stream_init', 'syntax_foreach'] },
     { id: 'h', name: 'STREAM_FILTER', requiredCardIds: ['mid_stream_filter', 'syntax_if'] },
-    { id: 'i', name: 'STREAM_COLLECT', requiredCardIds: ['mid_stream_collect', 'fn_sysout_print'] },
+    { id: 'i', name: 'STREAM_COLLECT', requiredCardIds: ['mid_stream_collect', 'syntax_foreach'] },
     { id: 'j', name: 'OUTPUT', requiredCardIds: ['fn_sysout_print', 'lib_commons_blank'] },
   ],
   [
@@ -247,7 +265,7 @@ export function generateCoopYardMissionPool(): GenTask[] {
           source: 'coop_yard',
           track: 'junior_foundation',
           intensityTier: 2,
-          description: `Intro-цепочка junior ${missionNo}/${JUNIOR_INTRO_MISSIONS}: расширенный onboarding на 10+ шагов перед длинными катами.`,
+          description: JUNIOR_INTRO_DESCRIPTIONS[missionNo],
           steps: inflateSteps(base, STEP_TARGET.junior, i, rank),
         });
         continue;
@@ -276,7 +294,10 @@ export function generateCoopYardMissionPool(): GenTask[] {
       source: 'coop_yard',
       track: 'release_gate',
       intensityTier: rank === 'senior' ? 4 : rank === 'mid' ? 3 : 2,
-      description: `БОСС-СМЕНА [${rank}]: после ${PER_RANK} миссий команда проходит «ворота релиза». Один длинный прогон.`,
+      description:
+        rank === 'junior'
+          ? `БОСС-СМЕНА [junior]: после ${COOP_JUNIOR_MISSIONS_FOR_BOSS} миссий полигона команда проходит «ворота релиза» и может перейти на mid. Один длинный прогон.`
+          : `БОСС-СМЕНА [${rank}]: после ${PER_RANK} миссий команда проходит «ворота релиза». Один длинный прогон.`,
       steps: BOSS_STEPS[rank].map((s, j) => ({
         ...s,
         id: `boss_${br}_${j}`,

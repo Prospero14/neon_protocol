@@ -1,4 +1,6 @@
+import { useCallback } from 'react';
 import { useGameState } from './logic/hooks/useGameState';
+import { useAuth } from './logic/AuthContext';
 import './App.css';
 import './combat-hud.css';
 import { MAP_NODES } from './logic/mapData';
@@ -27,7 +29,15 @@ import type { ViewType } from './logic/hooks/useGameState';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
 import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
-import { resolveCoopYardTaskIndexInLibrary, isCoopBossUnlocked } from './logic/coopYardRuntime';
+import {
+  resolveCoopYardTaskIndexInLibrary,
+  isCoopBossUnlocked,
+  countCoopTierMissionsCleared,
+  coopMissionsRequiredForBoss,
+} from './logic/coopYardRuntime';
+import { coopThemeForWorldDay } from './logic/coopWeeklySeason';
+import { buildMergedStartupLeaderboard } from './logic/coopStartupLeaderboard';
+import { refreshCoopStartupLeaderboardFromServer } from './logic/coopStartupRankingsApi';
 import { NPC_PRESENCE_CONFIGS, isNpcHomeAccessible } from './logic/npcPresence';
 import type { Profession } from './logic/professions';
 
@@ -44,6 +54,30 @@ function stableIndexFromSeed(seed: string, modulo: number): number {
 
 function App() {
   const gs = useGameState();
+  const { token, user: authUser } = useAuth();
+
+  const refreshCoopStartupLb = useCallback(async () => {
+    if (!token || !authUser?.id) return null;
+    if (gs.sessionMode !== 'coop') return null;
+    const cleared = countCoopTierMissionsCleared(gs.coopYardCompletedMissionIds, gs.coopTierRank);
+    return refreshCoopStartupLeaderboardFromServer({
+      token,
+      userId: authUser.id,
+      startupName: gs.coopStartupName?.trim() || gs.playerName || 'STARTUP',
+      clearedTierMissions: cleared,
+      bits: gs.bits,
+      tierRank: gs.coopTierRank,
+    });
+  }, [
+    token,
+    authUser?.id,
+    gs.sessionMode,
+    gs.coopYardCompletedMissionIds,
+    gs.coopTierRank,
+    gs.coopStartupName,
+    gs.playerName,
+    gs.bits,
+  ]);
 
   const grantProfessionCards = (prof: Profession) => {
     const byProfession: Record<string, string[]> = {
@@ -101,6 +135,17 @@ function App() {
         return true;
       });
 
+      const coopYardCombatHi =
+        gs.sessionMode === 'coop' && gs.activeDistrictId === 'coop_yard'
+          ? [
+              'coop_cp_light',
+              'coop_cp_medium',
+              'coop_cp_heavy',
+              'coop_cp_elite',
+              ...(isCoopBossUnlocked(gs.coopYardCompletedMissionIds, gs.coopTierRank) ? (['coop_cp_boss'] as const) : []),
+            ]
+          : null;
+
       return (
         <MapView 
           viewMode={gs.viewMode} 
@@ -113,6 +158,7 @@ function App() {
           playerBits={gs.bits} 
           customSubNodes={filteredNodes}
           gameClock={gs.gameClock}
+          coopCombatHighlightIds={coopYardCombatHi}
         />
       );
     }
@@ -397,6 +443,23 @@ function App() {
     }
 
     // Default: Return Hub View
+    const coopWeek = gs.sessionMode === 'coop' ? coopThemeForWorldDay(gs.worldDay) : null;
+    const coopTierCleared =
+      gs.sessionMode === 'coop'
+        ? countCoopTierMissionsCleared(gs.coopYardCompletedMissionIds, gs.coopTierRank)
+        : 0;
+    const coopTierNeed =
+      gs.sessionMode === 'coop' ? coopMissionsRequiredForBoss(gs.coopTierRank) : 0;
+    const startupLbRows =
+      gs.sessionMode === 'coop'
+        ? buildMergedStartupLeaderboard({
+            startupName: gs.coopStartupName?.trim() || gs.playerName || 'STARTUP',
+            clearedTierMissions: coopTierCleared,
+            bits: gs.bits,
+            tierRank: gs.coopTierRank,
+          })
+        : [];
+
     return (
       <HubView
         playerName={gs.playerName}
@@ -438,6 +501,14 @@ function App() {
         coopRole={gs.coopRole}
         onSwitchCoopClass={gs.switchCoopClass}
         onSwitchSessionMode={gs.switchSessionMode}
+        coopWeekTheme={coopWeek}
+        coopYardProgress={
+          gs.sessionMode === 'coop'
+            ? { cleared: coopTierCleared, required: coopTierNeed, tierLabel: gs.coopTierRank }
+            : null
+        }
+        coopStartupLeaderboard={startupLbRows}
+        onRefreshCoopStartupLeaderboard={refreshCoopStartupLb}
       />
     );
   };

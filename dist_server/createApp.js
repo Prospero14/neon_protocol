@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
+import { mergeStartupRankings } from './coopStartupPregen';
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
 function publicGameState(gs) {
     if (!gs)
@@ -993,6 +994,81 @@ export function createApp(opts) {
             return res.json({ ok: true, match: compactMatchView(match) });
         }
         return sendApiError(res, 400, 'COOP_ACTION_UNKNOWN', `Неизвестное действие: ${action}.`);
+    });
+    /** Публичный топ: 10 NPC + до ~200 записей из БД, топ-20. */
+    app.get('/neon_v1/coop/startup-rankings', async (_req, res) => {
+        try {
+            const dbRows = await prisma.coopStartupScore.findMany({
+                orderBy: { score: 'desc' },
+                take: 200,
+                select: { userId: true, startupName: true, score: true },
+            });
+            res.json({ rows: mergeStartupRankings(dbRows) });
+        }
+        catch (error) {
+            console.error('startup-rankings GET:', error);
+            res.json({ rows: mergeStartupRankings([]) });
+        }
+    });
+    /** Сохранить лучший результат игрока (только если score выше сохранённого). */
+    app.post('/neon_v1/coop/startup-rankings/submit', async (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        const body = (req.body ?? {});
+        const startupName = typeof body.startupName === 'string' ? body.startupName.trim().slice(0, 64) : '';
+        const score = Math.max(0, Math.min(9_999_999, Math.floor(Number(body.score ?? 0))));
+        const tierRank = typeof body.tierRank === 'string' ? body.tierRank.slice(0, 24) : 'junior';
+        const missionsCleared = Math.max(0, Math.floor(Number(body.missionsCleared ?? 0)));
+        const bits = Math.max(0, Math.floor(Number(body.bits ?? 0)));
+        if (!startupName) {
+            return sendApiError(res, 400, 'STARTUP_NAME_REQUIRED', 'Укажите startupName.');
+        }
+        try {
+            const prev = await prisma.coopStartupScore.findUnique({ where: { userId: auth.userId } });
+            if (prev && score <= prev.score) {
+                return res.json({
+                    ok: true,
+                    updated: false,
+                    entry: {
+                        userId: prev.userId,
+                        startupName: prev.startupName,
+                        score: prev.score,
+                        tierRank: prev.tierRank,
+                        missionsCleared: prev.missionsCleared,
+                        bits: prev.bits,
+                    },
+                });
+            }
+            const entry = await prisma.coopStartupScore.upsert({
+                where: { userId: auth.userId },
+                create: {
+                    userId: auth.userId,
+                    startupName,
+                    score,
+                    tierRank,
+                    missionsCleared,
+                    bits,
+                },
+                update: { startupName, score, tierRank, missionsCleared, bits },
+            });
+            res.json({
+                ok: true,
+                updated: true,
+                entry: {
+                    userId: entry.userId,
+                    startupName: entry.startupName,
+                    score: entry.score,
+                    tierRank: entry.tierRank,
+                    missionsCleared: entry.missionsCleared,
+                    bits: entry.bits,
+                },
+            });
+        }
+        catch (error) {
+            console.error('startup-rankings submit:', error);
+            return sendApiError(res, 500, 'STARTUP_RANK_SUBMIT_FAILED', 'Не удалось сохранить рейтинг.');
+        }
     });
     const DIST = path.join(process.cwd(), 'dist');
     const sendHtmlNoCache = (res, file) => {

@@ -10,7 +10,7 @@ import { createApp } from './createApp';
 
 const JWT_SECRET = 'test_neon_jwt_secret';
 
-function mockPrisma(): Pick<PrismaClient, 'user' | 'gameState'> {
+function mockPrisma(): Pick<PrismaClient, 'user' | 'gameState' | 'coopStartupScore'> {
   return {
     user: {
       findUnique: vi.fn(),
@@ -19,6 +19,11 @@ function mockPrisma(): Pick<PrismaClient, 'user' | 'gameState'> {
     gameState: {
       update: vi.fn(),
     } as unknown as PrismaClient['gameState'],
+    coopStartupScore: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    } as unknown as PrismaClient['coopStartupScore'],
   };
 }
 
@@ -174,5 +179,42 @@ describe('neon_v1 API (integration)', () => {
 
     const leave = await request(a).post('/neon_v1/coop/party/leave').set('Authorization', `Bearer ${tokA}`).expect(200);
     expect(leave.body.party).toBeNull();
+  });
+
+  it('GET /neon_v1/coop/startup-rankings (Prisma mock)', async () => {
+    vi.mocked(prisma.coopStartupScore.findMany).mockResolvedValue([]);
+    const res = await request(app()).get('/neon_v1/coop/startup-rankings').expect(200);
+    expect(Array.isArray(res.body.rows)).toBe(true);
+    expect(res.body.rows.length).toBeGreaterThan(0);
+    expect(res.body.rows[0]).toMatchObject({ rank: 1, tag: 'NPC' });
+  });
+
+  it('POST /neon_v1/coop/startup-rankings/submit (Prisma mock)', async () => {
+    vi.mocked(prisma.coopStartupScore.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.coopStartupScore.upsert).mockResolvedValue({
+      id: 'css1',
+      userId: 'uid-rank',
+      startupName: 'TEST_LAB',
+      score: 500,
+      tierRank: 'junior',
+      missionsCleared: 2,
+      bits: 100,
+      updatedAt: new Date(),
+    } as any);
+    const tok = jwt.sign({ userId: 'uid-rank' }, JWT_SECRET);
+    const res = await request(app())
+      .post('/neon_v1/coop/startup-rankings/submit')
+      .set('Authorization', `Bearer ${tok}`)
+      .send({
+        startupName: 'TEST_LAB',
+        score: 500,
+        tierRank: 'junior',
+        missionsCleared: 2,
+        bits: 100,
+      })
+      .expect(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.updated).toBe(true);
+    expect(res.body.entry.score).toBe(500);
   });
 });

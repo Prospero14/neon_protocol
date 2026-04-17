@@ -58,6 +58,8 @@ interface MapRadarRailProps {
   onPickSubNode: (id: string) => void;
   onPickCityNode: (node: MapNodeData) => void;
   objectiveNodeId?: string | null;
+  /** Кооп: слегка подсветить боевые точки текущего спринта в реестре */
+  highlightPoiIds?: ReadonlySet<string> | null;
   listRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -76,6 +78,7 @@ const MapRadarRail: React.FC<MapRadarRailProps> = ({
   onPickSubNode,
   onPickCityNode,
   objectiveNodeId,
+  highlightPoiIds = null,
   listRef,
 }) => {
   const [clockHintOpen, setClockHintOpen] = useState(false);
@@ -161,12 +164,13 @@ const MapRadarRail: React.FC<MapRadarRailProps> = ({
             districtRows.map((row) => {
               const sel = selectedSubNodeId === row.id;
               const obj = objectiveNodeId === row.id;
+              const hi = highlightPoiIds?.has(row.id) ?? false;
               return (
                 <button
                   key={row.id}
                   type="button"
                   data-poi-id={row.id}
-                  className={`map-rail-row ${sel ? 'selected' : ''} ${obj ? 'objective' : ''}`}
+                  className={`map-rail-row ${sel ? 'selected' : ''} ${obj ? 'objective' : ''} ${hi ? 'coop-combat-hi' : ''}`}
                   onClick={() => onPickSubNode(row.id)}
                 >
                   <span className="map-rail-row-type" style={{ color: 'var(--neon-cyan)' }}>

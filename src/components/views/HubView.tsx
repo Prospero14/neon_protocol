@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Zap, Layout, ChevronRight, Database, Globe, MapPin, User } from 'lucide-react';
+import { Shield, Zap, Layout, ChevronRight, Database, Globe, MapPin, User, Trophy, X } from 'lucide-react';
 import type { MapNodeData } from '../../logic/mapData';
 import type { Profession } from '../../logic/professions';
 import type { QuestState } from '../../logic/questEngine';
@@ -9,6 +9,8 @@ import type { MessengerMessage } from '../../logic/hooks/useGameState';
 import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
 import { COOP_DECK_MAX_CARDS, COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
 import { OCTOBERLINE_HUB_BRACKET_LABEL } from '../../buildInfo';
+import type { CoopWeeklyTheme } from '../../logic/coopWeeklySeason';
+import type { StartupLeaderRow } from '../../logic/coopStartupLeaderboard';
 
 interface HubViewProps {
   playerName: string;
@@ -55,6 +57,12 @@ interface HubViewProps {
   onSwitchCoopClass?: (role: CoopRole) => void;
   /** Переключение соло/кооп без перелогина. */
   onSwitchSessionMode?: (mode: 'solo' | 'coop') => void;
+  /** Кооп: тема «недели» и прогресс полигона */
+  coopWeekTheme?: CoopWeeklyTheme | null;
+  coopYardProgress?: { cleared: number; required: number; tierLabel: string } | null;
+  coopStartupLeaderboard?: StartupLeaderRow[];
+  /** При открытии модалки — подтянуть топ с сервера (после submit лучшего счёта). */
+  onRefreshCoopStartupLeaderboard?: () => Promise<StartupLeaderRow[] | null>;
 }
 
 export const HubView: React.FC<HubViewProps> = ({
@@ -95,8 +103,27 @@ export const HubView: React.FC<HubViewProps> = ({
   coopRole = null,
   onSwitchCoopClass,
   onSwitchSessionMode,
+  coopWeekTheme = null,
+  coopYardProgress = null,
+  coopStartupLeaderboard = [],
+  onRefreshCoopStartupLeaderboard,
 }) => {
   const [messageDraft, setMessageDraft] = React.useState('');
+  const [startupLbOpen, setStartupLbOpen] = React.useState(false);
+  const [startupLbDisplay, setStartupLbDisplay] = React.useState<StartupLeaderRow[]>(coopStartupLeaderboard);
+  React.useEffect(() => {
+    setStartupLbDisplay(coopStartupLeaderboard);
+  }, [coopStartupLeaderboard]);
+  React.useEffect(() => {
+    if (!startupLbOpen || !onRefreshCoopStartupLeaderboard) return undefined;
+    let cancelled = false;
+    onRefreshCoopStartupLeaderboard().then((next) => {
+      if (!cancelled && next && next.length > 0) setStartupLbDisplay(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [startupLbOpen, onRefreshCoopStartupLeaderboard]);
   const messengerFeedRef = React.useRef<HTMLDivElement | null>(null);
   const profilePopupRef = React.useRef<HTMLDivElement | null>(null);
   const [selectedChatProfile, setSelectedChatProfile] = React.useState<{
@@ -284,6 +311,26 @@ export const HubView: React.FC<HubViewProps> = ({
         </div>
       </header>
 
+      {sessionMode === 'coop' && coopWeekTheme && (
+        <div className="neon-panel arctic-monolith" style={{ margin: '0 0 14px', padding: '14px 18px' }}>
+          <div className="mono-text" style={{ fontSize: '0.62rem', color: 'var(--neon-cyan)', letterSpacing: '0.14em' }}>
+            {coopWeekTheme.title}
+          </div>
+          <p style={{ margin: '10px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: '#c5d8e8' }}>{coopWeekTheme.lore}</p>
+          {coopWeekTheme.accent && (
+            <p className="mono-text" style={{ margin: '10px 0 0', fontSize: '0.62rem', opacity: 0.8 }}>
+              {coopWeekTheme.accent}
+            </p>
+          )}
+          {coopYardProgress && (
+            <div className="mono-text" style={{ marginTop: 12, fontSize: '0.65rem', color: '#8ac' }}>
+              ПОЛИГОН · {coopYardProgress.tierLabel.toUpperCase()}: закрыто миссий {coopYardProgress.cleared} /{' '}
+              {coopYardProgress.required} до ворот босса (релизный гейт)
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="hub-grid-v4">
         <div className="hub-col identity">
           <div className="col-header mono-text"><Shield size={14} /> IDENTITY_MODULE</div>
@@ -387,6 +434,22 @@ export const HubView: React.FC<HubViewProps> = ({
               </div>
               <p className="intel-desc mono-text">LIBRARIES_OPENED / ARCHED_CONCEPTS</p>
            </div>
+           {sessionMode === 'coop' && (
+             <div
+               className="neon-panel interactive op-card"
+               onClick={() => setStartupLbOpen(true)}
+               style={{ borderColor: 'rgba(255, 200, 80, 0.35)' }}
+             >
+               <div className="op-icon">
+                 <Trophy size={32} color="var(--neon-amber)" />
+               </div>
+               <div className="op-text">
+                 <div className="op-title">РЕЙТИНГ СТАРТАПОВ</div>
+                 <div className="op-sub">NPC + игроки; при открытии — синхронизация с сервером</div>
+               </div>
+               <ChevronRight className="op-arrow" />
+             </div>
+           )}
         </div>
 
       </div>
@@ -525,6 +588,83 @@ export const HubView: React.FC<HubViewProps> = ({
           </div>
         </div>
       </aside>
+
+      {startupLbOpen && sessionMode === 'coop' && (
+        <div
+          className="map-rail-hint-overlay"
+          style={{ zIndex: 400 }}
+          onClick={() => setStartupLbOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="neon-panel arctic-monolith"
+            style={{
+              maxWidth: 480,
+              margin: '48px auto',
+              padding: 20,
+              position: 'relative',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Рейтинг стартапов"
+          >
+            <button
+              type="button"
+              onClick={() => setStartupLbOpen(false)}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: 12,
+                background: 'transparent',
+                border: 0,
+                cursor: 'pointer',
+                color: '#889',
+              }}
+              aria-label="Закрыть"
+            >
+              <X size={20} />
+            </button>
+            <h3 className="mono-text" style={{ margin: '0 0 12px', letterSpacing: '0.12em', color: 'var(--neon-amber)' }}>
+              РЕЙТИНГ СТАРТАПОВ
+            </h3>
+            <p className="mono-text" style={{ fontSize: '0.65rem', color: '#8ab', marginBottom: 14, lineHeight: 1.45 }}>
+              Список смешивает лоровые проекты сети и игроков. Очки: миссии полигона, биты, ранг. При входе в окно
+              лучший счёт отправляется на сервер и таблица подтягивается с API (если сессия авторизована).
+            </p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.72rem' }}>
+              <thead>
+                <tr style={{ color: '#8ac', textAlign: 'left' }}>
+                  <th style={{ padding: '6px 4px' }}>#</th>
+                  <th style={{ padding: '6px 4px' }}>СТАРТАП</th>
+                  <th style={{ padding: '6px 4px' }}>ОЧКИ</th>
+                  <th style={{ padding: '6px 4px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {startupLbDisplay.map((row) => (
+                  <tr
+                    key={`${row.rank}-${row.name}`}
+                    style={{
+                      borderTop: '1px solid rgba(0,212,255,0.12)',
+                      background: row.isPlayer ? 'rgba(0, 212, 255, 0.08)' : undefined,
+                    }}
+                  >
+                    <td style={{ padding: '8px 4px', color: '#9ab' }}>{row.rank}</td>
+                    <td style={{ padding: '8px 4px', color: row.isPlayer ? 'var(--neon-cyan)' : '#cde' }}>{row.name}</td>
+                    <td style={{ padding: '8px 4px' }}>{row.score}</td>
+                    <td className="mono-text" style={{ padding: '8px 4px', fontSize: '0.58rem', color: '#789' }}>
+                      {row.tag ?? ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

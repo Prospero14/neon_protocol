@@ -2,7 +2,12 @@ import React, { useMemo, useState } from 'react';
 import type { CardLibTag, CombatCard } from '../logic/combatCards';
 import { cardMatchesJavaStack, cardPassesCategoryChips, LIB_TAG_LABELS } from '../logic/cardStack';
 import type { SessionMode, CoopRole } from '../logic/sessionMode';
-import { getCoopDeckCatalogUnionIds, getCoopRoleCatalogIds } from '../logic/sessionMode';
+import {
+  COOP_DECK_MAX_CARDS,
+  COOP_DECK_MIN_CARDS,
+  getCoopDeckCatalogUnionIds,
+  getCoopRoleCatalogIds,
+} from '../logic/sessionMode';
 import type { DevLanguageStack } from '../logic/decks/deckCatalog';
 import { DEV_LANGUAGE_LABELS } from '../logic/decks/deckCatalog';
 import CyberCard from './CyberCard';
@@ -164,13 +169,15 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
     }
 
     const count = activeDeck.filter(c => c.id === card.id).length;
-    if (count < 3 && activeDeck.length < 30) {
+    const deckCap = sessionMode === 'coop' && coopRole ? COOP_DECK_MAX_CARDS : 30;
+    if (count < 3 && activeDeck.length < deckCap) {
       onUpdateDeck([...activeDeck, card]);
     }
   };
 
   const removeCard = (card: CombatCard, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (sessionMode === 'coop' && coopRole && activeDeck.length <= COOP_DECK_MIN_CARDS) return;
     const idx = activeDeck.lastIndexOf(activeDeck.find(c => c.id === card.id)!);
     if (idx !== -1) {
       const nextDeck = [...activeDeck];
@@ -567,7 +574,11 @@ const DeckBuilder: React.FC<DeckBuilderProps> = ({
         )}
         <div className="pane-header secondary">
           <ArrowRight size={14} />
-          <span>СНАРЯЖЕНИЕ ({activeDeck.length}/30)</span>
+          <span>
+            СНАРЯЖЕНИЕ (
+            {activeDeck.length}/{sessionMode === 'coop' && coopRole ? COOP_DECK_MAX_CARDS : 30})
+            {sessionMode === 'coop' && coopRole ? ` · мин. ${COOP_DECK_MIN_CARDS}` : ''}
+          </span>
         </div>
         <div className="active-list">
           {Array.from(new Set(activeDeck.map(c => c.id))).map(id => {

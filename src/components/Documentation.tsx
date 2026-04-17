@@ -1,23 +1,38 @@
 import React, { useState } from 'react';
-import { Book, ChevronRight, Code, Info, Lock, Zap, Clock, Server, ArrowLeft, Play, RotateCcw, Terminal } from 'lucide-react';
+import { Book, ChevronRight, Code, Info, Lock, Zap, Clock, Server, ArrowLeft, Play, RotateCcw, Terminal, Users } from 'lucide-react';
 import { JAVA_REFERENCE } from '../logic/referenceData';
 import { CARD_LIBRARY } from '../logic/combatCards';
 import type { CombatCard } from '../logic/combatCards';
 import { SPRING_CARD_LIBRARY } from '../logic/springCards';
 import { SPRING_JAVA_REFERENCE } from '../logic/springReferenceData';
+import type { CoopRole, DevLanguageStack, SessionMode } from '../logic/sessionMode';
+import { getCoopRoleCatalogIds, buildCoopProtocolDocCards, COOP_ROLE_LABELS } from '../logic/sessionMode';
 
-type DocPack = 'core' | 'spring' | 'infra' | 'soft-skills' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics' | 'scripting' | 'exploits';
+type DocPack = 'core' | 'spring' | 'infra' | 'soft-skills' | 'testing' | 'cookbook' | 'sandbox' | 'mechanics' | 'scripting' | 'exploits' | 'coop_protocol';
 
 interface DocumentationProps {
   discoveredCardIds: Set<string>;
   initialEntryId?: string | null;
   onBack: () => void;
   solvedChains: Array<{ taskId: string, name: string, chain: string[] }>;
+  /** В коопе списки карт ограничиваются каталогом роли; заметка открыта только если карта в колоде/инвентаре (discovered). */
+  sessionMode?: SessionMode;
+  coopRole?: CoopRole | null;
+  devLanguageStack?: DevLanguageStack | null;
 }
 
-const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initialEntryId, onBack, solvedChains }) => {
+const Documentation: React.FC<DocumentationProps> = ({
+  discoveredCardIds,
+  initialEntryId,
+  onBack,
+  solvedChains,
+  sessionMode = 'solo',
+  coopRole = null,
+  devLanguageStack = null,
+}) => {
   const [pack, setPack] = useState<DocPack>('mechanics');
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(initialEntryId || null);
+  const [selectedCoopCardId, setSelectedCoopCardId] = useState<string | null>(null);
   
   // Sandbox State
   const [sandboxCards, setSandboxCards] = useState<CombatCard[]>([]);
@@ -46,17 +61,58 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
     }
   }, [initialEntryId]);
 
+  const coopCatalogIds = React.useMemo(() => {
+    if (sessionMode !== 'coop' || !coopRole) return null;
+    return getCoopRoleCatalogIds(
+      coopRole,
+      coopRole === 'developer' ? (devLanguageStack ?? 'java') : null
+    );
+  }, [sessionMode, coopRole, devLanguageStack]);
+
+  const filterCoopCatalog = React.useCallback(
+    (cards: CombatCard[]) => {
+      if (!coopCatalogIds) return cards;
+      return cards.filter((c) => coopCatalogIds.has(c.id));
+    },
+    [coopCatalogIds]
+  );
+
+  const coopDocCatalog = React.useMemo(() => {
+    if (sessionMode !== 'coop' || !coopRole) return null;
+    const cards = buildCoopProtocolDocCards(
+      coopRole,
+      coopRole === 'developer' ? (devLanguageStack ?? 'java') : null
+    );
+    const total = cards.length;
+    let open = 0;
+    for (const c of cards) {
+      if (discoveredCardIds.has(c.id)) open++;
+    }
+    return { cards, total, open, roleTitle: COOP_ROLE_LABELS[coopRole].title };
+  }, [sessionMode, coopRole, devLanguageStack, discoveredCardIds]);
+
+  React.useEffect(() => {
+    if (sessionMode !== 'coop' && pack === 'coop_protocol') setPack('mechanics');
+  }, [sessionMode, pack]);
+
+  React.useEffect(() => {
+    if (pack !== 'coop_protocol' || !coopDocCatalog) return;
+    if (!selectedCoopCardId || !coopDocCatalog.cards.some((c) => c.id === selectedCoopCardId)) {
+      setSelectedCoopCardId(coopDocCatalog.cards[0]?.id ?? null);
+    }
+  }, [pack, coopDocCatalog, selectedCoopCardId]);
+
   const cardLibrary: CombatCard[] = React.useMemo(() => {
       switch(pack) {
-          case 'spring': return SPRING_CARD_LIBRARY;
-          case 'infra': return CARD_LIBRARY.filter(c => c.type === 'INFRASTRUCTURE');
-          case 'soft-skills': return CARD_LIBRARY.filter(c => c.type === 'SOFT');
-          case 'scripting': return CARD_LIBRARY.filter(c => c.type === 'SCRIPT');
-          case 'testing': return CARD_LIBRARY.filter((c: any) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || (c.tags && c.tags.includes('reaction')));
-          case 'core': return CARD_LIBRARY.filter((c: any) => c.type === 'SYNTAX' || c.type === 'FUNCTION');
-          default: return CARD_LIBRARY;
+          case 'spring': return filterCoopCatalog(SPRING_CARD_LIBRARY);
+          case 'infra': return filterCoopCatalog(CARD_LIBRARY.filter(c => c.type === 'INFRASTRUCTURE'));
+          case 'soft-skills': return filterCoopCatalog(CARD_LIBRARY.filter(c => c.type === 'SOFT'));
+          case 'scripting': return filterCoopCatalog(CARD_LIBRARY.filter(c => c.type === 'SCRIPT'));
+          case 'testing': return filterCoopCatalog(CARD_LIBRARY.filter((c: any) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || (c.tags && c.tags.includes('reaction'))));
+          case 'core': return filterCoopCatalog(CARD_LIBRARY.filter((c: any) => c.type === 'SYNTAX' || c.type === 'FUNCTION'));
+          default: return filterCoopCatalog(CARD_LIBRARY);
       }
-  }, [pack]);
+  }, [pack, filterCoopCatalog]);
 
   const refBook = pack === 'spring' ? SPRING_JAVA_REFERENCE : JAVA_REFERENCE;
   const getEntryById = React.useCallback((id: string | null) => {
@@ -132,8 +188,22 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
           <Book size={20} color="var(--neon-cyan)" />
           <div>
             <h3>OCTOBERLINE_DOCS [V6.4]</h3>
+            {sessionMode === 'coop' && coopRole && (
+              <p className="mono-text" style={{ margin: '6px 0 0', fontSize: 11, opacity: 0.75 }}>
+                COOP // каталог роли: только протоколы, доступные вашему классу. Заметка открыта, если карта уже у вас (колода/инвентарь).
+              </p>
+            )}
             <div className="ref-pack-tabs mono-text">
               <button className={`ref-pack-tab ${pack === 'mechanics' ? 'active' : ''}`} onClick={() => setPack('mechanics')}>GAME_SYSTEMS</button>
+              {sessionMode === 'coop' && coopRole && (
+                <button
+                  className={`ref-pack-tab ${pack === 'coop_protocol' ? 'active' : ''}`}
+                  onClick={() => setPack('coop_protocol')}
+                  title="Каталог коопа: открыто / закрыто"
+                >
+                  COOP_CATALOG
+                </button>
+              )}
               <button className={`ref-pack-tab core ${pack === 'core' ? 'active' : ''}`} onClick={() => setPack('core')}>JAVA_CORE</button>
               <button className={`ref-pack-tab scripting ${pack === 'scripting' ? 'active' : ''}`} onClick={() => setPack('scripting')}>SCRIPTS</button>
               <button className={`ref-pack-tab spring ${pack === 'spring' ? 'active' : ''}`} onClick={() => setPack('spring')}>SPRING_BOOT</button>
@@ -148,6 +218,158 @@ const Documentation: React.FC<DocumentationProps> = ({ discoveredCardIds, initia
         </div>
         <div style={{ flex: 1 }} />
       </header>
+
+      {pack === 'coop_protocol' && sessionMode === 'coop' && coopRole && coopDocCatalog && (
+        <div className="ref-guide-full neon-panel">
+          <div className="ref-guide-body">
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Users size={20} color="var(--neon-cyan)" />
+                <h4 className="section-label">КООП: КАТАЛОГ ПРОТОКОЛОВ И ЗАМЕТКИ</h4>
+              </div>
+              <p className="mono-text" style={{ opacity: 0.85 }}>
+                Роль: <strong>{coopDocCatalog.roleTitle}</strong>
+                {' · '}
+                Открыто заметок: <strong>{coopDocCatalog.open}</strong> / <strong>{coopDocCatalog.total}</strong> (в каталоге роли)
+              </p>
+              <p>
+                <strong>Каталог</strong> — это набор id карт, разрешённых для вашей роли в коопе (полигон <code>coop_yard</code>).
+                Во вкладках JAVA_CORE, SCRIPTS, SPRING_BOOT, INFRA, SOFT_SKILLS, TESTS показываются только карты из этого каталога;
+                протоколы других ролей скрыты — это разделение зон ответственности, а не ошибка списка.
+              </p>
+            </section>
+
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Info size={20} color="var(--neon-amber)" />
+                <h4 className="section-label">ОТКРЫТО И ЗАКРЫТО</h4>
+              </div>
+              <ul className="mech-list">
+                <li>
+                  <strong>Открыто (discovered)</strong> — id карты есть в множестве открытых протоколов: карта в{' '}
+                  <strong>активной колоде</strong> или в <strong>инвентаре</strong>. В списке слева видно название, справа — полный текст; строка подсвечена как открытая.
+                </li>
+                <li>
+                  <strong>Закрыто (locked)</strong> — карта входит в каталог роли, но вы её ещё не получили в колоду/инвентарь.
+                  В списке показывается маска <code>????????????</code>, описание недоступно до открытия.
+                </li>
+              </ul>
+              <p>
+                Новые заметки открываются, когда вы добавляете карту в колоду или получаете её наградой; после синхронизации сохранения множество открытых id обновляется вместе с колодой и инвентарём.
+              </p>
+            </section>
+
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Terminal size={20} color="var(--neon-pink)" />
+                <h4 className="section-label">SANDBOX В КООПЕ</h4>
+              </div>
+              <p>
+                В песочницу можно подгрузить только карты, которые уже <strong>открыты</strong> и входят в ваш кооп-каталог (те же правила фильтра, что и для списка протоколов).
+              </p>
+            </section>
+
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Server size={20} color="var(--neon-amethyst)" />
+                <h4 className="section-label">РАЗМЕР КОЛОДЫ (КООП)</h4>
+              </div>
+              <p>
+                Минимум <strong>30</strong> карт в стартовой колоде; в конструкторе — до <strong>200</strong> карт. Подробности в коде:{' '}
+                <code>sessionMode.ts</code> (<code>COOP_DECK_MIN_CARDS</code>, <code>COOP_DECK_MAX_CARDS</code>, <code>buildCoopProtocolDocCards</code>).
+              </p>
+              <p className="mono-text opacity-60" style={{ fontSize: 11, marginTop: 8 }}>
+                Полный текст: <code>docs/COOP_CARD_DOCUMENTATION.md</code>
+              </p>
+            </section>
+
+            <section className="mechanic-section">
+              <div className="mech-header">
+                <Book size={20} color="var(--neon-cyan)" />
+                <h4 className="section-label">ДОКУМЕНТАЦИЯ ПО ВСЕМ КАРТАМ КАТАЛОГА</h4>
+              </div>
+              <div className="ref-layout" style={{ marginTop: 10 }}>
+                <div className="ref-list-pane neon-panel">
+                  <div className="pane-header">
+                    <Info size={16} />
+                    <span>COOP_PROTOCOLS</span>
+                  </div>
+                  <div className="entries-scroll-list">
+                    {coopDocCatalog.cards.map((card) => {
+                      const isDiscovered = discoveredCardIds.has(card.id);
+                      return (
+                        <div
+                          key={card.id}
+                          className={`ref-item ${isDiscovered ? 'discovered' : 'locked'} ${selectedCoopCardId === card.id ? 'active' : ''}`}
+                          onClick={() => setSelectedCoopCardId(card.id)}
+                        >
+                          <div className="ref-item-main">
+                            {isDiscovered ? (
+                              <ChevronRight size={16} color="var(--neon-cyan)" />
+                            ) : (
+                              <Lock size={16} opacity={0.3} />
+                            )}
+                            <span className="ref-item-title">{isDiscovered ? card.name : '????????????'}</span>
+                          </div>
+                          <span className="ref-item-card-tag">{isDiscovered ? card.id : 'LOCKED'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="ref-detail-pane neon-panel">
+                  {(() => {
+                    const selected = coopDocCatalog.cards.find((c) => c.id === selectedCoopCardId) ?? null;
+                    if (!selected) {
+                      return (
+                        <div className="empty-entry-state">
+                          <Code size={48} opacity={0.1} />
+                          <p>SELECT_DATA_ENTRY_TO_VIEW_DOCUMENTATION</p>
+                        </div>
+                      );
+                    }
+                    const isDiscovered = discoveredCardIds.has(selected.id);
+                    return (
+                      <div className="entry-content animate-float">
+                        <div className="entry-header">
+                          <h2 className="entry-title">{isDiscovered ? selected.name : '????????????'}</h2>
+                          <div className="entry-concept mono-text">
+                            {isDiscovered ? `${selected.type} / ${selected.grade} / ${selected.id}` : 'LOCKED_ENTRY'}
+                          </div>
+                        </div>
+                        {isDiscovered ? (
+                          <>
+                            <div className="entry-section">
+                              <h4 className="section-label">[ EXPLANATION ]</h4>
+                              <p className="section-text">{selected.description}</p>
+                            </div>
+                            <div className="entry-section">
+                              <h4 className="section-label">[ KEY_CONCEPTS ]</h4>
+                              <ul className="entry-tech-list mono-text">
+                                <li>Тип: {selected.type}</li>
+                                <li>Грейд: {selected.grade}</li>
+                                <li>Стоимость: {selected.cost} CPU</li>
+                                <li>Фаза: {selected.phaseConstraint || 'ANY'}</li>
+                              </ul>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="entry-section">
+                            <h4 className="section-label">[ LOCKED ]</h4>
+                            <p className="section-text">
+                              Запись закрыта. Получите карту в колоду или инвентарь, чтобы открыть полную документацию.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      )}
 
       {pack === 'mechanics' && (
         <div className="ref-guide-full neon-panel">
@@ -360,7 +582,7 @@ spec: { containers: [{ image: neon-app:latest }] }`}</pre>
               <span>LOGIC_ASSEMBLER</span>
             </div>
             <div className="entries-scroll-list">
-              {CARD_LIBRARY.filter(c => discoveredCardIds.has(c.id)).map((card) => (
+              {filterCoopCatalog(CARD_LIBRARY).filter(c => discoveredCardIds.has(c.id)).map((card) => (
                 <div key={card.id} className="ref-item discovered" onClick={() => setSandboxCards([...sandboxCards, card])}>
                   <div className="ref-item-main">
                     <Zap size={14} color="var(--neon-cyan)" />

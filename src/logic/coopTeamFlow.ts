@@ -36,7 +36,7 @@ export function rollSyntheticSquadAssist(params: {
   stress: number;
   infraFilledSlots: number;
   playerProgress: number;
-}): SyntheticSquadTickResult | null {
+}): SyntheticSquadTickResult {
   const allies = otherCoopRoles(params.playerRole);
   const logs: string[] = [];
   let bugDelta = 0;
@@ -82,6 +82,8 @@ export function rollSyntheticSquadAssist(params: {
     }
   }
 
-  if (logs.length === 0) return null;
+  if (logs.length === 0) {
+    logs.push('[КОМАНДА] Радио-тишина: союзники на связи, ждут вашего коммита.');
+  }
   return { logs, bugDelta, stressDelta, mitigationDelta, progressDelta };
 }

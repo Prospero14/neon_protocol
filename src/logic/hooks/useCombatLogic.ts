@@ -5,13 +5,14 @@ import { isInfraDrawCard, isStabilizationDrawCard, isStaticCodeCardType } from '
 import type { CombatCard } from '../combatCards';
 import { getCardById } from '../combatCards';
 import { isOutplayCounter, problemTypeLabelRu } from '../combatCounterplay';
-import type { TechnicalTask } from '../combatTasks';
+import type { TechnicalTask, TZStep } from '../combatTasks';
 import { getStepCardIds } from '../combatTasks';
 
 import type { Trait } from '../traits';
 import { BUGS, pickNextBugAction } from '../combatEnemies';
 import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
-import type { CoopRole, SessionMode } from '../sessionMode';
+import type { CoopRole, DevLanguageStack, SessionMode } from '../sessionMode';
+import { getCoopRoleCatalogIds } from '../sessionMode';
 import type { CoopSquadFill } from '../coopTeamFlow';
 import { rollSyntheticSquadAssist } from '../coopTeamFlow';
 import {
@@ -49,6 +50,45 @@ interface UseCombatLogicProps {
   coopRole?: CoopRole | null;
   /** Кооп: пати людей — без симуляции ходов ботов на этом клиенте. */
   coopSquadFill?: CoopSquadFill;
+  devLanguageStack?: DevLanguageStack | null;
+}
+
+function pickCombatCardForMissionStep(step: TZStep): CombatCard | null {
+  for (const id of getStepCardIds(step)) {
+    const c = getCardById(id);
+    if (c) return c;
+  }
+  return null;
+}
+
+function ensureCoopDeveloperDeckCoversMission(
+  deck: CombatCard[],
+  mission: TechnicalTask,
+  stack: DevLanguageStack | null
+): CombatCard[] {
+  if (mission.districtId !== 'coop_yard') return deck;
+  const catalog = getCoopRoleCatalogIds('developer', stack);
+  const have = new Set(deck.map((c) => c.id));
+  const missing: string[] = [];
+  for (const step of mission.steps) {
+    const ids = getStepCardIds(step);
+    if (ids.length === 0) continue;
+    if (!ids.some((id) => have.has(id))) {
+      const pick = ids.find((id) => catalog.has(id)) ?? ids[0];
+      missing.push(pick);
+    }
+  }
+  if (missing.length === 0) return deck;
+  const out = [...deck];
+  for (const id of missing) {
+    if (have.has(id)) continue;
+    const card = getCardById(id);
+    if (!card) continue;
+    if (!catalog.has(id)) continue;
+    out.push(card);
+    have.add(id);
+  }
+  return out;
 }
 
 interface AiImpactSummary {
@@ -72,10 +112,16 @@ export function useCombatLogic({
   sessionMode = 'solo',
   coopRole = null,
   coopSquadFill = 'synthetic_bots',
+  devLanguageStack = null,
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
   const START_HAND_SIZE = 6;
+
+  const coopDeckForLogic = useMemo(() => {
+    if (!coopActive || coopRole !== 'developer') return activeDeck;
+    return ensureCoopDeveloperDeckCoversMission(activeDeck, missionTz, devLanguageStack);
+  }, [activeDeck, coopActive, coopRole, missionTz, devLanguageStack]);
 
   // --- CORE STATE ---
   const [currentPhase, setCurrentPhase] = useState<CombatPhase>(() =>
@@ -162,18 +208,19 @@ export function useCombatLogic({
   // --- DERIVED ---
   const ramSlotsMax = useMemo(() => {
     const raw = Math.floor(ramMaxMb / 512);
-    if (skillMode === 'script-kiddie') return Math.max(raw, missionTz.steps.length);
+    const stepCount = missionTz.steps?.length ?? 0;
+    if (skillMode === 'script-kiddie') return Math.max(raw, Math.max(stepCount, 1));
     return raw;
   }, [ramMaxMb, skillMode, missionTz]);
 
   const codingPalette = useMemo(
-    () => activeDeck.filter((c) => isStaticCodeCardType(c.type)),
-    [activeDeck]
+    () => coopDeckForLogic.filter((c) => isStaticCodeCardType(c.type)),
+    [coopDeckForLogic]
   );
 
   const scriptPool = useMemo(
-    () => activeDeck.filter((c) => c.type === 'SCRIPT' && !discard.some((d) => d.id === c.id)),
-    [activeDeck, discard]
+    () => coopDeckForLogic.filter((c) => c.type === 'SCRIPT' && !discard.some((d) => d.id === c.id)),
+    [coopDeckForLogic, discard]
   );
 
   const filteredHand = useMemo(() => {
@@ -272,6 +319,40 @@ export function useCombatLogic({
     if (playerTraits.some(t => t.id === 'overclocked')) {
       setCpuMax(prev => prev + 1);
       setCpu(prev => prev + 1);
+    }
+
+    /** Полигон coop_yard + synthetic_bots: общий пол RAM/CPU для всех ролей; цепочку кода на шину кладёт бот-DEV, если вы не developer. */
+    if (
+      coopActive &&
+      coopSquadFill === 'synthetic_bots' &&
+      missionTz.districtId === 'coop_yard' &&
+      coopRole
+    ) {
+      const railSteps = Math.max(1, missionTz.steps?.length ?? 1);
+      setRamMaxMb((prev) => Math.max(prev, 512 * railSteps));
+      const wantCpu = Math.max(3, Math.ceil(railSteps * 0.55));
+      setCpuMax((prev) => Math.max(prev, wantCpu));
+      setCpu((prev) => Math.max(prev, wantCpu));
+      addLog(
+        `[КОМАНДА:ADMIN] Синтетический контур: RAM/CPU под ${railSteps} слотов шины (общая база команды).`,
+      );
+      if (
+        missionTz.isExecutionChain &&
+        coopRole !== 'developer' &&
+        missionTz.steps?.length
+      ) {
+        setRuntimeRail((prev) => {
+          const next = [...prev];
+          for (let i = 0; i < missionTz.steps.length; i++) {
+            if (i >= next.length) break;
+            const card = pickCombatCardForMissionStep(missionTz.steps[i]);
+            if (!card) continue;
+            next[i] = { type: 'PLAYER_CODE', content: card, integrity: card.integrity ?? 10 };
+          }
+          return next;
+        });
+        addLog('[КОМАНДА:DEV] Синтетический разработчик выложил цепочку ТЗ на шину — играйте свою роль параллельно.');
+      }
     }
 
     setPhaseIntro(bootPhase);
@@ -1271,8 +1352,7 @@ export function useCombatLogic({
           coopActive &&
           coopRole &&
           coopSquadFill === 'synthetic_bots' &&
-          currentPhase !== 'ARCHITECTURE' &&
-          executed
+          currentPhase !== 'ARCHITECTURE'
         ) {
           const snap = combatCoopAssistRef.current;
           const assist = rollSyntheticSquadAssist({
@@ -1282,15 +1362,13 @@ export function useCombatLogic({
             infraFilledSlots: snap.infraFilled,
             playerProgress: snap.playerProgress,
           });
-          if (assist) {
-            assist.logs.forEach((line) => addLog(line));
-            if (assist.bugDelta) setBugPoints((p) => Math.max(0, p + assist.bugDelta));
-            if (assist.stressDelta) setStress((s) => Math.min(100, Math.max(0, s + assist.stressDelta)));
-            if (assist.mitigationDelta)
-              setMitigationBuffer((b) => Math.max(0, b + assist.mitigationDelta));
-            if (assist.progressDelta)
-              setPlayerProgress((p) => Math.min(100, Math.max(0, p + assist.progressDelta)));
-          }
+          assist.logs.forEach((line) => addLog(line));
+          if (assist.bugDelta) setBugPoints((p) => Math.max(0, p + assist.bugDelta));
+          if (assist.stressDelta) setStress((s) => Math.min(100, Math.max(0, s + assist.stressDelta)));
+          if (assist.mitigationDelta)
+            setMitigationBuffer((b) => Math.max(0, b + assist.mitigationDelta));
+          if (assist.progressDelta)
+            setPlayerProgress((p) => Math.min(100, Math.max(0, p + assist.progressDelta)));
         }
         setIsPlayerTurn(true); setCpu(cpuMax); drawCards(hadCleanCounterplay ? 2 : 1);
         if (hadCleanCounterplay) addLog('[TEMPO] Clean counterplay last turn: +1 extra draw.');

@@ -4,7 +4,7 @@ import { coopAdjustAiDeltas, coopChainProgressBonus, coopOutplayExtras } from '.
 import { pickNextBugAction } from './combatEnemies';
 import { BUGS } from './combatEnemies';
 import { coopSegmentBitsBonus } from './coopLobbyRewards';
-import { buildStarterDeckForSession } from './sessionMode';
+import { buildStarterDeckForSession, COOP_DECK_MAX_CARDS, COOP_DECK_MIN_CARDS } from './sessionMode';
 
 describe('economy', () => {
   it('baseQuestBits растёт с tier и difficulty', () => {
@@ -91,11 +91,11 @@ describe('coopLobbyRewards.coopSegmentBitsBonus', () => {
 });
 
 describe('sessionMode.buildStarterDeckForSession (coop accents)', () => {
-  it('кооп-роли: колода ≤14 карт и не пустая', () => {
+  it(`кооп-роли: колода от ${COOP_DECK_MIN_CARDS} до ${COOP_DECK_MAX_CARDS} карт`, () => {
     for (const role of ['qa', 'pm', 'admin', 'developer'] as const) {
       const deck = buildStarterDeckForSession('coop', role, role === 'developer' ? 'java' : null);
-      expect(deck.length).toBeGreaterThan(0);
-      expect(deck.length).toBeLessThanOrEqual(14);
+      expect(deck.length).toBeGreaterThanOrEqual(COOP_DECK_MIN_CARDS);
+      expect(deck.length).toBeLessThanOrEqual(COOP_DECK_MAX_CARDS);
     }
   });
 });

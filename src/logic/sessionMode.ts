@@ -4,8 +4,9 @@
  */
 
 import type { CombatCard } from './combatCards';
-import { getCardById } from './combatCards';
+import { CARD_LIBRARY, getCardById } from './combatCards';
 import { buildTraineeDeck } from './traineeDeck';
+import { SPRING_CARD_LIBRARY } from './springCards';
 import {
   DEV_DEFAULT_LIB_PACK,
   DEVELOPER_STACK_BROWSE_IDS,
@@ -122,7 +123,11 @@ const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
   ],
 };
 
-const MAX_COOP_STARTER_CARDS = 14;
+/** Минимальный размер стартовой колоды в коопе (каждая роль). */
+export const COOP_DECK_MIN_CARDS = 30;
+
+/** Верхний предел размера колоды в коопе (конструктор и стартовый набор). */
+export const COOP_DECK_MAX_CARDS = 200;
 
 function mergeUniqueIdLists(chunks: string[][], max: number): string[] {
   const out: string[] = [];
@@ -138,29 +143,81 @@ function mergeUniqueIdLists(chunks: string[][], max: number): string[] {
   return out;
 }
 
+/** Добиваем колоду до min уникальных+дублей (до maxPerId копий), только id с реальной картой в билде. */
+function padIdsToMinCount(
+  baseIds: string[],
+  fillerCandidates: string[],
+  min: number,
+  maxPerId = 3
+): string[] {
+  const out = [...baseIds];
+  const counts = new Map<string, number>();
+  for (const id of out) counts.set(id, (counts.get(id) ?? 0) + 1);
+  const pool = fillerCandidates.filter((id) => getCardById(id));
+  if (pool.length === 0) return out;
+  let i = 0;
+  let guard = 0;
+  while (out.length < min && guard < min * pool.length * 2) {
+    guard += 1;
+    const id = pool[i % pool.length];
+    i += 1;
+    const c = counts.get(id) ?? 0;
+    if (c >= maxPerId) continue;
+    out.push(id);
+    counts.set(id, c + 1);
+  }
+  return out;
+}
+
+function finalizeCoopDeckIds(uniqueOrdered: string[], fillerSorted: string[]): string[] {
+  const resolvable = uniqueOrdered.filter((id) => getCardById(id));
+  if (resolvable.length >= COOP_DECK_MIN_CARDS) {
+    return resolvable.slice(0, COOP_DECK_MAX_CARDS);
+  }
+  const padded = padIdsToMinCount(resolvable, fillerSorted, COOP_DECK_MIN_CARDS);
+  return padded.slice(0, COOP_DECK_MAX_CARDS);
+}
+
+function collectDeveloperStackIdChunks(stack: DevLanguageStack): string[][] {
+  const chunks: string[][] = [LANGUAGE_CORE_IDS[stack], COOP_STARTER_IDS.developer];
+  const packKey = DEV_DEFAULT_LIB_PACK[stack];
+  const packs = LANGUAGE_LIBRARY_PACKS[stack];
+  const primary = packs[packKey];
+  if (primary) chunks.push(primary.cardIds);
+  for (const key of Object.keys(packs).sort()) {
+    if (key === packKey) continue;
+    chunks.push(packs[key].cardIds);
+  }
+  chunks.push([...DEVELOPER_STACK_BROWSE_IDS[stack]].sort());
+  return chunks;
+}
+
 /** Только DEVELOPER собирает колоду из языкового ядра / акцентов. */
 function coopStarterIdsWithStack(coopRole: CoopRole, stack: DevLanguageStack): string[] {
-  if (coopRole === 'developer') {
-    const packKey = DEV_DEFAULT_LIB_PACK[stack];
-    const pack = LANGUAGE_LIBRARY_PACKS[stack][packKey];
-    if (!pack) return COOP_STARTER_IDS.developer;
-    return mergeUniqueIdLists([LANGUAGE_CORE_IDS[stack], pack.cardIds], MAX_COOP_STARTER_CARDS);
-  }
+  if (coopRole !== 'developer') return COOP_STARTER_IDS[coopRole];
+  const unique = mergeUniqueIdLists(collectDeveloperStackIdChunks(stack), 9999);
+  const filler = [...DEVELOPER_STACK_BROWSE_IDS[stack]].sort();
+  return finalizeCoopDeckIds(unique, filler);
+}
 
-  return COOP_STARTER_IDS[coopRole];
+function collectNonDevIdChunks(role: 'qa' | 'pm' | 'admin'): string[][] {
+  const chunks: string[][] = [ROLE_SPECIALTY_IDS[role], COOP_STARTER_IDS[role]];
+  const key = ROLE_DEFAULT_ACCENT[role];
+  const primary = ROLE_ACCENT_PACKS[role][key];
+  if (primary) chunks.push(primary.cardIds);
+  for (const pk of Object.keys(ROLE_ACCENT_PACKS[role]).sort()) {
+    if (pk === key) continue;
+    chunks.push(ROLE_ACCENT_PACKS[role][pk].cardIds);
+  }
+  chunks.push([...mergeCoopNonDevCatalogIds(role)].sort());
+  return chunks;
 }
 
 /** QA / PM / Admin: specialty + тематический акцент (аналог «библиотеки» у dev) + база роли. */
 function coopStarterIdsWithAccent(role: 'qa' | 'pm' | 'admin'): string[] {
-  const key = ROLE_DEFAULT_ACCENT[role];
-  const pack = ROLE_ACCENT_PACKS[role][key];
-  if (!pack) {
-    return mergeUniqueIdLists([ROLE_SPECIALTY_IDS[role], COOP_STARTER_IDS[role]], MAX_COOP_STARTER_CARDS);
-  }
-  return mergeUniqueIdLists(
-    [ROLE_SPECIALTY_IDS[role], pack.cardIds, COOP_STARTER_IDS[role]],
-    MAX_COOP_STARTER_CARDS
-  );
+  const unique = mergeUniqueIdLists(collectNonDevIdChunks(role), 9999);
+  const filler = [...mergeCoopNonDevCatalogIds(role)].sort();
+  return finalizeCoopDeckIds(unique, filler);
 }
 
 /**
@@ -175,8 +232,8 @@ export function buildStarterDeckForSession(
     return buildTraineeDeck();
   }
   let ids: string[];
-  if (devLanguageStack != null && coopRole === 'developer') {
-    ids = coopStarterIdsWithStack(coopRole, devLanguageStack);
+  if (coopRole === 'developer') {
+    ids = coopStarterIdsWithStack(coopRole, devLanguageStack ?? 'java');
   } else if (coopRole === 'admin' || coopRole === 'qa' || coopRole === 'pm') {
     ids = coopStarterIdsWithAccent(coopRole);
   } else {
@@ -226,4 +283,27 @@ export function getCoopRoleCatalogIds(
 /** Объединение каталогов для «чужих» dev-стеков vs награды вне стека. */
 export function getCoopDeckCatalogUnionIds(role: CoopRole): ReadonlySet<string> {
   return role === 'developer' ? DEVELOPER_STACKS_UNION_IDS : COOP_NON_DEV_CATALOG_UNION_IDS;
+}
+
+/**
+ * Все карты из билда, попадающие в кооп-каталог роли (для справочника: показать запись / замок).
+ * У developer в пул добавляется Spring-библиотека, если id есть в каталоге стека.
+ */
+export function buildCoopProtocolDocCards(
+  role: CoopRole,
+  devLanguageStack: DevLanguageStack | null
+): CombatCard[] {
+  const stack = role === 'developer' ? (devLanguageStack ?? 'java') : null;
+  const cat = getCoopRoleCatalogIds(role, stack);
+  const pool: CombatCard[] = [...CARD_LIBRARY];
+  if (role === 'developer') pool.push(...SPRING_CARD_LIBRARY);
+  const seen = new Set<string>();
+  const out: CombatCard[] = [];
+  for (const c of pool) {
+    if (!cat.has(c.id) || seen.has(c.id)) continue;
+    seen.add(c.id);
+    out.push(c);
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  return out;
 }

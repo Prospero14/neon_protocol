@@ -370,6 +370,9 @@ function App() {
           initialEntryId={gs.selectedDocId} 
           onBack={() => { gs.setCurrentView(gs.lastView); gs.setSelectedDocId(null); }} 
           solvedChains={gs.solvedChains}
+          sessionMode={gs.sessionMode}
+          coopRole={gs.coopRole}
+          devLanguageStack={gs.devLanguageStack}
         />
       );
     }

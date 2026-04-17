@@ -7,7 +7,7 @@ import type { CombatCard } from '../../logic/combatCards';
 import { PRECLASS_UNLOCK_BITS } from '../../logic/preClassProgression';
 import type { MessengerMessage } from '../../logic/hooks/useGameState';
 import { sanitizeMessengerFeed } from '../../logic/messengerDisplay';
-import { COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
+import { COOP_DECK_MAX_CARDS, COOP_ROLES, COOP_ROLE_LABELS, type CoopRole } from '../../logic/sessionMode';
 import { OCTOBERLINE_HUB_BRACKET_LABEL } from '../../buildInfo';
 
 interface HubViewProps {
@@ -366,7 +366,9 @@ export const HubView: React.FC<HubViewProps> = ({
               <div className="op-icon"><Database size={32} /></div>
               <div className="op-text">
                  <div className="op-title">DECK_CONSTRUCTOR</div>
-                 <div className="op-sub">{activeDeck.length}/30 Modules Loaded</div>
+                 <div className="op-sub">
+                   {activeDeck.length}/{sessionMode === 'coop' && coopRole ? COOP_DECK_MAX_CARDS : 30} Modules Loaded
+                 </div>
               </div>
               <ChevronRight className="op-arrow" />
            </div>

@@ -135,7 +135,7 @@ const HandControls: React.FC<HandControlsProps> = ({
           <button
             className="hc2-action-btn amber"
             onClick={onOverclock}
-            disabled={!isPlayerTurn || stress >= 85}
+            disabled={!isPlayerTurn || stress >= 90}
           >
             <Zap size={13} />
             <span>OC</span>

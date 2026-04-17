@@ -327,8 +327,18 @@ export const ROLE_ACCENT_PACKS: Record<
     },
     stress_chaos: {
       title: 'Chaos / стресс',
-      hint: 'Снятие шума и ложных срабатываний.',
-      cardIds: ['react_decoy_ping', 'react_trace_jam', 'react_spoof_id', 'react_emergency_flush', 'react_flaky_quarantine', 'react_property_fuzz'],
+      hint: 'Снятие шума и ложных срабатываний; пары TRACE→SPOOF и граничные кейсы.',
+      cardIds: [
+        'react_decoy_ping',
+        'react_trace_jam',
+        'react_spoof_id',
+        'react_emergency_flush',
+        'react_flaky_quarantine',
+        'react_property_fuzz',
+        'react_boundary_case',
+        'react_bug_repro',
+        'react_root_cause',
+      ],
     },
   },
   pm: {

@@ -40,32 +40,34 @@ export function coopAdjustAiDeltas(
   bugDelta: number,
   stressDelta: number
 ): { threatDelta: number; bugDelta: number; stressDelta: number } {
+  /** Общее усиление давления по стрессу в коопе (угроза должна ощущаться). */
+  const stressK = 1.22;
   if (role === 'developer') {
     return {
       threatDelta: Math.max(0, Math.ceil(threatDelta * 1.08)),
       bugDelta: Math.max(0, Math.floor(bugDelta * 0.94)),
-      stressDelta: Math.max(0, Math.floor(stressDelta * 1.05)),
+      stressDelta: Math.max(0, Math.floor(stressDelta * 1.08 * stressK)),
     };
   }
   if (role === 'qa') {
     return {
       threatDelta: Math.max(0, Math.floor(threatDelta * 1.04)),
       bugDelta: Math.max(0, Math.floor(bugDelta * 0.82)),
-      stressDelta: Math.max(0, Math.floor(stressDelta * 0.96)),
+      stressDelta: Math.max(0, Math.floor(stressDelta * 0.98 * stressK)),
     };
   }
   if (role === 'admin') {
     return {
       threatDelta: Math.max(0, Math.floor(threatDelta * 0.9)),
       bugDelta: Math.max(0, Math.floor(bugDelta * 0.9)),
-      stressDelta: Math.max(0, Math.floor(stressDelta * 0.84)),
+      stressDelta: Math.max(0, Math.floor(stressDelta * 0.88 * stressK)),
     };
   }
   if (role === 'pm') {
     return {
       threatDelta: Math.max(0, Math.floor(threatDelta * 0.95)),
       bugDelta,
-      stressDelta: Math.max(0, Math.floor(stressDelta * 0.88)),
+      stressDelta: Math.max(0, Math.floor(stressDelta * 0.92 * stressK)),
     };
   }
   return { threatDelta, bugDelta, stressDelta };
@@ -91,7 +93,72 @@ export function coopOutplayExtras(role: CoopRole, outplay: boolean): { bugExtra:
 
 /** Фоновый стресс в конце хода (PM — agile/буферы). */
 export function coopBackgroundNoise(role: CoopRole, base: number): number {
-  if (role === 'pm') return Math.max(0, base - 1);
-  if (role === 'admin') return Math.max(0, Math.floor(base * 0.85));
-  return base;
+  if (role === 'pm') return Math.max(0, base);
+  if (role === 'admin') return Math.max(0, Math.floor(base * 0.92));
+  return Math.max(0, Math.floor(base * 1.08));
+}
+
+/**
+ * Синергия не-dev ролей при снятии ICE/бага: предыдущие карты в том же ходу усиливают эффект.
+ * Подбирать колоду под пары (TRACE→SPOOF, REPRO→ROOT_CAUSE, PING→SSH и т.д.).
+ */
+export function coopBugClearSynergy(
+  role: CoopRole,
+  clearingCardId: string,
+  playedEarlierThisTurn: readonly string[],
+): { threatExtra: number; mitigationExtra: number; log: string | null } {
+  const p = new Set(playedEarlierThisTurn);
+  if (role === 'qa') {
+    if (clearingCardId === 'react_spoof_id' && p.has('react_trace_jam')) {
+      return {
+        threatExtra: 12,
+        mitigationExtra: 4,
+        log: '[SYNERGY:QA] TRACE_JAM → SPOOF_ID: усиленное снятие ICE.',
+      };
+    }
+    if (clearingCardId === 'react_root_cause' && p.has('react_bug_repro')) {
+      return {
+        threatExtra: 10,
+        mitigationExtra: 6,
+        log: '[SYNERGY:QA] BUG_REPRO → ROOT_CAUSE: расследование закрыто.',
+      };
+    }
+    if (clearingCardId === 'react_firewall_patch' && p.has('react_log_mask')) {
+      return {
+        threatExtra: 8,
+        mitigationExtra: 5,
+        log: '[SYNERGY:QA] LOG_MASK → FIREWALL: периметр укреплён.',
+      };
+    }
+  }
+  if (role === 'admin' && (clearingCardId === 'script_ssh' || clearingCardId === 'script_auth') && p.has('script_ping')) {
+    return {
+      threatExtra: 7,
+      mitigationExtra: 4,
+      log: '[SYNERGY:ADMIN] PING → SSH/AUTH: сетевой контур.',
+    };
+  }
+  if (role === 'pm' && clearingCardId.startsWith('soft_') && p.has('soft_coffee')) {
+    return {
+      threatExtra: 8,
+      mitigationExtra: 6,
+      log: '[SYNERGY:PM] COFFEE → SOFT на ICE: командный буфер.',
+    };
+  }
+  return { threatExtra: 0, mitigationExtra: 0, log: null };
+}
+
+/** PM: последовательность SOFT в фазе архитектуры (слоты soft). */
+export function coopPmSoftSynergy(
+  cardId: string,
+  playedEarlierThisTurn: readonly string[],
+): { threatCut: number; stressRelief: number; log: string | null } {
+  const p = new Set(playedEarlierThisTurn);
+  if (cardId === 'soft_focus' && p.has('soft_coffee')) {
+    return { threatCut: 5, stressRelief: 4, log: '[SYNERGY:PM] COFFEE → FOCUS: двойной буфер.' };
+  }
+  if (cardId === 'soft_buffer_flush' && (p.has('soft_deadline_trance') || p.has('soft_signal_prediction'))) {
+    return { threatCut: 6, stressRelief: 3, log: '[SYNERGY:PM] Прогноз/транс → BUFFER_FLUSH: срез давления.' };
+  }
+  return { threatCut: 0, stressRelief: 0, log: null };
 }

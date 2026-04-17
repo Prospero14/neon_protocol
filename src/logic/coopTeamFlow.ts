@@ -60,8 +60,7 @@ export function rollSyntheticSquadAssist(params: {
     } else if (role === 'admin') {
       if (params.infraFilledSlots < 8 && r < 0.32) {
         mitigationDelta += 2;
-        stressDelta -= 1;
-        logs.push('[КОМАНДА:ADMIN] Контур удержан: +2 mitigation, −1 стресс.');
+        logs.push('[КОМАНДА:ADMIN] Контур удержан: +2 mitigation.');
       } else if (r < 0.2) {
         mitigationDelta += 1;
         logs.push('[КОМАНДА:ADMIN] Ротация сертов / LB (+1 mitigation).');

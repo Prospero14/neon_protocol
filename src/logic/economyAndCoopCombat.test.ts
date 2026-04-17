@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { baseQuestBits, applyBitModifiers } from './economy';
-import { coopAdjustAiDeltas, coopChainProgressBonus, coopOutplayExtras } from './coopCombatRole';
+import {
+  coopAdjustAiDeltas,
+  coopBugClearSynergy,
+  coopChainProgressBonus,
+  coopOutplayExtras,
+  coopPmSoftSynergy,
+} from './coopCombatRole';
 import { pickNextBugAction } from './combatEnemies';
 import { BUGS } from './combatEnemies';
 import { coopSegmentBitsBonus } from './coopLobbyRewards';
@@ -38,6 +44,17 @@ describe('coopCombatRole (синергия)', () => {
   it('qa получает extras при outplay', () => {
     expect(coopOutplayExtras('qa', true).bugExtra).toBeGreaterThan(0);
     expect(coopOutplayExtras('pm', true).bugExtra).toBe(0);
+  });
+
+  it('coopBugClearSynergy: QA TRACE→SPOOF даёт доп. угрозу', () => {
+    const s = coopBugClearSynergy('qa', 'react_spoof_id', ['react_trace_jam', 'react_unit_test']);
+    expect(s.threatExtra).toBeGreaterThan(0);
+    expect(s.log).toBeTruthy();
+  });
+
+  it('coopPmSoftSynergy: COFFEE→FOCUS', () => {
+    const s = coopPmSoftSynergy('soft_focus', ['soft_coffee']);
+    expect(s.threatCut).toBeGreaterThan(0);
   });
 });
 

@@ -9,7 +9,7 @@ import type { TechnicalTask, TZStep } from '../combatTasks';
 import { getStepCardIds } from '../combatTasks';
 
 import type { Trait } from '../traits';
-import { BUGS, pickNextBugAction } from '../combatEnemies';
+import { ALL_ENEMIES, BUGS, pickNextBugAction } from '../combatEnemies';
 import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
 import type { CoopRole, DevLanguageStack, SessionMode } from '../sessionMode';
 import { getCoopRoleCatalogIds } from '../sessionMode';
@@ -18,10 +18,12 @@ import { rollSyntheticSquadAssist } from '../coopTeamFlow';
 import {
   coopAdjustAiDeltas,
   coopBackgroundNoise,
+  coopBugClearSynergy,
   coopChainProgressBonus,
   coopLaneCodeProgressBump,
   coopOppositionOpeningLine,
   coopOutplayExtras,
+  coopPmSoftSynergy,
   isCoopCombat,
 } from '../coopCombatRole';
 
@@ -131,6 +133,9 @@ export function useCombatLogic({
   const [aiProgress, setAiProgress] = useState(0);
   const [bugPoints, setBugPoints] = useState(0);
   const [stress, setStress] = useState(0);
+  const STRESS_MAX = 100;
+  /** В коопе снижать стресс с карт могут только SOFT у PM; в соло — как раньше. */
+  const stressReliefFromPlayerCards = !coopActive || coopRole === 'pm';
   const [activeProblem] = useState<BugProblemType | null>(null);
   const [aiDeadline, setAiDeadline] = useState(Math.max(3, 10 - tier));
 
@@ -163,11 +168,12 @@ export function useCombatLogic({
 
   const [enemy] = useState<BugEnemy | null>(() => {
     if (missionTz.id.includes('copy_logs') || missionTz.isExecutionChain) {
-      return BUGS.find(b => b.id === 'enemy_sysadmin') || BUGS[0];
+      return BUGS.find((b) => b.id === 'enemy_sysadmin') || BUGS[0];
     }
-    const enemies = BUGS.filter(b => b.id !== 'enemy_sysadmin');
-    return enemies[Math.floor(Math.random() * enemies.length)];
+    const pool = ALL_ENEMIES.filter((b) => b.id !== 'enemy_sysadmin');
+    return pool[Math.floor(Math.random() * pool.length)] ?? BUGS[0];
   });
+  const turnPlaysRef = useRef<string[]>([]);
   const [nextBugAction, setNextBugAction] = useState<BugAction | null>(null);
   const [lastAiAction, setLastAiAction] = useState<BugAction | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
@@ -204,6 +210,10 @@ export function useCombatLogic({
       infraFilled: infraSlots.filter(Boolean).length,
     };
   }, [stress, runtimeRail, playerProgress, infraSlots]);
+
+  useEffect(() => {
+    if (isPlayerTurn) turnPlaysRef.current = [];
+  }, [isPlayerTurn]);
 
   // --- DERIVED ---
   const ramSlotsMax = useMemo(() => {
@@ -252,8 +262,12 @@ export function useCombatLogic({
       const n = cardFamiliesRef.current.size;
       if (n >= 3 && !familyMilestoneRef.current.t3) {
         familyMilestoneRef.current.t3 = true;
-        setStress((s) => Math.max(0, s - 4));
-        addLog('[TOOLCHAIN] Разные классы карт в бою — −4 стресс.');
+        if (stressReliefFromPlayerCards) {
+          setStress((s) => Math.max(0, s - 4));
+          addLog('[TOOLCHAIN] Разные классы карт в бою — −4 стресс.');
+        } else {
+          addLog('[TOOLCHAIN] Разные классы карт — без релифа стресса (в коопе только PM снимает стресс картами).');
+        }
       }
       if (n >= 5 && !familyMilestoneRef.current.t5) {
         familyMilestoneRef.current.t5 = true;
@@ -261,7 +275,7 @@ export function useCombatLogic({
         addLog('[TOOLCHAIN] Пять разных типов — +1 CPU (до максимума).');
       }
     },
-    [addLog, cpuMax, skillMode]
+    [addLog, cpuMax, skillMode, stressReliefFromPlayerCards]
   );
 
   // --- INIT ---
@@ -473,6 +487,34 @@ export function useCombatLogic({
     if (!isPlayerTurn) return;
     const card = source === 'hand' ? hand[idx] : (source === 'palette' ? codingPalette[idx] : scriptPool[idx]);
 
+    if (coopActive && card.type === 'SOFT' && coopRole !== 'pm') {
+      addLog('[DENIED] SOFT — только у класса PM (снятие стресса и командные буферы).');
+      return;
+    }
+
+    const burnout = stress >= STRESS_MAX;
+    if (burnout) {
+      if (card.type === 'STATUS') {
+        /* сброс мусора разрешён */
+      } else if (card.type === 'SOFT' && stressReliefFromPlayerCards) {
+        /* соло или PM */
+      } else if (card.type === 'INFRASTRUCTURE') {
+        addLog('[BURNOUT] Стресс 100%: INFRA недоступна — только PM (SOFT) или сброс STATUS.');
+        return;
+      } else if (
+        card.type === 'REACTION' ||
+        card.type === 'DEFENSIVE' ||
+        card.type === 'SCRIPT' ||
+        card.type === 'SYNTAX' ||
+        card.type === 'FUNCTION'
+      ) {
+        /* снятие BUG_ERROR или код — фильтр в executeCardOnSlot */
+      } else {
+        addLog('[BURNOUT] Стресс 100%: игра карт заблокирована (PM·SOFT, STATUS, снятие ICE/бага).');
+        return;
+      }
+    }
+
     if (card.type === 'STATUS') {
       const cost = getEffectiveCost(card);
       if (cpu < cost) { addLog(`[ERROR] CPU_LOW`); return; }
@@ -502,13 +544,18 @@ export function useCombatLogic({
         applyInfraEffect(card);
         setCpu(prev => prev - cost);
         registerPlayDiversity(card);
-        if (coopActive && coopRole === 'admin') {
+        if (coopRole === 'admin') {
           setMitigationBuffer((b) => Math.min(30, b + 2));
-          setStress((s) => Math.max(0, s - 1));
-          addLog('[ROLE:ADMIN] PERIMETER — +2 mitigation, −1 stress.');
+          if (!coopActive) {
+            setStress((s) => Math.max(0, s - 1));
+            addLog('[ROLE:ADMIN] PERIMETER — +2 mitigation, −1 stress.');
+          } else {
+            addLog('[ROLE:ADMIN] PERIMETER — +2 mitigation (релиф стресса в коопе только у PM).');
+          }
         }
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] INFRA_DEPLOYED: ${card.name}`);
+        turnPlaysRef.current.push(card.id);
       }
       return;
     } else if (card.type === 'SOFT') {
@@ -688,10 +735,17 @@ export function useCombatLogic({
             break;
         }
         if (coopActive && coopRole === 'pm') {
+          const pmSyn = coopPmSoftSynergy(card.id, turnPlaysRef.current);
+          if (pmSyn.threatCut > 0) setAiProgress((p) => Math.max(0, p - pmSyn.threatCut));
+          if (pmSyn.stressRelief > 0 && stressReliefFromPlayerCards) {
+            setStress((s) => Math.max(0, s - pmSyn.stressRelief));
+          }
+          if (pmSyn.log) addLog(pmSyn.log);
           setPlayerProgress((p) => Math.min(100, p + 3));
           setStress((s) => Math.max(0, s - 2));
           addLog('[ROLE:PM] STAKEHOLDER_BUFFER — +3% progress, −2 stress.');
         }
+        turnPlaysRef.current.push(card.id);
         registerPlayDiversity(card);
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] SOFT_SKILL_ATTACHED: ${card.name}`);
@@ -730,15 +784,18 @@ export function useCombatLogic({
         break;
       case 'infra_edge_cache':
         setMitigationBuffer((b) => Math.min(30, b + 4));
-        setStress((s) => Math.max(0, s - 3));
+        if (!coopActive) setStress((s) => Math.max(0, s - 3));
         break;
       case 'infra_safe_proxy':
         setMitigationBuffer((b) => Math.min(30, b + 6));
-        setStress((s) => Math.max(0, s - 4));
+        if (!coopActive) setStress((s) => Math.max(0, s - 4));
         break;
       case 'infra_mesh_relay': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
       case 'infra_orbital_uplink': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 2048); break;
-      case 'infra_quarantine_vm': setStress(prev => Math.max(0, prev - 8)); setRamMaxMb(prev => prev + 512); break;
+      case 'infra_quarantine_vm':
+        if (!coopActive) setStress((prev) => Math.max(0, prev - 8));
+        setRamMaxMb((prev) => prev + 512);
+        break;
       case 'infra_street_fusion':
         setCpuMax(prev => prev + 2);
         setCpu(cur => cur + 2);
@@ -755,7 +812,9 @@ export function useCombatLogic({
         setCpu(cur => cur + 2);
         break;
       case 'infra_s3_bucket': setRamMaxMb(prev => prev + 1536); break;
-      case 'infra_raid_array': setStress(prev => Math.max(0, prev - 20)); break;
+      case 'infra_raid_array':
+        if (!coopActive) setStress((prev) => Math.max(0, prev - 20));
+        break;
       case 'infra_postgres': setCpuMax(prev => prev + 2); setCpu(cur => cur + 2); break;
       case 'infra_k8s_cluster':
         setCpuMax(prev => prev + 3);
@@ -776,8 +835,8 @@ export function useCombatLogic({
         setMitigationBuffer((b) => Math.min(30, b + 10));
         break;
       case 'infra_db_cluster':
-        setRamMaxMb(prev => prev + 3072);
-        setStress((s) => Math.max(0, s - 6));
+        setRamMaxMb((prev) => prev + 3072);
+        if (!coopActive) setStress((s) => Math.max(0, s - 6));
         break;
       default: setCpuMax(prev => prev + 1); setCpu(cur => cur + 1);
     }
@@ -788,6 +847,18 @@ export function useCombatLogic({
     if (idx >= ramSlotsMax) { addLog('[ERROR] RAM_LOCKED'); return; }
     const { card } = selectedCard;
     const slot = runtimeRail[idx];
+    const looksLikePatchPre =
+      (currentPhase === 'VERIFICATION' || coopActive) && (card.type === 'REACTION' || card.type === 'DEFENSIVE');
+    if (stress >= STRESS_MAX && slot.type !== 'BUG_ERROR') {
+      if (slot.type === 'EMPTY') {
+        if (looksLikePatchPre) {
+          addLog('[BURNOUT] Стресс 100%: нельзя ставить патч-заготовку — снимите стресс (PM·SOFT).');
+          return;
+        }
+        addLog('[BURNOUT] Стресс 100%: нельзя класть код на шину — снимите стресс (PM·SOFT).');
+        return;
+      }
+    }
 
     if (slot.type === 'BUG_ERROR') {
       const canDestroyIce =
@@ -811,6 +882,15 @@ export function useCombatLogic({
         setBugPoints((p) => Math.max(0, p - bugCut));
         setAiProgress((p) => Math.max(0, p - threatCut));
         setStress((s) => Math.max(0, s - (outplay ? 10 : 4)));
+        if (coopActive && coopRole) {
+          const syn = coopBugClearSynergy(coopRole, card.id, turnPlaysRef.current);
+          if (syn.threatExtra > 0) {
+            setAiProgress((p) => Math.max(0, p - syn.threatExtra));
+            setMitigationBuffer((b) => Math.min(30, b + syn.mitigationExtra));
+            if (syn.log) addLog(syn.log);
+          }
+        }
+        turnPlaysRef.current.push(card.id);
         if (outplay) {
           addLog(`[OUTPLAY] Попадание в тип сбоя — угроза и стресс срезаны.`);
           setMitigationBuffer((b) => Math.min(30, b + 5));
@@ -852,6 +932,7 @@ export function useCombatLogic({
         setDiscard(prev => [...prev, card]);
       }
       setSelectedCard(null);
+      turnPlaysRef.current.push(card.id);
       registerPlayDiversity(card);
       return;
     }
@@ -958,7 +1039,11 @@ export function useCombatLogic({
             const pb = coopActive ? coopChainProgressBonus(coopRole!, progressBonus) : progressBonus;
             setPlayerProgress((p) => Math.min(100, p + pb));
           }
-          if (stressRelief > 0) setStress(s => Math.max(0, s - stressRelief));
+          if (stressRelief > 0 && stressReliefFromPlayerCards) {
+            setStress((s) => Math.max(0, s - stressRelief));
+          } else if (stressRelief > 0 && coopActive) {
+            addLog('[CHAIN] Релиф стресса от цепочки отключён в коопе (только PM снимает стресс SOFT-картами).');
+          }
         }
       }
     }
@@ -967,8 +1052,12 @@ export function useCombatLogic({
     if (card.id === 'react_emergency_flush') {
       setHand([]);
       drawCards(4);
-      setStress(s => Math.max(0, s - 8));
-      addLog('[FLUSH] BUFFER_EMERGENCY_FLUSHED. Hand cleared, -8 stress.');
+      if (stressReliefFromPlayerCards) {
+        setStress((s) => Math.max(0, s - 8));
+        addLog('[FLUSH] BUFFER_EMERGENCY_FLUSHED. Hand cleared, −8 stress.');
+      } else {
+        addLog('[FLUSH] BUFFER_EMERGENCY_FLUSHED. Hand cleared (релиф стресса в коопе только у PM).');
+      }
     }
     if (card.id === 'react_null_packet') {
       setRuntimeRail(prev => {
@@ -997,6 +1086,8 @@ export function useCombatLogic({
     }
 
     registerPlayDiversity(card);
+
+    turnPlaysRef.current.push(card.id);
 
     // --- Reactive enemy: traceback наказывает за 2+ карты за тот же ход (используем актуальный счётчик, не stale state).
     setCardsPlayedThisTurn((p) => {
@@ -1039,12 +1130,13 @@ export function useCombatLogic({
       effBugs = adj.bugDelta;
       effStress = adj.stressDelta;
     }
+    effStress = Math.max(0, Math.floor(effStress * 1.14));
     setAiProgress((prev) => {
       const n = Math.min(100, prev + effThreat);
       if (n >= 100 && prev < 100) {
         queueMicrotask(() => {
           addLog('[CRITICAL] THREAT_MAX — снимай баги; сильный контрплей режет угрозу.');
-          setStress((s) => Math.min(100, s + 8));
+          setStress((s) => Math.min(STRESS_MAX, s + 12));
         });
       }
       return n;
@@ -1263,8 +1355,8 @@ export function useCombatLogic({
 
     // --- PERSONALITY EFFECTS (end of player turn; считаем до сброса счётчика) ---
     if (enemy?.personality === 'TRACER' && playedThisTurn > (skillMode === 'script-kiddie' ? 3 : 2)) {
-      setStress((s) => Math.min(100, s + 15));
-      addLog(`[TRACER] SIGNATURE_DETECTED! ${playedThisTurn} cards played. +15 stress penalty.`);
+      setStress((s) => Math.min(STRESS_MAX, s + 22));
+      addLog(`[TRACER] SIGNATURE_DETECTED! ${playedThisTurn} cards played. +22 stress penalty.`);
     }
 
     setCardsPlayedThisTurn(0);
@@ -1279,11 +1371,11 @@ export function useCombatLogic({
       } else {
         setIdleTurnStreak((n) => n + 1);
         const stallThreat = currentPhase === 'VERIFICATION'
-          ? Math.min(10, 4 + idleTurnStreak * 2)
-          : Math.min(12, 4 + idleTurnStreak * 2);
+          ? Math.min(14, 5 + idleTurnStreak * 3)
+          : Math.min(16, 6 + idleTurnStreak * 3);
         const stallStress = currentPhase === 'VERIFICATION'
-          ? Math.min(4, 1 + Math.floor(idleTurnStreak / 2))
-          : Math.min(8, 2 + idleTurnStreak);
+          ? Math.min(7, 2 + idleTurnStreak)
+          : Math.min(12, 3 + idleTurnStreak * 2);
         setAiProgress((p) => Math.min(100, p + stallThreat));
         setStress((s) => Math.min(100, s + stallStress));
         addLog(`[STALL] Idle turn penalty: +${stallThreat}% threat, +${stallStress} stress.`);
@@ -1389,9 +1481,9 @@ export function useCombatLogic({
           });
         }
         
-        const noise = skillMode === 'script-kiddie' ? 3 : 5;
+        const noise = skillMode === 'script-kiddie' ? 6 : 9;
         const noiseAdj = coopActive ? coopBackgroundNoise(coopRole!, noise) : noise;
-        setStress((prev) => Math.min(100, prev + noiseAdj));
+        setStress((prev) => Math.min(STRESS_MAX, prev + noiseAdj));
         addLog(`[WARNING] BACKGROUND_NOISE: +${noiseAdj}% STRESS`);
         if (currentPhase === 'ARCHITECTURE') {
           // Admin в коопе не уходит с INFRA по таймеру — только COMPILE после заполнения слотов.
@@ -1407,6 +1499,10 @@ export function useCombatLogic({
   };
 
   const handleMulligan = () => {
+    if (stress >= STRESS_MAX) {
+      addLog('[BURNOUT] Mulligan недоступен при стрессе 100%.');
+      return;
+    }
     if (mulliganUsed || currentPhase !== 'ARCHITECTURE' || planningTurn > 0) return;
     addLog(`[SYSTEM] REDRAW_BUFFER_INITIATED...`);
     const oldHand = [...hand];
@@ -1417,7 +1513,7 @@ export function useCombatLogic({
   };
 
   const handleOverclock = () => {
-    if (!isPlayerTurn || stress >= 85) return;
+    if (!isPlayerTurn || stress >= 90) return;
     setStress(prev => Math.min(100, prev + 15));
     setCpu(prev => prev + 1);
     addLog('[WARN] OVERCLOCK_ENGAGED.');

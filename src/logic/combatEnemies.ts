@@ -284,6 +284,126 @@ export const BUGS: BugEnemy[] = [
         damage: 10
       }
     ]
+  },
+  {
+    id: 'enemy_quota_overmind',
+    name: 'Quota Overmind (FinOps Bot)',
+    hp: 55,
+    maxHp: 55,
+    targetProgress: 85,
+    visualType: 'AI',
+    actions: [
+      {
+        id: 'quota_throttle',
+        name: 'Sprint Throttle',
+        description: 'Режет бюджет CPU/времени: TECH_DEBT на шине, давление на срок.',
+        progressPoints: 18,
+        bugPoints: 8,
+        damage: 4,
+        problemType: 'TECH_DEBT',
+        spawnId: 'bug_card_glitch',
+      },
+      {
+        id: 'quota_scope',
+        name: 'Scope Inflation',
+        description: 'Бизнес добавляет пункты в спринт без снятия старых — BUSINESS_RISK.',
+        progressPoints: 12,
+        bugPoints: 6,
+        damage: 6,
+        problemType: 'BUSINESS_RISK',
+        injectStatusId: 'status_deprecated',
+        injectDestination: 'hand',
+      },
+      {
+        id: 'quota_audit',
+        name: 'Audit Flash',
+        description: 'Внезапный аудит артефактов: стресс + рост угрозы.',
+        progressPoints: 14,
+        bugPoints: 4,
+        damage: 12,
+        problemType: 'FATIGUE',
+      },
+    ],
+  },
+  {
+    id: 'enemy_chaos_runner',
+    name: 'Chaos Runner CI',
+    hp: 48,
+    maxHp: 48,
+    targetProgress: 72,
+    visualType: 'ICE',
+    actions: [
+      {
+        id: 'chaos_flap',
+        name: 'Flaky Gate',
+        description: 'Плавающий тест блокирует пайплайн — SYNTAX_ERROR на шине.',
+        progressPoints: 10,
+        bugPoints: 12,
+        damage: 3,
+        problemType: 'SYNTAX_ERROR',
+        spawnId: 'bug_card_glitch',
+      },
+      {
+        id: 'chaos_shard',
+        name: 'Shard Split-brain',
+        description: 'Рассинхрон реплик: MEMORY_LEAK + инъекция статуса.',
+        progressPoints: 16,
+        bugPoints: 10,
+        damage: 5,
+        problemType: 'MEMORY_LEAK',
+        injectStatusId: 'status_spaghetti',
+        injectDestination: 'discard',
+      },
+      {
+        id: 'chaos_retry',
+        name: 'Retry Storm',
+        description: 'Бесконечные ретраи грузят периметр и нервы.',
+        progressPoints: 8,
+        bugPoints: 14,
+        damage: 8,
+        problemType: 'LOGIC_GAP',
+      },
+    ],
+  },
+  {
+    id: 'enemy_perimeter_wraith',
+    name: 'Perimeter Wraith',
+    hp: 65,
+    maxHp: 65,
+    targetProgress: 88,
+    visualType: 'ICE',
+    actions: [
+      {
+        id: 'wraith_probe',
+        name: 'Shadow Probe',
+        description: 'Скан снаружи: ищет дыры в прокси — давление на инфру.',
+        progressPoints: 20,
+        bugPoints: 6,
+        damage: 7,
+        problemType: 'LOGIC_GAP',
+      },
+      {
+        id: 'wraith_dns',
+        name: 'DNS Poison Echo',
+        description: 'Подмена маршрутов: баги на шине + стресс.',
+        progressPoints: 12,
+        bugPoints: 10,
+        damage: 9,
+        problemType: 'SYNTAX_ERROR',
+        spawnId: 'bug_card_ice',
+      },
+      {
+        id: 'wraith_exfil',
+        name: 'Policy Violation',
+        description: 'Нарушение политики egress — BUSINESS_RISK и инъекция.',
+        progressPoints: 14,
+        bugPoints: 8,
+        damage: 4,
+        problemType: 'BUSINESS_RISK',
+        injectStatusId: 'status_spaghetti',
+        injectDestination: 'hand',
+      },
+    ],
   }
 ];
 
@@ -297,7 +417,7 @@ export const PERSONALITY_ENEMIES: BugEnemy[] = [
     targetProgress: 80,
     visualType: 'ICE',
     personality: 'TRACER',
-    personalityHint: 'TRACER: не играй больше 2 карт за ход — иначе +15% стресс. Используй TRACE_JAM.',
+    personalityHint: 'TRACER: не играй больше 2 карт за ход — иначе сильный штраф по стрессу. Используй TRACE_JAM.',
     actions: [
       {
         id: 'tr2_sweep',
@@ -454,6 +574,8 @@ export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[], ctx?: 
     if (ctx?.phase === 'VERIFICATION' && a.injectStatusId) w *= 1.22;
     if ((ctx?.bugPressure ?? 0) >= 3 && a.bugPoints > 0) w *= 0.72;
     if ((ctx?.playerProgress ?? 0) >= 85 && a.damage > 0) w *= 1.2;
+    if (ctx?.phase === 'VERIFICATION' && a.damage >= 9) w *= 1.12;
+    if (ctx?.phase === 'VERIFICATION' && (a.problemType === 'BUSINESS_RISK' || a.problemType === 'TECH_DEBT')) w *= 1.08;
     return Math.max(0.06, w);
   });
 

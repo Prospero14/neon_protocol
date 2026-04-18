@@ -47,7 +47,7 @@ export const COOP_ROLE_LABELS: Record<CoopRole, { title: string; blurb: string }
   admin: {
     title: 'ADMIN',
     blurb:
-      'Периметр и инфра: shell, прокси, кластеры, карантин (карты инфры и скриптов — только эта роль). ИИ бьёт по периметру.',
+      'Интеграции и контур: БД, кэш, mesh, k8s, балансировка (Nginx / RR / parallel), серты через CI, горизонталь и ресурсы; скрипты — только проводка к инфре.',
   },
   pm: {
     title: 'PM',
@@ -87,24 +87,40 @@ const COOP_STARTER_IDS: Record<CoopRole, string[]> = {
     'react_decoy_ping',
     'react_log_mask',
   ],
-  /** Только SCRIPT + INFRASTRUCTURE (периметр, shell). */
+  /** Инфраструктура в приоритете; скрипты — короткий набор под проводку и синергию PING→SSH. */
   admin: [
+    'infra_postgres',
+    'infra_db_cluster',
+    'infra_redis',
+    'infra_kafka_bridge',
+    'infra_basic_pod',
+    'infra_k8s_cluster',
+    'infra_mesh_relay',
+    'infra_h_scaling',
+    'infra_lb_nginx',
+    'infra_lb_round_robin',
+    'infra_lb_parallel',
+    'infra_dns_resolver',
+    'infra_safe_proxy',
+    'infra_edge_cache',
+    'infra_vpc_network',
+    'infra_quarantine_vm',
+    'infra_actions_ci',
+    'infra_cicd',
+    'infra_prometheus',
+    'infra_cdn_edge',
+    'infra_log_aggregator',
+    'infra_s3_bucket',
+    'infra_raid_array',
+    'infra_docker',
+    'infra_old_hw',
+    'infra_street_fusion',
+    'infra_orbital_uplink',
     'script_ping',
     'script_ssh',
     'script_curl',
-    'script_sudo_fix',
-    'script_nc',
     'script_auth',
-    'script_chmod',
-    'script_rm',
-    'script_wash_logs',
-    'script_ls',
-    'infra_old_hw',
-    'infra_edge_cache',
-    'infra_safe_proxy',
-    'infra_dns_resolver',
-    'infra_basic_pod',
-    'infra_quarantine_vm',
+    'script_grep',
   ],
   /** Только SOFT — упор на снятие стресса и буферы (в коопе это единственный источник карточного релифа). */
   pm: [
@@ -227,6 +243,31 @@ function coopStarterIdsWithStack(coopRole: CoopRole, stack: DevLanguageStack): s
 }
 
 function collectNonDevIdChunks(role: 'qa' | 'pm' | 'admin'): string[][] {
+  /** Админ: сначала все тематические пакеты интеграций, потом specialty и база — чтобы в колоде доминировала INFRA. */
+  if (role === 'admin') {
+    const accentOrder = [
+      'storage_backup',
+      'messaging',
+      'cluster_mesh',
+      'ingress_lb',
+      'perimeter_hardening',
+      'incident_response',
+    ] as const;
+    const chunks: string[][] = [];
+    for (const pk of accentOrder) {
+      const pack = ROLE_ACCENT_PACKS.admin[pk as keyof typeof ROLE_ACCENT_PACKS.admin];
+      if (pack) chunks.push(pack.cardIds);
+    }
+    for (const pk of Object.keys(ROLE_ACCENT_PACKS.admin)) {
+      if ((accentOrder as readonly string[]).includes(pk)) continue;
+      chunks.push(ROLE_ACCENT_PACKS.admin[pk as keyof typeof ROLE_ACCENT_PACKS.admin].cardIds);
+    }
+    chunks.push(ROLE_SPECIALTY_IDS.admin);
+    chunks.push(COOP_STARTER_IDS.admin);
+    chunks.push([...mergeCoopNonDevCatalogIds(role)].sort());
+    return chunks;
+  }
+
   const chunks: string[][] = [ROLE_SPECIALTY_IDS[role], COOP_STARTER_IDS[role]];
   const key = ROLE_DEFAULT_ACCENT[role];
   const primary = ROLE_ACCENT_PACKS[role][key];

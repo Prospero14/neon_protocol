@@ -341,6 +341,24 @@ export const CARD_LIBRARY: CombatCard[] = [
     tags: ['utility'], phaseConstraint: 'PLANNING'
   },
   {
+    id: 'infra_lb_round_robin', name: 'LB_ROUND_ROBIN', type: 'INFRASTRUCTURE', grade: 'Middle',
+    cost: 1, power: 0, integrity: 18,
+    description: 'Round-robin VIP: равномерно грузит пулы, срезает THREAT за счёт предсказуемого трафика.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_lb_parallel', name: 'LB_PARALLEL_POOLS', type: 'INFRASTRUCTURE', grade: 'Middle',
+    cost: 1, power: 0, integrity: 22,
+    description: 'Параллельные upstream-пулы: дублирующие каналы, +RAM и лёгкое снятие баг-метрики.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
+    id: 'infra_kafka_bridge', name: 'KAFKA_EVENT_BUS', type: 'INFRASTRUCTURE', grade: 'Middle',
+    cost: 2, power: 0, integrity: 28,
+    description: 'Шина событий (логи/интеграции): потоковая доставка, добор карты и срез угрозы.',
+    tags: ['utility'], phaseConstraint: 'PLANNING'
+  },
+  {
     id: 'infra_actions_ci', name: 'GITHUB_ACTIONS', type: 'INFRASTRUCTURE', grade: 'Middle',
     cost: 1, power: 0, integrity: 25,
     description: 'CI/CD пайплайн. Сразу дает +1 CPU и небольшой защитный буфер.',

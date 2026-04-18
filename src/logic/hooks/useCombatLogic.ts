@@ -766,6 +766,24 @@ export function useCombatLogic({
     switch (card.id) {
       case 'infra_dns_resolver': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); break;
       case 'infra_lb_nginx': setCpuMax(prev => prev + 1); setCpu(cur => cur + 1); setRamMaxMb(prev => prev + 512); break;
+      case 'infra_lb_round_robin':
+        setCpuMax((prev) => prev + 1);
+        setCpu((cur) => cur + 1);
+        setAiProgress((p) => Math.max(0, p - 5));
+        setMitigationBuffer((b) => Math.min(30, b + 4));
+        break;
+      case 'infra_lb_parallel':
+        setRamMaxMb((prev) => prev + 1024);
+        setBugPoints((p) => Math.max(0, p - 2));
+        setMitigationBuffer((b) => Math.min(30, b + 4));
+        setCpuMax((prev) => prev + 1);
+        setCpu((cur) => cur + 1);
+        break;
+      case 'infra_kafka_bridge':
+        setAiProgress((p) => Math.max(0, p - 4));
+        setMitigationBuffer((b) => Math.min(30, b + 2));
+        drawCards(1);
+        break;
       case 'infra_actions_ci':
         setCpuMax(prev => prev + 1);
         setCpu(cur => cur + 1);

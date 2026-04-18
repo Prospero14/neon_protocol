@@ -150,24 +150,26 @@ interface AiImpactSummary {
   ts: number;
 }
 
-export function useCombatLogic({
-  skillMode,
-  playerTraits,
-  activeDeck,
-  missionTz,
-  tier,
-  deckCores,
-  deckRamMb,
-  isQuestCombat,
-  isFirstCombatQuestTutorial,
-  sessionMode = 'solo',
-  coopRole = null,
-  coopSquadFill = 'synthetic_bots',
-  devLanguageStack = null,
-  pushCoopLinkedProgressToServerRef,
-  coopLinkedServerAwardedIds,
-  coopSharedProjectProgress = null,
-}: UseCombatLogicProps) {
+export function useCombatLogic(config: UseCombatLogicProps) {
+  const {
+    skillMode,
+    playerTraits,
+    activeDeck,
+    missionTz,
+    tier,
+    deckCores,
+    deckRamMb,
+    isQuestCombat,
+    isFirstCombatQuestTutorial,
+    sessionMode = 'solo',
+    coopRole = null,
+    coopSquadFill = 'synthetic_bots',
+    devLanguageStack = null,
+    pushCoopLinkedProgressToServerRef,
+    coopLinkedServerAwardedIds,
+  } = config;
+  /** Читаем с объекта аргумента: надёжнее длинной деструктуризации параметра для deps/progress sync. */
+  const coopSharedProjectProgress = config.coopSharedProjectProgress ?? null;
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
   const coopUnified = coopUnifiedSprintCombat(sessionMode, coopRole ?? null);

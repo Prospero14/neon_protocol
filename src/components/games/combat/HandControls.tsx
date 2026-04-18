@@ -8,6 +8,8 @@ import { Play, Zap, Power, TrendingUp } from 'lucide-react';
 interface HandControlsProps {
   /** Подсказка для кооп-админа в фазе снабжения (пайплайн INFRA). */
   architectureSupplyHint?: string;
+  /** Кооп: единый спринт (GDD) — подписи и кнопка SHIP. */
+  coopUnifiedSprint?: boolean;
   currentPhase: CombatPhase;
   filteredHand: { card: CombatCard; source: CardSource; idx: number }[];
   fullHand: CombatCard[];
@@ -29,6 +31,7 @@ interface HandControlsProps {
 
 const HandControls: React.FC<HandControlsProps> = ({
   architectureSupplyHint,
+  coopUnifiedSprint = false,
   currentPhase, filteredHand, fullHand, selectedCard, isPlayerTurn, cpu,
   stress, canAdvancePhase, getEffectiveCost, onCardSelect, onEndTurn, onOverclock, onAdvancePhase, onTerminate, onMulligan, mulliganUsed, isPipelineFull
 }) => {
@@ -37,8 +40,9 @@ const HandControls: React.FC<HandControlsProps> = ({
   const isSupply = currentPhase === 'ARCHITECTURE';
   const isStabilize = currentPhase === 'VERIFICATION';
 
-  const tabsTitle =
-    isSupply
+  const tabsTitle = coopUnifiedSprint
+    ? 'COOP_SPRINT: код, инфра, реакции и SOFT параллельно; цель — PROJECT 100% и SHIP к деплою «приложения».'
+    : isSupply
       ? 'Архитектура: клик по INFRA → автоматически в первый свободный слот; COMPILE после 6+ карточек. Скрипты — проводка.'
       : isCodePuzzle
         ? 'Разработка: код из палитры и скриптов в шину, без случайного дро.'
@@ -53,9 +57,10 @@ const HandControls: React.FC<HandControlsProps> = ({
       {/* ── TAB BAR ── */}
       <div className="hc2-tabs" title={tabsTitle}>
         <span className="hc2-label">
-          {isSupply && 'АРХИТЕКТУРА · INFRA'}
-          {isCodePuzzle && 'РАЗРАБОТКА · КОД'}
-          {isStabilize && 'ВЕРИФИКАЦИЯ · СТАБ'}
+          {coopUnifiedSprint && isCodePuzzle && 'СПРИНТ · КОМАНДА'}
+          {!coopUnifiedSprint && isSupply && 'АРХИТЕКТУРА · INFRA'}
+          {!coopUnifiedSprint && isCodePuzzle && 'РАЗРАБОТКА · КОД'}
+          {!coopUnifiedSprint && isStabilize && 'ВЕРИФИКАЦИЯ · СТАБ'}
           {currentPhase === 'DEPLOYMENT' && 'ДЕПЛОЙ'}
         </span>
         <span className="hc2-phase-tag">[{currentPhase}]</span>
@@ -83,7 +88,7 @@ const HandControls: React.FC<HandControlsProps> = ({
           </button>
         )}
       </div>
-      {isSupply && architectureSupplyHint && (
+      {(isSupply || (coopUnifiedSprint && currentPhase === 'DEVELOPMENT')) && architectureSupplyHint && (
         <div className="hc2-arch-hint mono-text" title={architectureSupplyHint}>
           {architectureSupplyHint}
         </div>
@@ -138,7 +143,15 @@ const HandControls: React.FC<HandControlsProps> = ({
             disabled={!isPlayerTurn}
           >
             {canAdvancePhase ? <TrendingUp size={14} /> : <Play size={14} />}
-            <span>{canAdvancePhase ? (currentPhase === 'VERIFICATION' ? 'DEPLOY' : 'NEXT') : 'COMPILE'}</span>
+            <span>
+              {canAdvancePhase
+                ? coopUnifiedSprint && currentPhase === 'DEVELOPMENT'
+                  ? 'SHIP'
+                  : currentPhase === 'VERIFICATION'
+                    ? 'DEPLOY'
+                    : 'NEXT'
+                : 'COMPILE'}
+            </span>
           </button>
           <button
             className="hc2-action-btn amber"

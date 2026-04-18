@@ -16,7 +16,7 @@ import {
 } from '../../logic/coopSprint';
 import { coopParallelTzForRole } from '../../logic/coopParallelRoleTz';
 import { coopOpponentHintBody, coopOpponentHintTitle } from '../../logic/coopOpponentHints';
-import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
+import { coopUnifiedSprintCombat, sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
 import { useAuth } from '../../logic/AuthContext';
 import { readNeonAuthToken } from '../../logic/authTokenStorage';
@@ -34,6 +34,14 @@ import HandControls from './combat/HandControls';
 import CombatOverlays from './combat/CombatOverlays';
 import DraftPanel from './combat/DraftPanel';
 import { CoopTeamSitrep } from './combat/CoopTeamSitrep';
+
+/** GDD §1c: ролевая задача на бой → общий релиз «приложения». */
+const COOP_ROLE_MISSION_BLURB: Record<CoopRole, string> = {
+  developer: 'Ваша задача боя: одна фича — цепочка ТЗ на шине. Тянет общий PROJECT к релизу.',
+  qa: 'Ваша задача боя: тестировать решение dev — снять ICE/баги и шум; защищаете релиз от отката.',
+  admin: 'Ваша задача боя: инфра и надёжность контура (слоты) под код и проверки; без вас релиз не встанет.',
+  pm: 'Ваша задача боя: процесс и поддержка команды (SOFT), стресс и дедлайн; оркестрация общего потока.',
+};
 
 // Styles
 import '../../styles/CombatAnimations.css';
@@ -86,6 +94,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     [missionTz, sessionMode, coopRole]
   );
   const railPhases = sdlcRailPhaseOrder(sessionMode, coopRole);
+  const coopUnifiedSprint = coopUnifiedSprintCombat(sessionMode, coopRole);
   const fieldWorldDay = props.fieldWorldDay ?? 1;
   const fieldDistrictId = props.fieldDistrictId ?? props.homeDistrictId ?? 'altufyevo';
   const soloVariant = resolveSoloFieldVariant(fieldWorldDay, fieldDistrictId, props.fieldBarNode);
@@ -127,6 +136,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     coopSquadFill,
     pushCoopLinkedProgressToServerRef: pushCoopLinkedServerRef,
     coopLinkedServerAwardedIds: netMatch?.linkedObjectiveAwardedIds,
+    coopSharedProjectProgress:
+      coopSquadFill === 'live_party' && typeof netMatch?.shared.projectProgress === 'number'
+        ? netMatch.shared.projectProgress
+        : null,
   });
 
   const handleCombatWin = (bits: number, rank: string, chain: string[], name: string) => {
@@ -481,6 +494,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
           </div>
           <CoopTeamSitrep
             coopRole={coopRole}
+            roleMissionBlurb={COOP_ROLE_MISSION_BLURB[coopRole]}
             squadFill={coopSquadFill}
             matchActiveRole={netMatch?.shared.activeRole ?? null}
             isMyTurn={isMyRoleTurn}
@@ -555,7 +569,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         pipelineFieldClass={pipelineFieldClass}
         phaseOrder={railPhases}
         currentPhase={state.currentPhase}
-        softSocketsLocked={state.currentPhase !== 'VERIFICATION'}
+        softSocketsLocked={sessionMode === 'coop' ? false : state.currentPhase !== 'VERIFICATION'}
+        coopUnifiedSprint={coopUnifiedSprint}
         infraSlots={state.infraSlots}
         softSlots={state.softSlots}
         runtimeRail={state.runtimeRail}
@@ -606,9 +621,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       <HandControls 
         architectureSupplyHint={
           sessionMode === 'coop' && coopRole === 'admin'
-            ? 'PIPELINE: периметр (VPC/карантин) → контейнер/pod → mesh → DNS/proxy/cache → данные (БД/Redis/Kafka) → балансировка → CI/CD и мониторинг. INFRA — в слоты кликом; SSH/PING — проводка. ≥6 слотов → COMPILE.'
+            ? 'COOP_SPRINT: INFRA в том же бою, что и код. Периметр → pod → mesh → DNS/proxy → данные → LB → CI/наблюдаемость. INFRA в слоты кликом; SSH/PING — проводка. SHIP когда PROJECT 100% и цепочка готова.'
             : undefined
         }
+        coopUnifiedSprint={coopUnifiedSprint}
         currentPhase={state.currentPhase}
         filteredHand={state.filteredHand}
         fullHand={state.hand}

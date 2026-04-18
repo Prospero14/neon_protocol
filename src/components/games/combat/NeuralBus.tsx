@@ -17,6 +17,8 @@ interface NeuralBusProps {
   currentPhase: CombatPhase;
   /** Софт-скиллы кладутся только в фазе стабилизации (после кода). */
   softSocketsLocked: boolean;
+  /** Кооп GDD: единый спринт — INFRA у admin в DEVELOPMENT, SOFT не блокируются фазой. */
+  coopUnifiedSprint?: boolean;
   infraSlots: (CombatCard | null)[];
   softSlots: (CombatCard | null)[];
   runtimeRail: RailSlot[];
@@ -38,12 +40,17 @@ interface NeuralBusProps {
 const NeuralBus: React.FC<NeuralBusProps> = ({
   pipelineFieldClass = '',
   phaseOrder = SDLC_PHASE_IDS_FULL,
-  currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
+  currentPhase, softSocketsLocked, coopUnifiedSprint = false, infraSlots, softSlots, runtimeRail, ramSlotsMax,
   enemy, nextBugAction, isPlayerTurn, selectedCard, playerProgress, aiProgress,
   bugPoints, aiDeadline, onExecuteCardOnSlot,
   sessionMode = 'solo',
   coopRole = null,
 }) => {
+  const showInfraPlanning =
+    currentPhase === 'ARCHITECTURE' ||
+    Boolean(coopUnifiedSprint && coopRole === 'admin' && currentPhase === 'DEVELOPMENT');
+  const sprintStabilizationUi =
+    currentPhase === 'VERIFICATION' || (coopUnifiedSprint && sessionMode === 'coop' && currentPhase === 'DEVELOPMENT');
   const phaseIndex = Math.max(0, phaseOrder.indexOf(currentPhase));
   const hasSelection = selectedCard !== null;
   const threatColor = aiProgress > 60 ? '#ff4060' : '#ffaa00';
@@ -132,7 +139,13 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
             );
           })}
         </div>
-        {phaseOrder.length < SDLC_PHASE_IDS_FULL.length && (
+        {coopUnifiedSprint && (
+          <p className="nb2-sdlc-coop-caption">
+            COOP_SPRINT: код, инфра, тест и SOFT идут параллельно; ИИ давит как на стабилизации. Одна кнопка SHIP
+            ведёт к финальному деплою «приложения» при PROJECT 100%.
+          </p>
+        )}
+        {!coopUnifiedSprint && phaseOrder.length < SDLC_PHASE_IDS_FULL.length && (
           <p className="nb2-sdlc-coop-caption">
             INFRA/снабжение — зона admin в общем цикле команды; ваш клиент в этом спринте без отдельной фазы снабжения.
           </p>
@@ -140,11 +153,10 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
         {sessionMode === 'coop' && coopRole === 'pm' && currentPhase === 'DEVELOPMENT' && (
           <p className="nb2-sdlc-coop-caption" style={{ borderLeft: '2px solid #f472b6', paddingLeft: 8 }}>
             PM: слоты кода на шине собирает синтетический разработчик команды — вы не кликаете по ним. Играйте SOFT из
-            руки (стресс, срок, буферы), смотрите угрозу и блок «Вклад в релиз» в сводке; NEXT ведёт в верификацию,
-            когда решите проверить качество.
+            руки (стресс, срок, буферы), смотрите угрозу и «Вклад в релиз»; когда PROJECT 100% — SHIP к деплою.
           </p>
         )}
-        {currentPhase === 'ARCHITECTURE' ? (
+        {showInfraPlanning && (
           <div className="nb2-planning">
             <div className="nb2-plan-pipeline-seg nb2-plan-pipeline-seg--infra nb2-plan-pipeline-seg--active">
               <div className="nb2-section-label">INFRA_RESOURCES</div>
@@ -158,7 +170,7 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
             </div>
             <div
               className={`nb2-plan-pipeline-seg nb2-plan-pipeline-seg--soft ${
-                currentPhase === 'VERIFICATION' ? 'nb2-plan-pipeline-seg--active' : 'nb2-plan-pipeline-seg--idle'
+                sprintStabilizationUi ? 'nb2-plan-pipeline-seg--active' : 'nb2-plan-pipeline-seg--idle'
               }`}
             >
               <div className="nb2-section-label nb2-soft-section-head" style={{ marginTop: 12 }}>
@@ -186,18 +198,19 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
               </div>
             </div>
           </div>
-        ) : (
+        )}
+        {currentPhase !== 'ARCHITECTURE' && (
           <div className="nb2-code-editor nb2-code-editor--phase-wrap">
             <div className="nb2-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>NEURAL_BUS <span className="nb2-caret">█</span></span>
-              {currentPhase === 'VERIFICATION' && (
+              {sprintStabilizationUi && (
                 <span className={`nb2-test-status ${bugPoints === 0 ? 'passed' : 'failed'}`}>
                   {bugPoints === 0 ? '[OK] CI/CD RUNNER: TESTS PASSED' : `[FATAL] CI/CD RUNNER: ${bugPoints} BUGS DETECTED`}
                 </span>
               )}
             </div>
             <div className="nb2-code-flow" style={{ position: 'relative' }}>
-              {currentPhase === 'VERIFICATION' && (
+              {sprintStabilizationUi && (
                 <div className={`nb2-scanner-line ${bugPoints === 0 ? 'passed' : 'failed'}`} />
               )}
               {runtimeRail.map((slot, i) => {
@@ -207,7 +220,7 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                 const canPatch =
                   hasCard &&
                   slot.type === 'PLAYER_CODE' &&
-                  currentPhase === 'VERIFICATION' &&
+                  sprintStabilizationUi &&
                   (selectedCard?.card?.type === 'REACTION' || selectedCard?.card?.type === 'DEFENSIVE');
                 const isTarget = hasSelection && !isLocked && (!hasCard || canPatch);
                 return (

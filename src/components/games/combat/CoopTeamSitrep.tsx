@@ -8,6 +8,8 @@ import type { CoopLinkedObjectiveRow } from '../../../logic/coopLinkedRoleObject
 
 type Props = {
   coopRole: CoopRole;
+  /** GDD §1c: одна строка «задача боя» для выбранной роли. */
+  roleMissionBlurb?: string;
   squadFill: CoopSquadFill;
   matchActiveRole?: string | null;
   isMyTurn?: boolean;
@@ -74,6 +76,11 @@ export const CoopTeamSitrep: React.FC<Props> = ({
   return (
     <aside className="coop-team-sitrep mono-text" aria-label="Сводка команды и общий поток">
       <div className="coop-team-sitrep__head">КОМАНДА // ОБЩИЙ ПОТОК</div>
+      {roleMissionBlurb && (
+        <div className="coop-team-sitrep__mission" style={{ fontSize: 11, opacity: 0.88, lineHeight: 1.45, marginBottom: 10 }}>
+          {roleMissionBlurb}
+        </div>
+      )}
       {squadFill === 'live_party' && matchActiveRole && (
         <div className="coop-team-sitrep__plan-row" style={{ marginBottom: 8 }}>
           <span className="coop-team-sitrep__k">АКТИВНАЯ РОЛЬ</span>

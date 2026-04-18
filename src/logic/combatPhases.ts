@@ -9,17 +9,25 @@ export type CombatPhase = 'ARCHITECTURE' | 'DEVELOPMENT' | 'VERIFICATION' | 'DEP
 /** Полный цикл (4 фазы). Кооп dev/qa/pm пропускают ARCHITECTURE — INFRA ведёт только admin в общей модели команды. */
 export const SDLC_PHASE_IDS_FULL: CombatPhase[] = ['ARCHITECTURE', 'DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
 
-/** Порядок фаз на рельсе HUD: у коопа без admin — три фазы без отдельного снабжения. */
+/**
+ * Кооп по GDD: единый спринт-бой — без отдельных гейтов ARCH / VER как в соло.
+ * Все роли стартуют в DEVELOPMENT с параллельными типами карт; к SHIP — прямо в DEPLOYMENT.
+ */
+export function coopUnifiedSprintCombat(sessionMode: SessionMode, coopRole: CoopRole | null): boolean {
+  return sessionMode === 'coop' && Boolean(coopRole);
+}
+
+/** Порядок фаз на рельсе HUD. */
 export function sdlcRailPhaseOrder(sessionMode: SessionMode, coopRole: CoopRole | null): CombatPhase[] {
-  if (sessionMode === 'coop' && coopRole && coopRole !== 'admin') {
-    return ['DEVELOPMENT', 'VERIFICATION', 'DEPLOYMENT'];
+  if (coopUnifiedSprintCombat(sessionMode, coopRole)) {
+    return ['DEVELOPMENT', 'DEPLOYMENT'];
   }
   return SDLC_PHASE_IDS_FULL;
 }
 
-/** Кооп-роли кроме admin не играют фазу ARCHITECTURE (старт сразу с DEVELOPMENT). */
+/** Кооп: отдельная фаза ARCHITECTURE не используется (инфра у admin — в том же DEVELOPMENT). */
 export function coopSkipsArchitecturePhase(sessionMode: SessionMode, coopRole: CoopRole | null): boolean {
-  return sessionMode === 'coop' && Boolean(coopRole) && coopRole !== 'admin';
+  return coopUnifiedSprintCombat(sessionMode, coopRole);
 }
 
 export interface PhaseRules {

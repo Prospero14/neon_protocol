@@ -1,6 +1,11 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type MutableRefObject } from 'react';
 import type { CombatPhase } from '../combatPhases';
-import { SDLC_COOP_PARALLEL_ALLOWED_TYPES, SDLC_PHASES, coopSkipsArchitecturePhase } from '../combatPhases';
+import {
+  SDLC_COOP_PARALLEL_ALLOWED_TYPES,
+  SDLC_PHASES,
+  coopSkipsArchitecturePhase,
+  coopUnifiedSprintCombat,
+} from '../combatPhases';
 import { isInfraDrawCard, isStabilizationDrawCard, isStaticCodeCardType } from '../combatFlow';
 import { sortInfraCardsForAdminSupply } from '../adminInfraPipeline';
 import type { CombatCard } from '../combatCards';
@@ -52,6 +57,11 @@ function bugIntentPickContext(
   return { phase, bugPressure, playerProgress, eventDensity };
 }
 
+/** Кооп-спринт: в DEVELOPMENT давление ИИ как на стабилизации (GDD — активный оппонент). */
+function phaseForCoopAiIntent(phase: CombatPhase, coopUnified: boolean): CombatPhase {
+  return coopUnified && phase === 'DEVELOPMENT' ? 'VERIFICATION' : phase;
+}
+
 export type RailSlotType = 'EMPTY' | 'PLAYER_CODE' | 'BUG_ERROR';
 export interface RailSlot {
   type: RailSlotType;
@@ -87,6 +97,11 @@ interface UseCombatLogicProps {
   >;
   /** live_party: id целей с сервера — подмешивать в awarded, чтобы не дублировать после рефреша. */
   coopLinkedServerAwardedIds?: readonly string[];
+  /**
+   * live_party: общий % спринта с матча (у dev на шине). PM локально не видит чужую шину —
+   * без подмешивания PROJECT% залипает на 0 и не открывается VERIFICATION/DEPLOY.
+   */
+  coopSharedProjectProgress?: number | null;
 }
 
 function pickCombatCardForMissionStep(step: TZStep): CombatCard | null {
@@ -154,6 +169,7 @@ export function useCombatLogic({
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
+  const coopUnified = coopUnifiedSprintCombat(sessionMode, coopRole ?? null);
   const START_HAND_SIZE = 6;
   /** QA/PM/Admin: шире рука и дро — комбо из 2–3 карт не опустошает темп хода. */
   const coopSupportComboTempo =
@@ -426,6 +442,24 @@ export function useCombatLogic({
       setHand(stab.slice(0, n));
       setDeck(stab.slice(n));
       addLog('[SYSTEM] COOP: параллельный цикл — рука из стабилизации (роль QA/PM).');
+    } else if (skipArchitecture && coopActive && coopRole === 'admin') {
+      const rawInfra = [...activeDeck.filter(isInfraDrawCard)];
+      const infraPile = sortInfraCardsForAdminSupply(rawInfra);
+      if (infraPile.length === 0) {
+        setCpuMax((p) => p + 1);
+        setCpu((p) => p + 1);
+        setRamMaxMb((p) => p + 512);
+        addLog('[SYSTEM] EMERGENCY_INFRA_BOOT: +1 CPU, +512 MiB RAM');
+      }
+      const n = Math.min(effectiveStartHandSize, infraPile.length);
+      setHand(infraPile.slice(0, n));
+      setDeck(infraPile.slice(n));
+      addLog('[SYSTEM] COOP_SPRINT: admin — старт с INFRA в общем спринте (без фазы снабжения).');
+      if (infraPile.length > 0) {
+        addLog(
+          '[ADMIN:PIPE] Контур в том же бою, что и код: заполните INFRA-слоты; SSH/PING — проводка к узлам.',
+        );
+      }
     } else if (skipArchitecture) {
       setHand([]);
       setDeck([]);
@@ -460,11 +494,18 @@ export function useCombatLogic({
     const bootPhase: CombatPhase = skipArchitecture ? 'DEVELOPMENT' : 'ARCHITECTURE';
     if (enemy)
       setNextBugAction(
-        pickNextBugAction(enemy, [], bugIntentPickContext(bootPhase, 0, 0, coopActive)),
+        pickNextBugAction(
+          enemy,
+          [],
+          bugIntentPickContext(phaseForCoopAiIntent(bootPhase, coopUnified), 0, 0, coopActive),
+        ),
       );
 
     addLog('[SYSTEM] BOOT_SEQUENCE... [OK]');
     addLog(`[SYSTEM] PHASE_${bootPhase}_ACTIVE.`);
+    if (coopUnified) {
+      addLog('[SYSTEM] COOP_SPRINT: единый спринт — код, инфра, тест и SOFT параллельно; SHIP в релиз без отдельной фазы стабилизации.');
+    }
     if (isFirstCombatQuestTutorial && skillMode === 'script-kiddie') {
       addLog('[TUTORIAL] Цель: PROJECT 100% до THREAT 100%.');
       addLog('[TUTORIAL] DEVELOPMENT: выкладывай код в шину и собирай прогресс.');
@@ -532,6 +573,18 @@ export function useCombatLogic({
   // --- PROGRESS LOGIC ---
   useEffect(() => {
     if (!missionTz.steps) return;
+    const pmYardSynthetic =
+      coopActive &&
+      coopRole === 'pm' &&
+      coopSquadFill === 'synthetic_bots' &&
+      missionTz.districtId === 'coop_yard';
+    const sharedProg =
+      typeof coopSharedProjectProgress === 'number' && Number.isFinite(coopSharedProjectProgress)
+        ? Math.min(100, Math.max(0, Math.round(coopSharedProjectProgress)))
+        : null;
+    const pmLiveShared =
+      coopActive && coopRole === 'pm' && coopSquadFill === 'live_party' && sharedProg != null;
+
     if (missionTz.isExecutionChain) {
       let matchedSteps = 0;
       for (let i = 0; i < missionTz.steps.length; i++) {
@@ -542,15 +595,22 @@ export function useCombatLogic({
         if (getStepCardIds(step).includes(id)) matchedSteps++;
         else break;
       }
-      setPlayerProgress(Math.floor((matchedSteps / missionTz.steps.length) * 100));
+      let pct = Math.floor((matchedSteps / missionTz.steps.length) * 100);
+      /** PM: код на шине собирает синт. DEV — не держать PROJECT% на нуле из-за пустой локальной шины. */
+      if (pmYardSynthetic) pct = 100;
+      else if (pmLiveShared) pct = Math.max(pct, sharedProg!);
+      setPlayerProgress(pct);
     } else {
       const railIds = runtimeRail.filter((s) => s.type === 'PLAYER_CODE').map((s) => (s.content as CombatCard).id);
       const satisfiedSteps = missionTz.steps.filter((step) =>
         getStepCardIds(step).some((id) => railIds.includes(id))
       );
-      setPlayerProgress(Math.floor((satisfiedSteps.length / missionTz.steps.length) * 100));
+      let pct = Math.floor((satisfiedSteps.length / missionTz.steps.length) * 100);
+      if (pmYardSynthetic) pct = 100;
+      else if (pmLiveShared) pct = Math.max(pct, sharedProg!);
+      setPlayerProgress(pct);
     }
-  }, [runtimeRail, missionTz]);
+  }, [runtimeRail, missionTz, coopActive, coopRole, coopSquadFill, coopSharedProjectProgress]);
 
   useEffect(() => {
     const rules = SDLC_PHASES[currentPhase];
@@ -565,6 +625,34 @@ export function useCombatLogic({
       return;
     }
     if (currentPhase === 'DEVELOPMENT') {
+      /** GDD §4.2: один гейт к деплою «приложения» — без промежуточной VER. */
+      if (coopUnified) {
+        if (missionTz.isExecutionChain) {
+          /** PM не валидирует чужую шину; SHIP — когда команда довела PROJECT (см. синт. dev / shared). */
+          if (coopActive && coopRole === 'pm') {
+            setCanAdvancePhase(true);
+            return;
+          }
+          let ok = true;
+          for (let i = 0; i < missionTz.steps.length; i++) {
+            const step = missionTz.steps[i];
+            const slot = runtimeRail[i];
+            if (slot?.type !== 'PLAYER_CODE' || !slot.content) {
+              ok = false;
+              break;
+            }
+            const id = (slot.content as CombatCard).id;
+            if (!getStepCardIds(step).includes(id)) {
+              ok = false;
+              break;
+            }
+          }
+          setCanAdvancePhase(ok && playerProgress >= 100);
+          return;
+        }
+        setCanAdvancePhase(playerProgress >= 100);
+        return;
+      }
       if (missionTz.isExecutionChain) {
         /** PM не валидирует цепочку кода — иначе блок на пустой шине после отключения автозаполнения. */
         if (coopActive && coopRole === 'pm') {
@@ -602,7 +690,7 @@ export function useCombatLogic({
       return;
     }
     setCanAdvancePhase(true);
-  }, [currentPhase, playerProgress, missionTz, runtimeRail, infraSlots, coopActive, coopRole]);
+  }, [currentPhase, playerProgress, missionTz, runtimeRail, infraSlots, coopActive, coopRole, coopUnified]);
 
   const drawCards = (count: number) => {
     if (currentPhase === 'DEVELOPMENT' && !coopActive) return;
@@ -917,7 +1005,7 @@ export function useCombatLogic({
           setStress((s) => Math.max(0, s - 2));
           addLog('[ROLE:PM] STAKEHOLDER_BUFFER — +3% progress, −2 stress.');
           const tr = coopLinkedTrackRef.current;
-          if (currentPhase === 'ARCHITECTURE') tr.pmSoftArch += 1;
+          if (!coopUnified && currentPhase === 'ARCHITECTURE') tr.pmSoftArch += 1;
           else if (currentPhase === 'DEVELOPMENT') tr.pmSoftDevPlaced += 1;
           if (PM_RITUAL_SOFT_IDS.has(card.id)) tr.pmRitualSoft += 1;
           flushCoopLinkedObjectives();
@@ -1326,10 +1414,11 @@ export function useCombatLogic({
         : nextBugAction.progressPoints;
     const verificationThreatMult =
       skillMode === 'script-kiddie' ? 1.25 : coopActive ? 1.44 : 1.35;
-    const threatDelta =
-      currentPhase === 'VERIFICATION'
-        ? Math.max(2, Math.floor(baseThreatDelta * verificationThreatMult))
-        : baseThreatDelta;
+    const aiPressureAsVerify =
+      currentPhase === 'VERIFICATION' || (coopUnified && currentPhase === 'DEVELOPMENT');
+    const threatDelta = aiPressureAsVerify
+      ? Math.max(2, Math.floor(baseThreatDelta * verificationThreatMult))
+      : baseThreatDelta;
     const bugDelta = nextBugAction.bugPoints;
     const rawDamage = Math.floor(nextBugAction.damage * (1 + (tier - 1) * 0.25));
     const stressDelta =
@@ -1407,7 +1496,7 @@ export function useCombatLogic({
     }
     if (mitigationBuffer > 0) setMitigationBuffer((b) => Math.max(0, b - 2));
     if (
-      currentPhase === 'VERIFICATION' &&
+      aiPressureAsVerify &&
       effThreat === 0 &&
       effBugs === 0 &&
       effStress === 0 &&
@@ -1432,7 +1521,11 @@ export function useCombatLogic({
   const advancePhase = () => {
     const rules = SDLC_PHASES[currentPhase];
     if (rules.nextPhaseId) {
-      const targetPhase = rules.nextPhaseId;
+      let targetPhase = rules.nextPhaseId;
+      if (coopUnified && currentPhase === 'DEVELOPMENT' && targetPhase === 'VERIFICATION') {
+        targetPhase = 'DEPLOYMENT';
+        addLog('[PHASE] COOP_SPRINT: пропуск VERIFICATION — финальный деплой «приложения».');
+      }
       setSelectedCard(null);
       setCurrentPhase(targetPhase);
       setCanAdvancePhase(false);
@@ -1589,19 +1682,21 @@ export function useCombatLogic({
 
     setCardsPlayedThisTurn(0);
     setClearedBugsThisTurn(0);
+    const stallAsStabilization =
+      currentPhase === 'VERIFICATION' || (coopUnified && currentPhase === 'DEVELOPMENT');
     if ((currentPhase === 'DEVELOPMENT' || currentPhase === 'VERIFICATION') && playedThisTurn === 0) {
       const noPlayableInVerification =
-        currentPhase === 'VERIFICATION' &&
+        stallAsStabilization &&
         !hand.some((c) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || c.type === 'SOFT' || c.type === 'SCRIPT');
       if (noPlayableInVerification) {
         drawCards(2);
         addLog('[STALL] No playable counter cards. Auto-draw +2 for recovery.');
       } else {
         setIdleTurnStreak((n) => n + 1);
-        const stallThreat = currentPhase === 'VERIFICATION'
+        const stallThreat = stallAsStabilization
           ? Math.min(14, 5 + idleTurnStreak * 3)
           : Math.min(16, 6 + idleTurnStreak * 3);
-        const stallStress = currentPhase === 'VERIFICATION'
+        const stallStress = stallAsStabilization
           ? Math.min(7, 2 + idleTurnStreak)
           : Math.min(12, 3 + idleTurnStreak * 2);
         setAiProgress((p) => Math.min(100, p + stallThreat));
@@ -1619,7 +1714,10 @@ export function useCombatLogic({
         addLog(`[SNIFFER] ${statusCount} STATUS_CARDS_DETECTED. +${dmg} stress.`);
       }
     }
-    if (enemy?.personality === 'AUDITOR' && currentPhase === 'VERIFICATION') {
+    if (
+      enemy?.personality === 'AUDITOR' &&
+      (currentPhase === 'VERIFICATION' || (coopUnified && currentPhase === 'DEVELOPMENT'))
+    ) {
       const firstRailCard = runtimeRail.find((s) => s.type === 'PLAYER_CODE');
       if (firstRailCard && firstRailCard.content) {
         const card = firstRailCard.content as CombatCard;
@@ -1657,7 +1755,7 @@ export function useCombatLogic({
           enemy,
           aiRecentRef.current,
           bugIntentPickContext(
-            currentPhase,
+            phaseForCoopAiIntent(currentPhase, coopUnified),
             runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
             playerProgress,
             coopActive,
@@ -1716,7 +1814,7 @@ export function useCombatLogic({
               enemy,
               aiRecentRef.current,
               bugIntentPickContext(
-                currentPhase,
+                phaseForCoopAiIntent(currentPhase, coopUnified),
                 runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
                 playerProgress,
                 coopActive,

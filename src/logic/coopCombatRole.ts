@@ -130,6 +130,20 @@ export function coopBugClearSynergy(
         log: '[SYNERGY:QA] LOG_MASK → FIREWALL: периметр укреплён.',
       };
     }
+    if (clearingCardId === 'react_unit_test' && p.has('react_integration_test')) {
+      return {
+        threatExtra: 5,
+        mitigationExtra: 3,
+        log: '[SYNERGY:QA] INTEGRATION → UNIT: пирамида тестов.',
+      };
+    }
+    if (clearingCardId === 'react_contract_test' && p.has('react_mock_server')) {
+      return {
+        threatExtra: 5,
+        mitigationExtra: 3,
+        log: '[SYNERGY:QA] MOCK → CONTRACT: контракт зафиксирован.',
+      };
+    }
   }
   if (role === 'admin' && (clearingCardId === 'script_ssh' || clearingCardId === 'script_auth') && p.has('script_ping')) {
     return {
@@ -138,11 +152,25 @@ export function coopBugClearSynergy(
       log: '[SYNERGY:ADMIN] PING → SSH/AUTH: сетевой контур.',
     };
   }
+  if (role === 'admin' && clearingCardId === 'script_grep' && p.has('script_ping')) {
+    return {
+      threatExtra: 4,
+      mitigationExtra: 2,
+      log: '[SYNERGY:ADMIN] PING → GREP: быстрый срез логов.',
+    };
+  }
   if (role === 'pm' && clearingCardId.startsWith('soft_') && p.has('soft_coffee')) {
     return {
       threatExtra: 8,
       mitigationExtra: 6,
       log: '[SYNERGY:PM] COFFEE → SOFT на ICE: командный буфер.',
+    };
+  }
+  if (role === 'pm' && clearingCardId === 'soft_daily_sync' && p.has('soft_agile_ceremony')) {
+    return {
+      threatExtra: 5,
+      mitigationExtra: 4,
+      log: '[SYNERGY:PM] CEREMONY → DAILY: ритуал → синхронизация.',
     };
   }
   return { threatExtra: 0, mitigationExtra: 0, log: null };

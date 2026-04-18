@@ -540,6 +540,11 @@ export type AiSelectionContext = {
   phase?: 'ARCHITECTURE' | 'DEVELOPMENT' | 'VERIFICATION' | 'DEPLOYMENT';
   bugPressure?: number;
   playerProgress?: number;
+  /**
+   * Плотность событий ИИ: >1 — чаще спавн ICE на шине и инъекции статусов (кооп / «шумный» бой).
+   * 1 = поведение по умолчанию.
+   */
+  eventDensity?: number;
   /** Детерминированные тесты: источник U(0,1); по умолчанию Math.random. */
   random?: () => number;
 };
@@ -564,15 +569,22 @@ export function pickNextBugAction(bug: BugEnemy, recent: AiRecentEntry[], ctx?: 
     }
   }
 
+  const k = Math.min(1.55, Math.max(1, ctx?.eventDensity ?? 1));
+  const bp = ctx?.bugPressure ?? 0;
+
   const weights = actions.map((a) => {
     let w = 1;
     if (lastTwoIds.has(a.id)) w *= 0.38;
     if (lastPt !== undefined && a.problemType === lastPt) {
       w *= streakSamePt >= 2 ? 0.22 : 0.55;
     }
-    if (ctx?.phase === 'DEVELOPMENT' && a.spawnId) w *= 1.25;
-    if (ctx?.phase === 'VERIFICATION' && a.injectStatusId) w *= 1.22;
-    if ((ctx?.bugPressure ?? 0) >= 3 && a.bugPoints > 0) w *= 0.72;
+    if (ctx?.phase === 'DEVELOPMENT' && a.spawnId) w *= 1.25 * (0.92 + 0.08 * k);
+    if (ctx?.phase === 'VERIFICATION' && a.injectStatusId) w *= 1.22 * k;
+    if (ctx?.phase === 'VERIFICATION' && a.spawnId) w *= 1.16 * k;
+    if (ctx?.phase === 'VERIFICATION' && bp <= 1 && (a.spawnId || a.injectStatusId)) {
+      w *= 1 + 0.22 * Math.min(k, 1.45);
+    }
+    if (bp >= 3 && a.bugPoints > 0) w *= k >= 1.22 ? 0.78 : 0.72;
     if ((ctx?.playerProgress ?? 0) >= 85 && a.damage > 0) w *= 1.2;
     if (ctx?.phase === 'VERIFICATION' && a.damage >= 9) w *= 1.12;
     if (ctx?.phase === 'VERIFICATION' && (a.problemType === 'BUSINESS_RISK' || a.problemType === 'TECH_DEBT')) w *= 1.08;

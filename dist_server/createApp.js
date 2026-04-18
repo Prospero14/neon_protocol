@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
-import { mergeStartupRankings } from './coopStartupPregen';
+import { mergeStartupRankings } from './coopStartupPregen.js';
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
 function publicGameState(gs) {
     if (!gs)

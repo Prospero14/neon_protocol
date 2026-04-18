@@ -52,6 +52,13 @@ describe('coopCombatRole (синергия)', () => {
     expect(s.log).toBeTruthy();
   });
 
+  it('coopBugClearSynergy: QA INTEGRATION→UNIT и ADMIN PING→GREP', () => {
+    const qa = coopBugClearSynergy('qa', 'react_unit_test', ['react_integration_test']);
+    expect(qa.threatExtra).toBeGreaterThan(0);
+    const ad = coopBugClearSynergy('admin', 'script_grep', ['script_ping']);
+    expect(ad.mitigationExtra).toBeGreaterThan(0);
+  });
+
   it('coopPmSoftSynergy: COFFEE→FOCUS', () => {
     const s = coopPmSoftSynergy('soft_focus', ['soft_coffee']);
     expect(s.threatCut).toBeGreaterThan(0);
@@ -96,6 +103,17 @@ describe('combatEnemies.pickNextBugAction', () => {
       random: () => 0.35,
     });
     expect(a.id).toBe('ice_lock');
+  });
+
+  it('eventDensity остаётся валидным множителем весов', () => {
+    const a = pickNextBugAction(ice, [], {
+      phase: 'VERIFICATION',
+      bugPressure: 0,
+      playerProgress: 0,
+      eventDensity: 1.4,
+      random: () => 0.5,
+    });
+    expect(ice.actions.some((x) => x.id === a.id)).toBe(true);
   });
 });
 

@@ -10,7 +10,7 @@ import { getStepCardIds } from '../combatTasks';
 
 import type { Trait } from '../traits';
 import { ALL_ENEMIES, BUGS, pickNextBugAction } from '../combatEnemies';
-import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry } from '../combatEnemies';
+import type { BugEnemy, BugAction, BugProblemType, AiRecentEntry, AiSelectionContext } from '../combatEnemies';
 import type { CoopRole, DevLanguageStack, SessionMode } from '../sessionMode';
 import { getCoopRoleCatalogIds } from '../sessionMode';
 import type { CoopSquadFill } from '../coopTeamFlow';
@@ -26,6 +26,24 @@ import {
   coopPmSoftSynergy,
   isCoopCombat,
 } from '../coopCombatRole';
+
+/** Контекст выбора NEXT_INTENT: плотнее в коопе и в верификации соло. */
+function bugIntentPickContext(
+  phase: CombatPhase,
+  bugPressure: number,
+  playerProgress: number,
+  coopActive: boolean
+): AiSelectionContext {
+  let eventDensity = 1;
+  if (coopActive) {
+    if (phase === 'VERIFICATION') eventDensity = 1.34;
+    else if (phase === 'DEVELOPMENT') eventDensity = 1.14;
+    else eventDensity = 1.06;
+  } else if (phase === 'VERIFICATION') {
+    eventDensity = 1.1;
+  }
+  return { phase, bugPressure, playerProgress, eventDensity };
+}
 
 export type RailSlotType = 'EMPTY' | 'PLAYER_CODE' | 'BUG_ERROR';
 export interface RailSlot {
@@ -119,6 +137,10 @@ export function useCombatLogic({
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
   const START_HAND_SIZE = 6;
+  /** QA/PM/Admin: шире рука и дро — комбо из 2–3 карт не опустошает темп хода. */
+  const coopSupportComboTempo =
+    coopActive && coopRole && coopRole !== 'developer';
+  const effectiveStartHandSize = coopSupportComboTempo ? START_HAND_SIZE + 1 : START_HAND_SIZE;
 
   const coopDeckForLogic = useMemo(() => {
     if (!coopActive || coopRole !== 'developer') return activeDeck;
@@ -287,7 +309,7 @@ export function useCombatLogic({
 
     if (skipArchitecture && coopActive && (coopRole === 'qa' || coopRole === 'pm')) {
       const stab = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
-      const n = Math.min(START_HAND_SIZE, stab.length);
+      const n = Math.min(effectiveStartHandSize, stab.length);
       setHand(stab.slice(0, n));
       setDeck(stab.slice(n));
       addLog('[SYSTEM] COOP: параллельный цикл — рука из стабилизации (роль QA/PM).');
@@ -304,7 +326,7 @@ export function useCombatLogic({
         setRamMaxMb((p) => p + 512);
         addLog('[SYSTEM] EMERGENCY_INFRA_BOOT: +1 CPU, +512 MiB RAM');
       }
-      const n = Math.min(START_HAND_SIZE, infraPile.length);
+      const n = Math.min(effectiveStartHandSize, infraPile.length);
       setHand(infraPile.slice(0, n));
       setDeck(infraPile.slice(n));
       addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
@@ -313,7 +335,10 @@ export function useCombatLogic({
     stabilizationQueueRef.current = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
 
     const bootPhase: CombatPhase = skipArchitecture ? 'DEVELOPMENT' : 'ARCHITECTURE';
-    if (enemy) setNextBugAction(pickNextBugAction(enemy, [], { phase: bootPhase, bugPressure: 0, playerProgress: 0 }));
+    if (enemy)
+      setNextBugAction(
+        pickNextBugAction(enemy, [], bugIntentPickContext(bootPhase, 0, 0, coopActive)),
+      );
 
     addLog('[SYSTEM] BOOT_SEQUENCE... [OK]');
     addLog(`[SYSTEM] PHASE_${bootPhase}_ACTIVE.`);
@@ -1129,9 +1154,11 @@ export function useCombatLogic({
       skillMode === 'script-kiddie'
         ? Math.max(1, Math.floor(nextBugAction.progressPoints * 0.75))
         : nextBugAction.progressPoints;
+    const verificationThreatMult =
+      skillMode === 'script-kiddie' ? 1.25 : coopActive ? 1.44 : 1.35;
     const threatDelta =
       currentPhase === 'VERIFICATION'
-        ? Math.max(2, Math.floor(baseThreatDelta * (skillMode === 'script-kiddie' ? 1.25 : 1.35)))
+        ? Math.max(2, Math.floor(baseThreatDelta * verificationThreatMult))
         : baseThreatDelta;
     const bugDelta = nextBugAction.bugPoints;
     const rawDamage = Math.floor(nextBugAction.damage * (1 + (tier - 1) * 0.25));
@@ -1216,8 +1243,9 @@ export function useCombatLogic({
       !nextBugAction.spawnId &&
       !nextBugAction.injectStatusId
     ) {
-      setAiProgress((p) => Math.min(100, p + 4));
-      addLog('[AI] PASSIVE_SCAN: +4% THREAT (verification pressure).');
+      const passiveThreat = coopActive ? 6 : 5;
+      setAiProgress((p) => Math.min(100, p + passiveThreat));
+      addLog(`[AI] PASSIVE_SCAN: +${passiveThreat}% THREAT (verification pressure).`);
     }
     addLog(`[AI] ${nextBugAction.name} | threat +${effThreat}% | bugs +${effBugs}${effStress > 0 ? ` | stress +${effStress}` : ''}`);
     setLastAiAction(nextBugAction);
@@ -1311,7 +1339,7 @@ export function useCombatLogic({
         setDiscard((prev) => [...prev, ...hand, ...deck]);
         const stabQ = stabilizationQueueRef.current;
         stabilizationQueueRef.current = [];
-        const drawN = Math.min(START_HAND_SIZE, stabQ.length);
+        const drawN = Math.min(effectiveStartHandSize, stabQ.length);
         let nextHand = stabQ.slice(0, drawN);
         const nextDeck = stabQ.slice(drawN);
         const hasPlayableCounter = nextHand.some((c) => c.type === 'REACTION' || c.type === 'DEFENSIVE' || c.type === 'SOFT');
@@ -1321,7 +1349,7 @@ export function useCombatLogic({
             .map((id) => getCardById(id))
             .filter((c): c is CombatCard => Boolean(c))
             .slice(0, 2);
-          nextHand = [...emergencyCards, ...nextHand].slice(0, START_HAND_SIZE);
+          nextHand = [...emergencyCards, ...nextHand].slice(0, effectiveStartHandSize);
           addLog('[SYSTEM] EMERGENCY_COUNTER_KIT loaded for VERIFICATION.');
         }
         setHand(nextHand);
@@ -1372,7 +1400,14 @@ export function useCombatLogic({
     setIsPlayerTurn(false); setSelectedCard(null); setAiDeadline(prev => Math.max(0, prev - 1)); addLog('[AI] THINKING...');
 
     // --- PERSONALITY EFFECTS (end of player turn; считаем до сброса счётчика) ---
-    if (enemy?.personality === 'TRACER' && playedThisTurn > (skillMode === 'script-kiddie' ? 3 : 2)) {
+    const tracerCardCap = coopSupportComboTempo
+      ? skillMode === 'script-kiddie'
+        ? 4
+        : 3
+      : skillMode === 'script-kiddie'
+        ? 3
+        : 2;
+    if (enemy?.personality === 'TRACER' && playedThisTurn > tracerCardCap) {
       setStress((s) => Math.min(STRESS_MAX, s + 22));
       addLog(`[TRACER] SIGNATURE_DETECTED! ${playedThisTurn} cards played. +22 stress penalty.`);
     }
@@ -1442,11 +1477,16 @@ export function useCombatLogic({
 
     setTimeout(() => {
       if (!nextBugAction && enemy && currentPhase !== 'ARCHITECTURE') {
-        const fallbackAction = pickNextBugAction(enemy, aiRecentRef.current, {
-          phase: currentPhase,
-          bugPressure: runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
-          playerProgress,
-        });
+        const fallbackAction = pickNextBugAction(
+          enemy,
+          aiRecentRef.current,
+          bugIntentPickContext(
+            currentPhase,
+            runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
+            playerProgress,
+            coopActive,
+          ),
+        );
         setNextBugAction(fallbackAction);
         addLog('[AI] NEXT_INTENT synchronized before execution.');
       }
@@ -1480,15 +1520,32 @@ export function useCombatLogic({
           if (assist.progressDelta)
             setPlayerProgress((p) => Math.min(100, Math.max(0, p + assist.progressDelta)));
         }
-        setIsPlayerTurn(true); setCpu(cpuMax); drawCards(hadCleanCounterplay ? 2 : 1);
-        if (hadCleanCounterplay) addLog('[TEMPO] Clean counterplay last turn: +1 extra draw.');
+        const turnDrawN = coopSupportComboTempo
+          ? hadCleanCounterplay
+            ? 3
+            : 2
+          : hadCleanCounterplay
+            ? 2
+            : 1;
+        setIsPlayerTurn(true); setCpu(cpuMax); drawCards(turnDrawN);
+        if (coopSupportComboTempo) {
+          if (hadCleanCounterplay) addLog('[TEMPO:COOP] Снятие бага — усиленное дро поддержки (+3).');
+          else addLog('[TEMPO:COOP] Поддержка: +2 карт/ход (комбо QA/PM/Admin).');
+        } else if (hadCleanCounterplay) {
+          addLog('[TEMPO] Clean counterplay last turn: +1 extra draw.');
+        }
         if (enemy) {
           setNextBugAction(
-            pickNextBugAction(enemy, aiRecentRef.current, {
-              phase: currentPhase,
-              bugPressure: runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
-              playerProgress,
-            })
+            pickNextBugAction(
+              enemy,
+              aiRecentRef.current,
+              bugIntentPickContext(
+                currentPhase,
+                runtimeRail.filter((s) => s.type === 'BUG_ERROR').length,
+                playerProgress,
+                coopActive,
+              ),
+            ),
           );
         }
         if (enemy?.visualType === 'DEVELOPER') {
@@ -1525,8 +1582,8 @@ export function useCombatLogic({
     addLog(`[SYSTEM] REDRAW_BUFFER_INITIATED...`);
     const oldHand = [...hand];
     const newDeck = [...deck, ...oldHand].sort(() => Math.random() - 0.5);
-    setHand(newDeck.slice(0, START_HAND_SIZE));
-    setDeck(newDeck.slice(START_HAND_SIZE));
+    setHand(newDeck.slice(0, effectiveStartHandSize));
+    setDeck(newDeck.slice(effectiveStartHandSize));
     setMulliganUsed(true);
   };
 

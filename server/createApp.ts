@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import type { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
-import { mergeStartupRankings } from './coopStartupPregen';
+import { mergeStartupRankings } from './coopStartupPregen.js';
 
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
 function publicGameState(gs: Record<string, unknown> | null): Record<string, unknown> | null {

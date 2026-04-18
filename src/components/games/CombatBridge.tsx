@@ -569,6 +569,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         bugPoints={state.bugPoints}
         aiDeadline={state.aiDeadline}
         onExecuteCardOnSlot={actions.executeCardOnSlot}
+        sessionMode={sessionMode}
+        coopRole={coopRole}
       />
       {showFirstQuestMemo && (
         <div

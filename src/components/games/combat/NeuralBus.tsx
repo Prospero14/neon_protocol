@@ -1,6 +1,8 @@
 import React from 'react';
 import type { CombatPhase } from '../../../logic/combatPhases';
 import { SDLC_PHASES, SDLC_PHASE_IDS_FULL } from '../../../logic/combatPhases';
+import type { CoopRole } from '../../../logic/sessionMode';
+import type { SessionMode } from '../../../logic/sessionMode';
 import type { CombatCard } from '../../../logic/combatCards';
 import type { RailSlot } from '../../../logic/hooks/useCombatLogic';
 import type { BugAction, BugEnemy } from '../../../logic/combatEnemies';
@@ -28,6 +30,9 @@ interface NeuralBusProps {
   bugPoints: number;
   aiDeadline: number;
   onExecuteCardOnSlot: (idx: number) => void;
+  /** Кооп PM: подсказка, что шина кода не «ваша зона клика». */
+  sessionMode?: SessionMode;
+  coopRole?: CoopRole | null;
 }
 
 const NeuralBus: React.FC<NeuralBusProps> = ({
@@ -35,7 +40,9 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
   phaseOrder = SDLC_PHASE_IDS_FULL,
   currentPhase, softSocketsLocked, infraSlots, softSlots, runtimeRail, ramSlotsMax,
   enemy, nextBugAction, isPlayerTurn, selectedCard, playerProgress, aiProgress,
-  bugPoints, aiDeadline, onExecuteCardOnSlot
+  bugPoints, aiDeadline, onExecuteCardOnSlot,
+  sessionMode = 'solo',
+  coopRole = null,
 }) => {
   const phaseIndex = Math.max(0, phaseOrder.indexOf(currentPhase));
   const hasSelection = selectedCard !== null;
@@ -130,6 +137,13 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
             INFRA/снабжение — зона admin в общем цикле команды; ваш клиент в этом спринте без отдельной фазы снабжения.
           </p>
         )}
+        {sessionMode === 'coop' && coopRole === 'pm' && currentPhase === 'DEVELOPMENT' && (
+          <p className="nb2-sdlc-coop-caption" style={{ borderLeft: '2px solid #f472b6', paddingLeft: 8 }}>
+            PM: слоты кода на шине собирает синтетический разработчик команды — вы не кликаете по ним. Играйте SOFT из
+            руки (стресс, срок, буферы), смотрите угрозу и блок «Вклад в релиз» в сводке; NEXT ведёт в верификацию,
+            когда решите проверить качество.
+          </p>
+        )}
         {currentPhase === 'ARCHITECTURE' ? (
           <div className="nb2-planning">
             <div className="nb2-plan-pipeline-seg nb2-plan-pipeline-seg--infra nb2-plan-pipeline-seg--active">
@@ -187,10 +201,14 @@ const NeuralBus: React.FC<NeuralBusProps> = ({
                 <div className={`nb2-scanner-line ${bugPoints === 0 ? 'passed' : 'failed'}`} />
               )}
               {runtimeRail.map((slot, i) => {
+                if (!slot) return <React.Fragment key={i} />;
                 const isLocked = i >= ramSlotsMax;
                 const hasCard = slot.type !== 'EMPTY';
-                const canPatch = hasCard && slot.type === 'PLAYER_CODE' && currentPhase === 'VERIFICATION' && 
-                                (selectedCard?.card.type === 'REACTION' || selectedCard?.card.type === 'DEFENSIVE');
+                const canPatch =
+                  hasCard &&
+                  slot.type === 'PLAYER_CODE' &&
+                  currentPhase === 'VERIFICATION' &&
+                  (selectedCard?.card?.type === 'REACTION' || selectedCard?.card?.type === 'DEFENSIVE');
                 const isTarget = hasSelection && !isLocked && (!hasCard || canPatch);
                 return (
                   <React.Fragment key={i}>

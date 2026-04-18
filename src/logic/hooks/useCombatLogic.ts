@@ -267,6 +267,18 @@ export function useCombatLogic({
     return raw;
   }, [ramMaxMb, skillMode, missionTz]);
 
+  /** RAM/шаги миссии могут дать ramSlotsMax > длины шины (старт 10 слотов) — иначе VERIFICATION и ИИ падают на undefined.type. */
+  useLayoutEffect(() => {
+    setRuntimeRail((prev) => {
+      if (prev.length >= ramSlotsMax) return prev;
+      const pad: RailSlot[] = [];
+      for (let i = prev.length; i < ramSlotsMax; i++) {
+        pad.push({ type: 'EMPTY', content: null, integrity: 0 });
+      }
+      return [...prev, ...pad];
+    });
+  }, [ramSlotsMax]);
+
   const codingPalette = useMemo(
     () => coopDeckForLogic.filter((c) => isStaticCodeCardType(c.type)),
     [coopDeckForLogic]
@@ -486,9 +498,11 @@ export function useCombatLogic({
       addLog(
         `[КОМАНДА:ADMIN] Синтетический контур: RAM/CPU под ${railSteps} слотов шины (общая база команды).`,
       );
+      /** PM: не заполняем шину кодом — иначе 100% PROJECT и пустая роль; код ведёт синтетический DEV вне вашего клика. */
       if (
         missionTz.isExecutionChain &&
         coopRole !== 'developer' &&
+        coopRole !== 'pm' &&
         missionTz.steps?.length
       ) {
         setRuntimeRail((prev) => {
@@ -502,6 +516,12 @@ export function useCombatLogic({
           return next;
         });
         addLog('[КОМАНДА:DEV] Синтетический разработчик выложил цепочку ТЗ на шину — играйте свою роль параллельно.');
+      }
+      if (coopRole === 'pm' && missionTz.isExecutionChain && missionTz.steps?.length) {
+        addLog(
+          '[PM:СПРИНТ] Цепочку кода на шине собирает синтетический DEV — ваша работа: SOFT (стресс/срок), сводка команды и блок «Вклад в релиз». ' +
+            'Кнопка NEXT в разработке открывает верификацию, когда готовы проверить процесс.',
+        );
       }
     }
 
@@ -546,6 +566,11 @@ export function useCombatLogic({
     }
     if (currentPhase === 'DEVELOPMENT') {
       if (missionTz.isExecutionChain) {
+        /** PM не валидирует цепочку кода — иначе блок на пустой шине после отключения автозаполнения. */
+        if (coopActive && coopRole === 'pm') {
+          setCanAdvancePhase(true);
+          return;
+        }
         let ok = true;
         for (let i = 0; i < missionTz.steps.length; i++) {
           const step = missionTz.steps[i];
@@ -622,6 +647,11 @@ export function useCombatLogic({
   const handleCardSelect = (source: CardSource, idx: number) => {
     if (!isPlayerTurn) return;
     const card = source === 'hand' ? hand[idx] : (source === 'palette' ? codingPalette[idx] : scriptPool[idx]);
+    if (!card) {
+      addLog('[DENIED] CARD_NOT_FOUND (смена фазы или рассинхрон руки — выберите карту снова).');
+      setSelectedCard(null);
+      return;
+    }
 
     if (coopActive && card.type === 'SOFT' && coopRole !== 'pm') {
       addLog('[DENIED] SOFT — только у класса PM (снятие стресса и командные буферы).');
@@ -1012,6 +1042,10 @@ export function useCombatLogic({
     if (idx >= ramSlotsMax) { addLog('[ERROR] RAM_LOCKED'); return; }
     const { card } = selectedCard;
     const slot = runtimeRail[idx];
+    if (!slot) {
+      addLog('[ERROR] BUS_SLOT_MISSING — шина ещё расширяется, повторите ход.');
+      return;
+    }
     const looksLikePatchPre =
       (currentPhase === 'VERIFICATION' || coopActive) && (card.type === 'REACTION' || card.type === 'DEFENSIVE');
     if (stress >= STRESS_MAX && slot.type !== 'BUG_ERROR') {
@@ -1147,10 +1181,14 @@ export function useCombatLogic({
     }
 
     // --- EXTENDED CHAIN SYNERGIES ---
-    if (idx > 0 && runtimeRail[idx - 1].type === 'PLAYER_CODE') {
-      const prev1 = (runtimeRail[idx - 1].content as CombatCard).id;
-      const prev2 = idx > 1 && runtimeRail[idx - 2].type === 'PLAYER_CODE'
-        ? (runtimeRail[idx - 2].content as CombatCard).id : null;
+    const prevSlot1 = idx > 0 ? runtimeRail[idx - 1] : null;
+    if (prevSlot1?.type === 'PLAYER_CODE' && prevSlot1.content) {
+      const prev1 = (prevSlot1.content as CombatCard).id;
+      const prevSlot2 = idx > 1 ? runtimeRail[idx - 2] : null;
+      const prev2 =
+        prevSlot2?.type === 'PLAYER_CODE' && prevSlot2.content
+          ? (prevSlot2.content as CombatCard).id
+          : null;
 
       // 2-card chains
       if ((prev1 === 'script_ls' && card.id === 'script_grep') ||
@@ -1322,7 +1360,8 @@ export function useCombatLogic({
     if (nextBugAction.spawnId) {
       setRuntimeRail((prev) => {
         const next = [...prev];
-        const empty = next.findIndex((s, i) => s.type === 'EMPTY' && i < ramSlotsMax);
+        const cap = Math.min(ramSlotsMax, next.length);
+        const empty = next.findIndex((s, i) => s && s.type === 'EMPTY' && i < cap);
         if (empty !== -1) {
           const pt = nextBugAction.problemType;
           const stack = pt ? (weakPatchStackRef.current[pt] ?? 0) : 0;
@@ -1394,6 +1433,7 @@ export function useCombatLogic({
     const rules = SDLC_PHASES[currentPhase];
     if (rules.nextPhaseId) {
       const targetPhase = rules.nextPhaseId;
+      setSelectedCard(null);
       setCurrentPhase(targetPhase);
       setCanAdvancePhase(false);
       setPhaseIntro(targetPhase);
@@ -1425,8 +1465,10 @@ export function useCombatLogic({
            setRuntimeRail(prev => {
              const next = [...prev];
              let injected = 0;
-             for (let i = 0; i < ramSlotsMax && injected < injectionCount; i++) {
-               if (next[i].type === 'EMPTY') {
+             const cap = Math.min(ramSlotsMax, next.length);
+             for (let i = 0; i < cap && injected < injectionCount; i++) {
+               const cell = next[i];
+               if (cell && cell.type === 'EMPTY') {
                  next[i] = {
                    type: 'BUG_ERROR',
                    content: {
@@ -1450,8 +1492,9 @@ export function useCombatLogic({
            setRuntimeRail(prev => {
              const next = [...prev];
              // Find an empty slot or overwrite a random code slot
-             const emptyIdx = next.findIndex((s, idx) => s.type === 'EMPTY' && idx < ramSlotsMax);
-             const targetIdx = emptyIdx !== -1 ? emptyIdx : Math.floor(Math.random() * ramSlotsMax);
+             const cap = Math.min(ramSlotsMax, next.length);
+             const emptyIdx = next.findIndex((s, idx) => s && s.type === 'EMPTY' && idx < cap);
+             const targetIdx = emptyIdx !== -1 ? emptyIdx : Math.floor(Math.random() * cap);
              next[targetIdx] = { 
                type: 'BUG_ERROR', 
                content: { id: 'bug_logic_gap', name: 'LOGIC_INCONSISTENCY', description: 'Incomplete project paths detected. System state is unstable.', progressPoints: 0, bugPoints: 10, damage: 5 }, 
@@ -1596,7 +1639,8 @@ export function useCombatLogic({
         const occupied = next.map((s, i) => s.type === 'PLAYER_CODE' ? i : -1).filter(i => i !== -1);
         if (occupied.length > 1) {
           const fromIdx = occupied[Math.floor(Math.random() * occupied.length)];
-          const emptyIdx = next.findIndex((s, i) => s.type === 'EMPTY' && i < ramSlotsMax);
+          const cap = Math.min(ramSlotsMax, next.length);
+          const emptyIdx = next.findIndex((s, i) => s && s.type === 'EMPTY' && i < cap);
           if (emptyIdx !== -1) {
             next[emptyIdx] = next[fromIdx];
             next[fromIdx] = { type: 'EMPTY', content: null, integrity: 0 };
@@ -1739,7 +1783,7 @@ export function useCombatLogic({
       lastAiAction,
       lastAiImpact, isAiResolving,
       mitigationBuffer,
-      ramSlotsMax, filteredHand, codingPalette, scriptPool, isPipelineFull: runtimeRail.slice(0, ramSlotsMax).every(s => s.type !== 'EMPTY'),
+      ramSlotsMax, filteredHand, codingPalette, scriptPool, isPipelineFull: runtimeRail.slice(0, ramSlotsMax).every((s) => s && s.type !== 'EMPTY'),
       coopLinkedObjectiveRows,
     },
     actions: {

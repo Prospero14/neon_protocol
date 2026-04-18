@@ -1502,6 +1502,69 @@ body, html, #root {
   overflow: hidden;
 }
 
+/* Кооп-каталог: не вкладывать «полноэкранную» высоту ref-layout внутрь панели — иначе двойные рамки и сжатие */
+.ref-coop-protocol-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.ref-coop-protocol-intro.neon-panel {
+  flex: 0 1 auto;
+  max-height: min(40vh, 380px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.ref-coop-catalog-block.neon-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 16px;
+  gap: 10px;
+}
+
+.ref-coop-catalog-head {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.12);
+}
+
+.ref-layout.ref-layout--coop-catalog {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+}
+
+.ref-coop-catalog-pane {
+  min-height: 0;
+}
+
+.ref-layout--coop-catalog .ref-coop-catalog-pane {
+  border: 1px solid rgba(0, 255, 255, 0.12);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.ref-coop-pane-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 12px 8px;
+  color: var(--neon-cyan);
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.08);
+}
+
 .ref-list-pane {
   flex: 0 0 320px;
   display: flex;

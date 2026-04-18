@@ -220,153 +220,157 @@ const Documentation: React.FC<DocumentationProps> = ({
       </header>
 
       {pack === 'coop_protocol' && sessionMode === 'coop' && coopRole && coopDocCatalog && (
-        <div className="ref-guide-full neon-panel">
-          <div className="ref-guide-body">
-            <section className="mechanic-section">
-              <div className="mech-header">
-                <Users size={20} color="var(--neon-cyan)" />
-                <h4 className="section-label">КООП: КАТАЛОГ ПРОТОКОЛОВ И ЗАМЕТКИ</h4>
-              </div>
-              <p className="mono-text" style={{ opacity: 0.85 }}>
-                Роль: <strong>{coopDocCatalog.roleTitle}</strong>
-                {' · '}
-                Открыто заметок: <strong>{coopDocCatalog.open}</strong> / <strong>{coopDocCatalog.total}</strong> (в каталоге роли)
-              </p>
-              <p>
-                <strong>Каталог</strong> — это набор id карт, разрешённых для вашей роли в коопе (полигон <code>coop_yard</code>).
-                Во вкладках JAVA_CORE, SCRIPTS, SPRING_BOOT, INFRA, SOFT_SKILLS, TESTS показываются только карты из этого каталога;
-                протоколы других ролей скрыты — это разделение зон ответственности, а не ошибка списка.
-              </p>
-            </section>
-
-            <section className="mechanic-section">
-              <div className="mech-header">
-                <Info size={20} color="var(--neon-amber)" />
-                <h4 className="section-label">ОТКРЫТО И ЗАКРЫТО</h4>
-              </div>
-              <ul className="mech-list">
-                <li>
-                  <strong>Открыто (discovered)</strong> — id карты есть в множестве открытых протоколов: карта в{' '}
-                  <strong>активной колоде</strong> или в <strong>инвентаре</strong>. В списке слева видно название, справа — полный текст; строка подсвечена как открытая.
-                </li>
-                <li>
-                  <strong>Закрыто (locked)</strong> — карта входит в каталог роли, но вы её ещё не получили в колоду/инвентарь.
-                  В списке показывается маска <code>????????????</code>, описание недоступно до открытия.
-                </li>
-              </ul>
-              <p>
-                Новые заметки открываются, когда вы добавляете карту в колоду или получаете её наградой; после синхронизации сохранения множество открытых id обновляется вместе с колодой и инвентарём.
-              </p>
-            </section>
-
-            <section className="mechanic-section">
-              <div className="mech-header">
-                <Terminal size={20} color="var(--neon-pink)" />
-                <h4 className="section-label">SANDBOX В КООПЕ</h4>
-              </div>
-              <p>
-                В песочницу можно подгрузить только карты, которые уже <strong>открыты</strong> и входят в ваш кооп-каталог (те же правила фильтра, что и для списка протоколов).
-              </p>
-            </section>
-
-            <section className="mechanic-section">
-              <div className="mech-header">
-                <Server size={20} color="var(--neon-amethyst)" />
-                <h4 className="section-label">РАЗМЕР КОЛОДЫ (КООП)</h4>
-              </div>
-              <p>
-                Минимум <strong>30</strong> карт в стартовой колоде; в конструкторе — до <strong>200</strong> карт. Подробности в коде:{' '}
-                <code>sessionMode.ts</code> (<code>COOP_DECK_MIN_CARDS</code>, <code>COOP_DECK_MAX_CARDS</code>, <code>buildCoopProtocolDocCards</code>).
-              </p>
-              <p className="mono-text opacity-60" style={{ fontSize: 11, marginTop: 8 }}>
-                Полный текст: <code>docs/COOP_CARD_DOCUMENTATION.md</code>
-              </p>
-            </section>
-
-            <section className="mechanic-section">
-              <div className="mech-header">
-                <Book size={20} color="var(--neon-cyan)" />
-                <h4 className="section-label">ДОКУМЕНТАЦИЯ ПО ВСЕМ КАРТАМ КАТАЛОГА</h4>
-              </div>
-              <div className="ref-layout" style={{ marginTop: 10 }}>
-                <div className="ref-list-pane neon-panel">
-                  <div className="pane-header">
-                    <Info size={16} />
-                    <span>COOP_PROTOCOLS</span>
-                  </div>
-                  <div className="entries-scroll-list">
-                    {coopDocCatalog.cards.map((card) => {
-                      const isDiscovered = discoveredCardIds.has(card.id);
-                      return (
-                        <div
-                          key={card.id}
-                          className={`ref-item ${isDiscovered ? 'discovered' : 'locked'} ${selectedCoopCardId === card.id ? 'active' : ''}`}
-                          onClick={() => setSelectedCoopCardId(card.id)}
-                        >
-                          <div className="ref-item-main">
-                            {isDiscovered ? (
-                              <ChevronRight size={16} color="var(--neon-cyan)" />
-                            ) : (
-                              <Lock size={16} opacity={0.3} />
-                            )}
-                            <span className="ref-item-title">{isDiscovered ? card.name : '????????????'}</span>
-                          </div>
-                          <span className="ref-item-card-tag">{isDiscovered ? card.id : 'LOCKED'}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+        <div className="ref-coop-protocol-stack">
+          <div className="ref-guide-full neon-panel ref-coop-protocol-intro">
+            <div className="ref-guide-body">
+              <section className="mechanic-section">
+                <div className="mech-header">
+                  <Users size={20} color="var(--neon-cyan)" />
+                  <h4 className="section-label">КООП: КАТАЛОГ ПРОТОКОЛОВ И ЗАМЕТКИ</h4>
                 </div>
-                <div className="ref-detail-pane neon-panel">
-                  {(() => {
-                    const selected = coopDocCatalog.cards.find((c) => c.id === selectedCoopCardId) ?? null;
-                    if (!selected) {
-                      return (
-                        <div className="empty-entry-state">
-                          <Code size={48} opacity={0.1} />
-                          <p>SELECT_DATA_ENTRY_TO_VIEW_DOCUMENTATION</p>
-                        </div>
-                      );
-                    }
-                    const isDiscovered = discoveredCardIds.has(selected.id);
+                <p className="mono-text" style={{ opacity: 0.85 }}>
+                  Роль: <strong>{coopDocCatalog.roleTitle}</strong>
+                  {' · '}
+                  Открыто заметок: <strong>{coopDocCatalog.open}</strong> / <strong>{coopDocCatalog.total}</strong> (в каталоге роли)
+                </p>
+                <p>
+                  <strong>Каталог</strong> — это набор id карт, разрешённых для вашей роли в коопе (полигон <code>coop_yard</code>).
+                  Во вкладках JAVA_CORE, SCRIPTS, SPRING_BOOT, INFRA, SOFT_SKILLS, TESTS показываются только карты из этого каталога;
+                  протоколы других ролей скрыты — это разделение зон ответственности, а не ошибка списка.
+                </p>
+              </section>
+
+              <section className="mechanic-section">
+                <div className="mech-header">
+                  <Info size={20} color="var(--neon-amber)" />
+                  <h4 className="section-label">ОТКРЫТО И ЗАКРЫТО</h4>
+                </div>
+                <ul className="mech-list">
+                  <li>
+                    <strong>Открыто (discovered)</strong> — id карты есть в множестве открытых протоколов: карта в{' '}
+                    <strong>активной колоде</strong> или в <strong>инвентаре</strong>. В списке слева видно название, справа — полный текст; строка подсвечена как открытая.
+                  </li>
+                  <li>
+                    <strong>Закрыто (locked)</strong> — карта входит в каталог роли, но вы её ещё не получили в колоду/инвентарь.
+                    В списке показывается маска <code>????????????</code>, описание недоступно до открытия.
+                  </li>
+                </ul>
+                <p>
+                  Новые заметки открываются, когда вы добавляете карту в колоду или получаете её наградой; после синхронизации сохранения множество открытых id обновляется вместе с колодой и инвентарём.
+                </p>
+              </section>
+
+              <section className="mechanic-section">
+                <div className="mech-header">
+                  <Terminal size={20} color="var(--neon-pink)" />
+                  <h4 className="section-label">SANDBOX В КООПЕ</h4>
+                </div>
+                <p>
+                  В песочницу можно подгрузить только карты, которые уже <strong>открыты</strong> и входят в ваш кооп-каталог (те же правила фильтра, что и для списка протоколов).
+                </p>
+              </section>
+
+              <section className="mechanic-section">
+                <div className="mech-header">
+                  <Server size={20} color="var(--neon-amethyst)" />
+                  <h4 className="section-label">РАЗМЕР КОЛОДЫ (КООП)</h4>
+                </div>
+                <p>
+                  Минимум <strong>30</strong> карт в стартовой колоде; в конструкторе — до <strong>200</strong> карт. Подробности в коде:{' '}
+                  <code>sessionMode.ts</code> (<code>COOP_DECK_MIN_CARDS</code>, <code>COOP_DECK_MAX_CARDS</code>, <code>buildCoopProtocolDocCards</code>).
+                </p>
+                <p className="mono-text opacity-60" style={{ fontSize: 11, marginTop: 8 }}>
+                  Полный текст: <code>docs/COOP_CARD_DOCUMENTATION.md</code>
+                </p>
+              </section>
+            </div>
+          </div>
+
+          <div className="ref-coop-catalog-block neon-panel">
+            <div className="ref-coop-catalog-head mech-header">
+              <Book size={18} color="var(--neon-cyan)" />
+              <h4 className="section-label" style={{ marginBottom: 0 }}>
+                ДОКУМЕНТАЦИЯ ПО ВСЕМ КАРТАМ КАТАЛОГА
+              </h4>
+            </div>
+            <div className="ref-layout ref-layout--coop-catalog">
+              <div className="ref-list-pane ref-coop-catalog-pane">
+                <div className="ref-coop-pane-header">
+                  <Info size={16} />
+                  <span>COOP_PROTOCOLS</span>
+                </div>
+                <div className="entries-scroll-list">
+                  {coopDocCatalog.cards.map((card) => {
+                    const isDiscovered = discoveredCardIds.has(card.id);
                     return (
-                      <div className="entry-content animate-float">
-                        <div className="entry-header">
-                          <h2 className="entry-title">{isDiscovered ? selected.name : '????????????'}</h2>
-                          <div className="entry-concept mono-text">
-                            {isDiscovered ? `${selected.type} / ${selected.grade} / ${selected.id}` : 'LOCKED_ENTRY'}
-                          </div>
+                      <div
+                        key={card.id}
+                        className={`ref-item ${isDiscovered ? 'discovered' : 'locked'} ${selectedCoopCardId === card.id ? 'active' : ''}`}
+                        onClick={() => setSelectedCoopCardId(card.id)}
+                      >
+                        <div className="ref-item-main">
+                          {isDiscovered ? (
+                            <ChevronRight size={16} color="var(--neon-cyan)" />
+                          ) : (
+                            <Lock size={16} opacity={0.3} />
+                          )}
+                          <span className="ref-item-title">{isDiscovered ? card.name : '????????????'}</span>
                         </div>
-                        {isDiscovered ? (
-                          <>
-                            <div className="entry-section">
-                              <h4 className="section-label">[ EXPLANATION ]</h4>
-                              <p className="section-text">{selected.description}</p>
-                            </div>
-                            <div className="entry-section">
-                              <h4 className="section-label">[ KEY_CONCEPTS ]</h4>
-                              <ul className="entry-tech-list mono-text">
-                                <li>Тип: {selected.type}</li>
-                                <li>Грейд: {selected.grade}</li>
-                                <li>Стоимость: {selected.cost} CPU</li>
-                                <li>Фаза: {selected.phaseConstraint || 'ANY'}</li>
-                              </ul>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="entry-section">
-                            <h4 className="section-label">[ LOCKED ]</h4>
-                            <p className="section-text">
-                              Запись закрыта. Получите карту в колоду или инвентарь, чтобы открыть полную документацию.
-                            </p>
-                          </div>
-                        )}
+                        <span className="ref-item-card-tag">{isDiscovered ? card.id : 'LOCKED'}</span>
                       </div>
                     );
-                  })()}
+                  })}
                 </div>
               </div>
-            </section>
+              <div className="ref-detail-pane ref-coop-catalog-pane">
+                {(() => {
+                  const selected = coopDocCatalog.cards.find((c) => c.id === selectedCoopCardId) ?? null;
+                  if (!selected) {
+                    return (
+                      <div className="empty-entry-state">
+                        <Code size={48} opacity={0.1} />
+                        <p>SELECT_DATA_ENTRY_TO_VIEW_DOCUMENTATION</p>
+                      </div>
+                    );
+                  }
+                  const isDiscovered = discoveredCardIds.has(selected.id);
+                  return (
+                    <div className="entry-content animate-float">
+                      <div className="entry-header">
+                        <h2 className="entry-title">{isDiscovered ? selected.name : '????????????'}</h2>
+                        <div className="entry-concept mono-text">
+                          {isDiscovered ? `${selected.type} / ${selected.grade} / ${selected.id}` : 'LOCKED_ENTRY'}
+                        </div>
+                      </div>
+                      {isDiscovered ? (
+                        <>
+                          <div className="entry-section">
+                            <h4 className="section-label">[ EXPLANATION ]</h4>
+                            <p className="section-text">{selected.description}</p>
+                          </div>
+                          <div className="entry-section">
+                            <h4 className="section-label">[ KEY_CONCEPTS ]</h4>
+                            <ul className="entry-tech-list mono-text">
+                              <li>Тип: {selected.type}</li>
+                              <li>Грейд: {selected.grade}</li>
+                              <li>Стоимость: {selected.cost} CPU</li>
+                              <li>Фаза: {selected.phaseConstraint || 'ANY'}</li>
+                            </ul>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="entry-section">
+                          <h4 className="section-label">[ LOCKED ]</h4>
+                          <p className="section-text">
+                            Запись закрыта. Получите карту в колоду или инвентарь, чтобы открыть полную документацию.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -78,7 +78,7 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
   return (
     <>
       {/* PHASE INTRO OVERLAY */}
-      {phaseIntro && (
+      {phaseIntro && SDLC_PHASES[phaseIntro as CombatPhase] && (
         <div className="phase-intro-overlay animate-flicker-in">
           <div className="pi-content">
             <h1 className="pi-title text-shadow-neon">{SDLC_PHASES[phaseIntro as CombatPhase].name.toUpperCase()}</h1>

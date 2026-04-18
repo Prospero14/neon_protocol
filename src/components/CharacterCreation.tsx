@@ -43,6 +43,8 @@ import {
   UserCog,
 } from 'lucide-react';
 
+export type CharacterCreationGate = 'none' | 'solo_needs_coop';
+
 interface CharacterCreationProps {
   onComplete: (data: {
     name: string;
@@ -63,6 +65,13 @@ interface CharacterCreationProps {
   setSkillMode: (mode: 'junior' | 'mid' | 'senior') => void;
   userIp: string;
   faction: string;
+  creationGate?: CharacterCreationGate;
+  savedPlayerName?: string;
+  /** Из экрана входа: режим уже выбран, шаг SESSION пропускается логикой. */
+  lockedSessionMode?: SessionMode;
+  onCancelWizard?: () => void;
+  /** Роли коопа, для которых уже есть сохранение — недоступны при создании нового класса. */
+  coopRolesTaken?: CoopRole[];
 }
 
 const selectCoopRole = (
@@ -98,7 +107,18 @@ const getDistrictBuffDescription = (id: string): string => {
   }
 };
 
-const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skillMode, setSkillMode, userIp, faction }) => {
+const CharacterCreation: React.FC<CharacterCreationProps> = ({
+  onComplete,
+  skillMode,
+  setSkillMode,
+  userIp,
+  faction,
+  creationGate = 'none',
+  savedPlayerName = '',
+  lockedSessionMode,
+  onCancelWizard,
+  coopRolesTaken = [],
+}) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [district, setDistrict] = useState<MapNodeData | null>(null);
@@ -112,7 +132,23 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
   /** Ранг миссий полигона — вводит только PM после «пати». */
   const [coopTierRank, setCoopTierRank] = useState<SkillMode>('junior');
 
-  const districts = MAP_NODES.filter(n => n.tier === 1); 
+  const districts = MAP_NODES.filter(n => n.tier === 1);
+  const availableCoopRoles = COOP_ROLES.filter((role) => !coopRolesTaken.includes(role));
+
+  useEffect(() => {
+    if (creationGate === 'solo_needs_coop') {
+      setSessionMode('coop');
+      if (savedPlayerName.trim()) {
+        setName(savedPlayerName.trim());
+        setStep(4);
+      }
+    }
+  }, [creationGate, savedPlayerName]);
+
+  useEffect(() => {
+    if (!lockedSessionMode) return;
+    setSessionMode(lockedSessionMode);
+  }, [lockedSessionMode]);
 
   useEffect(() => {
     const logs = [
@@ -134,7 +170,11 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
   }, []);
 
   const handleNext = () => {
-    if (step === 1 && name.trim()) setStep(2);
+    if (step === 1 && name.trim()) {
+      if (lockedSessionMode === 'solo') setStep(3);
+      else if (lockedSessionMode === 'coop') setStep(4);
+      else setStep(2);
+    }
     else if (step === 2) setStep(sessionMode === 'solo' ? 3 : 4);
     else if (step === 3 && sessionMode === 'solo') setStep(4);
     else if (step === 4 && district) setStep(5);
@@ -171,13 +211,29 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
   };
 
   return (
-    <div className="v007-creation-context cc-view main-crt">
+    <div
+      className={`v007-creation-context cc-view main-crt ${
+        creationGate === 'solo_needs_coop' ? 'cc-gate-coop-only' : ''
+      }`}
+    >
       <div className="cc-container">
+        {onCancelWizard && (
+          <button type="button" className="cc-wizard-cancel" onClick={onCancelWizard}>
+            ← к выбору режима
+          </button>
+        )}
         
         {/* Navigation Tabs (v0.09 Style) */}
         <div className="cc-nav-tabs">
           <div className={`cc-nav-tab ${step === 1 ? 'active' : ''}`} onClick={() => setStep(1)}>IDENTITY</div>
-          <div className={`cc-nav-tab ${step === 2 ? 'active' : ''}`} onClick={() => setStep(2)}>SESSION</div>
+          <div
+            className={`cc-nav-tab ${step === 2 ? 'active' : ''} ${lockedSessionMode ? 'cc-nav-tab--locked' : ''}`}
+            onClick={() => {
+              if (!lockedSessionMode) setStep(2);
+            }}
+          >
+            SESSION
+          </div>
           {sessionMode === 'solo' && (
             <div className={`cc-nav-tab ${step === 3 ? 'active' : ''}`} onClick={() => setStep(3)}>SKILL</div>
           )}
@@ -272,28 +328,44 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                 <div className="animate-in">
                   <div className="cc-label-micro">NETWORK_PROFILE // SESSION</div>
                   <h2 className="cc-headline">SELECT_SESSION_MODE</h2>
-                  <p className="cc-hint" style={{ marginBottom: 16 }}>
-                    Соло — уровень игрока и классическая колода. Кооп — роль команды; ранг миссий полигона задаёт PM после сбора пати.
-                  </p>
-                  <div className="cc-skill-selector" style={{ marginBottom: 20 }}>
-                    <button
-                      type="button"
-                      className={`cc-skill-btn ${sessionMode === 'solo' ? 'active' : ''}`}
-                      onClick={() => {
-                        setSessionMode('solo');
-                        setCoopRole(null);
-                      }}
-                    >
-                      SOLO
-                    </button>
-                    <button
-                      type="button"
-                      className={`cc-skill-btn ${sessionMode === 'coop' ? 'active' : ''}`}
-                      onClick={() => setSessionMode('coop')}
-                    >
-                      COOP
-                    </button>
-                  </div>
+                  {lockedSessionMode ? (
+                    <p className="cc-hint" style={{ marginBottom: 16 }}>
+                      Режим зафиксирован экраном входа:{' '}
+                      <span className="copper">{lockedSessionMode === 'solo' ? 'SOLO' : 'CO-OP'}</span>.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="cc-hint" style={{ marginBottom: 16 }}>
+                        Соло — уровень игрока и классическая колода. Кооп — роль команды; ранг миссий полигона задаёт PM после
+                        сбора пати.
+                      </p>
+                      <div className="cc-skill-selector" style={{ marginBottom: 20 }}>
+                        <button
+                          type="button"
+                          className={`cc-skill-btn ${sessionMode === 'solo' ? 'active' : ''}`}
+                          disabled={creationGate === 'solo_needs_coop'}
+                          onClick={() => {
+                            setSessionMode('solo');
+                            setCoopRole(null);
+                          }}
+                        >
+                          SOLO
+                        </button>
+                        <button
+                          type="button"
+                          className={`cc-skill-btn cc-coop-mode ${sessionMode === 'coop' ? 'active' : ''}`}
+                          onClick={() => setSessionMode('coop')}
+                        >
+                          COOP
+                        </button>
+                      </div>
+                      {creationGate === 'solo_needs_coop' && (
+                        <p className="cc-hint" style={{ color: 'rgba(255, 150, 90, 0.95)', marginTop: 8 }}>
+                          Соло-персонаж уже в сети. Доступно только создание кооп-профиля (отдельные колоды по классам).
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -433,7 +505,10 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({ onComplete, skill
                   </div>
                   <div className="cc-grid-wrapper">
                     <div className="cc-grid hobbies">
-                      {COOP_ROLES.map((role) => (
+                      {availableCoopRoles.length === 0 ? (
+                        <p className="cc-hint">Все боевые роли уже заведены — удалите прогресс класса на стороне сервера или выберите другой аккаунт.</p>
+                      ) : null}
+                      {availableCoopRoles.map((role) => (
                         <div
                           key={role}
                           role="button"

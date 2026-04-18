@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../logic/AuthContext';
+import { readNeonAuthToken } from '../logic/authTokenStorage';
 import type { SkillMode } from '../logic/skillMode';
 import type { CoopRole } from '../logic/sessionMode';
 import { COOP_ROLES, COOP_ROLE_LABELS } from '../logic/sessionMode';
@@ -49,8 +50,9 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   }, [party]);
 
   const beat = useCallback(async () => {
-    if (!token) return;
-    const data = await coopLobbyHeartbeat(token, {
+    const authToken = readNeonAuthToken() ?? token;
+    if (!authToken) return;
+    const data = await coopLobbyHeartbeat(authToken, {
       displayName: playerDisplayName,
       coopRole,
       clientUsername: user?.username ?? '',
@@ -72,8 +74,9 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   }, [beat]);
 
   const sendChat = async () => {
-    if (!token || !chatInput.trim()) return;
-    const ok = await coopLobbySendChat(token, chatInput);
+    const authToken = readNeonAuthToken() ?? token;
+    if (!authToken || !chatInput.trim()) return;
+    const ok = await coopLobbySendChat(authToken, chatInput);
     if (ok) {
       setChatInput('');
       beat();
@@ -81,9 +84,10 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   };
 
   const invite = async () => {
-    if (!token || !inviteName.trim()) return;
+    const authToken = readNeonAuthToken() ?? token;
+    if (!authToken || !inviteName.trim()) return;
     setErr(null);
-    const p = await coopLobbyInvite(token, inviteName.trim());
+    const p = await coopLobbyInvite(authToken, inviteName.trim());
     if (!p) {
       setErr('Не удалось пригласить: ник не в сети или занят другой пати.');
       return;
@@ -93,8 +97,9 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
   };
 
   const leave = async () => {
-    if (!token) return;
-    await coopLobbyLeaveParty(token);
+    const authToken = readNeonAuthToken() ?? token;
+    if (!authToken) return;
+    await coopLobbyLeaveParty(authToken);
     setParty(null);
     beat();
   };
@@ -114,17 +119,18 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
     const coopSquadFill: CoopSquadFill =
       party && party.members.length > 1 ? 'live_party' : 'synthetic_bots';
     let coopMatchId: string | null = null;
-    if (token && coopSquadFill === 'live_party' && party) {
+    const authToken = readNeonAuthToken() ?? token;
+    if (authToken && coopSquadFill === 'live_party' && party) {
       const iAmHost = party.hostId === user?.id;
       if (iAmHost) {
-        const m = await coopMatchCreate(token);
+        const m = await coopMatchCreate(authToken);
         if (!m) {
           setErr('Не удалось создать общий матч для пати.');
           return;
         }
         coopMatchId = m.id;
       } else if (activeMatchId) {
-        const joined = await coopMatchJoin(token, activeMatchId);
+        const joined = await coopMatchJoin(authToken, activeMatchId);
         if (!joined) {
           setErr('Хост ещё не открыл общий матч. Повторите через пару секунд.');
           return;

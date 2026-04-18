@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { readNeonAuthToken } from './authTokenStorage';
 
 interface User {
   id: string;
@@ -52,13 +53,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const syncGameState = async (state: any) => {
-    if (!token) return;
+    const authToken = readNeonAuthToken() ?? token;
+    if (!authToken) return;
     try {
       const response = await fetch('/neon_v1/game/sync', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(state)
       });
@@ -76,8 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : response.statusText || 'Sync failed';
         const code = typeof errBody.code === 'string' ? errBody.code : '';
         console.error('Failed to sync game state:', msg, 'HTTP', response.status, code || '(no code)');
-        // Only hard-logout on confirmed invalid token.
-        if (response.status === 401 && code === 'SYNC_INVALID_TOKEN') {
+        if (response.status === 401 && (code === 'SYNC_INVALID_TOKEN' || code === 'SYNC_NO_TOKEN')) {
           logout();
         }
         return;

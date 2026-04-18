@@ -466,11 +466,12 @@ export function createApp(opts) {
             res.json(publicGameState(updatedState));
         }
         catch (error) {
-            console.error('Sync Error:', error);
             const name = error?.name ?? '';
             if (name === 'JsonWebTokenError' || name === 'TokenExpiredError' || name === 'NotBeforeError') {
+                console.warn('[sync] JWT rejected:', name);
                 return sendApiError(res, 401, 'SYNC_INVALID_TOKEN', 'Токен недействителен или истёк.');
             }
+            console.error('Sync Error:', error);
             return sendApiError(res, 500, 'SYNC_FAILED', 'Не удалось сохранить прогресс.');
         }
     });

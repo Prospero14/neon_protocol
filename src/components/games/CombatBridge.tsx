@@ -18,6 +18,7 @@ import { coopOpponentHintBody, coopOpponentHintTitle } from '../../logic/coopOpp
 import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
 import { useAuth } from '../../logic/AuthContext';
+import { readNeonAuthToken } from '../../logic/authTokenStorage';
 import {
   coopMatchAction,
   coopMatchEventsSource,
@@ -185,7 +186,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   useEffect(() => {
     const matchId = props.coopMatchId ?? null;
-    if (coopSquadFill !== 'live_party' || !matchId || !token) {
+    const authT = readNeonAuthToken() ?? token;
+    if (coopSquadFill !== 'live_party' || !matchId || !authT) {
       setNetMatch(null);
       if (sseRef.current) {
         sseRef.current.close();
@@ -195,14 +197,16 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     }
     let alive = true;
     const load = async () => {
-      const m = await coopMatchFetchState(token, matchId);
+      const t = readNeonAuthToken() ?? token;
+      if (!t) return;
+      const m = await coopMatchFetchState(t, matchId);
       if (!alive || !m) return;
       setNetMatch(m);
     };
     load();
     const poll = window.setInterval(load, 4000);
     try {
-      const src = coopMatchEventsSource(token, matchId);
+      const src = coopMatchEventsSource(authT, matchId);
       sseRef.current = src;
       src.addEventListener('match_update', (evt) => {
         try {
@@ -278,7 +282,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         return `[SYNC] ${actorRole.toUpperCase()} support${targetRole ? ` -> ${targetRole.toUpperCase()}` : ''}`;
       });
   }, [netMatch, coopSquadFill]);
-  const livePartyMode = coopSquadFill === 'live_party' && Boolean(netMatch && token);
+  const livePartyMode = coopSquadFill === 'live_party' && Boolean(netMatch && (readNeonAuthToken() ?? token));
   const isParallelWindow = livePartyMode && netMatch?.shared.mode === 'parallel_window';
   const missionStepTarget = Math.max(1, missionTz.steps.length);
   const missionIntensityTier = Math.max(1, Math.min(4, missionStepTarget >= 16 ? 4 : missionStepTarget >= 12 ? 3 : missionStepTarget >= 10 ? 2 : 1));
@@ -290,7 +294,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const handleEndTurn = async () => {
     if (endTurnPending) return;
-    if (livePartyMode && netMatch && token) {
+    if (livePartyMode && netMatch) {
+      const t = readNeonAuthToken() ?? token;
+      if (!t) return;
       setEndTurnPending(true);
       try {
         const actionName =
@@ -314,7 +320,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
                   : { stressDown: 9, deadlineUp: 1, targetRole: 'developer', ...missionMetaPayload }
             : {};
         const updated = await coopMatchAction(
-          token,
+          t,
           netMatch.id,
           actionName,
           payload,
@@ -332,11 +338,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const handlePmReleaseCheck = async () => {
     if (pmReleasePending) return;
-    if (!livePartyMode || !netMatch || !token || coopRole !== 'pm' || !isParallelWindow) return;
+    if (!livePartyMode || !netMatch || coopRole !== 'pm' || !isParallelWindow) return;
+    const tRelease = readNeonAuthToken() ?? token;
+    if (!tRelease) return;
     setPmReleasePending(true);
     try {
       const updated = await coopMatchAction(
-        token,
+        tRelease,
         netMatch.id,
         'release_check',
         {},
@@ -351,11 +359,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const handlePmSupportTarget = async (targetRole: CoopRole) => {
     if (pmSupportPending) return;
-    if (!livePartyMode || !netMatch || !token || coopRole !== 'pm') return;
+    if (!livePartyMode || !netMatch || coopRole !== 'pm') return;
+    const tPm = readNeonAuthToken() ?? token;
+    if (!tPm) return;
     setPmSupportPending(true);
     try {
       const updated = await coopMatchAction(
-        token,
+        tPm,
         netMatch.id,
         'apply_pm_support',
         { targetRole, stressDown: 9, deadlineUp: 1, ...missionMetaPayload },
@@ -370,11 +380,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const handleQaSupportTarget = async (targetRole: CoopRole) => {
     if (qaSupportPending) return;
-    if (!livePartyMode || !netMatch || !token || coopRole !== 'qa') return;
+    if (!livePartyMode || !netMatch || coopRole !== 'qa') return;
+    const tQa = readNeonAuthToken() ?? token;
+    if (!tQa) return;
     setQaSupportPending(true);
     try {
       const updated = await coopMatchAction(
-        token,
+        tQa,
         netMatch.id,
         'apply_qa_defense',
         { targetRole, bugsDown: 7, reliabilityUp: 3, stressDown: 4, ...missionMetaPayload },
@@ -389,11 +401,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const handleAdminSupportTarget = async (targetRole: CoopRole) => {
     if (adminSupportPending) return;
-    if (!livePartyMode || !netMatch || !token || coopRole !== 'admin') return;
+    if (!livePartyMode || !netMatch || coopRole !== 'admin') return;
+    const tAd = readNeonAuthToken() ?? token;
+    if (!tAd) return;
     setAdminSupportPending(true);
     try {
       const updated = await coopMatchAction(
-        token,
+        tAd,
         netMatch.id,
         'apply_admin_infra',
         { targetRole, reliabilityUp: 8, resourcesDown: 4, stressUp: 2, ...missionMetaPayload },

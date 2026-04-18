@@ -21,7 +21,7 @@ import { ITEM_LIBRARY, getItemById, type GameItem } from '../items';
 import type { NpcDayPhase } from '../npcPresence';
 import { getGameClockSnapshot, MS_PER_GAME_HOUR, type GameClockSnapshot } from '../gameClock';
 import type { SessionMode, CoopRole, DevLanguageStack } from '../sessionMode';
-import { buildStarterDeckForSession } from '../sessionMode';
+import { buildStarterDeckForSession, COOP_ROLES } from '../sessionMode';
 import { bossTaskIdForTier, nextCoopTierRank } from '../coopYardRuntime';
 import {
   coopRewardCardIdsForSegment,
@@ -34,6 +34,8 @@ import {
   defaultCoopClassSave,
   migrateLegacyCoopToProfiles,
   serializeCoopClassSave,
+  hydrateDeckFromIds,
+  hydrateInventoryFromIds,
   type CoopClassSave,
 } from '../coopClassProfiles';
 import type { CoopSquadFill } from '../coopTeamFlow';
@@ -41,6 +43,7 @@ import { isCoopSquadFill } from '../coopTeamFlow';
 
 
 export type ViewType =
+  | 'SESSION_GATE'
   | 'CREATION'
   | 'COOP_LOBBY'
   | 'HUB'
@@ -52,6 +55,76 @@ export type ViewType =
   | 'FIXER_BAR'
   | 'QUEST_LOG'
   | 'INTEL';
+
+/** Флаги «соло / кооп персонаж» для экрана входа и мастера создания. */
+export type CreationResumeInfo = {
+  /** Есть сохранённый соло-персонаж (имя + дом, флаг или снимок колоды). */
+  soloPersonaExists: boolean;
+  /** @deprecated используйте soloPersonaExists */
+  soloEstablished: boolean;
+  coopEstablished: boolean;
+  existingCoopRoles: CoopRole[];
+  soloOnlyNeedsCoop: boolean;
+  coopOnlyNeedsSolo: boolean;
+  bothEstablished: boolean;
+};
+
+/** Снимок соло-колоды/инвентаря, пока активна сессия коопа (корневые activeDeck перезаписываются). */
+export type SoloRuntimeCache = {
+  deckIds: string[];
+  inventoryIds: string[];
+  discoveredCardIds: string[];
+};
+
+function parseSoloRuntimeCache(raw: unknown): SoloRuntimeCache | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o.deckIds) || !Array.isArray(o.inventoryIds)) return null;
+  return {
+    deckIds: o.deckIds.filter((x): x is string => typeof x === 'string'),
+    inventoryIds: o.inventoryIds.filter((x): x is string => typeof x === 'string'),
+    discoveredCardIds: Array.isArray(o.discoveredCardIds)
+      ? o.discoveredCardIds.filter((x): x is string => typeof x === 'string')
+      : [],
+  };
+}
+
+function serializeSoloRuntimeCache(params: {
+  activeDeck: CombatCard[];
+  inventoryUnique: CombatCard[];
+  discoveredCardIds: Set<string>;
+}): SoloRuntimeCache {
+  return {
+    deckIds: params.activeDeck.map((c) => c.id),
+    inventoryIds: params.inventoryUnique.map((c) => c.id),
+    discoveredCardIds: [...params.discoveredCardIds].sort(),
+  };
+}
+
+function snapshotCoopProfilesFromSave(
+  gs: Record<string, unknown>,
+  userId: string | undefined,
+): Partial<Record<CoopRole, CoopClassSave>> {
+  try {
+    const fromGs = gs.coopClassProfiles as Partial<Record<CoopRole, CoopClassSave>> | undefined;
+    if (fromGs && typeof fromGs === 'object' && !Array.isArray(fromGs) && Object.keys(fromGs).length > 0) {
+      return fromGs;
+    }
+    if (userId) {
+      const raw = localStorage.getItem(COOP_PROFILES_STORAGE_KEY(userId));
+      if (raw) return JSON.parse(raw) as Partial<Record<CoopRole, CoopClassSave>>;
+    }
+  } catch {
+    /* ignore */
+  }
+  const mig = migrateLegacyCoopToProfiles(gs as never);
+  return mig && Object.keys(mig).length > 0 ? mig : {};
+}
+
+function coopProfilesHaveDecks(p: Partial<Record<CoopRole, CoopClassSave>>): boolean {
+  return COOP_ROLES.some((r) => (p[r]?.deckIds?.length ?? 0) > 0);
+}
+
 export interface MessengerMessage {
   id: string;
   from: string;
@@ -122,7 +195,6 @@ export function useGameState() {
   const { user, isLoading, syncGameState, logout } = useAuth();
   const [skillMode, setSkillMode] = useState<SkillMode>(() => parseSkillMode(localStorage.getItem(SKILL_MODE_STORAGE_KEY)));
   const [userIp, setUserIp] = useState<string>('ОПРЕДЕЛЕНИЕ...');
-  const hasLoadedInitialState = useRef(false);
   /** Анти-повтор для автосообщений публичного чата (последние тексты). */
   const recentPublicChatterTextsRef = useRef<string[]>([]);
   /** Анти-повтор по каждому району отдельно (чтобы один и тот же шаблон не спамился подряд). */
@@ -135,14 +207,11 @@ export function useGameState() {
       .catch(() => setUserIp('127.0.0.1 (VPN_ACTIVE)'));
   }, []);
 
-  /** После logout нужно снова подтянуть состояние следующего входа (иначе новый аккаунт видит старый currentView). */
-  useEffect(() => {
-    if (!user) {
-      hasLoadedInitialState.current = false;
-    }
-  }, [user]);
-
-  const [currentView, setCurrentView] = useState<ViewType>('CREATION');
+  const [currentView, setCurrentView] = useState<ViewType>('SESSION_GATE');
+  const [creationResume, setCreationResume] = useState<CreationResumeInfo | null>(null);
+  const [creationWizardLockedMode, setCreationWizardLockedMode] = useState<SessionMode | null>(null);
+  const [hasSoloPersona, setHasSoloPersona] = useState(false);
+  const soloRuntimeCacheRef = useRef<SoloRuntimeCache | null>(null);
   const [lastView, setLastView] = useState<ViewType>('HUB');
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [playerName, setPlayerName] = useState('ID_НЕИЗВЕСТЕН');
@@ -199,6 +268,16 @@ export function useGameState() {
   useEffect(() => {
     coopClassProfilesRef.current = coopClassProfiles;
   }, [coopClassProfiles]);
+
+  const openCharacterWizard = useCallback((mode: SessionMode) => {
+    setCreationWizardLockedMode(mode);
+    setCurrentView('CREATION');
+  }, []);
+
+  const cancelCharacterWizard = useCallback(() => {
+    setCreationWizardLockedMode(null);
+    setCurrentView('SESSION_GATE');
+  }, []);
   const coopTierRankRef = useRef(coopTierRank);
   const coopRoleRef = useRef(coopRole);
   useEffect(() => {
@@ -518,6 +597,17 @@ export function useGameState() {
 
   const syncGame = async (overrides: Record<string, unknown> = {}) => {
     if (!user) return;
+    const nextSoloRuntimeCache =
+      sessionMode === 'solo'
+        ? serializeSoloRuntimeCache({
+            activeDeck,
+            inventoryUnique,
+            discoveredCardIds,
+          })
+        : soloRuntimeCacheRef.current;
+    if (sessionMode === 'solo') {
+      soloRuntimeCacheRef.current = nextSoloRuntimeCache;
+    }
     const state = {
       stress, maxStress, bits, solvedTaskCounts,
       activeDeck: activeDeck.map(c => ({ id: c.id })),
@@ -559,16 +649,36 @@ export function useGameState() {
       activeMessengerChannel,
       barContactDistricts,
       currentView,
+      hasSoloPersona,
+      soloRuntimeCache: nextSoloRuntimeCache ?? undefined,
       ...overrides
     };
     await syncGameState(state);
   };
 
   useEffect(() => {
-    if (user && user.gameState && !hasLoadedInitialState.current) {
-      const gs = user.gameState;
-      hasLoadedInitialState.current = true;
-      if (gs.stress !== undefined) setStress(gs.stress);
+    if (!user?.id) {
+      setCreationResume(null);
+      setCreationWizardLockedMode(null);
+      soloRuntimeCacheRef.current = null;
+      setHasSoloPersona(false);
+      return;
+    }
+    if (!user.gameState) {
+      setCreationResume(null);
+      setCurrentView('SESSION_GATE');
+      return;
+    }
+    const gs = user.gameState;
+    const soloRtcParsed = parseSoloRuntimeCache((gs as Record<string, unknown>).soloRuntimeCache);
+    if (soloRtcParsed && soloRtcParsed.deckIds.length > 0) {
+      soloRuntimeCacheRef.current = soloRtcParsed;
+    }
+    const resumeProfiles = snapshotCoopProfilesFromSave(gs as Record<string, unknown>, user.id);
+    if (Object.keys(resumeProfiles).length > 0) {
+      setCoopClassProfiles(resumeProfiles);
+    }
+    if (gs.stress !== undefined) setStress(gs.stress);
       if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
       if (gs.bits !== undefined) setBits(gs.bits);
       if (gs.solvedTaskCounts !== undefined) setSolvedTaskCounts(gs.solvedTaskCounts);
@@ -583,9 +693,6 @@ export function useGameState() {
       
       if (gs.completedQuests) {
         setQuestStates(gs.completedQuests);
-        if (gs.completedQuests.length > 0 && currentView === 'CREATION') {
-          setCurrentView('HUB');
-        }
       }
 
       if (gs.activeDistrictId && MAP_NODES.some((n) => n.id === gs.activeDistrictId)) {
@@ -599,36 +706,23 @@ export function useGameState() {
           ? 'admin'
           : (gs.coopRole as CoopRole | undefined);
       let skipLegacyDeck = false;
-      let coopProfilesLoaded: Partial<Record<CoopRole, CoopClassSave>> | null = null;
-      if (gs.sessionMode === 'coop' && crEarly && ['developer', 'qa', 'admin', 'pm'].includes(crEarly)) {
-        try {
-          const fromGs = (gs as { coopClassProfiles?: Partial<Record<CoopRole, CoopClassSave>> }).coopClassProfiles;
-          if (fromGs && typeof fromGs === 'object' && Object.keys(fromGs).length > 0) {
-            coopProfilesLoaded = fromGs;
-          } else if (user?.id) {
-            const raw = localStorage.getItem(COOP_PROFILES_STORAGE_KEY(user.id));
-            if (raw) coopProfilesLoaded = JSON.parse(raw) as Partial<Record<CoopRole, CoopClassSave>>;
-          }
-        } catch {
-          coopProfilesLoaded = null;
-        }
-        if (!coopProfilesLoaded || Object.keys(coopProfilesLoaded).length === 0) {
-          coopProfilesLoaded = migrateLegacyCoopToProfiles(gs as any) ?? {};
-        }
-        if (coopProfilesLoaded && Object.keys(coopProfilesLoaded).length > 0) {
-          setCoopClassProfiles(coopProfilesLoaded);
-          const save = coopProfilesLoaded[crEarly];
-          if (save) {
-            const applied = applyCoopClassSave(save);
-            setActiveDeck(applied.activeDeck);
-            setInventory(applied.inventory);
-            setCoopTierRank(applied.coopTierRank);
-            setCoopYardCompletedMissionIds(applied.coopYardCompletedMissionIds);
-            setDiscoveredCardIds(applied.discoveredCardIds);
-            setDevLanguageStack(applied.devLanguageStack);
-            setCoopSprintConsecutiveLosses(applied.coopSprintConsecutiveLosses);
-            skipLegacyDeck = true;
-          }
+      if (
+        gs.sessionMode === 'coop' &&
+        crEarly &&
+        ['developer', 'qa', 'admin', 'pm'].includes(crEarly) &&
+        Object.keys(resumeProfiles).length > 0
+      ) {
+        const save = resumeProfiles[crEarly];
+        if (save) {
+          const applied = applyCoopClassSave(save);
+          setActiveDeck(applied.activeDeck);
+          setInventory(applied.inventory);
+          setCoopTierRank(applied.coopTierRank);
+          setCoopYardCompletedMissionIds(applied.coopYardCompletedMissionIds);
+          setDiscoveredCardIds(applied.discoveredCardIds);
+          setDevLanguageStack(applied.devLanguageStack);
+          setCoopSprintConsecutiveLosses(applied.coopSprintConsecutiveLosses);
+          skipLegacyDeck = true;
         }
       }
 
@@ -654,13 +748,49 @@ export function useGameState() {
 
       if (gs.activeBarNode) setActiveBarNode(gs.activeBarNode);
       if (gs.viewMode) setViewMode(gs.viewMode);
-      if (gs.currentView && gs.currentView !== 'CREATION') {
-        setCurrentView(gs.currentView);
-      } else if (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId)) {
-        setCurrentView('HUB');
+
+      const hasHome = Boolean(gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId));
+      const named = Boolean(gs.playerName && gs.playerName !== 'ID_НЕИЗВЕСТЕН');
+      const smRaw = gs.sessionMode as SessionMode | undefined;
+      const coopEstablished = coopProfilesHaveDecks(resumeProfiles);
+      const soloRtc = soloRuntimeCacheRef.current;
+      const soloPersonaExists =
+        Boolean((gs as Record<string, unknown>).hasSoloPersona) ||
+        (hasHome && named && smRaw !== 'coop') ||
+        Boolean(soloRtc && soloRtc.deckIds.length > 0);
+      const soloEstablished = soloPersonaExists;
+      const soloOnlyNeedsCoop = soloPersonaExists && !coopEstablished;
+      const coopOnlyNeedsSolo = coopEstablished && !soloPersonaExists;
+      const bothEstablished = soloPersonaExists && coopEstablished;
+      const existingCoopRoles = COOP_ROLES.filter((r) => (resumeProfiles[r]?.deckIds?.length ?? 0) > 0);
+
+      setHasSoloPersona(soloPersonaExists);
+
+      const deepViews: ViewType[] = [
+        'MAP',
+        'COMBAT',
+        'DECK_BUILDER',
+        'FIXER_BAR',
+        'QUEST_LOG',
+        'INTEL',
+        'REFERENCE',
+      ];
+      const savedView = gs.currentView as ViewType | undefined;
+      if (savedView && deepViews.includes(savedView)) {
+        setCurrentView(savedView);
       } else {
-        setCurrentView('CREATION');
+        setCurrentView('SESSION_GATE');
       }
+
+      setCreationResume({
+        soloPersonaExists,
+        soloEstablished,
+        coopEstablished,
+        existingCoopRoles,
+        soloOnlyNeedsCoop,
+        coopOnlyNeedsSolo,
+        bothEstablished,
+      });
 
       if (gs.traits) setTraits(gs.traits);
       if (gs.sessionMode === 'solo' || gs.sessionMode === 'coop') setSessionMode(gs.sessionMode);
@@ -782,11 +912,10 @@ export function useGameState() {
           }
         }
       }
-    }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (currentView !== 'CREATION') syncGame();
+    if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
   }, [currentView]);
 
   useEffect(() => {
@@ -796,7 +925,7 @@ export function useGameState() {
   // AUTO-SYNC ON CRITICAL CHANGES
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (currentView !== 'CREATION') syncGame();
+      if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
     }, 1500); // 1.5s debounce to prevent spamming
     return () => clearTimeout(timer);
   }, [
@@ -898,20 +1027,19 @@ export function useGameState() {
 
   const switchCoopClass = useCallback(
     (next: CoopRole) => {
-      if (sessionMode !== 'coop' || !coopRole || next === coopRole) return;
-      const current = serializeCoopClassSave({
-        activeDeck,
-        inventoryUnique,
-        coopTierRank,
-        coopYardCompletedMissionIds,
-        discoveredCardIds,
-        devLanguageStack,
-        coopSprintConsecutiveLosses,
-      });
-      const merged: Partial<Record<CoopRole, CoopClassSave>> = {
-        ...coopClassProfilesRef.current,
-        [coopRole]: current,
-      };
+      if (sessionMode !== 'coop' || next === coopRole) return;
+      const merged: Partial<Record<CoopRole, CoopClassSave>> = { ...coopClassProfilesRef.current };
+      if (coopRole) {
+        merged[coopRole] = serializeCoopClassSave({
+          activeDeck,
+          inventoryUnique,
+          coopTierRank,
+          coopYardCompletedMissionIds,
+          discoveredCardIds,
+          devLanguageStack,
+          coopSprintConsecutiveLosses,
+        });
+      }
       const fallbackStack =
         next === 'developer'
           ? merged.developer?.devLanguageStack ?? devLanguageStack ?? 'java'
@@ -973,12 +1101,22 @@ export function useGameState() {
         setCoopStartupName(null);
         setCoopSquadFill('synthetic_bots');
         setCoopMatchId(null);
-        const deck = buildStarterDeckForSession('solo', null, null);
-        setActiveDeck(deck);
-        const invUnique = deck.filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
-        setInventory(invUnique);
-        setDiscoveredCardIds(new Set(invUnique.map((c) => c.id)));
-        invUnique.forEach((c) => discoverCard(c.id));
+        const cached = soloRuntimeCacheRef.current;
+        if (cached && cached.deckIds.length > 0) {
+          const deck = hydrateDeckFromIds(cached.deckIds);
+          const invUnique = hydrateInventoryFromIds(cached.inventoryIds);
+          setActiveDeck(deck);
+          setInventory(invUnique);
+          setDiscoveredCardIds(new Set(cached.discoveredCardIds));
+          deck.forEach((c) => discoverCard(c.id));
+        } else {
+          const deck = buildStarterDeckForSession('solo', null, null);
+          setActiveDeck(deck);
+          const invUnique = deck.filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
+          setInventory(invUnique);
+          setDiscoveredCardIds(new Set(invUnique.map((c) => c.id)));
+          invUnique.forEach((c) => discoverCard(c.id));
+        }
         setCurrentView('HUB');
         setActiveDistrictId(homeDistrictId);
         setActiveMessengerChannel(homeDistrictId);
@@ -997,6 +1135,16 @@ export function useGameState() {
       }
 
       if (next === 'coop' && sessionMode === 'coop' && !coopPick) return;
+
+      if (sessionMode === 'solo') {
+        const soloSnap = serializeSoloRuntimeCache({
+          activeDeck,
+          inventoryUnique,
+          discoveredCardIds,
+        });
+        soloRuntimeCacheRef.current = soloSnap;
+        setHasSoloPersona(true);
+      }
 
       const role = coopPick ?? coopRole ?? 'developer';
       const stackForNew = role === 'developer' ? devLanguageStack ?? 'java' : null;
@@ -1051,6 +1199,27 @@ export function useGameState() {
     ]
   );
 
+  const resumeEnterSoloHub = useCallback(() => {
+    if (sessionMode === 'coop') {
+      switchSessionMode('solo');
+    } else {
+      setCurrentView('HUB');
+      void syncGame({ currentView: 'HUB' });
+    }
+  }, [sessionMode, switchSessionMode, syncGame]);
+
+  const resumeEnterCoopLobby = useCallback(
+    (preferred?: CoopRole) => {
+      const merged = coopClassProfilesRef.current;
+      const pick =
+        preferred && (merged[preferred]?.deckIds?.length ?? 0) > 0
+          ? preferred
+          : COOP_ROLES.find((r) => (merged[r]?.deckIds?.length ?? 0) > 0) ?? coopRole ?? 'developer';
+      switchSessionMode('coop', pick);
+    },
+    [switchSessionMode, coopRole],
+  );
+
   useEffect(() => {
     if (sessionMode !== 'coop' || !coopRole) return;
     const t = window.setTimeout(() => {
@@ -1103,6 +1272,7 @@ export function useGameState() {
     /** Кооп: после профиля — зона ожидания (чат + пати), не карта. */
     enterCoopLobby?: boolean;
   }) => {
+    setCreationWizardLockedMode(null);
     setPlayerName(data.name);
     setHomeDistrict(data.district);
     setHomeDistrictId(data.district.id);
@@ -1175,8 +1345,19 @@ export function useGameState() {
         devLanguageStack: data.devLanguageStack ?? null,
         coopSprintConsecutiveLosses: 0,
       });
-      coopProfilesForSync = { [data.coopRole]: initialSave };
+      coopProfilesForSync = { ...coopClassProfilesRef.current, [data.coopRole]: initialSave };
       setCoopClassProfiles(coopProfilesForSync);
+    } else {
+      setHasSoloPersona(true);
+      const invUnique = starterDeck.filter((c, i, a) => a.findIndex((x) => x.id === c.id) === i);
+      setInventory(invUnique);
+      setDiscoveredCardIds(new Set(invUnique.map((c) => c.id)));
+      const soloSnap = serializeSoloRuntimeCache({
+        activeDeck: starterDeck,
+        inventoryUnique: invUnique,
+        discoveredCardIds: new Set(invUnique.map((c) => c.id)),
+      });
+      soloRuntimeCacheRef.current = soloSnap;
     }
     setQuestStates(prev => acceptQuest(prev, `q_kiddo_start_${data.district.id}`));
     setKnownDistrictChannels(coopStart ? [data.district.id, 'coop_yard'] : [data.district.id]);
@@ -1236,7 +1417,9 @@ export function useGameState() {
       coopStartupLiquidated: false,
       coopSquadFill: data.sessionMode === 'coop' ? 'synthetic_bots' : undefined,
       coopMatchId: data.sessionMode === 'coop' ? null : undefined,
-      coopClassProfiles: coopProfilesForSync,
+      coopClassProfiles: coopProfilesForSync ?? coopClassProfilesRef.current,
+      hasSoloPersona: data.sessionMode === 'solo' ? true : hasSoloPersona,
+      soloRuntimeCache: soloRuntimeCacheRef.current ?? undefined,
     });
   };
 
@@ -1527,6 +1710,13 @@ export function useGameState() {
     user, isLoading, logout,
     skillMode, setSkillMode, userIp,
     currentView, setCurrentView,
+    creationResume,
+    creationWizardLockedMode,
+    openCharacterWizard,
+    cancelCharacterWizard,
+    coopClassProfiles,
+    resumeEnterSoloHub,
+    resumeEnterCoopLobby,
     lastView, setLastView,
     selectedDocId, setSelectedDocId,
     playerName, setPlayerName,

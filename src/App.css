@@ -3716,3 +3716,202 @@ body, html, #root {
   color: #678;
   line-height: 1.4;
 }
+
+/* Выбор режима после входа (оба персонажа) / акценты мастера создания */
+.session-resume-gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.06), transparent 40%),
+    radial-gradient(circle at 80% 30%, rgba(255, 120, 60, 0.07), transparent 38%),
+    linear-gradient(180deg, #06080d 0%, #090d14 100%);
+}
+.session-resume-gate__panel {
+  max-width: 520px;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  padding: 1.75rem 1.5rem;
+  background: rgba(5, 10, 18, 0.88);
+  box-shadow: 0 0 40px rgba(0, 212, 255, 0.12);
+}
+.session-resume-gate__kicker {
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  color: rgba(0, 212, 255, 0.75);
+  margin-bottom: 0.5rem;
+}
+.session-resume-gate__title {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  color: #e8ffff;
+  margin: 0 0 0.75rem;
+}
+.session-resume-gate__hint {
+  font-size: 0.78rem;
+  color: #9ab;
+  line-height: 1.45;
+  margin: 0 0 1.25rem;
+}
+.session-resume-gate__roles {
+  color: rgba(255, 180, 120, 0.95);
+}
+.session-resume-gate__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.session-resume-btn {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 14px 18px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #e8f4ff;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+.session-resume-btn--solo {
+  border-color: rgba(0, 212, 255, 0.55);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.15);
+}
+.session-resume-btn--solo:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+.session-resume-btn--coop {
+  border-color: rgba(255, 130, 70, 0.65);
+  color: #ffe8dc;
+  box-shadow: 0 0 18px rgba(255, 120, 60, 0.18);
+}
+.session-resume-btn--coop:hover {
+  background: rgba(255, 120, 60, 0.1);
+}
+
+.session-gate__panel {
+  max-width: 560px;
+}
+.session-gate__hint {
+  margin-bottom: 1rem;
+}
+.session-gate__mode-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.session-gate__mode-btn {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+.session-gate__mode-title {
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+}
+.session-gate__mode-sub {
+  font-size: 0.72rem;
+  color: #9ab;
+  letter-spacing: 0.04em;
+}
+.session-gate__mode-btn--ready {
+  outline: 1px solid rgba(0, 255, 200, 0.25);
+}
+.session-resume-btn--coop.session-gate__mode-btn--ready {
+  outline-color: rgba(255, 140, 80, 0.45);
+}
+.session-gate__back {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  margin-bottom: 1rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: #9ab;
+}
+.session-gate__back:hover {
+  color: #cfe;
+  border-color: rgba(0, 212, 255, 0.35);
+}
+.session-gate__roster {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.session-gate__roster-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+}
+.session-gate__roster-card--solo {
+  border-color: rgba(0, 212, 255, 0.35);
+}
+.session-gate__roster-card--coop {
+  border-color: rgba(255, 130, 70, 0.35);
+}
+.session-gate__roster-name {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  color: #e8ffff;
+}
+.session-gate__roster-meta {
+  font-size: 0.72rem;
+  color: #8a9;
+  margin-top: 4px;
+}
+.session-gate__roster-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.session-gate__fine-print {
+  margin-top: 0.75rem;
+  font-size: 0.7rem;
+}
+.session-resume-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cc-wizard-cancel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 8px 12px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  color: #9ff;
+}
+.cc-wizard-cancel:hover {
+  background: rgba(0, 212, 255, 0.12);
+}
+.cc-nav-tab--locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.v007-creation-context.cc-gate-coop-only .cc-skill-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.v007-creation-context .cc-skill-btn.cc-coop-mode.active {
+  border-color: rgba(255, 140, 80, 0.95);
+  color: #ffe8dc;
+  box-shadow: 0 0 20px rgba(255, 110, 50, 0.35);
+}
+.v007-creation-context.cc-gate-from-coop {
+  border-color: rgba(255, 130, 70, 0.25);
+}

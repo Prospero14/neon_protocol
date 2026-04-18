@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useGameState } from './logic/hooks/useGameState';
 import { useAuth } from './logic/AuthContext';
+import { readNeonAuthToken } from './logic/authTokenStorage';
 import './App.css';
 import './combat-hud.css';
 import { MAP_NODES } from './logic/mapData';
@@ -14,6 +15,7 @@ import MapView from './components/MapView';
 import CombatBridge from './components/games/CombatBridge';
 import { shouldLiquidateStartup } from './logic/coopSprint';
 import CharacterCreation from './components/CharacterCreation';
+import SessionGateView from './components/SessionGateView';
 import CharacterScreen from './components/CharacterScreen';
 import DeckBuilder from './components/DeckBuilder';
 import Documentation from './components/Documentation';
@@ -29,6 +31,7 @@ import type { ViewType } from './logic/hooks/useGameState';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
 import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
+import { COOP_ROLES } from './logic/sessionMode';
 import {
   resolveCoopYardTaskIndexInLibrary,
   isCoopBossUnlocked,
@@ -57,11 +60,12 @@ function App() {
   const { token, user: authUser } = useAuth();
 
   const refreshCoopStartupLb = useCallback(async () => {
-    if (!token || !authUser?.id) return null;
+    const authT = readNeonAuthToken() ?? token;
+    if (!authT || !authUser?.id) return null;
     if (gs.sessionMode !== 'coop') return null;
     const cleared = countCoopTierMissionsCleared(gs.coopYardCompletedMissionIds, gs.coopTierRank);
     return refreshCoopStartupLeaderboardFromServer({
-      token,
+      token: authT,
       userId: authUser.id,
       startupName: gs.coopStartupName?.trim() || gs.playerName || 'STARTUP',
       clearedTierMissions: cleared,
@@ -98,14 +102,35 @@ function App() {
   };
 
   const renderAppView = () => {
+    if (gs.currentView === 'SESSION_GATE') {
+      return (
+        <SessionGateView
+          creationResume={gs.creationResume}
+          playerName={gs.playerName}
+          homeDistrictId={gs.homeDistrictId}
+          coopClassProfiles={gs.coopClassProfiles}
+          onEnterSolo={() => gs.resumeEnterSoloHub()}
+          onEnterCoop={(role) => gs.resumeEnterCoopLobby(role)}
+          onOpenWizard={(mode) => gs.openCharacterWizard(mode)}
+        />
+      );
+    }
     if (gs.currentView === 'CREATION') {
+      const coopRolesTaken = COOP_ROLES.filter((r) => (gs.coopClassProfiles[r]?.deckIds?.length ?? 0) > 0);
       return (
         <CharacterCreation 
           skillMode={gs.skillMode} 
           setSkillMode={gs.setSkillMode} 
           userIp={gs.userIp} 
           faction={'INDEPENDENT_ANON'} 
-          onComplete={gs.handleCreationComplete} 
+          onComplete={gs.handleCreationComplete}
+          lockedSessionMode={gs.creationWizardLockedMode ?? undefined}
+          onCancelWizard={gs.creationWizardLockedMode ? gs.cancelCharacterWizard : undefined}
+          coopRolesTaken={coopRolesTaken}
+          creationGate={
+            gs.creationWizardLockedMode === 'coop' && gs.creationResume?.soloOnlyNeedsCoop ? 'solo_needs_coop' : 'none'
+          }
+          savedPlayerName={gs.playerName !== 'ID_НЕИЗВЕСТЕН' ? gs.playerName : ''}
         />
       );
     }
@@ -513,7 +538,7 @@ function App() {
     );
   };
 
-  const hideNav = ['CREATION', 'COOP_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
+  const hideNav = ['SESSION_GATE', 'CREATION', 'COOP_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
 
   if (gs.isLoading) return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
   if (!gs.user) return <AuthForm />;

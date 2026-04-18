@@ -166,6 +166,7 @@ export function useCombatLogic({
   devLanguageStack = null,
   pushCoopLinkedProgressToServerRef,
   coopLinkedServerAwardedIds,
+  coopSharedProjectProgress = null,
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);

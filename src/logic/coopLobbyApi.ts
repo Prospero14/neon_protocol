@@ -71,6 +71,8 @@ export type CoopMatchState = {
   roleByUserId: Record<string, string>;
   shared: CoopMatchSharedState;
   seq: number;
+  /** Id связанных целей, уже учтённых сервером в projectProgress (дедуп / гидрация клиента). */
+  linkedObjectiveAwardedIds?: string[];
   recentEvents: Array<{
     seq: number;
     ts: number;

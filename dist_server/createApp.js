@@ -102,6 +102,7 @@ export function createApp(opts) {
             roleByUserId: match.roleByUserId,
             shared: match.shared,
             seq: match.seq,
+            linkedObjectiveAwardedIds: match.linkedObjectiveAwardedIds ?? [],
             recentEvents: match.events.slice(-30),
         };
     }
@@ -704,6 +705,7 @@ export function createApp(opts) {
             events: [],
             intentQueue: [],
             seq: 0,
+            linkedObjectiveAwardedIds: [],
         };
         matches.set(match.id, match);
         matchByPartyId.set(party.id, match.id);
@@ -830,6 +832,37 @@ export function createApp(opts) {
             ['admin', 'developer', 'qa', 'pm'].includes(payload.targetRole)
             ? payload.targetRole
             : null;
+        /** Немедленный вклад non-dev по связанным целям (не очередь parallel_window). */
+        if (action === 'apply_linked_sprint_progress') {
+            if (!['qa', 'admin', 'pm'].includes(role)) {
+                return sendApiError(res, 403, 'COOP_LINKED_ROLE', 'Вклад по связанным целям доступен только QA, Admin или PM.');
+            }
+            const rawIds = payload.objectiveIds;
+            const objectiveIds = Array.isArray(rawIds)
+                ? rawIds
+                    .filter((x) => typeof x === 'string' && x.length > 0 && x.length < 200)
+                    .slice(0, 4)
+                : [];
+            const awarded = match.linkedObjectiveAwardedIds ?? (match.linkedObjectiveAwardedIds = []);
+            const newIds = objectiveIds.filter((id) => !awarded.includes(id));
+            let progressUp = Math.floor(Number(payload.progressUp ?? 0));
+            progressUp = Math.max(0, Math.min(25, progressUp));
+            const maxByNew = newIds.length > 0 ? Math.min(18, 9 * newIds.length) : 0;
+            progressUp = Math.min(progressUp, maxByNew);
+            if (progressUp > 0 && newIds.length > 0) {
+                for (const id of newIds)
+                    awarded.push(id);
+                match.shared.projectProgress = Math.min(100, match.shared.projectProgress + progressUp);
+                const rk = role;
+                match.shared.roleTaskProgress[rk] = Math.min(100, match.shared.roleTaskProgress[rk] + progressUp);
+                recomputeTeamStress(match);
+                pushMatchEvent(match, action, auth.userId, { progressUp, objectiveIds: newIds, role });
+            }
+            else {
+                pushMatchEvent(match, action, auth.userId, { duplicate: true, objectiveIds, role });
+            }
+            return res.json({ ok: true, match: compactMatchView(match) });
+        }
         if (match.shared.mode === 'sequential' && match.shared.activeRole !== role && action !== 'apply_pm_support') {
             return sendApiError(res, 409, 'COOP_ROLE_TURN_DENIED', `Сейчас ход роли ${match.shared.activeRole}; ваш класс ${role}.`);
         }

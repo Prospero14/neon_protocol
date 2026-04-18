@@ -6,6 +6,8 @@ import type { CombatPhase } from '../../../logic/combatPhases';
 import { Play, Zap, Power, TrendingUp } from 'lucide-react';
 
 interface HandControlsProps {
+  /** Подсказка для кооп-админа в фазе снабжения (пайплайн INFRA). */
+  architectureSupplyHint?: string;
   currentPhase: CombatPhase;
   filteredHand: { card: CombatCard; source: CardSource; idx: number }[];
   fullHand: CombatCard[];
@@ -26,6 +28,7 @@ interface HandControlsProps {
 }
 
 const HandControls: React.FC<HandControlsProps> = ({
+  architectureSupplyHint,
   currentPhase, filteredHand, fullHand, selectedCard, isPlayerTurn, cpu,
   stress, canAdvancePhase, getEffectiveCost, onCardSelect, onEndTurn, onOverclock, onAdvancePhase, onTerminate, onMulligan, mulliganUsed, isPipelineFull
 }) => {
@@ -36,7 +39,7 @@ const HandControls: React.FC<HandControlsProps> = ({
 
   const tabsTitle =
     isSupply
-      ? 'Архитектура: дро карт INFRA, расклад по слотам, затем COMPILE / NEXT.'
+      ? 'Архитектура: клик по INFRA → автоматически в первый свободный слот; COMPILE после 6+ карточек. Скрипты — проводка.'
       : isCodePuzzle
         ? 'Разработка: код из палитры и скриптов в шину, без случайного дро.'
         : isStabilize
@@ -80,6 +83,11 @@ const HandControls: React.FC<HandControlsProps> = ({
           </button>
         )}
       </div>
+      {isSupply && architectureSupplyHint && (
+        <div className="hc2-arch-hint mono-text" title={architectureSupplyHint}>
+          {architectureSupplyHint}
+        </div>
+      )}
 
       {/* ── HAND + ACTIONS ── */}
       <div className="hc2-main">

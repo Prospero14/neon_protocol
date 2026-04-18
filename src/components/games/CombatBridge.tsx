@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import type { Trait } from '../../logic/traits';
 import type { CombatCard } from '../../logic/combatCards';
 import type { TechnicalTask } from '../../logic/combatTasks';
@@ -14,6 +14,7 @@ import {
   buildCoopSprintReport,
   getCoopBriefTz,
 } from '../../logic/coopSprint';
+import { coopParallelTzForRole } from '../../logic/coopParallelRoleTz';
 import { coopOpponentHintBody, coopOpponentHintTitle } from '../../logic/coopOpponentHints';
 import { sdlcRailPhaseOrder } from '../../logic/combatPhases';
 import { useCombatLogic } from '../../logic/hooks/useCombatLogic';
@@ -80,6 +81,10 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
   const sessionMode = props.sessionMode ?? 'solo';
   const coopRole = props.coopRole ?? null;
+  const displayMissionTz = useMemo(
+    () => coopParallelTzForRole(missionTz, sessionMode, coopRole),
+    [missionTz, sessionMode, coopRole]
+  );
   const railPhases = sdlcRailPhaseOrder(sessionMode, coopRole);
   const fieldWorldDay = props.fieldWorldDay ?? 1;
   const fieldDistrictId = props.fieldDistrictId ?? props.homeDistrictId ?? 'altufyevo';
@@ -112,10 +117,16 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   const { token, user } = useAuth();
   const [netMatch, setNetMatch] = useState<CoopMatchState | null>(null);
   const sseRef = useRef<EventSource | null>(null);
+  const pushCoopLinkedServerRef: MutableRefObject<
+    | ((args: { progressDelta: number; objectiveIds: readonly string[] }) => Promise<boolean>)
+    | undefined
+  > = useRef(undefined);
   const { state, actions } = useCombatLogic({
     ...props,
     missionTz,
     coopSquadFill,
+    pushCoopLinkedProgressToServerRef: pushCoopLinkedServerRef,
+    coopLinkedServerAwardedIds: netMatch?.linkedObjectiveAwardedIds,
   });
 
   const handleCombatWin = (bits: number, rank: string, chain: string[], name: string) => {
@@ -152,33 +163,6 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
   };
 
   const stack = props.devLanguageStack ?? null;
-  const coopVictoryReport =
-    sessionMode === 'coop' && coopRole && state.showVictory && state.victoryResult
-      ? buildCoopSprintReport(coopRole, stack, {
-          won: true,
-          stressEnd: state.stress,
-          bugPointsEnd: state.bugPoints,
-          playerProgressEnd: state.playerProgress,
-          aiProgressEnd: state.aiProgress,
-          aiDeadlineEnd: state.aiDeadline,
-          chainLength: state.victoryResult.chain.length,
-          deploymentOk: deploymentOk(state.deploymentReport),
-        })
-      : null;
-
-  const coopDefeatReport =
-    sessionMode === 'coop' && coopRole && state.showDefeat
-      ? buildCoopSprintReport(coopRole, stack, {
-          won: false,
-          stressEnd: state.stress,
-          bugPointsEnd: state.bugPoints,
-          playerProgressEnd: state.playerProgress,
-          aiProgressEnd: state.aiProgress,
-          aiDeadlineEnd: state.aiDeadline,
-          chainLength: 0,
-          deploymentOk: false,
-        })
-      : null;
 
   const lossesBefore = props.coopSprintLossesBeforeBattle ?? 0;
   const defeatAttemptIndex = lossesBefore + 1;
@@ -260,6 +244,40 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       infraFilled: Math.max(0, Math.min(8, Math.floor((netMatch.shared.infraResources / 100) * 8))),
     };
   }, [coopSquadFill, netMatch, state]);
+
+  const combatHudPlayerProgress = useMemo(() => {
+    if (coopSquadFill === 'live_party' && netMatch) return netMatch.shared.projectProgress;
+    return state.playerProgress;
+  }, [coopSquadFill, netMatch, state.playerProgress]);
+
+  const coopVictoryReport =
+    sessionMode === 'coop' && coopRole && state.showVictory && state.victoryResult
+      ? buildCoopSprintReport(coopRole, stack, {
+          won: true,
+          stressEnd: state.stress,
+          bugPointsEnd: state.bugPoints,
+          playerProgressEnd: combatHudPlayerProgress,
+          aiProgressEnd: state.aiProgress,
+          aiDeadlineEnd: state.aiDeadline,
+          chainLength: state.victoryResult.chain.length,
+          deploymentOk: deploymentOk(state.deploymentReport),
+        })
+      : null;
+
+  const coopDefeatReport =
+    sessionMode === 'coop' && coopRole && state.showDefeat
+      ? buildCoopSprintReport(coopRole, stack, {
+          won: false,
+          stressEnd: state.stress,
+          bugPointsEnd: state.bugPoints,
+          playerProgressEnd: combatHudPlayerProgress,
+          aiProgressEnd: state.aiProgress,
+          aiDeadlineEnd: state.aiDeadline,
+          chainLength: 0,
+          deploymentOk: false,
+        })
+      : null;
+
   const supportFeed = useMemo(() => {
     if (!netMatch || coopSquadFill !== 'live_party') return [];
     return netMatch.recentEvents
@@ -268,6 +286,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
           e.type === 'apply_pm_support' ||
           e.type === 'apply_qa_defense' ||
           e.type === 'apply_admin_infra' ||
+          e.type === 'apply_linked_sprint_progress' ||
           e.type === 'release_checked'
       )
       .slice(-6)
@@ -275,6 +294,13 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
       .map((e) => {
         if (e.type === 'release_checked') {
           return `[RELEASE] ${e.payload?.ok ? 'OK' : 'FAIL'}: ${typeof e.payload?.note === 'string' ? e.payload.note : ''}`;
+        }
+        if (e.type === 'apply_linked_sprint_progress') {
+          const dup = Boolean(e.payload?.duplicate);
+          const up = typeof e.payload?.progressUp === 'number' ? e.payload.progressUp : 0;
+          return dup
+            ? '[SYNC] LINKED_SPRINT (дубликат / без изменений)'
+            : `[SYNC] LINKED_SPRINT +${up}% project`;
         }
         const actorRole = e.actorUserId ? netMatch.roleByUserId[e.actorUserId] ?? '?' : '?';
         const targetRole =
@@ -420,6 +446,31 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
     }
   };
 
+  pushCoopLinkedServerRef.current =
+    livePartyMode && netMatch && coopRole && coopRole !== 'developer'
+      ? async ({ progressDelta, objectiveIds }) => {
+          const t = readNeonAuthToken() ?? token;
+          if (!t) return false;
+          const updated = await coopMatchAction(
+            t,
+            netMatch.id,
+            'apply_linked_sprint_progress',
+            {
+              progressUp: progressDelta,
+              objectiveIds: [...objectiveIds],
+              ...missionMetaPayload,
+            },
+            netMatch.seq,
+            `linked_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+          );
+          if (updated) {
+            setNetMatch(updated);
+            return true;
+          }
+          return false;
+        }
+      : undefined;
+
   return (
     <div className={`combat-v2 ${combatFieldOuterClass} ${state.stress > 70 ? 'screen-glitch' : ''}`}>
       {sessionMode === 'coop' && coopRole && (
@@ -458,6 +509,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
                   }`
                 : (state.lastAiAction?.name ?? null)
             }
+            coopLinkedRows={state.coopLinkedObjectiveRows}
           />
         </div>
       )}
@@ -471,7 +523,9 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
           <div className="coop-brief-box border-pulse-cyan">
             <div className="coop-brief-title">СПРИНТ // КРАТКОЕ ТЗ</div>
             <div className="coop-brief-startup">{props.coopStartupName.trim()}</div>
-            <p className="coop-brief-body font-terminal">{getCoopBriefTz(props.coopStartupName.trim(), missionTz.name)}</p>
+            <p className="coop-brief-body font-terminal">
+              {getCoopBriefTz(props.coopStartupName.trim(), displayMissionTz.name)}
+            </p>
             <button type="button" className="coop-brief-ack" onClick={() => setShowCoopBrief(false)}>
               [ ПРИСТУПИТЬ К РЕЛИЗУ ]
             </button>
@@ -490,8 +544,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         lastAiActionName={state.lastAiAction?.name ?? null}
         nextIntentName={state.nextBugAction?.name ?? null}
         isPlayerTurn={state.isPlayerTurn}
-        tzName={missionTz.name}
-        playerProgress={state.playerProgress}
+        tzName={displayMissionTz.name}
+        playerProgress={combatHudPlayerProgress}
         aiProgress={state.aiProgress}
         onShowTzModal={() => setShowTzModal(true)}
       />
@@ -510,7 +564,7 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         nextBugAction={state.nextBugAction}
         isPlayerTurn={state.isPlayerTurn}
         selectedCard={state.selectedCard}
-        playerProgress={state.playerProgress}
+        playerProgress={combatHudPlayerProgress}
         aiProgress={state.aiProgress}
         bugPoints={state.bugPoints}
         aiDeadline={state.aiDeadline}
@@ -548,6 +602,11 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
 
       {/* ── HAND + ACTIONS ── */}
       <HandControls 
+        architectureSupplyHint={
+          sessionMode === 'coop' && coopRole === 'admin'
+            ? 'PIPELINE: периметр (VPC/карантин) → контейнер/pod → mesh → DNS/proxy/cache → данные (БД/Redis/Kafka) → балансировка → CI/CD и мониторинг. INFRA — в слоты кликом; SSH/PING — проводка. ≥6 слотов → COMPILE.'
+            : undefined
+        }
         currentPhase={state.currentPhase}
         filteredHand={state.filteredHand}
         fullHand={state.hand}
@@ -575,6 +634,8 @@ const CombatBridge: React.FC<CombatBridgeProps> = (props) => {
         ramMaxMb={state.ramMaxMb}
         showTzModal={showTzModal}
         missionTz={missionTz}
+        missionTzDisplay={displayMissionTz}
+        hideDevImplementationChecklist={sessionMode === 'coop' && Boolean(coopRole && coopRole !== 'developer')}
         enemy={state.enemy}
         showVictory={state.showVictory}
         showDefeat={state.showDefeat}

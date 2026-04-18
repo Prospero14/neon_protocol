@@ -1,7 +1,8 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, type MutableRefObject } from 'react';
 import type { CombatPhase } from '../combatPhases';
 import { SDLC_COOP_PARALLEL_ALLOWED_TYPES, SDLC_PHASES, coopSkipsArchitecturePhase } from '../combatPhases';
 import { isInfraDrawCard, isStabilizationDrawCard, isStaticCodeCardType } from '../combatFlow';
+import { sortInfraCardsForAdminSupply } from '../adminInfraPipeline';
 import type { CombatCard } from '../combatCards';
 import { getCardById } from '../combatCards';
 import { isOutplayCounter, problemTypeLabelRu } from '../combatCounterplay';
@@ -26,6 +27,12 @@ import {
   coopPmSoftSynergy,
   isCoopCombat,
 } from '../coopCombatRole';
+import {
+  PM_RITUAL_SOFT_IDS,
+  computeCoopLinkedRows,
+  emptyCoopLinkedTrack,
+  nextCoopLinkedAwards,
+} from '../coopLinkedRoleObjectives';
 
 /** Контекст выбора NEXT_INTENT: плотнее в коопе и в верификации соло. */
 function bugIntentPickContext(
@@ -71,6 +78,15 @@ interface UseCombatLogicProps {
   /** Кооп: пати людей — без симуляции ходов ботов на этом клиенте. */
   coopSquadFill?: CoopSquadFill;
   devLanguageStack?: DevLanguageStack | null;
+  /**
+   * live_party: ref на функцию, которая отправляет бонус связанных целей на сервер.
+   * Обновляется родителем каждый рендер — читать только `.current` в момент вызова.
+   */
+  pushCoopLinkedProgressToServerRef?: MutableRefObject<
+    ((args: { progressDelta: number; objectiveIds: readonly string[] }) => Promise<boolean>) | undefined
+  >;
+  /** live_party: id целей с сервера — подмешивать в awarded, чтобы не дублировать после рефреша. */
+  coopLinkedServerAwardedIds?: readonly string[];
 }
 
 function pickCombatCardForMissionStep(step: TZStep): CombatCard | null {
@@ -133,6 +149,8 @@ export function useCombatLogic({
   coopRole = null,
   coopSquadFill = 'synthetic_bots',
   devLanguageStack = null,
+  pushCoopLinkedProgressToServerRef,
+  coopLinkedServerAwardedIds,
 }: UseCombatLogicProps) {
   const coopActive = isCoopCombat(sessionMode, coopRole);
   const skipArchitecture = coopSkipsArchitecturePhase(sessionMode, coopRole ?? null);
@@ -217,6 +235,10 @@ export function useCombatLogic({
   /** Уникальные CombatCard.type за бой — бонус за «широкий тулчейн». */
   const cardFamiliesRef = useRef<Set<string>>(new Set());
   const familyMilestoneRef = useRef({ t3: false, t5: false });
+  /** Кооп non-dev: счётчики под цели, привязанные к длине ТЗ разработчика. */
+  const coopLinkedTrackRef = useRef(emptyCoopLinkedTrack());
+  const coopLinkedAwardedRef = useRef<Set<string>>(new Set());
+  const [coopLinkedHudTick, setCoopLinkedHudTick] = useState(0);
   /** Снимок метрик после коммита стейта — для assist ботов в конце хода ИИ. */
   const combatCoopAssistRef = useRef({
     stress: 0,
@@ -256,8 +278,27 @@ export function useCombatLogic({
   );
 
   const filteredHand = useMemo(() => {
-    /** Кооп: палитра кода + одноразовые скрипты + рука одновременно (параллельные стадии). */
+    /**
+     * Кооп: в DEVELOPMENT — палитра + скрипты + рука параллельно.
+     * В ARCHITECTURE только снабжение (и у админа — проводка SCRIPT из пула), иначе палитра «забивает» INFRA и ломает читаемость пайплайна.
+     */
     if (coopActive) {
+      if (currentPhase === 'ARCHITECTURE') {
+        const h = hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
+        if (coopRole === 'admin') {
+          const s = scriptPool.map((c, i) => ({ card: c, source: 'script_pool' as const, idx: i }));
+          return [...h, ...s];
+        }
+        return h;
+      }
+      if (currentPhase === 'VERIFICATION') {
+        const s = scriptPool.map((c, i) => ({ card: c, source: 'script_pool' as const, idx: i }));
+        const h = hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
+        return [...s, ...h];
+      }
+      if (currentPhase === 'DEPLOYMENT') {
+        return hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
+      }
       const p = codingPalette.map((c, i) => ({ card: c, source: 'palette' as const, idx: i }));
       const s = scriptPool.map((c, i) => ({ card: c, source: 'script_pool' as const, idx: i }));
       const h = hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
@@ -272,9 +313,69 @@ export function useCombatLogic({
       return hand.map((c, i) => ({ card: c, source: 'hand' as const, idx: i }));
     }
     return [];
-  }, [coopActive, currentPhase, hand, codingPalette, scriptPool]);
+  }, [coopActive, currentPhase, hand, codingPalette, scriptPool, coopRole]);
 
   const addLog = useCallback((msg: string) => setLog(prev => [msg, ...prev].slice(0, 15)), []);
+
+  const flushCoopLinkedObjectives = useCallback(() => {
+    if (!coopActive || !coopRole || coopRole === 'developer') return;
+    const res = nextCoopLinkedAwards(missionTz, coopRole, coopLinkedTrackRef.current, coopLinkedAwardedRef.current, {
+      skipArchitecture,
+    });
+    if (res.newAwarded.length === 0) {
+      setCoopLinkedHudTick((x) => x + 1);
+      return;
+    }
+    const pushServer = pushCoopLinkedProgressToServerRef?.current;
+    if (pushServer && res.progressDelta > 0) {
+      void (async () => {
+        const ok = await pushServer({ progressDelta: res.progressDelta, objectiveIds: res.newAwarded });
+        if (ok) {
+          for (const id of res.newAwarded) coopLinkedAwardedRef.current.add(id);
+          res.rewardLines.forEach(addLog);
+        } else {
+          addLog('[СПРИНТ] Синк вклада с сервером не удался — цели остаются открытыми, попробуйте снова.');
+        }
+        setCoopLinkedHudTick((x) => x + 1);
+      })();
+      return;
+    }
+    for (const id of res.newAwarded) coopLinkedAwardedRef.current.add(id);
+    if (res.progressDelta > 0) {
+      setPlayerProgress((p) => Math.min(100, p + res.progressDelta));
+      res.rewardLines.forEach(addLog);
+    }
+    setCoopLinkedHudTick((x) => x + 1);
+  }, [coopActive, coopRole, missionTz, addLog, skipArchitecture, pushCoopLinkedProgressToServerRef]);
+
+  const coopLinkedObjectiveRows = useMemo(() => {
+    if (!coopActive || !coopRole || coopRole === 'developer') return [];
+    return computeCoopLinkedRows(missionTz, coopRole, coopLinkedTrackRef.current, coopLinkedAwardedRef.current, {
+      skipArchitecture,
+    });
+  }, [coopActive, coopRole, missionTz, coopLinkedHudTick, skipArchitecture]);
+
+  useEffect(() => {
+    coopLinkedTrackRef.current = emptyCoopLinkedTrack();
+    coopLinkedAwardedRef.current = new Set();
+    setCoopLinkedHudTick((x) => x + 1);
+  }, [missionTz.id, coopActive, coopRole]);
+
+  const coopLinkedServerAwardedJoin = coopLinkedServerAwardedIds?.length
+    ? coopLinkedServerAwardedIds.join('|')
+    : '';
+  useEffect(() => {
+    if (!coopLinkedServerAwardedJoin) return;
+    const ids = coopLinkedServerAwardedJoin.split('|').filter(Boolean);
+    let ch = false;
+    for (const id of ids) {
+      if (!coopLinkedAwardedRef.current.has(id)) {
+        coopLinkedAwardedRef.current.add(id);
+        ch = true;
+      }
+    }
+    if (ch) setCoopLinkedHudTick((x) => x + 1);
+  }, [coopLinkedServerAwardedJoin]);
 
   const registerPlayDiversity = useCallback(
     (card: CombatCard) => {
@@ -318,7 +419,11 @@ export function useCombatLogic({
       setDeck([]);
       addLog('[SYSTEM] COOP: старт с ПАЗЗЛ КОДА (роль Developer).');
     } else {
-      const infraPile = [...activeDeck.filter(isInfraDrawCard)].sort(() => Math.random() - 0.5);
+      const rawInfra = [...activeDeck.filter(isInfraDrawCard)];
+      const infraPile =
+        coopActive && coopRole === 'admin'
+          ? sortInfraCardsForAdminSupply(rawInfra)
+          : rawInfra.sort(() => Math.random() - 0.5);
       if (infraPile.length === 0) {
         // Fail-safe: бой не должен разваливаться, если в деке случайно нет INFRA карт.
         setCpuMax((p) => p + 1);
@@ -330,6 +435,12 @@ export function useCombatLogic({
       setHand(infraPile.slice(0, n));
       setDeck(infraPile.slice(n));
       addLog('[SYSTEM] PHASE_SUPPLY: infra draw only.');
+      if (coopActive && coopRole === 'admin' && infraPile.length > 0) {
+        addLog(
+          '[ADMIN:PIPE] Сначала заполните INFRA-слоты (периметр → вычисление → данные → баланс/edge → CI/наблюдаемость). ' +
+            'Затем COMPILE. SSH/PING — проводка к узлам, не замена слотов.',
+        );
+      }
     }
 
     stabilizationQueueRef.current = [...activeDeck.filter(isStabilizationDrawCard)].sort(() => Math.random() - 0.5);
@@ -581,6 +692,12 @@ export function useCombatLogic({
         if (source === 'hand') setHand(prev => prev.filter((_, i) => i !== idx));
         addLog(`[SYSTEM] INFRA_DEPLOYED: ${card.name}`);
         turnPlaysRef.current.push(card.id);
+        if (coopActive && coopRole === 'admin') {
+          const tr = coopLinkedTrackRef.current;
+          tr.adminInfra += 1;
+          tr.adminInfraIds.add(card.id);
+          flushCoopLinkedObjectives();
+        }
       }
       return;
     } else if (card.type === 'SOFT') {
@@ -769,6 +886,11 @@ export function useCombatLogic({
           setPlayerProgress((p) => Math.min(100, p + 3));
           setStress((s) => Math.max(0, s - 2));
           addLog('[ROLE:PM] STAKEHOLDER_BUFFER — +3% progress, −2 stress.');
+          const tr = coopLinkedTrackRef.current;
+          if (currentPhase === 'ARCHITECTURE') tr.pmSoftArch += 1;
+          else if (currentPhase === 'DEVELOPMENT') tr.pmSoftDevPlaced += 1;
+          if (PM_RITUAL_SOFT_IDS.has(card.id)) tr.pmRitualSoft += 1;
+          flushCoopLinkedObjectives();
         }
         turnPlaysRef.current.push(card.id);
         registerPlayDiversity(card);
@@ -942,6 +1064,12 @@ export function useCombatLogic({
           addLog(`[PATCH] ${card.name} снял блокировку (слабее оптимального инструмента).`);
         }
         setClearedBugsThisTurn((n) => n + 1);
+        if (coopActive && coopRole === 'qa') {
+          const tr = coopLinkedTrackRef.current;
+          tr.qaIceClears += 1;
+          tr.qaBugCutSum += bugCut;
+          flushCoopLinkedObjectives();
+        }
         if (bugPayload.problemType) {
           const pt = bugPayload.problemType;
           if (outplay) {
@@ -1112,6 +1240,10 @@ export function useCombatLogic({
           if (coopActive && coopRole === 'qa') {
             setBugPoints((p) => Math.max(0, p - 1));
             addLog('[ROLE:QA] TRIAGE — доп. −1 к счётчику багов.');
+            const tr = coopLinkedTrackRef.current;
+            tr.qaIceClears += 1;
+            tr.qaBugCutSum += 1;
+            queueMicrotask(() => flushCoopLinkedObjectives());
           }
         }
         return next;
@@ -1581,7 +1713,11 @@ export function useCombatLogic({
     if (mulliganUsed || currentPhase !== 'ARCHITECTURE' || planningTurn > 0) return;
     addLog(`[SYSTEM] REDRAW_BUFFER_INITIATED...`);
     const oldHand = [...hand];
-    const newDeck = [...deck, ...oldHand].sort(() => Math.random() - 0.5);
+    const pooled = [...deck, ...oldHand];
+    const newDeck =
+      coopActive && coopRole === 'admin'
+        ? sortInfraCardsForAdminSupply(pooled.filter(isInfraDrawCard))
+        : pooled.sort(() => Math.random() - 0.5);
     setHand(newDeck.slice(0, effectiveStartHandSize));
     setDeck(newDeck.slice(effectiveStartHandSize));
     setMulliganUsed(true);
@@ -1603,7 +1739,8 @@ export function useCombatLogic({
       lastAiAction,
       lastAiImpact, isAiResolving,
       mitigationBuffer,
-      ramSlotsMax, filteredHand, codingPalette, scriptPool, isPipelineFull: runtimeRail.slice(0, ramSlotsMax).every(s => s.type !== 'EMPTY')
+      ramSlotsMax, filteredHand, codingPalette, scriptPool, isPipelineFull: runtimeRail.slice(0, ramSlotsMax).every(s => s.type !== 'EMPTY'),
+      coopLinkedObjectiveRows,
     },
     actions: {
       handleCardSelect,

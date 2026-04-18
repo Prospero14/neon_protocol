@@ -31,7 +31,12 @@ interface CombatOverlaysProps {
   cpuMax: number;
   ramMaxMb: number;
   showTzModal: boolean;
+  /** Каноническое ТЗ (прогресс, id миссии, победа). */
   missionTz: TechnicalTask;
+  /** Текст ТЗ для модалки/победы: для кооп QA/SRE/PM — параллельная подача той же задачи. */
+  missionTzDisplay?: TechnicalTask;
+  /** Кооп не-dev: не показывать пошаговый список конструкций кода (это гайд разработчика). */
+  hideDevImplementationChecklist?: boolean;
   enemy?: BugEnemy | null;
   showVictory: boolean;
   showDefeat: boolean;
@@ -52,6 +57,8 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
   skillMode,
   showTzModal,
   missionTz,
+  missionTzDisplay = missionTz,
+  hideDevImplementationChecklist = false,
   enemy,
   showVictory,
   showDefeat,
@@ -115,22 +122,37 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
             )}
 
             <div className="tz-modal-desc font-terminal">
-              {missionTz.description}
+              {missionTzDisplay.description}
             </div>
             
             <div className="tz-req-grid">
               <div className="tz-req-item full-width">
-                <span className="lbl text-amber">ТРЕБУЕМЫЕ ШАГИ РЕАЛИЗАЦИИ:</span>
-                <div className="tz-steps-list">
-                  {missionTz.steps.map((step, idx) => (
-                    <div key={idx} className="tz-step-row">
-                      <span className="step-name">{step.name}:</span>
-                      <span className="step-options opacity-80">
-                        {getStepCardIds(step).map(id => id.replace('syntax_', '').replace('fn_', '')).join(' | ')}
-                      </span>
+                {hideDevImplementationChecklist ? (
+                  <>
+                    <span className="lbl text-amber">КОНТУР КОМАНДЫ</span>
+                    <p className="font-terminal opacity-90" style={{ margin: '8px 0 0', lineHeight: 1.45 }}>
+                      Задача «{missionTz.name}» общая для спринта. Пошаговый чеклист конструкций на шине и список карт по
+                      шагам — только у роли DEVELOPER; ваша роль закрывает свои фазы боя (INFRA / QA / PM) без этого
+                      гайда.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className="lbl text-amber">ТРЕБУЕМЫЕ ШАГИ РЕАЛИЗАЦИИ:</span>
+                    <div className="tz-steps-list">
+                      {missionTzDisplay.steps.map((step, idx) => (
+                        <div key={idx} className="tz-step-row">
+                          <span className="step-name">{step.name}:</span>
+                          <span className="step-options opacity-80">
+                            {getStepCardIds(missionTz.steps[idx] ?? step)
+                              .map((id) => id.replace('syntax_', '').replace('fn_', ''))
+                              .join(' | ')}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -150,7 +172,7 @@ const CombatOverlays: React.FC<CombatOverlaysProps> = ({
             <div className="result-stats">
               <div className="stat-row">
                 <span>TASK_COMPLETED:</span>
-                <span className="green">{missionTz.name}</span>
+                <span className="green">{missionTzDisplay.name}</span>
               </div>
               <div className="stat-row total">
                 <span>REWARDS_EARNED:</span>

@@ -4,6 +4,7 @@ import { COOP_ROLE_LABELS } from '../../../logic/sessionMode';
 import type { CoopSquadFill } from '../../../logic/coopTeamFlow';
 import { CoopRoleBadge } from '../../CoopRoleBadge';
 import type { CoopMatchSharedState } from '../../../logic/coopLobbyApi';
+import type { CoopLinkedObjectiveRow } from '../../../logic/coopLinkedRoleObjectives';
 
 type Props = {
   coopRole: CoopRole;
@@ -29,6 +30,8 @@ type Props = {
   supportFeed?: string[];
   onPmReleaseCheck?: (() => void) | null;
   pmReleaseBusy?: boolean;
+  /** Кооп non-dev: цели, привязанные к длине ТЗ разработчика (локальный клиент). */
+  coopLinkedRows?: CoopLinkedObjectiveRow[];
 };
 
 const roleLabel = (r: CoopRole) => COOP_ROLE_LABELS[r].title;
@@ -57,6 +60,7 @@ export const CoopTeamSitrep: React.FC<Props> = ({
   supportFeed = [],
   onPmReleaseCheck = null,
   pmReleaseBusy = false,
+  coopLinkedRows = [],
 }) => {
   const pmCd = Math.max(0, Math.floor(matchShared?.supportCooldownByRole?.pm ?? 0));
   const qaCd = Math.max(0, Math.floor(matchShared?.supportCooldownByRole?.qa ?? 0));
@@ -129,6 +133,27 @@ export const CoopTeamSitrep: React.FC<Props> = ({
         </div>
       </div>
       <div className="coop-team-sitrep__plan">
+        {coopLinkedRows.length > 0 && (
+          <div className="coop-team-sitrep__linked" aria-label="Подзадачи спринта под ТЗ разработчика">
+            <div className="coop-team-sitrep__linked-title">ВКЛАД В РЕЛИЗ (ТЗ DEV)</div>
+            <ul className="coop-team-sitrep__linked-list">
+              {coopLinkedRows.map((row) => (
+                <li
+                  key={row.id}
+                  className={`coop-team-sitrep__linked-item ${row.done ? 'coop-team-sitrep__linked-item--done' : ''}`}
+                >
+                  <span className="coop-team-sitrep__linked-mark">{row.done ? '✓' : '○'}</span>
+                  <span className="coop-team-sitrep__linked-text">{row.label}</span>
+                  {!row.done && (
+                    <span className="coop-team-sitrep__linked-meter">
+                      {Math.min(row.current, row.target)}/{row.target}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="coop-team-sitrep__plan-title">ПЛАН / УГРОЗЫ ОППОНЕНТА</div>
         {lastAiActionName && (
           <div className="coop-team-sitrep__plan-row">

@@ -907,6 +907,15 @@
   border-bottom: 1px solid rgba(255,255,255,0.03);
   cursor: help;
 }
+.hc2-arch-hint {
+  font-size: 0.62rem;
+  line-height: 1.35;
+  color: rgba(180, 200, 220, 0.88);
+  padding: 4px 16px 8px;
+  border-bottom: 1px solid rgba(168, 85, 247, 0.12);
+  max-height: 2.8rem;
+  overflow: hidden;
+}
 .hc2-label {
   font-size: 0.55rem;
   color: #00d4ff;
@@ -1419,6 +1428,53 @@
 .coop-team-sitrep__v {
   font-weight: 700;
   color: #e2e8f0;
+}
+.coop-team-sitrep__linked {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+.coop-team-sitrep__linked-title {
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  color: #38bdf8;
+  margin-bottom: 4px;
+  font-weight: 800;
+}
+.coop-team-sitrep__linked-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.coop-team-sitrep__linked-item {
+  display: grid;
+  grid-template-columns: 1rem 1fr auto;
+  gap: 4px;
+  align-items: start;
+  font-size: 0.58rem;
+  line-height: 1.25;
+  color: #cbd5e1;
+}
+.coop-team-sitrep__linked-item--done {
+  opacity: 0.72;
+}
+.coop-team-sitrep__linked-mark {
+  color: #94a3b8;
+  font-weight: 700;
+}
+.coop-team-sitrep__linked-item--done .coop-team-sitrep__linked-mark {
+  color: #4ade80;
+}
+.coop-team-sitrep__linked-text {
+  word-break: break-word;
+}
+.coop-team-sitrep__linked-meter {
+  color: #7dd3fc;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .coop-team-sitrep__plan {
   border-top: 1px solid rgba(148, 163, 184, 0.15);

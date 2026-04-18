@@ -1534,6 +1534,9 @@ export function useGameState() {
       }
       setNodeCooldowns(prev => ({ ...prev, [nodeId]: Date.now() + 5 * 60 * 1000 }));
 
+      if (sessionMode === 'coop' && currentDistrictId === 'coop_yard') {
+        setActiveCombatPack('java_core');
+      }
       setActiveBarNode(nodeId);
       setCurrentView('COMBAT');
       return;

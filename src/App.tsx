@@ -203,7 +203,13 @@ function App() {
         );
       }
       const district = MAP_NODES.find((n) => n.id === gs.activeDistrictId) ?? MAP_NODES[0];
-      const taskLibrary = gs.activeCombatPack === 'java_spring' ? SPRING_TZ_LIBRARY : TZ_LIBRARY;
+      /** Полигон коопа: ТЗ только в основной библиотеке; Spring-пак не содержит coop_yard → иначе пустой safeLibrary и «вход в бой» ломается. */
+      const taskLibrary =
+        gs.sessionMode === 'coop' && gs.activeDistrictId === 'coop_yard'
+          ? TZ_LIBRARY
+          : gs.activeCombatPack === 'java_spring'
+            ? SPRING_TZ_LIBRARY
+            : TZ_LIBRARY;
       
       let effectiveRank: SkillMode = 'script-kiddie';
       if (gs.sessionMode === 'coop') {

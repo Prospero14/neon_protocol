@@ -1,6 +1,17 @@
 import React from 'react';
 import GibsonIceHack from './GibsonIceHack';
-import { DeadDropGame, PortSequenceGame, ScanPickGame, TapRushGame } from './IceMiniGames';
+import {
+  AuthBypassGame,
+  DeadDropGame,
+  HashCrackGame,
+  MeshJackGame,
+  LogWipeGame,
+  PacketSniffGame,
+  PortSequenceGame,
+  ProxyDodgeGame,
+  ScanPickGame,
+  TapRushGame,
+} from './IceMiniGames';
 import {
   getIceGame,
   resolveIceParams,
@@ -29,6 +40,7 @@ export const IcebreakerRouter: React.FC<Props> = ({ gameId, difficulty, onComple
 
   const fail = () => onComplete(false);
   const win = () => onComplete(true);
+  const p = { params, onWin: win, onFail: fail };
 
   if (game.engine === 'gibson') {
     return (
@@ -50,10 +62,16 @@ export const IcebreakerRouter: React.FC<Props> = ({ gameId, difficulty, onComple
           {game.difficulties[difficulty].label}
         </span>
       </header>
-      {game.engine === 'sequence' && <PortSequenceGame params={params} onWin={win} onFail={fail} />}
-      {game.engine === 'scan' && <ScanPickGame params={params} onWin={win} onFail={fail} />}
-      {game.engine === 'tap' && <TapRushGame params={params} onWin={win} onFail={fail} />}
-      {game.engine === 'memory' && <DeadDropGame params={params} onWin={win} onFail={fail} />}
+      {game.engine === 'sequence' && <PortSequenceGame {...p} />}
+      {game.engine === 'scan' && <ScanPickGame {...p} />}
+      {game.engine === 'tap' && <TapRushGame {...p} />}
+      {game.engine === 'mesh' && <MeshJackGame {...p} />}
+      {game.engine === 'memory' && <DeadDropGame {...p} />}
+      {game.engine === 'dodge' && <ProxyDodgeGame {...p} />}
+      {game.engine === 'logwipe' && <LogWipeGame {...p} />}
+      {game.engine === 'wordle' && <AuthBypassGame {...p} />}
+      {game.engine === 'sniff' && <PacketSniffGame {...p} />}
+      {game.engine === 'hash' && <HashCrackGame {...p} />}
       {onBack && (
         <button type="button" className="icebreaker-wrap__back" onClick={onBack}>
           ← Отмена

@@ -17,6 +17,8 @@ export type ChatMessage = {
   isNpc?: boolean;
   npcName?: string;
   npcImageUrl?: string;
+  npcArchetype?: string;
+  npcId?: string;
   text: string;
   payload?: Record<string, unknown> | null;
   isFile?: boolean;

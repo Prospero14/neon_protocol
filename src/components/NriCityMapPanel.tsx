@@ -1,0 +1,691 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, MapPin, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  nriCreateMapMarker,
+  nriDeleteMapMarker,
+  nriFetchMapMarkers,
+  nriFetchMapZones,
+  nriPatchMapZone,
+  type NriMapMarker,
+  type NriMapZone,
+  type NriMapView,
+} from '../logic/nriApi';
+import {
+  DISTRICT_TYPE_LABELS,
+  getMegaWatermarks,
+  megaFromZoneKey,
+  megaKeyFromZoneKey,
+  type NightCityDistrictType,
+} from '../logic/nriNightCityMap';
+import { readNeonAuthToken } from '../logic/authTokenStorage';
+import { useAuth } from '../logic/AuthContext';
+
+type Props = {
+  inviteCode: string;
+  isHost: boolean;
+  currentUserId: string;
+};
+
+type ViewBox = { x: number; y: number; w: number; h: number };
+
+const LAYER_ORDER: Record<string, number> = {
+  highway: 0,
+  overpass: 1,
+  industrial: 2,
+  slum: 3,
+  mid: 4,
+  park: 5,
+  corp: 6,
+  tunnel: 7,
+};
+
+const DEFAULT_VIEW: NriMapView = { w: 240, h: 165 };
+const MIN_ZOOM_W = 56;
+
+function sortedZones(zones: NriMapZone[]): NriMapZone[] {
+  return [...zones].sort((a, b) => {
+    const la = LAYER_ORDER[a.zoneType] ?? 3;
+    const lb = LAYER_ORDER[b.zoneType] ?? 3;
+    return la - lb || a.sortOrder - b.sortOrder;
+  });
+}
+
+function clampViewBox(vb: ViewBox, mapView: NriMapView): ViewBox {
+  const w = Math.min(mapView.w, Math.max(MIN_ZOOM_W, vb.w));
+  const h = (w / mapView.w) * mapView.h;
+  return {
+    w,
+    h,
+    x: Math.max(0, Math.min(mapView.w - w, vb.x)),
+    y: Math.max(0, Math.min(mapView.h - h, vb.y)),
+  };
+}
+
+function zoneLabelLines(z: NriMapZone): string[] {
+  if (z.zoneType === 'corp') {
+    const label = z.corpName || z.name;
+    const parts = label.split(' ');
+    return parts.length > 1 ? [parts[0], parts.slice(1).join(' ')] : [label];
+  }
+  if (['park', 'mid', 'slum', 'industrial'].includes(z.zoneType)) {
+    const words = z.name.split(' ');
+    if (words.length <= 2) return [z.name];
+    const mid = Math.ceil(words.length / 2);
+    return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+  }
+  return [];
+}
+
+function zoneMega(z: NriMapZone): string | null {
+  return z.megaDistrict ?? megaFromZoneKey(z.zoneKey);
+}
+
+export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUserId }) => {
+  const { token } = useAuth();
+  const authToken = readNeonAuthToken() ?? token;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef({
+    active: false,
+    moved: false,
+    sx: 0,
+    sy: 0,
+    vbx: 0,
+    vby: 0,
+  });
+
+  const [mapView, setMapView] = useState<NriMapView>(DEFAULT_VIEW);
+  const [zones, setZones] = useState<NriMapZone[]>([]);
+  const [markers, setMarkers] = useState<NriMapMarker[]>([]);
+  const [placeMode, setPlaceMode] = useState(false);
+  const [selected, setSelected] = useState<NriMapMarker | null>(null);
+  const [draft, setDraft] = useState<{ x: number; y: number; label: string; blurb: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [hoverZone, setHoverZone] = useState<NriMapZone | null>(null);
+  const [focusZone, setFocusZone] = useState<NriMapZone | null>(null);
+  const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 0, w: DEFAULT_VIEW.w, h: DEFAULT_VIEW.h });
+  const [editName, setEditName] = useState('');
+  const [editMega, setEditMega] = useState('');
+  const [editCorp, setEditCorp] = useState('');
+  const [editPois, setEditPois] = useState('');
+  const [panning, setPanning] = useState(false);
+
+  const refreshMarkers = useCallback(async () => {
+    if (!authToken) return;
+    const list = await nriFetchMapMarkers(authToken, inviteCode);
+    if (list) setMarkers(list);
+  }, [authToken, inviteCode]);
+
+  const refreshZones = useCallback(async () => {
+    if (!authToken) return;
+    const data = await nriFetchMapZones(authToken, inviteCode);
+    if (!data) return;
+    setZones(data.zones);
+    setMapView(data.view);
+    setViewBox({ x: 0, y: 0, w: data.view.w, h: data.view.h });
+    setFocusZone(null);
+  }, [authToken, inviteCode]);
+
+  useEffect(() => {
+    refreshZones();
+    refreshMarkers();
+    const t = setInterval(refreshMarkers, 5000);
+    return () => clearInterval(t);
+  }, [refreshZones, refreshMarkers]);
+
+  useEffect(() => {
+    if (!hoverZone) {
+      setEditName('');
+      setEditMega('');
+      setEditCorp('');
+      setEditPois('');
+      return;
+    }
+    setEditName(hoverZone.name);
+    setEditMega(zoneMega(hoverZone) ?? '');
+    setEditCorp(hoverZone.corpName ?? '');
+    setEditPois(hoverZone.pois?.join(', ') ?? '');
+  }, [hoverZone?.zoneKey, hoverZone?.name, hoverZone?.corpName, hoverZone?.pois, hoverZone?.megaDistrict]);
+
+  const isZoomedIn = viewBox.w < mapView.w - 1 || viewBox.x > 0.5 || viewBox.y > 0.5;
+
+  const clickToPercent = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const local = pt.matrixTransform(ctm.inverse());
+    return {
+      x: (local.x / mapView.w) * 100,
+      y: (local.y / mapView.h) * 100,
+    };
+  };
+
+  const onSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (panRef.current.moved) return;
+    if (placeMode) {
+      const pos = clickToPercent(e);
+      if (!pos) return;
+      setDraft({ x: pos.x, y: pos.y, label: '', blurb: '' });
+      setSelected(null);
+    }
+  };
+
+  const zoomAt = (factor: number, clientX?: number, clientY?: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    setViewBox((vb) => {
+      const nw = Math.min(mapView.w, Math.max(MIN_ZOOM_W, vb.w * factor));
+      const nh = (nw / mapView.w) * mapView.h;
+      let anchorX = vb.x + vb.w / 2;
+      let anchorY = vb.y + vb.h / 2;
+      if (clientX != null && clientY != null) {
+        const pt = svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const ctm = svg.getScreenCTM();
+        if (ctm) {
+          const local = pt.matrixTransform(ctm.inverse());
+          anchorX = local.x;
+          anchorY = local.y;
+        }
+      }
+      const ratioX = (anchorX - vb.x) / vb.w;
+      const ratioY = (anchorY - vb.y) / vb.h;
+      return clampViewBox(
+        {
+          w: nw,
+          h: nh,
+          x: anchorX - nw * ratioX,
+          y: anchorY - nh * ratioY,
+        },
+        mapView
+      );
+    });
+  };
+
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    zoomAt(e.deltaY > 0 ? 1.1 : 0.9, e.clientX, e.clientY);
+  };
+
+  const resetView = () => {
+    setViewBox({ x: 0, y: 0, w: mapView.w, h: mapView.h });
+    setFocusZone(null);
+  };
+
+  const zoomToZone = (z: NriMapZone) => {
+    const pad = Math.max(4, Math.min(z.w, z.h) * 0.2);
+    setViewBox(
+      clampViewBox(
+        {
+          x: z.x - pad,
+          y: z.y - pad,
+          w: z.w + pad * 2,
+          h: z.h + pad * 2,
+        },
+        mapView
+      )
+    );
+    setFocusZone(z);
+    setHoverZone(z);
+  };
+
+  const onZoneClick = (z: NriMapZone, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (panRef.current.moved || placeMode) return;
+    if (z.zoneType === 'highway' || z.zoneType === 'tunnel') return;
+    zoomToZone(z);
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (placeMode || e.button !== 0) return;
+    panRef.current = {
+      active: true,
+      moved: false,
+      sx: e.clientX,
+      sy: e.clientY,
+      vbx: viewBox.x,
+      vby: viewBox.y,
+    };
+    setPanning(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!panRef.current.active || !svgRef.current) return;
+    const dx = e.clientX - panRef.current.sx;
+    const dy = e.clientY - panRef.current.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 3) panRef.current.moved = true;
+    const rect = svgRef.current.getBoundingClientRect();
+    const scaleX = viewBox.w / rect.width;
+    const scaleY = viewBox.h / rect.height;
+    setViewBox((vb) =>
+      clampViewBox(
+        {
+          ...vb,
+          x: panRef.current.vbx - dx * scaleX,
+          y: panRef.current.vby - dy * scaleY,
+        },
+        mapView
+      )
+    );
+  };
+
+  const endPan = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!panRef.current.active) return;
+    panRef.current.active = false;
+    setPanning(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    window.setTimeout(() => {
+      panRef.current.moved = false;
+    }, 0);
+  };
+
+  const saveMarker = async () => {
+    if (!authToken || !draft?.label.trim()) return;
+    setBusy(true);
+    setErr(null);
+    const res = await nriCreateMapMarker(authToken, inviteCode, {
+      label: draft.label.trim(),
+      blurb: draft.blurb.trim() || undefined,
+      x: draft.x,
+      y: draft.y,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setDraft(null);
+    setPlaceMode(false);
+    await refreshMarkers();
+  };
+
+  const removeMarker = async (id: string) => {
+    if (!authToken || !window.confirm('Удалить метку?')) return;
+    setBusy(true);
+    await nriDeleteMapMarker(authToken, inviteCode, id);
+    setBusy(false);
+    setSelected(null);
+    await refreshMarkers();
+  };
+
+  const saveZoneEdits = async () => {
+    if (!authToken || !hoverZone) return;
+    const payload: {
+      name?: string;
+      corpName?: string | null;
+      megaDistrict?: string;
+      pois?: string[];
+    } = {};
+    const name = editName.trim();
+    const mega = editMega.trim();
+    const corp = editCorp.trim();
+    const pois = editPois
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const curMega = zoneMega(hoverZone);
+
+    if (name && name !== hoverZone.name) payload.name = name;
+    if (mega && mega !== curMega) payload.megaDistrict = mega;
+    if (hoverZone.zoneType === 'corp' && corp !== (hoverZone.corpName ?? '')) {
+      payload.corpName = corp || null;
+    }
+    const curPois = hoverZone.pois ?? [];
+    if (pois.join('\0') !== curPois.join('\0')) payload.pois = pois;
+
+    if (Object.keys(payload).length === 0) return;
+
+    setBusy(true);
+    setErr(null);
+    const res = await nriPatchMapZone(authToken, inviteCode, hoverZone.zoneKey, payload);
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    if (payload.megaDistrict) {
+      const data = await nriFetchMapZones(authToken, inviteCode);
+      if (data) {
+        setZones(data.zones);
+        const hit = data.zones.find((z) => z.zoneKey === hoverZone.zoneKey) ?? res.zone;
+        setHoverZone(hit);
+        if (focusZone?.zoneKey === hit.zoneKey) setFocusZone(hit);
+      }
+    } else {
+      setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
+      setHoverZone(res.zone);
+    }
+    if (focusZone?.zoneKey === res.zone.zoneKey) setFocusZone(res.zone);
+  };
+
+  const zoneEditsDirty =
+    !!hoverZone &&
+    (editName.trim() !== hoverZone.name ||
+      editMega.trim() !== (zoneMega(hoverZone) ?? '') ||
+      (hoverZone.zoneType === 'corp' && editCorp.trim() !== (hoverZone.corpName ?? '')) ||
+      editPois
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .join('\0') !== (hoverZone.pois ?? []).join('\0'));
+
+  const districtList = sortedZones(zones);
+  const megaMarks = useMemo(() => {
+    const defaults = getMegaWatermarks();
+    const byKey = new Map<string, string>();
+    for (const z of zones) {
+      const mk = megaKeyFromZoneKey(z.zoneKey);
+      const label = z.megaDistrict ?? megaFromZoneKey(z.zoneKey);
+      if (mk && label) byKey.set(mk, label);
+    }
+    return defaults.map((m) => ({ ...m, megaLabel: byKey.get(m.megaKey) ?? m.megaLabel }));
+  }, [zones]);
+  const typeLabel = hoverZone
+    ? DISTRICT_TYPE_LABELS[hoverZone.zoneType as NightCityDistrictType] ?? hoverZone.zoneType
+    : '';
+
+  return (
+    <div className="nri-city-map">
+      <header className="nri-city-map__head">
+        <MapPin size={18} />
+        <div>
+          <h2 className="nri-city-map__title">Найт-Сити · Carbon 2185</h2>
+          <p className="mono-text opacity-70">
+            Шесть мегарайонов в духе CP2077. Колёсико — зум · ЛКМ — сдвиг · клик — приблизить.
+            {isHost ? ' Мастер может переименовать любой район и точки интереса.' : ''}
+          </p>
+        </div>
+        <div className="nri-city-map__toolbar">
+          {isZoomedIn && (
+            <button type="button" className="nri-modal__submit" onClick={resetView}>
+              <ArrowLeft size={14} /> Общая карта
+            </button>
+          )}
+          <button type="button" className="nri-lobby__close" title="Приблизить" onClick={() => zoomAt(0.82)}>
+            <Plus size={14} />
+          </button>
+          <button type="button" className="nri-lobby__close" title="Отдалить" onClick={() => zoomAt(1.12)}>
+            <Minus size={14} />
+          </button>
+          <button type="button" className="nri-lobby__close" title="Сбросить" onClick={resetView}>
+            <RotateCcw size={14} />
+          </button>
+          <button
+            type="button"
+            className={`nri-modal__submit ${placeMode ? 'active' : ''} ${!isHost ? 'nri-city-map__place-player' : ''}`}
+            onClick={() => {
+              setPlaceMode((v) => !v);
+              setDraft(null);
+            }}
+          >
+            <Plus size={14} /> {placeMode ? 'Метки: ВКЛ' : 'Ставить метку'}
+          </button>
+        </div>
+      </header>
+
+      {err && <p className="nri-lobby__err mono-text">{err}</p>}
+
+      <div className="nri-city-map__hover-slot" aria-live="polite">
+        {hoverZone ? (
+          <>
+            <p className="mono-text nri-city-map__hover">
+              {zoneMega(hoverZone) && <span className="nri-city-map__mega-tag">{zoneMega(hoverZone)}</span>}
+              <strong>{hoverZone.name}</strong> · {typeLabel}
+              {hoverZone.locked && ' · доступ только корпам'}
+              {hoverZone.corpName && ` · ${hoverZone.corpName}`}
+              {hoverZone.pois?.length ? ` · ${hoverZone.pois.join(', ')}` : ''}
+            </p>
+            {isHost && hoverZone && (
+              <div className="nri-city-map__zone-edit">
+                <label className="nri-city-map__zone-field mono-text">
+                  <span>Название</span>
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} />
+                </label>
+                {megaKeyFromZoneKey(hoverZone.zoneKey) && (
+                  <label className="nri-city-map__zone-field mono-text">
+                    <span>Мегарайон</span>
+                    <input
+                      value={editMega}
+                      onChange={(e) => setEditMega(e.target.value)}
+                      title="Меняет подпись для всего мегарайона"
+                    />
+                  </label>
+                )}
+                {hoverZone.zoneType === 'corp' && (
+                  <label className="nri-city-map__zone-field mono-text">
+                    <span>Корпорация</span>
+                    <input value={editCorp} onChange={(e) => setEditCorp(e.target.value)} />
+                  </label>
+                )}
+                <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--wide">
+                  <span>Места (через запятую)</span>
+                  <input
+                    value={editPois}
+                    onChange={(e) => setEditPois(e.target.value)}
+                    placeholder="бар, рынок, засада…"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="nri-modal__submit"
+                  disabled={busy || !zoneEditsDirty || !editName.trim()}
+                  onClick={saveZoneEdits}
+                >
+                  Сохранить
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="mono-text nri-city-map__hover nri-city-map__hover--empty">
+            Наведите на квартал или кликните, чтобы приблизить
+          </p>
+        )}
+      </div>
+
+      <div className="nri-city-map__chassis">
+        <span className="nri-city-map__corner nri-city-map__corner--tl" />
+        <span className="nri-city-map__corner nri-city-map__corner--tr" />
+        <span className="nri-city-map__corner nri-city-map__corner--bl" />
+        <span className="nri-city-map__corner nri-city-map__corner--br" />
+        <div
+          className={`nri-city-map__wrap ${panning ? 'nri-city-map__wrap--panning' : ''} ${placeMode ? 'nri-city-map__wrap--place' : ''}`}
+          ref={wrapRef}
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endPan}
+          onPointerCancel={endPan}
+        >
+          <svg
+            ref={svgRef}
+            className="nri-city-map__svg"
+            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+            onClick={onSvgClick}
+          >
+            <defs>
+              <pattern id="nc-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(0,255,255,0.06)" strokeWidth="0.15" />
+              </pattern>
+              <filter id="nc-glow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="0.8" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <rect className="nri-city-map__bg" x={0} y={0} width={mapView.w} height={mapView.h} />
+            <rect className="nri-city-map__grid" x={0} y={0} width={mapView.w} height={mapView.h} fill="url(#nc-grid)" />
+            {megaMarks.map((m) => (
+              <text
+                key={m.megaKey}
+                x={m.x}
+                y={m.y}
+                className="nri-city-map__mega-watermark"
+                textAnchor="middle"
+              >
+                {m.megaLabel}
+              </text>
+            ))}
+            {districtList.map((z) => {
+              const lines = zoneLabelLines(z);
+              const showFo =
+                lines.length > 0 &&
+                ['park', 'corp', 'mid', 'slum', 'industrial'].includes(z.zoneType) &&
+                z.w > 8 &&
+                z.h > 5;
+              const isFocused = focusZone?.zoneKey === z.zoneKey;
+              return (
+                <g
+                  key={z.zoneKey}
+                  className={`nri-city-map__zone-g ${isFocused ? 'focused' : ''}`}
+                  onMouseEnter={() => setHoverZone(z)}
+                  onMouseLeave={() => setHoverZone((prev) => (prev?.zoneKey === z.zoneKey ? null : prev))}
+                  onClick={(e) => onZoneClick(z, e)}
+                >
+                  <rect
+                    x={z.x}
+                    y={z.y}
+                    width={z.w}
+                    height={z.h}
+                    className={`nri-city-map__zone nri-city-map__zone--${z.zoneType}${z.locked ? ' locked' : ''}`}
+                    rx={z.zoneType === 'corp' ? 1.2 : z.zoneType === 'park' ? 1 : 0.4}
+                    filter={isFocused || hoverZone?.zoneKey === z.zoneKey ? 'url(#nc-glow)' : undefined}
+                  />
+                  {showFo && (
+                    <foreignObject
+                      x={z.x + 0.3}
+                      y={z.y + 0.3}
+                      width={Math.max(0, z.w - 0.6)}
+                      height={Math.max(0, z.h - 0.6)}
+                      className="nri-city-map__fo"
+                    >
+                      <div
+                        xmlns="http://www.w3.org/1999/xhtml"
+                        className={`nri-city-map__fo-label nri-city-map__fo-label--${z.zoneType}`}
+                      >
+                        {lines.map((line) => (
+                          <span key={line}>{line}</span>
+                        ))}
+                      </div>
+                    </foreignObject>
+                  )}
+                  {z.zoneType === 'corp' && z.h > 6 && (
+                    <line
+                      x1={z.x + z.w * 0.05}
+                      y1={z.y + z.h * 0.52}
+                      x2={z.x + z.w * 0.95}
+                      y2={z.y + z.h * 0.52}
+                      className="nri-city-map__tunnel-line"
+                    />
+                  )}
+                  {z.zoneType === 'slum' && z.pois?.length && z.h > 7 && (
+                    <text x={z.x + z.w / 2} y={z.y + z.h - 1} className="nri-city-map__poi">
+                      {z.pois.slice(0, 2).join(' · ')}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+            {markers.map((m) => {
+              const px = (m.x / 100) * mapView.w;
+              const py = (m.y / 100) * mapView.h;
+              const isHostMarker = m.kind === 'host';
+              return (
+                <g
+                  key={m.id}
+                  className={`nri-city-map__marker nri-city-map__marker--${isHostMarker ? 'host' : 'player'} ${selected?.id === m.id ? 'selected' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelected(m);
+                    setDraft(null);
+                  }}
+                >
+                  {isHostMarker ? (
+                    <circle cx={px} cy={py} r={2.2} />
+                  ) : (
+                    <polygon
+                      points={`${px},${py - 2.6} ${px + 2.2},${py} ${px},${py + 2.6} ${px - 2.2},${py}`}
+                    />
+                  )}
+                  <text x={px} y={py - 3.6} textAnchor="middle">
+                    {m.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+
+      {draft && (
+        <div className="nri-city-map__draft">
+          <h4 className="mono-text">Новая метка</h4>
+          <label className="nri-modal__field">
+            <span>Подпись</span>
+            <input
+              value={draft.label}
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+              placeholder="Встреча, засада, NPC…"
+              autoFocus
+            />
+          </label>
+          <label className="nri-modal__field">
+            <span>Заметка (опционально)</span>
+            <textarea
+              rows={2}
+              value={draft.blurb}
+              onChange={(e) => setDraft({ ...draft, blurb: e.target.value })}
+            />
+          </label>
+          <div className="nri-presets__actions">
+            <button type="button" className="nri-lobby__close" onClick={() => setDraft(null)}>
+              Отмена
+            </button>
+            <button type="button" className="nri-modal__submit" disabled={busy || !draft.label.trim()} onClick={saveMarker}>
+              Поставить
+            </button>
+          </div>
+        </div>
+      )}
+
+      {selected && (
+        <div className="nri-city-map__selected mono-text">
+          <strong>{selected.label}</strong>
+          <p className="opacity-70">
+            {selected.kind === 'host' ? 'Метка мастера' : 'Метка игрока'}
+            {selected.ownerName ? ` · ${selected.ownerName}` : ''}
+          </p>
+          {selected.blurb && <p className="opacity-70">{selected.blurb}</p>}
+          {(isHost || (selected.ownerUserId != null && selected.ownerUserId === currentUserId)) && (
+            <button type="button" className="nri-lobby__close" disabled={busy} onClick={() => removeMarker(selected.id)}>
+              <Trash2 size={14} /> Удалить метку
+            </button>
+          )}
+        </div>
+      )}
+
+      <ul className="nri-city-map__legend">
+        <li><span className="swatch marker-host" /> Метка мастера</li>
+        <li><span className="swatch marker-player" /> Метка игрока</li>
+        <li><span className="swatch corp" /> Корп-квартал</li>
+        <li><span className="swatch mid" /> Средний класс</li>
+        <li><span className="swatch slum" /> Трущобы</li>
+        <li><span className="swatch industrial" /> Промзоны</li>
+        <li><span className="swatch park" /> Парки</li>
+        <li><span className="swatch highway" /> Магистрали</li>
+        <li><span className="swatch tunnel" /> Корп-тоннели</li>
+      </ul>
+    </div>
+  );
+};

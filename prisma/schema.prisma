@@ -33,6 +33,7 @@ model NriSession {
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   status     String   @default("open")
   spamBotEnabled Boolean @default(false)
+  spamPausedUntil DateTime?
   createdAt  DateTime @default(now())
   players    NriPlayer[]
   members    NriSessionMember[]
@@ -40,6 +41,7 @@ model NriSession {
   presets    NriPresetCharacter[]
   npcs       NriNpc[]
   cyberProducts NriCyberProduct[]
+  mapMarkers NriMapMarker[]
 }
 
 model NriSessionMember {
@@ -84,6 +86,7 @@ model NriPresetCharacter {
   inventory       Json       @default("[]")
   sheet           Json?
   portraitUrl     String?
+  publishedToPlayers Boolean @default(false)
   sortOrder       Int        @default(0)
   claimedByUserId String?
   createdAt       DateTime   @default(now())
@@ -122,6 +125,41 @@ model NriCyberProduct {
   updatedAt   DateTime   @updatedAt
 
   @@index([sessionId, inShop])
+}
+
+/** Метки на карте мегаполиса (Night City) — мастер и игроки. */
+model NriMapMarker {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  ownerUserId String?
+  label       String
+  blurb       String?
+  x           Float
+  y           Float
+  /** host | player (legacy: pin → host) */
+  kind        String     @default("player")
+  createdAt   DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([sessionId, ownerUserId])
+}
+
+/** Районы карты Night City — названия и геометрия (редактируемые). */
+model NriMapZone {
+  zoneKey   String   @id
+  sortOrder Int      @default(0)
+  name      String
+  zoneType  String
+  x         Float
+  y         Float
+  w         Float
+  h         Float
+  corpName      String?
+  megaDistrict  String?
+  locked        Boolean  @default(false)
+  pois      Json?
+  updatedAt DateTime @updatedAt
 }
 
 model NriVaultFile {

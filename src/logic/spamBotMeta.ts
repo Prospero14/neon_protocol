@@ -11,6 +11,12 @@ export type ChatParticipant = {
   isHost?: boolean;
 };
 
+export function spamMessageVariant(text: string): number {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h + text.charCodeAt(i) * 11) % 5;
+  return h;
+}
+
 export function spamBotParticipant(userId = 'spam-bot'): ChatParticipant {
   return {
     userId,

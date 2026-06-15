@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Megaphone, Skull, User, Users, UserCircle, XCircle, ScrollText } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -10,28 +10,42 @@ import {
   nriFetchRoster,
   nriFetchState,
   nriFetchVault,
+  nriFetchNpcs,
   nriSavePlayer,
   nriSetSpamBot,
+  nriFetchWallet,
+  nriPayAntispam,
   type NriMember,
   type NriPlayerProfile,
   type NriSessionInfo,
   type NriVaultFile,
+  type NriNpc,
+  type NriRosterPlayer,
+  type NriWalletInfo,
 } from '../logic/nriApi';
+import {
+  archetypeForClass,
+  activityForClass,
+  buildFullCharacter,
+} from '../logic/nriCharacterGen';
+import type { NriClassId } from '../logic/nriClasses';
 import { chatFetchParticipants } from '../logic/chatApi';
 import { NeonChatPanel } from './services/NeonChatPanel';
 import GibsonIceHack from './games/GibsonIceHack';
 import { NriJoinProfileModal } from './NriJoinProfileModal';
 import { NriCharacterSheet } from './NriCharacterSheet';
-import { NriCharactersPanel } from './NriCharactersPanel';
+import { NriPeopleHub, type PeopleSection } from './NriPeopleHub';
 import { NriVaultTab, type VaultRecipient } from './NriVaultTab';
 import { NriRulesPanel } from './NriRulesPanel';
-import { NriPresetsPanel } from './NriPresetsPanel';
-import { NriNpcsPanel } from './NriNpcsPanel';
 import { NriCyberPanel } from './NriCyberPanel';
+import { NriInventoryPanel } from './NriInventoryPanel';
+import { NriWalletPanel } from './NriWalletPanel';
+import { NriCityMapPanel } from './NriCityMapPanel';
 
+import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
 
-type Tab = 'chat' | 'ice' | 'vault' | 'presets' | 'chars' | 'npcs' | 'cyber';
+type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map';
 
 type Props = {
   inviteCode: string;
@@ -40,7 +54,7 @@ type Props = {
 };
 
 export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward }) => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [session, setSession] = useState<NriSessionInfo | null>(null);
   const [members, setMembers] = useState<NriMember[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -55,9 +69,15 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     id: string;
     name: string;
     imageUrl?: string | null;
+    archetype?: string;
   } | null>(null);
   const [vaultFiles, setVaultFiles] = useState<NriVaultFile[]>([]);
   const [vaultRecipients, setVaultRecipients] = useState<VaultRecipient[]>([]);
+  const [tableNpcs, setTableNpcs] = useState<NriNpc[]>([]);
+  const [roster, setRoster] = useState<NriRosterPlayer[]>([]);
+  const [walletInfo, setWalletInfo] = useState<NriWalletInfo | null>(null);
+  const [antispamBusy, setAntispamBusy] = useState(false);
+  const [peopleSection, setPeopleSection] = useState<PeopleSection>('chars');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const authToken = readNeonAuthToken() ?? token;
@@ -96,6 +116,18 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     setVaultRecipients([...byId.values()]);
   }, [authToken, session?.chatRoomId, inviteCode, members]);
 
+  const loadRoster = useCallback(async () => {
+    if (!authToken || !(session?.isHost || session?.isAdmin)) return;
+    const data = await nriFetchRoster(authToken, inviteCode);
+    if (data) setRoster(data);
+  }, [authToken, inviteCode, session?.isHost, session?.isAdmin]);
+
+  const loadTableNpcs = useCallback(async () => {
+    if (!authToken || !(session?.isHost || session?.isAdmin)) return;
+    const list = await nriFetchNpcs(authToken, inviteCode);
+    if (list) setTableNpcs(list);
+  }, [authToken, inviteCode, session?.isHost, session?.isAdmin]);
+
   const refresh = useCallback(async () => {
     if (!authToken) return;
     const data = await nriFetchState(authToken, inviteCode);
@@ -111,8 +143,9 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     }
     if (data.session.isHost || data.session.isAdmin) {
       await loadVault();
+      await loadTableNpcs();
     }
-  }, [authToken, inviteCode, loadVault]);
+  }, [authToken, inviteCode, loadVault, loadTableNpcs]);
 
   useEffect(() => {
     refresh();
@@ -127,6 +160,39 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     nriFetchPlayer(authToken, inviteCode).then(setProfile);
   }, [authToken, inviteCode]);
 
+  const loadWalletHint = useCallback(async () => {
+    if (!authToken || session?.isHost || !session?.spamBotEnabled) {
+      setWalletInfo(null);
+      return;
+    }
+    const w = await nriFetchWallet(authToken, inviteCode);
+    if (w) setWalletInfo(w);
+  }, [authToken, inviteCode, session?.isHost, session?.spamBotEnabled]);
+
+  useEffect(() => {
+    if (tab !== 'chat') return;
+    loadWalletHint();
+    const t = setInterval(loadWalletHint, 8000);
+    return () => clearInterval(t);
+  }, [tab, loadWalletHint]);
+
+  const payAntispamFromChat = async () => {
+    if (!authToken || antispamBusy) return;
+    setAntispamBusy(true);
+    const res = await nriPayAntispam(authToken, inviteCode);
+    setAntispamBusy(false);
+    if (res.ok) {
+      if (profile) {
+        setProfile({
+          ...profile,
+          sheet: { ...(parseNriSheet(profile.sheet) ?? {}), wonlongs: res.wonlongs },
+        });
+      }
+      await refresh();
+      await loadWalletHint();
+    }
+  };
+
   const needsProfile = profile === null && session && !session.isHost;
 
   const saveProfile = async (
@@ -136,7 +202,20 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     if (!authToken) return;
     setProfileBusy(true);
     setProfileErr(null);
-    const saved = await nriSavePlayer(authToken, inviteCode, displayName, opts);
+    let sheet: unknown;
+    let inventory: unknown;
+    if (!opts.presetId && opts.classId) {
+      const built = buildFullCharacter({
+        classId: opts.classId as NriClassId,
+        originId: 'neo_tokyo',
+        activityId: activityForClass(opts.classId as NriClassId),
+        archetypeId: archetypeForClass(opts.classId as NriClassId),
+        characterName: displayName,
+      });
+      sheet = built.sheet;
+      inventory = [];
+    }
+    const saved = await nriSavePlayer(authToken, inviteCode, displayName, { ...opts, sheet, inventory });
     setProfileBusy(false);
     if (saved.ok) setProfile(saved.player);
     else setProfileErr(saved.error);
@@ -172,10 +251,28 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
       loadVault();
       loadRecipients();
     }
-    if (tab === 'chat' && (session?.isHost || session?.isAdmin)) {
+    if (tab === 'chat' && session?.chatRoomId) {
       loadRecipients();
+      if (session?.isHost || session?.isAdmin) loadTableNpcs();
     }
-  }, [tab, session?.isHost, session?.isAdmin, loadVault, loadRecipients]);
+    if (tab === 'inventory' && authToken) {
+      nriFetchPlayer(authToken, inviteCode).then((p) => {
+        if (p) setProfile(p);
+      });
+      if (session?.isHost || session?.isAdmin) loadRoster();
+    }
+  }, [
+    tab,
+    authToken,
+    inviteCode,
+    session?.chatRoomId,
+    session?.isHost,
+    session?.isAdmin,
+    loadVault,
+    loadRecipients,
+    loadTableNpcs,
+    loadRoster,
+  ]);
 
   const createVaultFile = async (payload: {
     title: string;
@@ -204,7 +301,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         {session.spamBotEnabled ? '■ SPAM-бот (стоп)' : '▶ SPAM-бот (реклама)'}
       </button>
       <span className="mono-text nri-host-tools__hint">
-        Участник @{SPAM_BOT_USERNAME} появится в чате и шлёт [РЕКЛАМА] ~каждые 9–16 сек.
+        Участник @{SPAM_BOT_USERNAME} появится в чате и шлёт [РЕКЛАМА] ~каждые 18–30 сек.
       </span>
     </div>
   ) : null;
@@ -282,24 +379,33 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         <button type="button" className={tab === 'ice' ? 'active' : ''} onClick={() => setTab('ice')}>
           <Skull size={14} /> ICE RUN
         </button>
+        {session && (
+          <button type="button" className={tab === 'map' ? 'active' : ''} onClick={() => setTab('map')}>
+            <Map size={14} /> КАРТА
+          </button>
+        )}
+        {(profile || session?.isHost) && (
+          <button type="button" className={tab === 'wallet' ? 'active' : ''} onClick={() => setTab('wallet')}>
+            <Coins size={14} /> КОШЕЛЁК
+          </button>
+        )}
+        {(profile || session?.isHost) && (
+          <button type="button" className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>
+            <Package size={14} /> ИНВЕНТАРЬ
+          </button>
+        )}
         {(session?.isHost || session?.isAdmin) && (
           <button type="button" className={tab === 'vault' ? 'active' : ''} onClick={() => setTab('vault')}>
             <FileArchive size={14} /> ФАЙЛОХРАНИЛИЩЕ
           </button>
         )}
         {(session?.isHost || session?.isAdmin) && (
-          <button type="button" className={tab === 'presets' ? 'active' : ''} onClick={() => setTab('presets')}>
+          <button
+            type="button"
+            className={tab === 'people' ? 'active' : ''}
+            onClick={() => setTab('people')}
+          >
             <UserCircle size={14} /> ПЕРСОНАЖИ
-          </button>
-        )}
-        {(session?.isHost || session?.isAdmin) && (
-          <button type="button" className={tab === 'chars' ? 'active' : ''} onClick={() => setTab('chars')}>
-            <ScrollText size={14} /> ЧАРНИКИ
-          </button>
-        )}
-        {(session?.isHost || session?.isAdmin) && (
-          <button type="button" className={tab === 'npcs' ? 'active' : ''} onClick={() => setTab('npcs')}>
-            <Users size={14} /> НПС
           </button>
         )}
         {(session?.isHost || session?.isAdmin) && (
@@ -321,11 +427,66 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onRoomSpamToggle={session.isHost ? toggleSpamBot : undefined}
             canToggleRoomSpam={!!session.isHost}
             speakAsNpc={speakAsNpc}
-            dmRecipients={vaultRecipients}
+            onSpeakAsNpcChange={session.isHost ? setSpeakAsNpc : undefined}
+            isTableHost={!!session.isHost}
+            hostLabel={user?.username ? `@${user.username} (мастер)` : 'Мастер'}
+            npcSpeakers={tableNpcs.map((n) => ({
+              id: n.id,
+              name: n.name,
+              imageUrl: n.imageUrl,
+              archetype: parseNriSheet(n.sheet)?.npcArchetype,
+            }))}
+            dmRecipients={vaultRecipients.filter((r) => r.userId !== user?.id)}
             nriInviteCode={inviteCode}
+            roomSpamPaused={!!session.spamPausedActive}
+            spamPausedUntil={session.spamPausedUntil ?? walletInfo?.spamPausedUntil}
+            antispamPrice={walletInfo?.antispamPrice}
+            playerWonlongs={walletInfo?.wonlongs}
+            onPayAntispam={!session.isHost && session.spamBotEnabled ? payAntispamFromChat : undefined}
+            antispamBusy={antispamBusy}
+            onOpenWallet={() => setTab('wallet')}
           />
         )}
-        {tab === 'ice' && <GibsonIceHack onFinish={onIceReward} />}
+        {tab === 'ice' && (
+          <GibsonIceHack
+            onFinish={onIceReward}
+            nriInviteCode={inviteCode}
+            onOpenInventory={() => setTab('inventory')}
+          />
+        )}
+        {tab === 'map' && session && user && (
+          <NriCityMapPanel inviteCode={inviteCode} isHost={!!session.isHost} currentUserId={user.id} />
+        )}
+        {tab === 'wallet' && session && (
+          <NriWalletPanel
+            inviteCode={inviteCode}
+            profile={
+              profile ?? {
+                displayName: session.hostUsername ?? 'Мастер',
+                classId: 'fixer',
+              }
+            }
+            session={session}
+            isHost={!!session.isHost}
+            onProfileUpdate={(p) => setProfile(p)}
+            onSessionRefresh={refresh}
+          />
+        )}
+        {tab === 'inventory' && (profile || session?.isHost) && (
+          <NriInventoryPanel
+            inviteCode={inviteCode}
+            profile={
+              profile ?? {
+                displayName: session?.hostUsername ?? 'Мастер',
+                classId: 'fixer',
+                inventory: [],
+              }
+            }
+            isHost={!!session?.isHost}
+            roster={roster}
+            onProfileUpdate={(p) => setProfile(p)}
+          />
+        )}
         {tab === 'vault' && (session?.isHost || session?.isAdmin) && session.chatRoomId && (
           <NriVaultTab
             files={vaultFiles}
@@ -334,15 +495,11 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             recipients={vaultRecipients}
           />
         )}
-        {tab === 'presets' && (session?.isHost || session?.isAdmin) && (
-          <NriPresetsPanel inviteCode={inviteCode} />
-        )}
-        {tab === 'chars' && (session?.isHost || session?.isAdmin) && (
-          <NriCharactersPanel inviteCode={inviteCode} />
-        )}
-        {tab === 'npcs' && (session?.isHost || session?.isAdmin) && (
-          <NriNpcsPanel
+        {tab === 'people' && (session?.isHost || session?.isAdmin) && (
+          <NriPeopleHub
             inviteCode={inviteCode}
+            section={peopleSection}
+            onSectionChange={setPeopleSection}
             selectedNpcId={speakAsNpc?.id ?? null}
             onSelectNpc={setSpeakAsNpc}
             onOpenChat={() => setTab('chat')}

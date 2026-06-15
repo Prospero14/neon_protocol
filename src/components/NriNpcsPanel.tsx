@@ -1,31 +1,55 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dices, Plus, Trash2, User } from 'lucide-react';
+import { Dices, Save, Trash2, User } from 'lucide-react';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 import { nriCreateNpc, nriDeleteNpc, nriFetchNpcs, type NriNpc } from '../logic/nriApi';
 import { NRI_CLASSES, type NriClassId } from '../logic/nriClasses';
-import { buildSheetForClass, rollNpcName, type NriSheetData } from '../logic/nriNpcGenerator';
+import {
+  applyMetaToSheet,
+  buildFullCharacter,
+  NRI_ACTIVITIES,
+  NRI_NPC_ARCHETYPES,
+  NRI_ORIGINS,
+  type CharacterMetaDraft,
+  type NriActivityId,
+  type NriNpcArchetypeId,
+  type NriOriginId,
+} from '../logic/nriCharacterGen';
+import { rollNpcName, parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
+import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheetContent } from './NriCharacterSheetContent';
 
 type Props = {
   inviteCode: string;
+  mode?: 'full' | 'list' | 'gen';
   selectedNpcId: string | null;
-  onSelectNpc: (npc: { id: string; name: string; imageUrl: string | null } | null) => void;
+  onSelectNpc: (npc: { id: string; name: string; imageUrl?: string | null; archetype?: string } | null) => void;
   onOpenChat?: () => void;
 };
 
-export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSelectNpc, onOpenChat }) => {
+export const NriNpcsPanel: React.FC<Props> = ({
+  inviteCode,
+  mode = 'full',
+  selectedNpcId,
+  onSelectNpc,
+  onOpenChat,
+}) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [npcs, setNpcs] = useState<NriNpc[]>([]);
-  const [name, setName] = useState('');
+  const [archetypeId, setArchetypeId] = useState<NriNpcArchetypeId>('civilian');
+  const [originId, setOriginId] = useState<NriOriginId>('neo_tokyo');
+  const [activityId, setActivityId] = useState<NriActivityId>('street');
   const [classId, setClassId] = useState<NriClassId>('merc');
+  const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [sheet, setSheet] = useState<NriSheetData | null>(null);
+  const [meta, setMeta] = useState<CharacterMetaDraft>({ originId: 'neo_tokyo', activityId: 'street', level: 1 });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
@@ -40,48 +64,65 @@ export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSel
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 5000);
+    const t = setInterval(refresh, 8000);
     return () => clearInterval(t);
   }, [refresh]);
 
-  const rollSheet = () => {
-    setSheet(buildSheetForClass(classId));
+  const pickArchetype = (id: NriNpcArchetypeId) => {
+    setArchetypeId(id);
+    const arch = NRI_NPC_ARCHETYPES.find((a) => a.id === id);
+    if (arch?.defaultClass) setClassId(arch.defaultClass);
+  };
+
+  const generatePreview = () => {
+    const built = buildFullCharacter({
+      classId,
+      originId,
+      activityId,
+      archetypeId,
+      characterName: name.trim() || undefined,
+    });
+    setSheet(built.sheet);
+    setMeta({ ...built.meta, npcArchetypeId: archetypeId });
+    if (!name.trim()) setName(built.meta.characterName);
+    setShowPreview(true);
     setErr(null);
   };
 
-  const rollName = () => setName(rollNpcName());
-
-  const create = async (opts?: { autoName?: boolean; autoRoll?: boolean }) => {
+  const saveNpc = async () => {
     if (!authToken) return;
-    const npcName = opts?.autoName ? rollNpcName() : name.trim();
-    if (!npcName) {
-      setErr('Укажите имя НПС или нажмите «Сгенерировать и сохранить».');
+    if (!sheet || !showPreview) {
+      setErr('Сначала нажмите «Сгенерировать» и проверьте чарник.');
       return;
     }
-    const npcSheet = opts?.autoRoll || !sheet ? buildSheetForClass(classId) : sheet;
+    const npcName = (meta.characterName ?? name).trim();
+    if (!npcName) {
+      setErr('Укажите имя или сгенерируйте персонажа.');
+      return;
+    }
+    const base = sheet;
+    const finalSheet = applyMetaToSheet(base, { ...meta, characterName: npcName, npcArchetypeId: archetypeId });
     setBusy(true);
     setErr(null);
     const created = await nriCreateNpc(authToken, inviteCode, {
       name: npcName,
       classId,
       imageUrl: imageUrl.trim() || undefined,
-      sheet: npcSheet,
-      notes: notes.trim() || undefined,
+      sheet: finalSheet,
+      notes: notes.trim() || finalSheet.backstory || undefined,
     });
     setBusy(false);
     if (!created.ok) {
       setErr(created.error);
       return;
     }
-    if (opts?.autoName) setName(npcName);
-    else setName('');
+    setName('');
     setImageUrl('');
     setNotes('');
     setSheet(null);
+    setShowPreview(false);
     await refresh();
   };
-
-  const generateAndSave = () => create({ autoName: true, autoRoll: true });
 
   const remove = async (id: string) => {
     if (!authToken || !window.confirm('Удалить НПС?')) return;
@@ -93,31 +134,65 @@ export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSel
 
   return (
     <div className="nri-npcs">
+      {(mode === 'full' || mode === 'list') && (
       <header className="nri-chars__head">
         <h3 className="mono-text">НПС стола</h3>
         <p className="mono-text opacity-70">
-          «Сгенерировать и сохранить» — имя, статы 2d6+5 и запись в список. Или вручную: имя → статы → «Сохранить».
+          Список неигровых персонажей. Выберите — пишите в чат от их имени.
         </p>
       </header>
+      )}
 
+      {(mode === 'full' || mode === 'gen') && (
       <div className="nri-presets__form">
-        <label className="nri-modal__field">
-          <span>Имя НПС</span>
-          <div className="nri-presets__name-row">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Jackie Chow…" />
-            <button type="button" className="nri-lobby__copy" onClick={rollName} title="Случайное имя">
-              <Dices size={14} />
+        {mode === 'gen' && (
+          <header className="nri-chars__head nri-chars__head--compact">
+            <p className="mono-text opacity-70">
+              Параметры → <strong>Сгенерировать</strong> → проверьте лист → <strong>Сохранить НПС</strong>.
+            </p>
+          </header>
+        )}
+        {mode === 'full' && <h4 className="mono-text">1. Тип НПС</h4>}
+        {mode === 'gen' && <h4 className="mono-text">Тип НПС</h4>}
+        <div className="nri-class-grid nri-class-grid--compact">
+          {NRI_NPC_ARCHETYPES.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              className={`nri-class-card ${archetypeId === a.id ? 'active' : ''}`}
+              onClick={() => pickArchetype(a.id)}
+              title={a.blurb}
+            >
+              <strong>{a.label}</strong>
             </button>
-          </div>
-        </label>
-        <label className="nri-modal__field">
-          <span>Изображение (URL)</span>
-          <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
-        </label>
-        <label className="nri-modal__field">
-          <span>Заметки</span>
-          <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Red Pole, 16K Triad…" />
-        </label>
+          ))}
+        </div>
+
+        <h4 className="mono-text">2. Происхождение и деятельность</h4>
+        <div className="nri-meta-form__row">
+          <label className="nri-modal__field">
+            <span>Происхождение</span>
+            <select value={originId} onChange={(e) => setOriginId(e.target.value as NriOriginId)}>
+              {NRI_ORIGINS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="nri-modal__field">
+            <span>Деятельность</span>
+            <select value={activityId} onChange={(e) => setActivityId(e.target.value as NriActivityId)}>
+              {NRI_ACTIVITIES.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <h4 className="mono-text">3. Класс (C2185)</h4>
         <div className="nri-class-grid nri-class-grid--compact">
           {NRI_CLASSES.map((c) => (
             <button
@@ -130,26 +205,67 @@ export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSel
             </button>
           ))}
         </div>
+
+        <label className="nri-modal__field">
+          <span>Имя (опционально до генерации)</span>
+          <div className="nri-presets__name-row">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Случайное при генерации…" />
+            <button type="button" className="nri-lobby__copy" onClick={() => setName(rollNpcName())} title="Случайное имя">
+              <Dices size={14} />
+            </button>
+          </div>
+        </label>
+        <label className="nri-modal__field">
+          <span>Изображение (URL)</span>
+          <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
+        </label>
+
         <div className="nri-presets__actions">
-          <button type="button" className="nri-modal__submit" disabled={busy} onClick={generateAndSave}>
-            <Dices size={14} /> Сгенерировать и сохранить
+          <button type="button" className="nri-lobby__copy" disabled={busy} onClick={generatePreview}>
+            <Dices size={14} /> Сгенерировать
           </button>
-          <button type="button" className="nri-lobby__copy" onClick={rollSheet} disabled={busy}>
-            <Dices size={14} /> Только статы (2d6+5)
-          </button>
-          <button type="button" className="nri-lobby__copy" disabled={busy || !name.trim()} onClick={() => create()}>
-            <Plus size={14} /> Сохранить НПС
+          <button
+            type="button"
+            className="nri-modal__submit"
+            disabled={busy || !showPreview || !sheet}
+            onClick={saveNpc}
+            title={!showPreview ? 'Сначала сгенерируйте чарник' : 'Сохранить в список НПС'}
+          >
+            <Save size={14} /> Сохранить НПС
           </button>
         </div>
-        {sheet && (
-          <p className="mono-text opacity-70">
-            STR {sheet.abilities.STR} · DEX {sheet.abilities.DEX} · CON {sheet.abilities.CON} · INT {sheet.abilities.INT} · TEC{' '}
-            {sheet.abilities.TEC} · PEO {sheet.abilities.PEO} · HP {sheet.hpMax} · AC {sheet.ac}
-          </p>
+
+        {showPreview && sheet && (
+          <div className="nri-presets__wizard">
+            <h4 className="mono-text">Проверьте чарник перед сохранением</h4>
+            <NriCharacterMetaForm
+              meta={{ ...meta, originId, activityId, npcArchetypeId: archetypeId }}
+              sheet={sheet}
+              onChange={(m) => {
+                setMeta(m);
+                setSheet(applyMetaToSheet(sheet, m));
+              }}
+            />
+            <label className="nri-modal__field">
+              <span>Заметки мастера</span>
+              <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Фракция, крючок…" />
+            </label>
+            <NriCharacterSheetContent
+              profile={{
+                displayName: meta.characterName ?? name,
+                classId,
+                inventory: [],
+                sheet: applyMetaToSheet(sheet, meta),
+                portraitUrl: imageUrl || null,
+              }}
+            />
+          </div>
         )}
       </div>
+      )}
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
 
+      {(mode === 'full' || mode === 'list') && (
       <ul className="nri-npcs__list">
         {npcs.map((n) => {
           const open = expandedId === n.id;
@@ -164,7 +280,12 @@ export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSel
                     onSelectNpc(null);
                     return;
                   }
-                  onSelectNpc({ id: n.id, name: n.name, imageUrl: n.imageUrl });
+                  onSelectNpc({
+                    id: n.id,
+                    name: n.name,
+                    imageUrl: n.imageUrl,
+                    archetype: parseNriSheet(n.sheet)?.npcArchetype,
+                  });
                   onOpenChat?.();
                 }}
                 title="Выбрать и писать в чат"
@@ -201,28 +322,14 @@ export const NriNpcsPanel: React.FC<Props> = ({ inviteCode, selectedNpcId, onSel
                       sheet: n.sheet,
                       portraitUrl: n.imageUrl,
                     }}
-                    compact
                   />
                 </div>
               )}
             </li>
           );
         })}
-        {npcs.length === 0 && <p className="mono-text opacity-50">Нет сохранённых НПС.</p>}
+        {npcs.length === 0 && <p className="mono-text opacity-50">НПС пока нет — сгенерируйте во вкладке «Генерация».</p>}
       </ul>
-      {selectedNpcId && (
-        <p className="mono-text nri-npcs__hint opacity-70">
-          Активен в чате: <strong>{npcs.find((n) => n.id === selectedNpcId)?.name}</strong>
-          {onOpenChat && (
-            <>
-              {' '}
-              ·{' '}
-              <button type="button" className="nri-npcs__chat-link" onClick={onOpenChat}>
-                открыть чат
-              </button>
-            </>
-          )}
-        </p>
       )}
     </div>
   );

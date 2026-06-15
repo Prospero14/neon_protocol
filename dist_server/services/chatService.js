@@ -1,6 +1,7 @@
 import { ADMIN_USERNAME, isAdminUsername } from './auth.js';
 import { isNriMember } from './nriMemberDb.js';
 import { SPAM_BOT_USERNAME } from './messengerSpamPool.js';
+import { isSpamPaused } from './nriWallet.js';
 import { ensureSpamBotUser, spamBotKeyForGeneral, startRoomSpamBot, stopRoomSpamBot, } from './spamBotRunner.js';
 const PUBLIC_SLUG = 'general';
 const MAX_MESSAGE_LEN = 500;
@@ -77,6 +78,8 @@ function serializeMessage(msg) {
         isNpc,
         npcName: isNpc && typeof payload?.displayName === 'string' ? payload.displayName : undefined,
         npcImageUrl: isNpc && typeof payload?.imageUrl === 'string' ? payload.imageUrl : undefined,
+        npcArchetype: isNpc && typeof payload?.npcArchetype === 'string' ? payload.npcArchetype : undefined,
+        npcId: isNpc && typeof payload?.npcId === 'string' ? payload.npcId : undefined,
         text: msg.text,
         payload,
         isFile,
@@ -326,11 +329,18 @@ export function mountChatService(app, deps) {
                 });
                 if (!npc)
                     return sendApiError(res, 404, 'CHAT_NPC_NOT_FOUND', 'НПС не найден.');
+                const sheet = npc.sheet && typeof npc.sheet === 'object'
+                    ? npc.sheet
+                    : null;
+                const npcArchetype = typeof sheet?.npcArchetype === 'string' && sheet.npcArchetype.trim()
+                    ? sheet.npcArchetype.trim()
+                    : undefined;
                 payloadStr = JSON.stringify({
                     type: 'npc',
                     npcId: npc.id,
                     displayName: npc.name,
                     imageUrl: npc.imageUrl ?? null,
+                    npcArchetype,
                 });
             }
             const msg = await prisma.chatMessage.create({
@@ -377,7 +387,9 @@ export function mountChatService(app, deps) {
         }
         if (room.kind === 'nri' && room.slug) {
             const session = await prisma.nriSession.findUnique({ where: { inviteCode: room.slug } });
-            return !!(session?.spamBotEnabled && session.status === 'open');
+            return !!(session?.spamBotEnabled &&
+                session.status === 'open' &&
+                !isSpamPaused(session.spamPausedUntil));
         }
         return false;
     }

@@ -13,6 +13,7 @@ import {
   nriPatchCyberProduct,
   type NriCyberProduct,
   type NriNpc,
+  type NriRosterPlayer,
 } from '../logic/nriApi';
 import {
   ASSEMBLY_LABELS,
@@ -41,7 +42,7 @@ type Props = {
   recipients: VaultRecipient[];
 };
 
-type SubTab = 'build' | 'shop';
+type SubTab = 'build' | 'stock';
 
 type GrantTarget =
   | { kind: 'player'; id: string; label: string; sheet: unknown }
@@ -107,6 +108,17 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
     refreshTargets();
   }, [refresh, refreshTargets]);
 
+  useEffect(() => {
+    if (!authToken || !inviteCode) return;
+    fetch(`/neon_v1/services/nri/${encodeURIComponent(inviteCode)}/cyber`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    }).then((res) => {
+      if (res.status === 404) {
+        setErr('Маршрут /cyber не найден — на порту 8080 старый сервер. Выполните: npm run build && npm start');
+      }
+    });
+  }, [authToken, inviteCode]);
+
   const togglePart = (id: string) => {
     setPartIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
@@ -138,9 +150,9 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
       setErr(res.error);
       return;
     }
-    setOkMsg(inShop ? 'Имплант в лавке.' : 'Черновик сохранён.');
+    setOkMsg(inShop ? 'Имплант выставлен в лавку.' : 'Черновик сохранён — откройте вкладку «Склад / лавка».');
     await refresh();
-    if (inShop) setSub('shop');
+    setSub('stock');
   };
 
   const toggleShop = async (p: NriCyberProduct) => {
@@ -221,7 +233,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
     }));
   }, [roster, recipients]);
 
-  const shopItems = products.filter((p) => p.inShop);
+  const draftCount = products.filter((p) => !p.inShop).length;
 
   const modLine = (['STR', 'DEX', 'CON', 'INT', 'TEC', 'PEO'] as const)
     .map((k) => {
@@ -306,8 +318,9 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
         <button type="button" className={sub === 'build' ? 'active' : ''} onClick={() => setSub('build')}>
           <Wrench size={14} /> Конструктор
         </button>
-        <button type="button" className={sub === 'shop' ? 'active' : ''} onClick={() => setSub('shop')}>
-          <ShoppingBag size={14} /> Лавка ({shopItems.length})
+        <button type="button" className={sub === 'stock' ? 'active' : ''} onClick={() => setSub('stock')}>
+          <ShoppingBag size={14} /> Склад / лавка ({products.length})
+          {draftCount > 0 && ` · ${draftCount} черн.`}
         </button>
       </nav>
 
@@ -460,8 +473,12 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
         </div>
       )}
 
-      {sub === 'shop' && (
-        <div className="nri-cyber__shop">
+      {sub === 'stock' && (
+        <div className="nri-cyber__shop nri-cyber__stock-panel">
+          <p className="mono-text opacity-70 nri-cyber__shop-hint">
+            Все сохранённые импланты. Кнопка <strong>«Передать игроку / НПС»</strong> — выдача с проверкой BT и слота.
+            «В лавку» — видно как товар (опционально).
+          </p>
           <ul className="nri-cyber__shop-list">
             {products.map((p) => {
               const meta = productBuildMeta(p);
@@ -476,19 +493,19 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
                     </span>
                   </div>
                   <div className="nri-cyber__shop-actions">
-                    <button type="button" className="nri-lobby__copy" onClick={() => toggleShop(p)}>
-                      {p.inShop ? 'Снять' : 'В лавку'}
-                    </button>
                     <button
                       type="button"
-                      className="nri-modal__submit"
+                      className="nri-modal__submit nri-cyber__grant-btn"
                       onClick={() => {
                         setGrantProduct(p);
                         setGrantTarget(null);
                         setOkMsg(null);
                       }}
                     >
-                      <Send size={14} /> Отправить
+                      <Send size={14} /> Передать игроку / НПС
+                    </button>
+                    <button type="button" className="nri-lobby__copy" onClick={() => toggleShop(p)}>
+                      {p.inShop ? 'Снять с лавки' : 'В лавку'}
                     </button>
                     <button type="button" className="nri-lobby__close" onClick={() => remove(p.id)}>
                       <Trash2 size={14} />
@@ -497,7 +514,9 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
                 </li>
               );
             })}
-            {products.length === 0 && <p className="mono-text opacity-50">Пока пусто — соберите в конструкторе.</p>}
+            {products.length === 0 && (
+              <p className="mono-text opacity-50">Пусто — соберите в конструкторе и нажмите «Сохранить черновик».</p>
+            )}
           </ul>
         </div>
       )}
@@ -505,7 +524,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
       {grantProduct && (
         <div className="nri-cyber__grant-modal">
           <div className="nri-cyber__grant-dialog">
-            <h4 className="mono-text">Отправить: {grantProduct.name}</h4>
+            <h4 className="mono-text">Передать имплант: {grantProduct.name}</h4>
             <p className="mono-text opacity-70">
               BT сборки {productBuildMeta(grantProduct).bloodTox} · слот{' '}
               {CYBER_SLOT_LABELS[productBuildMeta(grantProduct).slot as CyberSlot] ??

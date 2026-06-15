@@ -14,9 +14,14 @@ export type NriC2185Mods = Partial<Record<'STR' | 'DEX' | 'CON' | 'INT' | 'TEC' 
 
 export type NriInventoryItem = {
   id: string;
+  catalogId?: string;
   name: string;
   blurb?: string;
   kind?: 'gear' | 'cyberware';
+  slot?: 'weapon' | 'armor' | 'accessory' | 'quick';
+  equipped?: boolean;
+  acBonus?: number;
+  attack?: { damageDice: string; damageType: string; ability: 'STR' | 'DEX' };
   statMods?: NriItemStatMods;
   c2185Mods?: NriC2185Mods;
   cyber?: {

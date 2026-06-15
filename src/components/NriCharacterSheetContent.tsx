@@ -1,5 +1,5 @@
-import React from 'react';
-import { getNriClass } from '../logic/nriClasses';
+import React, { useMemo } from 'react';
+import { getNriClass, type NriClassId } from '../logic/nriClasses';
 import {
   C2185_ABILITIES,
   C2185_SAVING_THROWS,
@@ -8,7 +8,11 @@ import {
 } from '../logic/nriCarbon2185';
 import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory';
 import { abilityModifier, parseNriSheet } from '../logic/nriNpcGenerator';
+import { ensureCompleteSheet } from '../logic/nriCharacterGen';
+import { readWonlongs } from '../logic/nriWallet';
 import { parseAugmentedSheet, getBloodToxLimit } from '../logic/nriCyberInstall';
+import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
+import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
 import type { NriPlayerProfile } from '../logic/nriApi';
 
@@ -31,11 +35,29 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
   const cls = getNriClass(profile.classId);
   const tpl = getC2185ClassTemplate(profile.classId);
   const inventory: NriInventoryItem[] = parseNriInventory(profile.inventory);
-  const sheet = parseNriSheet(profile.sheet);
-  const augSheet = parseAugmentedSheet(profile.sheet);
+  const completed = useMemo(
+    () => ensureCompleteSheet(profile.sheet, profile.classId as NriClassId, profile.displayName),
+    [profile.sheet, profile.classId, profile.displayName]
+  );
+  const sheet = parseNriSheet(completed);
+  const effectiveSheet = sheet ? applyEquippedToSheet(sheet, inventory) : null;
+  const augSheet = parseAugmentedSheet(completed);
   const augmentations = augSheet?.augmentations ?? [];
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const bloodToxLimit = getBloodToxLimit(augSheet);
+  const combat = effectiveSheet
+    ? getSheetCombatView(effectiveSheet, profile.classId as NriClassId, augmentations)
+    : null;
+  const gearAttacks = effectiveSheet ? attacksFromEquippedGear(effectiveSheet, inventory) : [];
+  const displayAttacks =
+    gearAttacks.length > 0
+      ? gearAttacks.map((a) => ({
+          name: a.name,
+          atk: formatSignedMod(a.atkBonus),
+          damage: a.damage,
+        }))
+      : combat?.attacks ?? [];
+  const dexMod = effectiveSheet ? abilityModifier(effectiveSheet.abilities.DEX) : null;
 
   if (compact) {
     return (
@@ -77,21 +99,24 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       </header>
 
       <div className="nri-c2185-grid nri-c2185-grid--meta">
-        <Field label="CHARACTER NAME" value={profile.displayName} wide />
+        <Field label="CHARACTER NAME" value={sheet?.characterName ?? profile.displayName} wide />
         <Field label="PLAYER NAME" value={accountUsername ? `@${accountUsername}` : undefined} />
-        <Field label="CLASS & LEVEL" value={tpl ? `${tpl.carbonName} · ${sheet?.level ?? 1}` : cls?.name} />
-        <Field label="ORIGIN" />
-        <Field label="EXPERIENCE POINTS" value="0" />
-        <Field label="AGE" />
-        <Field label="CAREER" />
-        <Field label="YEARS SERVED" />
-        <Field label="STREET INFLUENCE" />
-        <Field label="CORPORATE INFLUENCE" />
+        <Field
+          label="CLASS & LEVEL"
+          value={tpl ? `${tpl.carbonName} · ${sheet?.level ?? 1}` : cls?.name}
+        />
+        <Field label="ORIGIN" value={sheet?.origin} />
+        <Field label="EXPERIENCE POINTS" value={sheet?.xp != null ? String(sheet.xp) : '0'} />
+        <Field label="AGE" value={sheet?.age} />
+        <Field label="CAREER" value={sheet?.career ?? sheet?.activity} />
+        <Field label="YEARS SERVED" value={sheet?.yearsServed} />
+        <Field label="STREET INFLUENCE" value={sheet?.streetInfluence} />
+        <Field label="CORPORATE INFLUENCE" value={sheet?.corporateInfluence} />
       </div>
 
       <div className="nri-c2185-grid nri-c2185-grid--stats">
         {C2185_ABILITIES.map((ab) => {
-          const score = sheet?.abilities?.[ab];
+          const score = effectiveSheet?.abilities?.[ab];
           const mod = typeof score === 'number' ? abilityModifier(score) : null;
           return (
             <div key={ab} className="nri-c2185-stat">
@@ -106,41 +131,48 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       </div>
 
       <div className="nri-c2185-grid nri-c2185-grid--combat">
-        <Field label="PROFICIENCY BONUS" value={sheet ? `+${sheet.proficiencyBonus}` : '+2'} />
-        <Field label="ARMOR CLASS" value={sheet?.ac != null ? String(sheet.ac) : undefined} />
-        <Field label="INITIATIVE" />
+        <Field label="PROFICIENCY BONUS" value={effectiveSheet ? `+${effectiveSheet.proficiencyBonus}` : '+2'} />
+        <Field label="ARMOR CLASS" value={effectiveSheet?.ac != null ? String(effectiveSheet.ac) : undefined} />
+        <Field label="INITIATIVE" value={dexMod !== null ? formatSignedMod(dexMod) : undefined} />
         <Field label="SPEED" value="30 ft" />
         <Field label="HP MAX" value={sheet?.hpMax != null ? String(sheet.hpMax) : tpl?.hpAt1} />
         <Field label="HIT DICE" value={tpl ? `1${tpl.hitDie}` : undefined} />
         <Field label="HIT POINTS" value={sheet?.hp != null ? String(sheet.hp) : undefined} />
-        <Field label="D/R" />
+        <Field label="D/R" value={sheet?.dr} />
         <Field label="BLOOD TOX LIMIT" value={String(bloodToxLimit)} />
         <Field
           label="CURRENT BLOOD TOX"
-          value={augmentations.length > 0 ? String(bloodToxCurrent) : undefined}
+          value={augmentations.length > 0 || bloodToxCurrent > 0 ? String(bloodToxCurrent) : '0'}
         />
-        <Field label="VICE" />
-        <Field label="WONLONGS" />
+        <Field label="VICE" value={sheet?.vice} />
+        <Field
+          label="WONLONGS"
+          value={sheet ? `₩${readWonlongs(sheet)}` : undefined}
+        />
       </div>
 
       <div className="nri-c2185-cols">
         <section className="nri-c2185-block">
           <h4 className="nri-c2185-block__title">SAVING THROWS</h4>
           <ul className="nri-c2185-checklist">
-            {C2185_SAVING_THROWS.map((s) => (
-              <li key={s.id}>
-                <span className="nri-c2185-check">{blank}</span>
-                {s.label} ({s.ability})
-                {tpl?.saveProficiencies.includes(s.label) ? ' ★' : ''}
-              </li>
-            ))}
+            {(combat?.saves ?? C2185_SAVING_THROWS.map((s) => ({ ...s, modifier: null as number | null, proficient: false }))).map(
+              (s) => (
+                <li key={s.id}>
+                  <span className="nri-c2185-check">
+                    {typeof s.modifier === 'number' ? formatSignedMod(s.modifier) : blank}
+                  </span>
+                  {s.label} ({s.ability})
+                  {s.proficient ? ' ★' : ''}
+                </li>
+              )
+            )}
           </ul>
         </section>
 
         <section className="nri-c2185-block">
           <h4 className="nri-c2185-block__title">DEATH SAVES</h4>
           <p className="mono-text nri-c2185-death">
-            SUCCESSES {blank} · FAILURES {blank}
+            SUCCESSES {sheet?.deathSaveSuccesses ?? 0} · FAILURES {sheet?.deathSaveFailures ?? 0}
           </p>
         </section>
       </div>
@@ -148,12 +180,17 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       <section className="nri-c2185-block">
         <h4 className="nri-c2185-block__title">SKILLS</h4>
         <ul className="nri-c2185-skills">
-          {C2185_SKILLS.map((sk) => (
-            <li key={sk.name}>
-              <span className="nri-c2185-check">{blank}</span>
-              {sk.name} ({sk.ability})
-            </li>
-          ))}
+          {(combat?.skills ?? C2185_SKILLS.map((sk) => ({ ...sk, modifier: null as number | null, proficient: false }))).map(
+            (sk) => (
+              <li key={sk.name}>
+                <span className="nri-c2185-check">
+                  {typeof sk.modifier === 'number' ? formatSignedMod(sk.modifier) : blank}
+                </span>
+                {sk.name} ({sk.ability})
+                {sk.proficient ? ' ★' : ''}
+              </li>
+            )
+          )}
         </ul>
       </section>
 
@@ -163,14 +200,19 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           <span>NAME</span>
           <span>ATK</span>
           <span>DAMAGE/TYPE</span>
-          {[0, 1, 2].map((i) => (
-            <React.Fragment key={i}>
-              <span>{blank}</span>
-              <span>{blank}</span>
-              <span>{blank}</span>
+          {(displayAttacks.length ? displayAttacks : [{ name: blank, atk: blank, damage: blank }]).map((a, i) => (
+            <React.Fragment key={`${a.name}-${i}`}>
+              <span>{a.name}</span>
+              <span>{a.atk}</span>
+              <span>{a.damage}</span>
             </React.Fragment>
           ))}
         </div>
+      </section>
+
+      <section className="nri-c2185-block">
+        <h4 className="nri-c2185-block__title">BACKSTORY</h4>
+        <p className="mono-text nri-c2185-trait">{sheet?.backstory ?? blank}</p>
       </section>
 
       <section className="nri-c2185-block">
@@ -221,12 +263,12 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       </section>
 
       <div className="nri-c2185-grid nri-c2185-grid--bio">
-        <Field label="HEIGHT" />
-        <Field label="WEIGHT" />
-        <Field label="SKIN" />
-        <Field label="HAIR" />
-        <Field label="EYES" />
-        <Field label="CULTURE" />
+        <Field label="HEIGHT" value={sheet?.height} />
+        <Field label="WEIGHT" value={sheet?.weight} />
+        <Field label="SKIN" value={sheet?.skin} />
+        <Field label="HAIR" value={sheet?.hair} />
+        <Field label="EYES" value={sheet?.eyes} />
+        <Field label="CULTURE" value={sheet?.culture} />
       </div>
 
       <section className="nri-c2185-block">
@@ -247,7 +289,8 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           )}
         </div>
         <p className="mono-text opacity-50">
-          Encumbered / Heavily encumbered / Max carry — заполнить по весу.
+          Encumbered {sheet?.encumberedLb ?? blank} lb · Heavily encumbered {sheet?.heavilyEncumberedLb ?? blank} lb ·
+          Max carry {sheet?.maxCarryLb ?? blank} lb
         </p>
       </section>
 

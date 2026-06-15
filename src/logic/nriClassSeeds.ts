@@ -3,6 +3,7 @@
 import type { NriClassId } from './nriClasses';
 import { getC2185ClassTemplate } from './nriCarbon2185';
 import { abilityModifier, type NriSheetData } from './nriNpcGenerator';
+import { enrichSheetCombat } from './nriSheetCombat';
 
 export type ClassSeedPreset = {
   label: string;
@@ -28,16 +29,19 @@ function sheetFor(classId: NriClassId): NriSheetData {
   const hitDie = tpl?.hitDie ?? 'd8';
   const hpBase = hitDie === 'd12' ? 12 : hitDie === 'd10' ? 10 : 8;
   const hpMax = hpBase + conMod;
-  return {
-    abilities,
-    level: 1,
-    proficiencyBonus: 2,
-    hpMax: Math.max(1, hpMax),
-    hp: Math.max(1, hpMax),
-    ac: 10 + dexMod,
-    origin: 'Neo-Tokyo',
-    notes: `Стартовый ${tpl?.carbonName ?? classId} — правьте статы на столе.`,
-  };
+  return enrichSheetCombat(
+    {
+      abilities,
+      level: 1,
+      proficiencyBonus: 2,
+      hpMax: Math.max(1, hpMax),
+      hp: Math.max(1, hpMax),
+      ac: 10 + dexMod,
+      origin: 'Neo-Tokyo',
+      notes: `Стартовый ${tpl?.carbonName ?? classId} — правьте статы на столе.`,
+    },
+    classId
+  );
 }
 
 export const NRI_CLASS_SEEDS: ClassSeedPreset[] = [

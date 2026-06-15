@@ -1,0 +1,468 @@
+[
+  {
+    "zoneKey": "hw_ns_n",
+    "sortOrder": 0,
+    "name": "Гранд-авеню · север",
+    "zoneType": "highway",
+    "x": 108,
+    "y": 0,
+    "w": 10,
+    "h": 75
+  },
+  {
+    "zoneKey": "hw_ew_w",
+    "sortOrder": 1,
+    "name": "Кольцевая петля · запад",
+    "zoneType": "highway",
+    "x": 0,
+    "y": 75,
+    "w": 108,
+    "h": 10
+  },
+  {
+    "zoneKey": "hw_ew_e",
+    "sortOrder": 2,
+    "name": "Кольцевая петля · восток",
+    "zoneType": "highway",
+    "x": 118,
+    "y": 75,
+    "w": 122,
+    "h": 10
+  },
+  {
+    "zoneKey": "hw_ns_s",
+    "sortOrder": 3,
+    "name": "Гранд-авеню · юг",
+    "zoneType": "highway",
+    "x": 108,
+    "y": 85,
+    "w": 10,
+    "h": 80
+  },
+  {
+    "zoneKey": "hw_core",
+    "sortOrder": 4,
+    "name": "Кольцевая развязка",
+    "zoneType": "overpass",
+    "x": 108,
+    "y": 75,
+    "w": 10,
+    "h": 10
+  },
+  {
+    "zoneKey": "watson_northside",
+    "sortOrder": 5,
+    "name": "Нортсайд",
+    "zoneType": "industrial",
+    "megaDistrict": "ВАТСОН",
+    "x": 0,
+    "y": 0,
+    "w": 108,
+    "h": 22,
+    "pois": [
+      "доки",
+      "завод All Foods",
+      "промзоны"
+    ]
+  },
+  {
+    "zoneKey": "watson_arasaka_wf",
+    "sortOrder": 6,
+    "name": "Прибрежная зона Арасаки",
+    "zoneType": "industrial",
+    "megaDistrict": "ВАТСОН",
+    "x": 118,
+    "y": 0,
+    "w": 122,
+    "h": 22,
+    "pois": [
+      "Militech",
+      "корп-доки",
+      "контейнеры"
+    ]
+  },
+  {
+    "zoneKey": "santo_domingo_arroyo",
+    "sortOrder": 7,
+    "name": "Арройо",
+    "zoneType": "industrial",
+    "megaDistrict": "САНТО-ДОМИНГО",
+    "x": 188,
+    "y": 22,
+    "w": 52,
+    "h": 29,
+    "pois": [
+      "6th Street",
+      "цехи",
+      "электростанция"
+    ]
+  },
+  {
+    "zoneKey": "santo_domingo_rancho_coronado",
+    "sortOrder": 8,
+    "name": "Ранчо-Коронадо",
+    "zoneType": "industrial",
+    "megaDistrict": "САНТО-ДОМИНГО",
+    "x": 188,
+    "y": 51,
+    "w": 52,
+    "h": 24,
+    "pois": [
+      "заводы",
+      "грузовики",
+      "Valentinos"
+    ]
+  },
+  {
+    "zoneKey": "santo_domingo_industrial_ring",
+    "sortOrder": 9,
+    "name": "Промкольцо",
+    "zoneType": "industrial",
+    "megaDistrict": "САНТО-ДОМИНГО",
+    "x": 118,
+    "y": 85,
+    "w": 52,
+    "h": 37,
+    "pois": [
+      "токсичные цеха",
+      "Biotechnica"
+    ]
+  },
+  {
+    "zoneKey": "pacifica_south_docks",
+    "sortOrder": 10,
+    "name": "Южные доки",
+    "zoneType": "industrial",
+    "megaDistrict": "ПАСИФИКА",
+    "x": 118,
+    "y": 122,
+    "w": 55,
+    "h": 43,
+    "pois": [
+      "порт",
+      "контейнеры",
+      "смог"
+    ]
+  },
+  {
+    "zoneKey": "watson_little_china",
+    "sortOrder": 11,
+    "name": "Маленькая Китайщина",
+    "zoneType": "slum",
+    "megaDistrict": "ВАТСОН",
+    "x": 36,
+    "y": 22,
+    "w": 40,
+    "h": 53,
+    "pois": [
+      "Afterlife",
+      "мегабилдинг H10",
+      "нудл-бары"
+    ]
+  },
+  {
+    "zoneKey": "watson_kabuki",
+    "sortOrder": 12,
+    "name": "Кабуки",
+    "zoneType": "slum",
+    "megaDistrict": "ВАТСОН",
+    "x": 76,
+    "y": 22,
+    "w": 32,
+    "h": 53,
+    "pois": [
+      "рынок Кабуки",
+      "Maelstrom",
+      "риппердок"
+    ]
+  },
+  {
+    "zoneKey": "pacifica_coastview",
+    "sortOrder": 13,
+    "name": "Коствью",
+    "zoneType": "slum",
+    "megaDistrict": "ПАСИФИКА",
+    "x": 170,
+    "y": 85,
+    "w": 70,
+    "h": 20,
+    "pois": [
+      "Voodoo Boys",
+      "заброшки",
+      "рынок"
+    ]
+  },
+  {
+    "zoneKey": "pacifica_west_wind",
+    "sortOrder": 14,
+    "name": "Поместье Вест-Винд",
+    "zoneType": "slum",
+    "megaDistrict": "ПАСИФИКА",
+    "x": 170,
+    "y": 105,
+    "w": 70,
+    "h": 17,
+    "pois": [
+      "отель-руины",
+      "контрабанда"
+    ]
+  },
+  {
+    "zoneKey": "heywood_wellsprings",
+    "sortOrder": 15,
+    "name": "Уэллспрингс",
+    "zoneType": "slum",
+    "megaDistrict": "ХЕЙВУД",
+    "x": 0,
+    "y": 114,
+    "w": 54,
+    "h": 51,
+    "pois": [
+      "рынок",
+      "хибары"
+    ]
+  },
+  {
+    "zoneKey": "heywood_vista_del_rey",
+    "sortOrder": 16,
+    "name": "Виста-дель-Рей",
+    "zoneType": "slum",
+    "megaDistrict": "ХЕЙВУД",
+    "x": 54,
+    "y": 114,
+    "w": 54,
+    "h": 51,
+    "pois": [
+      "банды",
+      "контрабанда"
+    ]
+  },
+  {
+    "zoneKey": "pacifica_pacifica_ruins",
+    "sortOrder": 17,
+    "name": "Руины Пасифики",
+    "zoneType": "slum",
+    "megaDistrict": "ПАСИФИКА",
+    "x": 173,
+    "y": 122,
+    "w": 67,
+    "h": 43,
+    "pois": [
+      "Animals",
+      "беззаконие",
+      "заброшки"
+    ]
+  },
+  {
+    "zoneKey": "westbrook_japantown",
+    "sortOrder": 18,
+    "name": "Джапантаун",
+    "zoneType": "mid",
+    "megaDistrict": "ВЕСТБРУК",
+    "x": 0,
+    "y": 22,
+    "w": 36,
+    "h": 22,
+    "pois": [
+      "Tyger Claws",
+      "клубы",
+      "рынок"
+    ]
+  },
+  {
+    "zoneKey": "westbrook_charter_hill",
+    "sortOrder": 19,
+    "name": "Чартер-Хилл",
+    "zoneType": "mid",
+    "megaDistrict": "ВЕСТБРУК",
+    "x": 0,
+    "y": 44,
+    "w": 36,
+    "h": 18,
+    "pois": [
+      "башни",
+      "медиа"
+    ]
+  },
+  {
+    "zoneKey": "city_center_downtown",
+    "sortOrder": 20,
+    "name": "Даунтаун",
+    "zoneType": "mid",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "x": 118,
+    "y": 53,
+    "w": 43,
+    "h": 22,
+    "pois": [
+      "7th Hell",
+      "бизнес-центры"
+    ]
+  },
+  {
+    "zoneKey": "westbrook_north_oaks",
+    "sortOrder": 21,
+    "name": "Норт-Оукс",
+    "zoneType": "mid",
+    "megaDistrict": "ВЕСТБРУК",
+    "x": 0,
+    "y": 62,
+    "w": 36,
+    "h": 13,
+    "pois": [
+      "виллы",
+      "охрана"
+    ]
+  },
+  {
+    "zoneKey": "heywood_the_glen",
+    "sortOrder": 22,
+    "name": "Глен",
+    "zoneType": "mid",
+    "megaDistrict": "ХЕЙВУД",
+    "x": 0,
+    "y": 85,
+    "w": 108,
+    "h": 29,
+    "pois": [
+      "Valentinos",
+      "бары",
+      "жилые кварталы"
+    ]
+  },
+  {
+    "zoneKey": "city_center_memorial",
+    "sortOrder": 23,
+    "name": "Мемориальный парк",
+    "zoneType": "park",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "x": 161,
+    "y": 53,
+    "w": 27,
+    "h": 22,
+    "pois": [
+      "сквер",
+      "памятник"
+    ]
+  },
+  {
+    "zoneKey": "corp_arasaka",
+    "sortOrder": 24,
+    "name": "Arasaka",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Arasaka",
+    "x": 119,
+    "y": 23,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_militech",
+    "sortOrder": 25,
+    "name": "Militech",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Militech",
+    "x": 132,
+    "y": 23,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_kang_tao",
+    "sortOrder": 26,
+    "name": "Kang Tao",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Kang Tao",
+    "x": 145,
+    "y": 23,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_biotechnica",
+    "sortOrder": 27,
+    "name": "Biotechnica",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Biotechnica",
+    "x": 158,
+    "y": 23,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_trauma_team",
+    "sortOrder": 28,
+    "name": "Trauma Team",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Trauma Team",
+    "x": 171,
+    "y": 23,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_netwatch",
+    "sortOrder": 29,
+    "name": "NetWatch",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "NetWatch",
+    "x": 119,
+    "y": 38,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_zetatech",
+    "sortOrder": 30,
+    "name": "Zetatech",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Zetatech",
+    "x": 132,
+    "y": 38,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_orbital_air",
+    "sortOrder": 31,
+    "name": "Orbital Air",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "Orbital Air",
+    "x": 145,
+    "y": 38,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_sovoil",
+    "sortOrder": 32,
+    "name": "SovOil",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "SovOil",
+    "x": 158,
+    "y": 38,
+    "w": 12,
+    "h": 14
+  },
+  {
+    "zoneKey": "corp_ebm",
+    "sortOrder": 33,
+    "name": "EBM",
+    "zoneType": "corp",
+    "megaDistrict": "ЦЕНТР ГОРОДА",
+    "corpName": "EBM",
+    "x": 171,
+    "y": 38,
+    "w": 12,
+    "h": 14
+  }
+]

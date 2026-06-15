@@ -1,17 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { iceRewardBits, rollIceRun, type IceRunPhase, type IceService } from '../../logic/gibsonIceRun';
 import type { IceDifficulty } from '../../logic/nriGameCatalog';
+import { readNeonAuthToken } from '../../logic/authTokenStorage';
+import { useAuth } from '../../logic/AuthContext';
+import {
+  nriFetchIceStatus,
+  nriReportIceResult,
+  type NriIcePlayStatus,
+} from '../../logic/nriApi';
+import { IceHardwareBanPopup } from './IceHardwareBanPopup';
 
 type Props = {
   onFinish: (bitsEarned: number) => void;
   onBack?: () => void;
   icebreakerMode?: boolean;
   difficulty?: IceDifficulty;
+  nriInviteCode?: string;
+  onOpenInventory?: () => void;
 };
 
 const TRACE_MULT: Record<IceDifficulty, number> = { easy: 0.75, medium: 1, hard: 1.45 };
 
-const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, difficulty = 'medium' }) => {
+const GibsonIceHack: React.FC<Props> = ({
+  onFinish,
+  onBack,
+  icebreakerMode,
+  difficulty = 'medium',
+  nriInviteCode,
+  onOpenInventory,
+}) => {
+  const { token } = useAuth();
+  const authToken = readNeonAuthToken() ?? token;
   const [phase, setPhase] = useState<IceRunPhase>('intro');
   const [runSeed, setRunSeed] = useState(() => Date.now());
   const run = useMemo(() => rollIceRun(runSeed), [runSeed]);
@@ -23,9 +42,23 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
   const [exfil, setExfil] = useState(0);
   const [iceTrace, setIceTrace] = useState(0);
   const [statusLine, setStatusLine] = useState('Подключение к периметру…');
+  const [iceStatus, setIceStatus] = useState<NriIcePlayStatus | null>(null);
+  const [banPopup, setBanPopup] = useState(false);
+  const [resultReported, setResultReported] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exfilRef = useRef(0);
   const traceRef = useRef(0);
+
+  const loadIceStatus = useCallback(async () => {
+    if (!nriInviteCode || !authToken) return null;
+    const st = await nriFetchIceStatus(authToken, nriInviteCode);
+    if (st) setIceStatus(st);
+    return st;
+  }, [authToken, nriInviteCode]);
+
+  useEffect(() => {
+    loadIceStatus();
+  }, [loadIceStatus]);
 
   const stopTick = () => {
     if (tickRef.current) {
@@ -39,14 +72,28 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
     flashTimersRef.current = [];
   };
 
-  const triggerBusted = useCallback((line: string) => {
-    stopTick();
-    clearFlashTimers();
-    setFlashPlaying(false);
-    setFlashPort(null);
-    setPhase('busted');
-    setStatusLine(line);
-  }, []);
+  const reportResult = useCallback(
+    async (won: boolean) => {
+      if (!nriInviteCode || !authToken || resultReported) return;
+      setResultReported(true);
+      const res = await nriReportIceResult(authToken, nriInviteCode, won);
+      if (res.ok) setIceStatus(res.status);
+    },
+    [authToken, nriInviteCode, resultReported]
+  );
+
+  const triggerBusted = useCallback(
+    (line: string) => {
+      stopTick();
+      clearFlashTimers();
+      setFlashPlaying(false);
+      setFlashPort(null);
+      setPhase('busted');
+      setStatusLine(line);
+      void reportResult(false);
+    },
+    [reportResult]
+  );
 
   const applyIcePenalty = useCallback(
     (delta: number) => {
@@ -99,17 +146,58 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
         stopTick();
         setPhase('busted');
         setStatusLine('ICE TRACE MAX — соединение оборвано, данные уничтожены.');
+        void reportResult(false);
       } else if (exfilRef.current >= 100) {
         stopTick();
         setPhase('win');
         setStatusLine('Пакет ушёл в тень. Gibson бы одобрил.');
+        void reportResult(true);
       }
     }, 120);
-  }, [difficulty]);
+  }, [difficulty, reportResult]);
 
   const beginCrack = () => {
     setPhase('crack');
     playCrackFlash();
+  };
+
+  const resetRun = () => {
+    stopTick();
+    setRunSeed(Date.now());
+    setPhase('intro');
+    setScanPick(null);
+    setCrackStep(0);
+    setFlashPort(null);
+    setFlashPlaying(false);
+    clearFlashTimers();
+    setExfil(0);
+    setIceTrace(0);
+    exfilRef.current = 0;
+    traceRef.current = 0;
+    setResultReported(false);
+    setStatusLine('Подключение к периметру…');
+  };
+
+  const guardJackIn = async (): Promise<boolean> => {
+    if (!nriInviteCode || !authToken) return true;
+    const st = (await loadIceStatus()) ?? iceStatus;
+    if (st && st.hardwareBanned && !st.canPlay) {
+      setBanPopup(true);
+      return false;
+    }
+    return true;
+  };
+
+  const tryJackIn = async () => {
+    if (!(await guardJackIn())) return;
+    setResultReported(false);
+    setPhase('scan');
+    setStatusLine('Сканируй периметр — ищи уязвимость.');
+  };
+
+  const tryAgain = async () => {
+    if (!(await guardJackIn())) return;
+    resetRun();
   };
 
   const handleScan = (svc: IceService) => {
@@ -156,19 +244,29 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
     setExfil(exfilRef.current);
   };
 
-  useEffect(() => () => {
-    stopTick();
-    clearFlashTimers();
-  }, []);
+  useEffect(
+    () => () => {
+      stopTick();
+      clearFlashTimers();
+    },
+    []
+  );
 
   const reward = iceRewardBits(exfil, iceTrace);
+  const streakHint =
+    nriInviteCode && iceStatus && !iceStatus.hardwareBanned && iceStatus.consecutiveFails > 0
+      ? ` · серия провалов ${iceStatus.consecutiveFails}/3`
+      : '';
 
   return (
     <div className="ice-run">
       <header className="ice-run-head">
         <div>
           <h2 className="ice-run-title">GIBSON_ICE_RUN</h2>
-          <p className="ice-run-sub mono-text">{statusLine}</p>
+          <p className="ice-run-sub mono-text">
+            {statusLine}
+            {streakHint}
+          </p>
         </div>
         {onBack && (
           <button type="button" className="ice-run-back" onClick={onBack}>
@@ -192,14 +290,13 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
             <strong> CRACK</strong> — порты вспыхнут по очереди, повтори;
             <strong> EXFIL</strong> — жми «PUMP», пока ICE TRACE не 100%.
           </p>
-          <button
-            type="button"
-            className="ice-btn primary"
-            onClick={() => {
-              setPhase('scan');
-              setStatusLine('Сканируй периметр — ищи уязвимость.');
-            }}
-          >
+          {iceStatus?.hardwareBanned && iceStatus.canPlay && (
+            <p className="ice-ban-cleared mono-text">
+              Железо обновлено ({iceStatus.clearanceVia === 'deck' ? 'кибер-дека' : 'нейролинк'}) — можно
+              джекаться.
+            </p>
+          )}
+          <button type="button" className="ice-btn primary" onClick={tryJackIn}>
             [ JACK IN ]
           </button>
         </div>
@@ -268,6 +365,9 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
           <p className="mono-text">
             Эксfil: {Math.round(exfil)}% · ICE: {Math.round(iceTrace)}%
           </p>
+          {phase === 'busted' && iceStatus?.hardwareBanned && !iceStatus.canPlay && (
+            <p className="ice-ban-warn mono-text">Следующий джек-ин заблокирован — бан по железу.</p>
+          )}
           {phase === 'win' && !icebreakerMode && <p className="ice-reward">+{reward} BITS</p>}
           <div className="ice-result-actions">
             {phase === 'win' && (
@@ -275,29 +375,19 @@ const GibsonIceHack: React.FC<Props> = ({ onFinish, onBack, icebreakerMode, diff
                 {icebreakerMode ? '[ ФАЙЛ РАЗБЛОКИРОВАН ]' : '[ ЗАБРАТЬ LOOT ]'}
               </button>
             )}
-            <button
-              type="button"
-              className="ice-btn"
-              onClick={() => {
-                stopTick();
-                setRunSeed(Date.now());
-                setPhase('intro');
-                setScanPick(null);
-                setCrackStep(0);
-                setFlashPort(null);
-                setFlashPlaying(false);
-                clearFlashTimers();
-                setExfil(0);
-                setIceTrace(0);
-                exfilRef.current = 0;
-                traceRef.current = 0;
-                setStatusLine('Подключение к периметру…');
-              }}
-            >
+            <button type="button" className="ice-btn" onClick={tryAgain}>
               [ ЕЩЁ РАЗ ]
             </button>
           </div>
         </div>
+      )}
+
+      {banPopup && (
+        <IceHardwareBanPopup
+          tableAllBanned={iceStatus?.tableAllBanned}
+          onClose={() => setBanPopup(false)}
+          onOpenInventory={onOpenInventory}
+        />
       )}
     </div>
   );

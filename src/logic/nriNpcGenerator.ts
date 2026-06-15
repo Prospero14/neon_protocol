@@ -2,6 +2,8 @@
 
 import type { NriClassId } from './nriClasses';
 import { getC2185ClassTemplate } from './nriCarbon2185';
+import type { InstalledAugmentation } from './nriCyberInstall';
+import { enrichSheetCombat } from './nriSheetCombat';
 
 export type NriSheetData = {
   abilities: Record<'STR' | 'DEX' | 'CON' | 'INT' | 'TEC' | 'PEO', number>;
@@ -11,8 +13,36 @@ export type NriSheetData = {
   hp: number;
   ac: number;
   origin?: string;
+  activity?: string;
   vice?: string;
   notes?: string;
+  characterName?: string;
+  age?: string;
+  career?: string;
+  yearsServed?: string;
+  streetInfluence?: string;
+  corporateInfluence?: string;
+  backstory?: string;
+  npcArchetype?: string;
+  xp?: number;
+  wonlongs?: number;
+  skillProficiencies?: string[];
+  attacks?: { name: string; atkBonus: number; damage: string }[];
+  height?: string;
+  weight?: string;
+  skin?: string;
+  hair?: string;
+  eyes?: string;
+  culture?: string;
+  dr?: string;
+  deathSaveSuccesses?: number;
+  deathSaveFailures?: number;
+  bloodToxCurrent?: number;
+  bloodToxLimit?: number;
+  augmentations?: InstalledAugmentation[];
+  encumberedLb?: string;
+  heavilyEncumberedLb?: string;
+  maxCarryLb?: string;
 };
 
 export function abilityModifier(score: number): number {
@@ -53,14 +83,18 @@ export function buildSheetForClass(classId: NriClassId, abilities = rollAbilityS
   const dexMod = abilityModifier(abilities.DEX);
   const hitDie = tpl?.hitDie ?? 'd8';
   const hpMax = (HIT_DIE_AVG[hitDie] ?? 5) + conMod + (hitDie === 'd12' ? 5 : hitDie === 'd10' ? 4 : 3);
-  return {
-    abilities,
-    level: 1,
-    proficiencyBonus: 2,
-    hpMax: Math.max(1, hpMax),
-    hp: Math.max(1, hpMax),
-    ac: 10 + dexMod,
-  };
+  return enrichSheetCombat(
+    {
+      abilities,
+      level: 1,
+      proficiencyBonus: 2,
+      hpMax: Math.max(1, hpMax),
+      hp: Math.max(1, hpMax),
+      ac: 10 + dexMod,
+      wonlongs: 50 + Math.floor(Math.random() * 6) * 50,
+    },
+    classId
+  );
 }
 
 export function parseNriSheet(raw: unknown): NriSheetData | null {

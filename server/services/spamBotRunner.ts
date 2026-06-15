@@ -48,7 +48,7 @@ export async function startRoomSpamBot(
     await postSpam(prisma, roomId, botUserId);
   };
   void tick();
-  const intervalMs = 9000 + Math.floor(Math.random() * 7000);
+  const intervalMs = 18000 + Math.floor(Math.random() * 12000);
   timers.set(key, setInterval(() => void tick(), intervalMs));
 }
 

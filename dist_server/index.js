@@ -86,6 +86,13 @@ async function ensureNriSchemaSync() {
         console.warn('[NEON_BOOT] NriCyberProduct missing — applying schema…');
         runDbPushSync();
     }
+    try {
+        await prisma.nriSession.findFirst({ select: { spamPausedUntil: true } });
+    }
+    catch {
+        console.warn('[NEON_BOOT] NriSession.spamPausedUntil missing — applying schema…');
+        runDbPushSync();
+    }
 }
 let isDbReady = false;
 async function initDB() {

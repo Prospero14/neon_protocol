@@ -38,8 +38,11 @@ const GLOBAL_SPAM_LINES = [
     'Импланты без гарантии, зато дёшево. Самовывоз из подвала.',
     'Набор в команду: нужен человек с чистыми логами. Оплата битами.',
 ];
+const SPAM_EMOJIS = ['📢', '💸', '🔥', '⚡', '🚨', '💊', '🔌', '📡', '💀', '🤑', '🛒', '🔒', '✨'];
 export function pickRandomSpamLine() {
     const i = Math.floor(Math.random() * GLOBAL_SPAM_LINES.length);
-    return GLOBAL_SPAM_LINES[i] ?? GLOBAL_SPAM_LINES[0];
+    const line = GLOBAL_SPAM_LINES[i] ?? GLOBAL_SPAM_LINES[0];
+    const emoji = SPAM_EMOJIS[Math.floor(Math.random() * SPAM_EMOJIS.length)] ?? '📢';
+    return `${emoji} ${line}`;
 }
 //# sourceMappingURL=messengerSpamPool.js.map

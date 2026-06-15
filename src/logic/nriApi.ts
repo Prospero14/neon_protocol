@@ -2,8 +2,16 @@
 
 import type { NriInventoryItem } from './nriInventory';
 import type { NriScenarioLinks, NriScenarioNode } from './nriScenario';
+import type {
+  NriFaction,
+  NriHostAlert,
+  NriLorePlace,
+  NriPlayerPosition,
+  NriScenarioProgress,
+} from './nriLore';
 
 export type { NriScenarioNode, NriScenarioLinks };
+export type { NriFaction, NriLoreEntry, NriLorePlace, NriScenarioProgress, NriPlayerPosition, NriHostAlert } from './nriLore';
 
 export type NriMember = {
   userId: string;
@@ -1007,7 +1015,10 @@ export async function nriDeleteMapMarker(token: string, code: string, markerId: 
 export async function nriFetchScenario(
   token: string,
   code: string
-): Promise<{ ok: true; nodes: NriScenarioNode[] } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; nodes: NriScenarioNode[]; progress: NriScenarioProgress }
+  | { ok: false; error: string }
+> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/scenario`, {
     headers: authHeaders(token),
   });
@@ -1015,7 +1026,15 @@ export async function nriFetchScenario(
   if (!res.ok) {
     return { ok: false, error: parseApiError(data, 'Не удалось загрузить сценарий') };
   }
-  return { ok: true, nodes: (data.nodes ?? []) as NriScenarioNode[] };
+  return {
+    ok: true,
+    nodes: (data.nodes ?? []) as NriScenarioNode[],
+    progress: (data.progress ?? {
+      currentScriptNodeId: null,
+      completedNodeIds: [],
+      updatedAt: Date.now(),
+    }) as NriScenarioProgress,
+  };
 }
 
 export async function nriCreateScenarioNode(
@@ -1085,5 +1104,207 @@ export async function nriSavePlayerNotes(
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось сохранить заметки') };
   return { ok: true, privateNotes: typeof data.privateNotes === 'string' ? data.privateNotes : notes };
+}
+
+export async function nriFetchLore(
+  token: string,
+  code: string
+): Promise<{ world: { body: string }; entries: import('./nriLore').NriLoreEntry[]; factions: NriFaction[]; places: NriLorePlace[] } | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return data as { world: { body: string }; entries: import('./nriLore').NriLoreEntry[]; factions: NriFaction[]; places: NriLorePlace[] };
+}
+
+export async function nriCreateLoreEntry(
+  token: string,
+  code: string,
+  payload: { title?: string; body?: string }
+): Promise<{ ok: true; entry: import('./nriLore').NriLoreEntry } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/entries`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать карточку') };
+  return { ok: true, entry: data.entry };
+}
+
+export async function nriPatchLoreEntry(
+  token: string,
+  code: string,
+  entryId: string,
+  payload: { title?: string; body?: string }
+): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/entries/${encodeURIComponent(entryId)}`,
+    { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify(payload) }
+  );
+  return res.ok;
+}
+
+export async function nriDeleteLoreEntry(token: string, code: string, entryId: string): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/entries/${encodeURIComponent(entryId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriTransferItem(
+  token: string,
+  code: string,
+  payload: {
+    toUserId: string;
+    itemId?: string;
+    fromNpcId?: string;
+    asNpcId?: string;
+    catalogId?: string;
+    qty?: number;
+  }
+): Promise<
+  | { ok: true; messageId: string; dmRoomId: string; text: string; inventory?: NriInventoryItem[] }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/items/transfer`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось передать предмет') };
+  return {
+    ok: true,
+    messageId: data.messageId,
+    dmRoomId: data.dmRoomId,
+    text: data.text ?? '',
+    inventory: data.inventory,
+  };
+}
+
+export async function nriBroadcastItemTransfer(
+  token: string,
+  code: string,
+  messageId: string
+): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/items/transfer/broadcast`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ messageId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось показать предмет') };
+  return { ok: true, text: data.text ?? '' };
+}
+
+export async function nriSaveLoreWorld(token: string, code: string, body: string): Promise<boolean> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/world`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ body }),
+  });
+  return res.ok;
+}
+
+export async function nriCreateFaction(
+  token: string,
+  code: string,
+  payload: { name: string; description?: string; color?: string }
+): Promise<{ ok: true; faction: NriFaction } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/factions`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать фракцию') };
+  return { ok: true, faction: data.faction as NriFaction };
+}
+
+export async function nriPatchFaction(
+  token: string,
+  code: string,
+  factionId: string,
+  payload: Partial<NriFaction>
+): Promise<{ ok: true; faction: NriFaction } | { ok: false; error: string }> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/factions/${encodeURIComponent(factionId)}`,
+    { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify(payload) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось обновить фракцию') };
+  return { ok: true, faction: data.faction as NriFaction };
+}
+
+export async function nriDeleteFaction(token: string, code: string, factionId: string): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/factions/${encodeURIComponent(factionId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriPatchLorePlace(
+  token: string,
+  code: string,
+  placeId: string,
+  payload: { title?: string; body?: string }
+): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/places/${encodeURIComponent(placeId)}`,
+    { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify(payload) }
+  );
+  return res.ok;
+}
+
+export async function nriPatchScenarioProgress(
+  token: string,
+  code: string,
+  payload: { currentScriptNodeId?: string | null; completeNodeId?: string }
+): Promise<NriScenarioProgress | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/scenario/progress`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return data.progress as NriScenarioProgress;
+}
+
+export async function nriFetchMapPositions(token: string, code: string): Promise<NriPlayerPosition[]> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/positions`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return [];
+  return (data.positions ?? []) as NriPlayerPosition[];
+}
+
+export async function nriMoveToZone(
+  token: string,
+  code: string,
+  payload: { zoneKey: string; vehicleId?: string | null; overload?: boolean }
+): Promise<{ ok: true; minutes: number; message: string } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/move`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось переместиться') };
+  return { ok: true, minutes: data.minutes ?? 0, message: data.message ?? '' };
+}
+
+export async function nriFetchHostAlerts(token: string, code: string): Promise<NriHostAlert[]> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/host-alerts`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return [];
+  return (data.alerts ?? []) as NriHostAlert[];
 }
 

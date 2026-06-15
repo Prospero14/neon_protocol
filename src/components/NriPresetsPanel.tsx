@@ -28,6 +28,7 @@ import { parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
 import type { NriInventoryItem } from '../logic/nriInventory';
 import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheetContent } from './NriCharacterSheetContent';
+import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriSkillPickField } from './NriSkillPickField';
 import { defaultSkillsForClass, validateSkillPick } from '../logic/nriSkillPick';
 
@@ -56,12 +57,8 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   const authToken = readNeonAuthToken() ?? token;
   const [presets, setPresets] = useState<NriPresetCharacter[]>([]);
   const [cyberDrafts, setCyberDrafts] = useState<NriCyberProduct[]>([]);
-  const [label, setLabel] = useState('');
   const [classId, setClassId] = useState<NriClassId>('merc');
-  const [portraitUrl, setPortraitUrl] = useState('');
-  const [sheet, setSheet] = useState<NriSheetData | null>(null);
   const [meta, setMeta] = useState<CharacterMetaDraft>({ originId: 'neo_tokyo', activityId: 'street', level: 1 });
-  const [pickedCyberIds, setPickedCyberIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -99,62 +96,6 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
       .filter(Boolean)
       .map((p) => cyberProductToItem(p!))
       .filter(Boolean) as NriInventoryItem[];
-
-  const rollSheet = () => {
-    const built = buildFullCharacter({
-      classId,
-      originId: meta.originId ?? 'neo_tokyo',
-      activityId: meta.activityId ?? 'street',
-      archetypeId: archetypeForClass(classId),
-      skillProficiencies: pickedSkills,
-    });
-    setSheet(built.sheet);
-    setMeta((m) => ({ ...m, ...built.meta }));
-    if (!label.trim()) setLabel(built.meta.characterName);
-  };
-
-  const withSkills = (s: NriSheetData) => ({ ...s, skillProficiencies: pickedSkills });
-
-  const create = async () => {
-    if (!authToken || !label.trim()) return;
-    const skillErr = validateSkillPick(classId, pickedSkills);
-    if (skillErr) {
-      setErr(skillErr);
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    const baseSheet = withSkills(
-      sheet ??
-        buildFullCharacter({
-          classId,
-          originId: meta.originId ?? 'neo_tokyo',
-          activityId: meta.activityId ?? 'street',
-          archetypeId: archetypeForClass(classId),
-          characterName: label.trim(),
-          skillProficiencies: pickedSkills,
-        }).sheet
-    );
-    const finalSheet = sheetHpForLevel(applyMetaToSheet(baseSheet, meta), classId);
-    const created = await nriCreatePreset(authToken, inviteCode, {
-      label: label.trim(),
-      classId,
-      sheet: finalSheet,
-      inventory: inventoryFromCyber(pickedCyberIds),
-      portraitUrl: portraitUrl.trim() || undefined,
-      publishedToPlayers: true,
-    });
-    setBusy(false);
-    if (!created.ok) {
-      setErr(created.error);
-      return;
-    }
-    setLabel('');
-    setPortraitUrl('');
-    setSheet(null);
-    setPickedCyberIds([]);
-    await refresh();
-  };
 
   const remove = async (id: string) => {
     if (!authToken || !window.confirm('Удалить пресет?')) return;
@@ -442,79 +383,6 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
         </div>
       )}
 
-      {showGen && (
-      <div className="nri-presets__form">
-        <h4 className="mono-text">Один персонаж вручную</h4>
-        <label className="nri-modal__field">
-          <span>Название (для мастера)</span>
-          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Jackie Chow build…" />
-        </label>
-        <label className="nri-modal__field">
-          <span>Портрет (URL)</span>
-          <input value={portraitUrl} onChange={(e) => setPortraitUrl(e.target.value)} placeholder="https://…" />
-        </label>
-        <div className="nri-class-grid nri-class-grid--compact">
-          {NRI_CLASSES.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`nri-class-card ${classId === c.id ? 'active' : ''}`}
-              onClick={() => setClassId(c.id)}
-            >
-              <strong>{c.name}</strong>
-            </button>
-          ))}
-        </div>
-        <NriCharacterMetaForm meta={meta} sheet={sheet} onChange={setMeta} />
-        <NriSkillPickField classId={classId} picked={pickedSkills} onChange={setPickedSkills} />
-        {cyberDrafts.length > 0 && (
-          <div className="nri-presets__cyber-pick">
-            <span className="mono-text">Импланты из черновиков киберпанели:</span>
-            <ul>
-              {cyberDrafts.map((c) => (
-                <li key={c.id}>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={pickedCyberIds.includes(c.id)}
-                      onChange={() =>
-                        setPickedCyberIds((prev) =>
-                          prev.includes(c.id) ? prev.filter((x) => x !== c.id) : [...prev, c.id]
-                        )
-                      }
-                    />
-                    {c.name}
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <div className="nri-presets__actions">
-          <button type="button" className="nri-lobby__copy" onClick={rollSheet}>
-            <Dices size={14} /> Сгенерировать полный чарник
-          </button>
-          <button type="button" className="nri-modal__submit" disabled={busy || !label.trim()} onClick={create}>
-            <Plus size={14} /> Сохранить черновик (только мастер)
-          </button>
-        </div>
-        {sheet && (
-          <div className="nri-presets__preview">
-            <NriCharacterSheetContent
-              profile={{
-                displayName: meta.characterName ?? label,
-                classId,
-                inventory: inventoryFromCyber(pickedCyberIds),
-                sheet: applyMetaToSheet(sheet, meta),
-                portraitUrl: portraitUrl || null,
-              }}
-            />
-          </div>
-        )}
-        {err && <p className="nri-lobby__err mono-text">{err}</p>}
-      </div>
-      )}
-
       {showList && (
       <ul className="nri-presets__list">
         {presets.map((p) => (
@@ -527,7 +395,11 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
                 {p.claimed ? ' · занят' : p.publishedToPlayers ? ' · для игроков' : ' · черновик мастера'}
               </span>
             </div>
-            <button type="button" className="nri-lobby__copy" onClick={() => setPreviewId(p.id)}>
+            <button
+              type="button"
+              className={`nri-lobby__copy ${previewId === p.id ? 'active' : ''}`}
+              onClick={() => setPreviewId((id) => (id === p.id ? null : p.id))}
+            >
               <Eye size={14} /> Лист
             </button>
             <button type="button" className="nri-lobby__copy" onClick={() => startEdit(p)}>
@@ -546,7 +418,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
           </li>
         ))}
         {presets.length === 0 && (
-          <p className="mono-text opacity-50">Пока нет персонажей — нажмите «Сгенерировать персонажа» или создайте вручную ниже.</p>
+          <p className="mono-text opacity-50">Пока нет персонажей — нажмите «Сгенерировать персонажа».</p>
         )}
       </ul>
       )}
@@ -580,17 +452,17 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
       )}
 
       {showList && preview && !editId && (
-        <div className="nri-presets__preview">
-          <NriCharacterSheetContent
-            profile={{
-              displayName: preview.label,
-              classId: preview.classId,
-              inventory: preview.inventory,
-              sheet: preview.sheet,
-              portraitUrl: preview.portraitUrl,
-            }}
-          />
-        </div>
+        <NriCharacterSheet
+          title={preview.label}
+          profile={{
+            displayName: preview.label,
+            classId: preview.classId,
+            inventory: preview.inventory,
+            sheet: preview.sheet,
+            portraitUrl: preview.portraitUrl,
+          }}
+          onClose={() => setPreviewId(null)}
+        />
       )}
     </div>
   );

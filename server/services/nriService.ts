@@ -14,6 +14,8 @@ import {
   maybeAutoClearIceBan,
 } from './nriIceBan.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
+import { mountNriLoreTravelRoutes } from './nriLoreTravel.js';
+import { mountNriItemTransferRoutes } from './nriItemTransfer.js';
 
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -727,11 +729,37 @@ export function mountNriService(app: Express, deps: NriServiceDeps) {
       if (!me || !(await requireHost(session, auth, me))) {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Сценарий доступен только мастеру.');
       }
-      const nodes = await prisma.nriScenarioNode.findMany({
-        where: { sessionId: session.id },
-        orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+      const [nodes, progress, positions, players] = await Promise.all([
+        prisma.nriScenarioNode.findMany({
+          where: { sessionId: session.id },
+          orderBy: [{ parentId: 'asc' }, { sortOrder: 'asc' }, { createdAt: 'asc' }],
+        }),
+        prisma.nriScenarioProgress.findUnique({ where: { sessionId: session.id } }),
+        prisma.nriPlayerPosition.findMany({ where: { sessionId: session.id } }),
+        prisma.nriPlayer.findMany({ where: { sessionId: session.id }, select: { userId: true } }),
+      ]);
+      const currentId = progress?.currentScriptNodeId ?? null;
+      const zoneKeys = positions.map((p) => p.zoneKey).filter(Boolean) as string[];
+      const completedIds = Array.isArray(progress?.completedNodeIds)
+        ? (progress!.completedNodeIds as unknown[]).filter((x): x is string => typeof x === 'string')
+        : [];
+      res.json({
+        nodes: nodes.map((n) => {
+          const base = serializeScenarioNode(n);
+          const links = (base.links ?? {}) as Record<string, unknown>;
+          const meet = links.meetCheckpoint === true && typeof links.zoneKey === 'string';
+          let checkpointMet = false;
+          if (meet && currentId === n.id && players.length > 0) {
+            checkpointMet = zoneKeys.filter((z) => z === links.zoneKey).length >= players.length;
+          }
+          return { ...base, checkpointMet };
+        }),
+        progress: {
+          currentScriptNodeId: currentId,
+          completedNodeIds: completedIds,
+          updatedAt: progress?.updatedAt.getTime() ?? Date.now(),
+        },
       });
-      res.json({ nodes: nodes.map(serializeScenarioNode) });
     } catch (error) {
       console.error('nri/scenario get:', error);
       return sendApiError(res, 500, 'NRI_SCENARIO_GET_FAILED', 'Не удалось загрузить сценарий.');
@@ -834,12 +862,45 @@ export function mountNriService(app: Express, deps: NriServiceDeps) {
           nextParentId = parent.id;
         }
       }
+      let mergedLinks =
+        links !== undefined && typeof links === 'object' ? ({ ...(links as object) } as Record<string, unknown>) : null;
+      if (mergedLinks?.syncToLore === true) {
+        const placeTitle =
+          (typeof mergedLinks.placeTitle === 'string' && mergedLinks.placeTitle.trim()) ||
+          (typeof title === 'string' && title.trim()) ||
+          existing.title;
+        const lorePlaceId =
+          typeof mergedLinks.lorePlaceId === 'string' ? mergedLinks.lorePlaceId : null;
+        if (lorePlaceId) {
+          await prisma.nriLorePlace.update({
+            where: { id: lorePlaceId },
+            data: {
+              title: placeTitle.slice(0, 120),
+              zoneKey: typeof mergedLinks.zoneKey === 'string' ? mergedLinks.zoneKey : null,
+              mapMarkerId: typeof mergedLinks.mapMarkerId === 'string' ? mergedLinks.mapMarkerId : null,
+              sourceScenarioNodeId: nodeId,
+            },
+          });
+        } else {
+          const created = await prisma.nriLorePlace.create({
+            data: {
+              sessionId: session.id,
+              title: placeTitle.slice(0, 120),
+              body: '',
+              zoneKey: typeof mergedLinks.zoneKey === 'string' ? mergedLinks.zoneKey : null,
+              mapMarkerId: typeof mergedLinks.mapMarkerId === 'string' ? mergedLinks.mapMarkerId : null,
+              sourceScenarioNodeId: nodeId,
+            },
+          });
+          mergedLinks = { ...mergedLinks, lorePlaceId: created.id };
+        }
+      }
       const updated = await prisma.nriScenarioNode.update({
         where: { id: nodeId },
         data: {
           ...(typeof title === 'string' && title.trim() ? { title: title.trim().slice(0, 120) } : {}),
           ...(typeof body === 'string' ? { body: body.slice(0, 20000) } : {}),
-          ...(links !== undefined && typeof links === 'object' ? { links: links as object } : {}),
+          ...(mergedLinks ? { links: mergedLinks as object } : links !== undefined && typeof links === 'object' ? { links: links as object } : {}),
           ...(typeof sortOrder === 'number' && Number.isFinite(sortOrder)
             ? { sortOrder: Math.floor(sortOrder) }
             : {}),
@@ -2457,21 +2518,6 @@ export function mountNriService(app: Express, deps: NriServiceDeps) {
         where: { id: player.id },
         data: { inventory: next as object[] },
       });
-      if (npcName && session.chatRoomId) {
-        const payload = JSON.stringify({
-          type: 'npc',
-          npcId: fromNpcId!.trim(),
-          displayName: npcName,
-        });
-        await prisma.chatMessage.create({
-          data: {
-            roomId: session.chatRoomId,
-            userId: auth.userId,
-            text: `${npcName} передаёт ${player.displayName}: «${item.name}».`.slice(0, 2000),
-            payload,
-          },
-        });
-      }
       res.json({ ok: true, inventory: next });
     } catch (error) {
       console.error('nri/grant item:', error);
@@ -2646,5 +2692,22 @@ export function mountNriService(app: Express, deps: NriServiceDeps) {
       console.error('vault/delete:', error);
       return sendApiError(res, 500, 'VAULT_DELETE_FAILED', 'Не удалось удалить файл.');
     }
+  });
+
+  mountNriLoreTravelRoutes(app, {
+    prisma,
+    jwtAuth,
+    sendApiError,
+    resolveSession,
+    resolveUser,
+    requireHost,
+  });
+
+  mountNriItemTransferRoutes(app, {
+    prisma,
+    jwtAuth,
+    sendApiError,
+    resolveSession,
+    resolveUser,
   });
 }

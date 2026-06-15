@@ -45,6 +45,13 @@ model NriSession {
   vehicles   NriSessionVehicle[]
   iceScores  NriIceScore[]
   scenarioNodes NriScenarioNode[]
+  loreWorld     NriLoreWorld?
+  loreEntries   NriLoreEntry[]
+  factions      NriFaction[]
+  lorePlaces    NriLorePlace[]
+  scenarioProgress NriScenarioProgress?
+  playerPositions NriPlayerPosition[]
+  hostAlerts    NriHostAlert[]
 }
 
 model NriSessionMember {
@@ -144,6 +151,102 @@ model NriScenarioNode {
   updatedAt  DateTime   @updatedAt
 
   @@index([sessionId, parentId])
+}
+
+/** Общий лор мира стола (legacy — одно поле). */
+model NriLoreWorld {
+  sessionId String     @id
+  session   NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  body      String     @default("")
+  updatedAt DateTime   @updatedAt
+}
+
+/** Карточка лора мира (раздел «Мир»). */
+model NriLoreEntry {
+  id        String     @id @default(uuid())
+  sessionId String
+  session   NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title     String
+  body      String     @default("")
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([sessionId, sortOrder])
+}
+
+/** Фракция — игроки и НПС. */
+model NriFaction {
+  id              String     @id @default(uuid())
+  sessionId       String
+  session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name            String
+  description     String     @default("")
+  color           String?
+  memberPlayerIds Json
+  memberNpcIds    Json
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([sessionId])
+}
+
+/** Карточка места в лоре (из сценария или вручную). */
+model NriLorePlace {
+  id                   String     @id @default(uuid())
+  sessionId            String
+  session              NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title                String
+  body                 String     @default("")
+  zoneKey              String?
+  mapMarkerId          String?
+  x                    Float?
+  y                    Float?
+  sourceScenarioNodeId String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  @@index([sessionId])
+}
+
+/** Текущий пункт сценария (чтобы не засчитывать ранние приходы). */
+model NriScenarioProgress {
+  sessionId          String     @id
+  session            NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  currentScriptNodeId String?
+  completedNodeIds   Json
+  updatedAt          DateTime   @updatedAt
+}
+
+/** Позиция игрока на карте. */
+model NriPlayerPosition {
+  id              String     @id @default(uuid())
+  sessionId       String
+  session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId          String
+  zoneKey         String?
+  x               Float?
+  y               Float?
+  vehicleId       String?
+  vehicleOverload Boolean    @default(false)
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([sessionId, userId])
+  @@index([sessionId, zoneKey])
+}
+
+/** Служебные уведомления мастеру (дублируются в личку). */
+model NriHostAlert {
+  id         String     @id @default(uuid())
+  sessionId  String
+  session    NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  fromUserId String
+  kind       String
+  body       String
+  read       Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+
+  @@index([sessionId, read])
 }
 
 /** НПС стола — чарник, портрет, инвентарь; мастер пишет в чат от их лица. */

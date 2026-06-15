@@ -27,6 +27,25 @@ export function mergeInventoryItem(existing, newItem) {
     }
     return [...existing, newItem];
 }
+/** Снять один экземпляр по id из инвентаря. */
+export function takeOneInstanceItem(existing, itemId) {
+    const idx = existing.findIndex((i) => i.id === itemId);
+    if (idx < 0)
+        return { inventory: existing, item: null };
+    const copy = [...existing];
+    const cur = copy[idx];
+    const qty = typeof cur.qty === 'number' ? cur.qty : 1;
+    let item;
+    if (qty > 1) {
+        copy[idx] = { ...cur, qty: qty - 1 };
+        item = { ...cur, id: `${cur.id}-${Date.now()}`, qty: 1 };
+    }
+    else {
+        copy.splice(idx, 1);
+        item = { ...cur };
+    }
+    return { inventory: copy, item };
+}
 /** Снять один предмет по catalogId из инвентаря НПС (для передачи игроку). */
 export function takeOneCatalogItem(existing, catalogId) {
     const idx = existing.findIndex((i) => i.catalogId === catalogId);

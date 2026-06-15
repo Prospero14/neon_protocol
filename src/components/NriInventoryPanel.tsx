@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { Package, Search, Shield, Sword, Zap } from 'lucide-react';
 import {
   nriFetchNpcs,
-  nriGrantItem,
   nriGrantNpcItem,
+  nriTransferItem,
   nriToggleEquip,
   type NriNpc,
   type NriPlayerProfile,
@@ -96,13 +96,19 @@ export const NriInventoryPanel: React.FC<Props> = ({
     if (!authToken || !catalogPick || !grantTarget) return;
     setBusy('grant');
     setErr(null);
-    const res = await nriGrantItem(authToken, inviteCode, grantTarget, catalogPick, {
+    const res = await nriTransferItem(authToken, inviteCode, {
+      toUserId: grantTarget,
+      catalogId: catalogPick,
       fromNpcId: grantFromNpc || undefined,
+      asNpcId: grantFromNpc || undefined,
     });
     setBusy(null);
     if (!res.ok) setErr(res.error);
-    else if (user?.id && grantTarget === user.id) {
-      onProfileUpdate({ ...profile, inventory: res.inventory });
+    else {
+      if (user?.id && grantTarget === user.id && res.inventory && onProfileUpdate) {
+        onProfileUpdate({ ...profile, inventory: res.inventory });
+      }
+      setErr(null);
     }
   };
 
@@ -176,9 +182,9 @@ export const NriInventoryPanel: React.FC<Props> = ({
 
       {isHost && (
         <section className="nri-inventory__grant">
-          <h3 className="mono-text">Выдать из каталога (мастер)</h3>
+          <h3 className="mono-text">Выдать из каталога (мастер → личка)</h3>
           <p className="mono-text opacity-50 nri-inventory__hint">
-            Каталог: {NRI_ITEM_CATALOG.length} предметов · дубликаты id отфильтрованы при загрузке.
+            Предмет уходит в личку игроку. Показать за столом — из сообщения передачи в личке.
           </p>
 
           <div className="nri-inventory__category-tabs">

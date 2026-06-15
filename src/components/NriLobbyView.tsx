@@ -37,7 +37,7 @@ import { NriInventoryPanel } from './NriInventoryPanel';
 import { NriWalletPanel } from './NriWalletPanel';
 import { NriCityMapPanel } from './NriCityMapPanel';
 import { NriTransportPanel } from './NriTransportPanel';
-import { NriScenarioPanel } from './NriScenarioPanel';
+import { NriScenarioHub } from './NriScenarioHub';
 import { NriPlayerNotesPanel } from './NriPlayerNotesPanel';
 
 import { parseNriSheet } from '../logic/nriNpcGenerator';
@@ -445,6 +445,9 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             }))}
             dmRecipients={vaultRecipients.filter((r) => r.userId !== user?.id)}
             nriInviteCode={inviteCode}
+            nriProfile={profile ?? null}
+            tableNpcs={tableNpcs}
+            onNriProfileUpdate={(p) => setProfile(p)}
             roomSpamPaused={!!session.spamPausedActive}
             spamPausedUntil={session.spamPausedUntil ?? walletInfo?.spamPausedUntil}
             antispamPrice={walletInfo?.antispamPrice}
@@ -520,7 +523,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           />
         )}
         {tab === 'scenario' && (session?.isHost || session?.isAdmin) && (
-          <NriScenarioPanel inviteCode={inviteCode} />
+          <NriScenarioHub inviteCode={inviteCode} />
         )}
         {tab === 'notes' && profile && !session?.isHost && (
           <NriPlayerNotesPanel

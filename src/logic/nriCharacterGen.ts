@@ -120,6 +120,45 @@ function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
+function stableHash(...parts: (string | number | undefined)[]): number {
+  let h = 2166136261;
+  for (const p of parts) {
+    const s = String(p ?? '');
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+  }
+  return h >>> 0;
+}
+
+class SeededRng {
+  private state: number;
+
+  constructor(seed: number) {
+    this.state = seed || 1;
+  }
+
+  next(): number {
+    this.state = (this.state * 1664525 + 1013904223) >>> 0;
+    return this.state / 0x100000000;
+  }
+
+  pick<T>(arr: readonly T[]): T {
+    return arr[Math.floor(this.next() * arr.length)]!;
+  }
+
+  int(min: number, max: number): number {
+    return min + Math.floor(this.next() * (max - min + 1));
+  }
+}
+
+function resolveOriginId(originLabel?: string): NriOriginId {
+  if (!originLabel) return 'neo_tokyo';
+  const hit = NRI_ORIGINS.find((o) => o.label === originLabel || o.id === originLabel);
+  return hit?.id ?? 'neo_tokyo';
+}
+
 export function activityForClass(classId: NriClassId): NriActivityId {
   return (
     {
@@ -279,33 +318,34 @@ function generateAugmentations(
 function generateBio(
   originId: NriOriginId,
   archetypeId?: NriNpcArchetypeId,
-  isRobot?: boolean
+  isRobot?: boolean,
+  rng: SeededRng = new SeededRng(Math.random() * 0x7fffffff)
 ): Pick<NriSheetData, 'height' | 'weight' | 'skin' | 'hair' | 'eyes' | 'culture'> {
   if (isRobot || archetypeId === 'robot') {
     return {
-      height: `${175 + Math.floor(Math.random() * 15)} cm (шасси)`,
-      weight: `${80 + Math.floor(Math.random() * 40)} kg`,
+      height: `${175 + rng.int(0, 14)} cm (шасси)`,
+      weight: `${80 + rng.int(0, 39)} kg`,
       skin: 'синтетическая оболочка',
-      hair: pick(['отсутствует', 'синтетические волокна', 'LED-полосы'] as const),
+      hair: rng.pick(['отсутствует', 'синтетические волокна', 'LED-полосы'] as const),
       eyes: 'оптика v3',
       culture: 'Machine',
     };
   }
-  const h = 160 + Math.floor(Math.random() * 35);
-  const w = 55 + Math.floor(Math.random() * 45);
+  const h = 160 + rng.int(0, 34);
+  const w = 55 + rng.int(0, 44);
   return {
     height: `${h} cm`,
     weight: `${w} kg`,
-    skin: pick(SKIN_BY_ORIGIN[originId] ?? SKIN_BY_ORIGIN.neo_tokyo),
-    hair: pick(HAIR_OPTIONS),
-    eyes: pick(EYE_OPTIONS),
+    skin: rng.pick(SKIN_BY_ORIGIN[originId] ?? SKIN_BY_ORIGIN.neo_tokyo),
+    hair: rng.pick(HAIR_OPTIONS),
+    eyes: rng.pick(EYE_OPTIONS),
     culture: CULTURE_BY_ORIGIN[originId] ?? 'Mixed',
   };
 }
 
-function generateVice(archetypeId?: NriNpcArchetypeId): string {
-  if (archetypeId) return pick(VICE_BY_ARCH[archetypeId]);
-  return pick(['Synthohol', 'Nicotine', 'Gambling', 'None documented'] as const);
+function generateVice(archetypeId?: NriNpcArchetypeId, rng: SeededRng = new SeededRng(Math.random() * 0x7fffffff)): string {
+  if (archetypeId) return rng.pick(VICE_BY_ARCH[archetypeId]);
+  return rng.pick(['Synthohol', 'Nicotine', 'Gambling', 'None documented'] as const);
 }
 
 function encumbranceFromStr(str: number): Pick<NriSheetData, 'encumberedLb' | 'heavilyEncumberedLb' | 'maxCarryLb'> {
@@ -325,9 +365,47 @@ function proficiencyForLevel(level: number): number {
 
 function sheetNeedsGeneration(sheet: AugmentedSheet | null): boolean {
   if (!sheet) return true;
-  if (!sheet.origin || !sheet.height || !sheet.vice) return true;
-  if (!sheet.augmentations?.length) return true;
+  if (!sheet.abilities) return true;
   return false;
+}
+
+/** Дозаполняет пропуски без перегенерации уже сохранённых полей (стабильный seed). */
+function fillMissingSheetFields(
+  sheet: AugmentedSheet,
+  classId: NriClassId,
+  displayName?: string
+): AugmentedSheet {
+  const seed = stableHash(displayName ?? sheet.characterName ?? '', classId, sheet.origin ?? '');
+  const rng = new SeededRng(seed);
+  const originId = resolveOriginId(sheet.origin);
+  const archetypeId = archetypeForClass(classId);
+  const arch = NRI_NPC_ARCHETYPES.find((a) => a.id === archetypeId);
+  const bioNeeded = !sheet.height || !sheet.weight || !sheet.skin || !sheet.hair || !sheet.eyes || !sheet.culture;
+  const bio = bioNeeded ? generateBio(originId, archetypeId, arch?.isRobot, rng) : null;
+  const augmentations = sheet.augmentations ?? [];
+  const bloodToxCurrent =
+    sheet.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
+  const enc =
+    sheet.encumberedLb && sheet.maxCarryLb
+      ? {}
+      : encumbranceFromStr(sheet.abilities.STR);
+
+  return {
+    ...sheet,
+    origin: sheet.origin ?? originLabel(originId),
+    activity: sheet.activity ?? activityLabel(activityForClass(classId)),
+    height: sheet.height ?? bio?.height,
+    weight: sheet.weight ?? bio?.weight,
+    skin: sheet.skin ?? bio?.skin,
+    hair: sheet.hair ?? bio?.hair,
+    eyes: sheet.eyes ?? bio?.eyes,
+    culture: sheet.culture ?? bio?.culture,
+    vice: sheet.vice ?? generateVice(archetypeId, rng),
+    augmentations,
+    bloodToxCurrent,
+    bloodToxLimit: sheet.bloodToxLimit ?? getBloodToxLimit({ ...sheet, augmentations }),
+    ...enc,
+  };
 }
 
 export function ensureCompleteSheet(
@@ -336,7 +414,9 @@ export function ensureCompleteSheet(
   displayName?: string
 ): AugmentedSheet {
   const parsed = parseAugmentedSheet(raw);
-  if (parsed && !sheetNeedsGeneration(parsed)) return parsed;
+  if (parsed && !sheetNeedsGeneration(parsed)) {
+    return fillMissingSheetFields(parsed, classId, displayName);
+  }
 
   const built = buildFullCharacter({
     classId,
@@ -347,45 +427,21 @@ export function ensureCompleteSheet(
     rollStats: !parsed?.abilities,
   });
 
-  if (!parsed) return { ...built.sheet, augmentations: built.sheet.augmentations };
+  if (!parsed) return { ...built.sheet, augmentations: built.sheet.augmentations ?? [] };
 
-  const augmentations = parsed.augmentations?.length ? parsed.augmentations : built.sheet.augmentations;
-  const btCurrent =
-    parsed.bloodToxCurrent ?? augmentations?.reduce((s, a) => s + a.bloodTox, 0) ?? built.sheet.bloodToxCurrent;
-
-  return {
-    ...built.sheet,
-    ...parsed,
-    abilities: parsed.abilities ?? built.sheet.abilities,
-    hp: parsed.hp ?? built.sheet.hp,
-    hpMax: parsed.hpMax ?? built.sheet.hpMax,
-    ac: parsed.ac ?? built.sheet.ac,
-    origin: parsed.origin ?? built.sheet.origin,
-    activity: parsed.activity ?? built.sheet.activity,
-    age: parsed.age ?? built.sheet.age,
-    career: parsed.career ?? built.sheet.career,
-    yearsServed: parsed.yearsServed ?? built.sheet.yearsServed,
-    streetInfluence: parsed.streetInfluence ?? built.sheet.streetInfluence,
-    corporateInfluence: parsed.corporateInfluence ?? built.sheet.corporateInfluence,
-    backstory: parsed.backstory ?? built.sheet.backstory,
-    height: parsed.height ?? built.sheet.height,
-    weight: parsed.weight ?? built.sheet.weight,
-    skin: parsed.skin ?? built.sheet.skin,
-    hair: parsed.hair ?? built.sheet.hair,
-    eyes: parsed.eyes ?? built.sheet.eyes,
-    culture: parsed.culture ?? built.sheet.culture,
-    vice: parsed.vice ?? built.sheet.vice,
-    dr: parsed.dr ?? built.sheet.dr,
-    xp: parsed.xp ?? built.sheet.xp,
-    augmentations,
-    bloodToxCurrent: btCurrent,
-    bloodToxLimit: parsed.bloodToxLimit ?? getBloodToxLimit({ ...parsed, augmentations }),
-    encumberedLb: parsed.encumberedLb ?? built.sheet.encumberedLb,
-    heavilyEncumberedLb: parsed.heavilyEncumberedLb ?? built.sheet.heavilyEncumberedLb,
-    maxCarryLb: parsed.maxCarryLb ?? built.sheet.maxCarryLb,
-    attacks: parsed.attacks ?? built.sheet.attacks,
-    skillProficiencies: parsed.skillProficiencies ?? built.sheet.skillProficiencies,
-  };
+  return fillMissingSheetFields(
+    {
+      ...built.sheet,
+      ...parsed,
+      abilities: parsed.abilities ?? built.sheet.abilities,
+      hp: parsed.hp ?? built.sheet.hp,
+      hpMax: parsed.hpMax ?? built.sheet.hpMax,
+      ac: parsed.ac ?? built.sheet.ac,
+      augmentations: parsed.augmentations?.length ? parsed.augmentations : (built.sheet.augmentations ?? []),
+    },
+    classId,
+    displayName
+  );
 }
 
 export function isValidPlayerSheet(raw: unknown): raw is NriSheetData {

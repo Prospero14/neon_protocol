@@ -38,7 +38,7 @@ const GibsonIceHack: React.FC<Props> = ({
   const authToken = readNeonAuthToken() ?? token;
   const [phase, setPhase] = useState<IceRunPhase>('intro');
   const [runSeed, setRunSeed] = useState(() => Date.now());
-  const run = useMemo(() => rollIceRun(runSeed), [runSeed]);
+  const run = useMemo(() => rollIceRun(runSeed, difficulty), [runSeed, difficulty]);
   const [scanPick, setScanPick] = useState<string | null>(null);
   const [crackStep, setCrackStep] = useState(0);
   const [flashPort, setFlashPort] = useState<number | null>(null);
@@ -54,6 +54,10 @@ const GibsonIceHack: React.FC<Props> = ({
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exfilRef = useRef(0);
   const traceRef = useRef(0);
+
+  useEffect(() => {
+    traceRef.current = iceTrace;
+  }, [iceTrace]);
 
   const loadIceStatus = useCallback(async () => {
     if (!nriInviteCode || !authToken) return null;
@@ -105,6 +109,7 @@ const GibsonIceHack: React.FC<Props> = ({
     (delta: number) => {
       setIceTrace((t) => {
         const next = Math.min(100, t + delta);
+        traceRef.current = next;
         if (next >= 100) {
           triggerBusted('ICE TRACE MAX — соединение оборвано, данные уничтожены.');
         }
@@ -113,6 +118,9 @@ const GibsonIceHack: React.FC<Props> = ({
     },
     [triggerBusted]
   );
+
+  const flashMs = difficulty === 'hard' ? 320 : difficulty === 'medium' ? 380 : 420;
+  const flashGap = difficulty === 'hard' ? 420 : difficulty === 'medium' ? 480 : 520;
 
   const playCrackFlash = useCallback(() => {
     clearFlashTimers();
@@ -124,27 +132,32 @@ const GibsonIceHack: React.FC<Props> = ({
     seq.forEach((port, idx) => {
       const onTimer = setTimeout(() => {
         setFlashPort(port);
-        const offTimer = setTimeout(() => setFlashPort(null), 420);
+        const offTimer = setTimeout(() => setFlashPort(null), flashMs);
         flashTimersRef.current.push(offTimer);
-      }, idx * 520);
+      }, idx * flashGap);
       flashTimersRef.current.push(onTimer);
     });
     const doneTimer = setTimeout(() => {
       setFlashPlaying(false);
       setFlashPort(null);
       setStatusLine('Повтори порядок — жми PORT по одному.');
-    }, seq.length * 520 + 300);
+    }, seq.length * flashGap + 300);
     flashTimersRef.current.push(doneTimer);
-  }, [run.crackSequence]);
+  }, [run.crackSequence, flashMs, flashGap]);
 
   const startExfil = useCallback(() => {
     stopTick();
     exfilRef.current = 0;
-    traceRef.current = 8;
     setExfil(0);
-    setIceTrace(8);
+    const carryTrace = Math.min(99, traceRef.current);
+    traceRef.current = carryTrace;
+    setIceTrace(carryTrace);
     setPhase('exfil');
-    setStatusLine('Эксfil активен — качай данные, пока ICE не проснулся!');
+    setStatusLine(
+      carryTrace > 0
+        ? `Эксfil — ICE уже на ${Math.round(carryTrace)}%, качай быстрее!`
+        : 'Эксfil активен — качай данные, пока ICE не проснулся!'
+    );
     tickRef.current = setInterval(() => {
       traceRef.current = Math.min(100, traceRef.current + 1.8 * TRACE_MULT[difficulty]);
       setIceTrace(traceRef.current);
@@ -215,8 +228,9 @@ const GibsonIceHack: React.FC<Props> = ({
       setStatusLine(`CVE найден на ${svc.label}:${svc.port} — внедряем эксплойт…`);
       setTimeout(beginCrack, 700);
     } else {
-      setStatusLine('Ложная цель — ICE поднял тревогу +10%');
-      applyIcePenalty(10);
+      const penalty = difficulty === 'hard' ? 14 : difficulty === 'medium' ? 12 : 10;
+      setStatusLine(`Ложная цель — ICE +${penalty}%`);
+      applyIcePenalty(penalty);
       setTimeout(() => setScanPick(null), 600);
     }
   };
@@ -225,12 +239,14 @@ const GibsonIceHack: React.FC<Props> = ({
     if (phase !== 'crack' || flashPlaying) return;
     const expected = run.crackSequence[crackStep];
     if (port !== expected) {
+      const penalty = difficulty === 'hard' ? 15 : difficulty === 'medium' ? 12 : 10;
       setIceTrace((t) => {
-        const next = Math.min(100, t + 12);
+        const next = Math.min(100, t + penalty);
+        traceRef.current = next;
         if (next >= 100) {
           triggerBusted('ICE TRACE MAX — соединение оборвано, данные уничтожены.');
         } else {
-          setStatusLine('Неверный порт — смотри последовательность ещё раз.');
+          setStatusLine(`Неверный PORT — ICE +${penalty}%. Смотри последовательность ещё раз.`);
           playCrackFlash();
         }
         return next;
@@ -302,9 +318,9 @@ const GibsonIceHack: React.FC<Props> = ({
       {phase === 'intro' && (
         <div className="ice-panel">
           <p className="ice-brief">
-            Три фазы: <strong>SCAN</strong> — найди дырявый сервис (anon OK, open bind);
-            <strong> CRACK</strong> — порты вспыхнут по очереди, повтори;
-            <strong> EXFIL</strong> — жми «PUMP», пока ICE TRACE не 100%.
+            Три фазы: <strong>SCAN</strong> — найди дырявый сервис (баннеры врут);
+            <strong> CRACK</strong> — порты вспыхнут по очереди, повтори (ошибка копит ICE);
+            <strong> EXFIL</strong> — жми «PUMP»; ICE trace не сбрасывается между фазами.
           </p>
           {iceStatus?.hardwareBanned && iceStatus.canPlay && (
             <p className="ice-ban-cleared mono-text">
@@ -345,7 +361,7 @@ const GibsonIceHack: React.FC<Props> = ({
             {flashPlaying ? ' — смотри, порты мигают по очереди!' : ' — твой ход, жми PORT'}
           </p>
           <div className="ice-port-grid">
-            {[1, 2, 3, 4].map((p) => (
+            {Array.from({ length: run.portCount }, (_, i) => i + 1).map((p) => (
               <button
                 key={p}
                 type="button"

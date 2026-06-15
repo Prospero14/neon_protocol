@@ -1,4 +1,10 @@
-/** Переносимый вес: инвентарь + импланты vs лимит STR×15 lb. */
+/** Переносимый вес: инвентарь + импланты vs лимит STR×15 lb (отображение в кг). */
+
+const LB_TO_KG = 0.453592;
+
+export function lbToKg(lb: number): number {
+  return Math.round(lb * LB_TO_KG * 10) / 10;
+}
 
 import type { InstalledAugmentation } from './nriCyberInstall';
 import { getCatalogItem } from './nriItemCatalog';
@@ -54,7 +60,7 @@ export function encumbranceLabel(
   if (maxLb <= 0) return { text: '—', status: 'ok' };
   const enc = Math.floor(maxLb * 0.67);
   const heavy = Math.floor(maxLb * 0.83);
-  const text = `${carriedLb} / ${maxLb} lb`;
+  const text = `${lbToKg(carriedLb)} / ${lbToKg(maxLb)} кг`;
   if (carriedLb > maxLb) return { text: `${text} · перегруз`, status: 'over' };
   if (carriedLb > heavy) return { text: `${text} · тяжёлая ноша`, status: 'heavy' };
   if (carriedLb > enc) return { text: `${text} · ноша`, status: 'encumbered' };

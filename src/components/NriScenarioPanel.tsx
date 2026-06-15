@@ -5,12 +5,16 @@ import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
   nriCreateScenarioNode,
   nriDeleteScenarioNode,
+  nriFetchMapZones,
   nriFetchNpcs,
   nriFetchScenario,
   nriFetchVault,
   nriPatchScenarioNode,
+  nriPatchScenarioProgress,
+  type NriMapZone,
   type NriNpc,
   type NriScenarioNode,
+  type NriScenarioProgress,
   type NriVaultFile,
 } from '../logic/nriApi';
 import { NRI_ITEM_CATALOG, searchCatalog } from '../logic/nriItemCatalog';
@@ -32,6 +36,8 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [nodes, setNodes] = useState<NriScenarioNode[]>([]);
+  const [progress, setProgress] = useState<NriScenarioProgress | null>(null);
+  const [zones, setZones] = useState<NriMapZone[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -45,17 +51,20 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [scenarioRes, npcList, vault] = await Promise.all([
+    const [scenarioRes, npcList, vault, zoneData] = await Promise.all([
       nriFetchScenario(authToken, inviteCode),
       nriFetchNpcs(authToken, inviteCode),
       nriFetchVault(authToken, inviteCode),
+      nriFetchMapZones(authToken, inviteCode),
     ]);
     if (scenarioRes.ok) {
       setNodes(scenarioRes.nodes);
+      setProgress(scenarioRes.progress);
       setErr(null);
     } else {
       setErr(scenarioRes.error);
     }
+    if (zoneData) setZones(zoneData.zones);
     if (npcList) setNpcs(npcList);
     if (vault) setFiles(vault);
   }, [authToken, inviteCode]);
@@ -104,13 +113,15 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
           >
             {isRoot ? '◆ ' : '▸ '}
             {n.title}
+            {progress?.currentScriptNodeId === n.id && ' · ▶'}
+            {n.checkpointMet && ' ✓'}
           </button>,
           ...walk(n.id),
         ];
       });
     };
     return walk(null);
-  }, [nodes, selectedId]);
+  }, [nodes, selectedId, progress?.currentScriptNodeId]);
 
   const addRoot = async () => {
     if (!authToken || root) return;
@@ -178,6 +189,24 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
     await refresh();
   };
 
+  const setCurrentScript = async () => {
+    if (!authToken || !selectedId) return;
+    setBusy(true);
+    const p = await nriPatchScenarioProgress(authToken, inviteCode, { currentScriptNodeId: selectedId });
+    setBusy(false);
+    if (p) setProgress(p);
+    else setErr('Не удалось установить текущий пункт сценария.');
+    await refresh();
+  };
+
+  const completeCheckpoint = async () => {
+    if (!authToken || !selectedId || !selected?.checkpointMet) return;
+    setBusy(true);
+    await nriPatchScenarioProgress(authToken, inviteCode, { completeNodeId: selectedId });
+    setBusy(false);
+    await refresh();
+  };
+
   const linkNpcName = (id: string) => npcs.find((n) => n.id === id)?.name ?? id;
   const linkFileTitle = (id: string) => files.find((f) => f.id === id)?.title ?? id;
   const linkItemName = (id: string) => NRI_ITEM_CATALOG.find((c) => c.id === id)?.name ?? id;
@@ -224,6 +253,66 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
                 <span>Описание</span>
                 <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} />
               </label>
+
+              <section className="nri-scenario__place">
+                <h4 className="mono-text">Место · лор</h4>
+                <label className="mono-text nri-scenario__check">
+                  <input
+                    type="checkbox"
+                    checked={!!links.syncToLore}
+                    onChange={(e) => setLinks((l) => ({ ...l, syncToLore: e.target.checked }))}
+                  />
+                  Дублировать в лор (карточка места)
+                </label>
+                <label className="nri-modal__field">
+                  <span>Название места</span>
+                  <input
+                    value={links.placeTitle ?? ''}
+                    placeholder={title}
+                    onChange={(e) => setLinks((l) => ({ ...l, placeTitle: e.target.value }))}
+                  />
+                </label>
+                <label className="nri-modal__field">
+                  <span>Район на карте</span>
+                  <select
+                    value={links.zoneKey ?? ''}
+                    onChange={(e) => setLinks((l) => ({ ...l, zoneKey: e.target.value || null }))}
+                  >
+                    <option value="">— не выбран —</option>
+                    {zones.map((z) => (
+                      <option key={z.zoneKey} value={z.zoneKey}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="mono-text nri-scenario__check">
+                  <input
+                    type="checkbox"
+                    checked={!!links.meetCheckpoint}
+                    onChange={(e) => setLinks((l) => ({ ...l, meetCheckpoint: e.target.checked }))}
+                  />
+                  Чекпоинт: все игроки здесь (только если это текущий пункт сценария)
+                </label>
+                {selected.checkpointMet && (
+                  <p className="mono-text nri-scenario__checkpoint-ok">✓ Условие встречи выполнено</p>
+                )}
+                {links.meetCheckpoint && progress?.currentScriptNodeId !== selected.id && (
+                  <p className="mono-text opacity-60">
+                    Игроки могут прийти раньше — галочка не засчитается, пока не нажмёте «Текущий пункт».
+                  </p>
+                )}
+                <div className="nri-presets__actions">
+                  <button type="button" className="nri-lobby__copy" disabled={busy} onClick={setCurrentScript}>
+                    ▶ Текущий пункт сценария
+                  </button>
+                  {selected.checkpointMet && (
+                    <button type="button" className="nri-modal__submit" disabled={busy} onClick={completeCheckpoint}>
+                      Завершить чекпоинт
+                    </button>
+                  )}
+                </div>
+              </section>
 
               <section className="nri-scenario__links">
                 <h4 className="mono-text">Привязки</h4>

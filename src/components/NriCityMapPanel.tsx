@@ -4,11 +4,16 @@ import {
   nriCreateMapMarker,
   nriDeleteMapMarker,
   nriFetchMapMarkers,
+  nriFetchMapPositions,
   nriFetchMapZones,
+  nriFetchVehicles,
+  nriMoveToZone,
   nriPatchMapZone,
   type NriMapMarker,
   type NriMapZone,
   type NriMapView,
+  type NriPlayerPosition,
+  type NriTableVehicle,
 } from '../logic/nriApi';
 import {
   DISTRICT_TYPE_LABELS,
@@ -20,6 +25,7 @@ import {
   zoneRectPaint,
   type NightCityDistrictType,
 } from '../logic/nriNightCityMap';
+import { getVehicleDef } from '../logic/nriVehicles';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 
@@ -114,6 +120,11 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const [editPois, setEditPois] = useState('');
   const [editColor, setEditColor] = useState('#5a9ee6');
   const [colorUseDefault, setColorUseDefault] = useState(true);
+  const [positions, setPositions] = useState<NriPlayerPosition[]>([]);
+  const [vehicles, setVehicles] = useState<NriTableVehicle[]>([]);
+  const [moveVehicleId, setMoveVehicleId] = useState<string>('');
+  const [moveOverload, setMoveOverload] = useState(false);
+  const [moveMsg, setMoveMsg] = useState<string | null>(null);
   const focusZone = useMemo(
     () => (selectedZoneKey ? zones.find((z) => z.zoneKey === selectedZoneKey) ?? null : null),
     [zones, selectedZoneKey]
@@ -124,6 +135,16 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     if (!authToken) return;
     const list = await nriFetchMapMarkers(authToken, inviteCode);
     if (list) setMarkers(list);
+  }, [authToken, inviteCode]);
+
+  const refreshPositions = useCallback(async () => {
+    if (!authToken) return;
+    const [pos, veh] = await Promise.all([
+      nriFetchMapPositions(authToken, inviteCode),
+      nriFetchVehicles(authToken, inviteCode),
+    ]);
+    setPositions(pos);
+    setVehicles(veh);
   }, [authToken, inviteCode]);
 
   const refreshZones = useCallback(async () => {
@@ -139,9 +160,13 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   useEffect(() => {
     refreshZones();
     refreshMarkers();
-    const t = setInterval(refreshMarkers, 5000);
+    refreshPositions();
+    const t = setInterval(() => {
+      refreshMarkers();
+      refreshPositions();
+    }, 5000);
     return () => clearInterval(t);
-  }, [refreshZones, refreshMarkers]);
+  }, [refreshZones, refreshMarkers, refreshPositions]);
 
   useEffect(() => {
     if (!focusZone) {
@@ -423,6 +448,52 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     ? DISTRICT_TYPE_LABELS[panelZone.zoneType as NightCityDistrictType] ?? panelZone.zoneType
     : '';
 
+  const myPosition = useMemo(
+    () => positions.find((p) => p.userId === currentUserId) ?? null,
+    [positions, currentUserId]
+  );
+  const myVehicles = useMemo(
+    () => vehicles.filter((v) => v.assignedUserId === currentUserId),
+    [vehicles, currentUserId]
+  );
+  const myZone = useMemo(
+    () => (myPosition?.zoneKey ? zones.find((z) => z.zoneKey === myPosition.zoneKey) ?? null : null),
+    [myPosition?.zoneKey, zones]
+  );
+  const selectedVehicle = moveVehicleId ? vehicles.find((v) => v.id === moveVehicleId) ?? null : null;
+  const selectedVehicleDef = selectedVehicle ? getVehicleDef(selectedVehicle.catalogId) : null;
+
+  const moveToZone = async () => {
+    if (!authToken || !focusZone) return;
+    if (myPosition?.zoneKey === focusZone.zoneKey) {
+      setMoveMsg('Вы уже в этом районе.');
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    setMoveMsg(null);
+    const res = await nriMoveToZone(authToken, inviteCode, {
+      zoneKey: focusZone.zoneKey,
+      vehicleId: moveVehicleId || null,
+      overload: moveOverload,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setMoveMsg(res.message);
+    await refreshPositions();
+  };
+
+  const positionDot = (p: NriPlayerPosition) => {
+    const z = p.zoneKey ? zones.find((z) => z.zoneKey === p.zoneKey) : null;
+    const px = p.x ?? (z ? z.x + z.w / 2 : null);
+    const py = p.y ?? (z ? z.y + z.h / 2 : null);
+    if (px == null || py == null) return null;
+    return { px, py, label: p.displayName ?? p.userId.slice(0, 6) };
+  };
+
   return (
     <div className="nri-city-map">
       <header className="nri-city-map__head">
@@ -543,6 +614,66 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             {isHost && !focusZone && (
               <p className="mono-text nri-city-map__hover-hint">Кликните район на карте, чтобы выбрать его для переименования</p>
             )}
+            {!isHost && focusZone && (
+              <div className="nri-city-map__travel">
+                <p className="mono-text">
+                  {myZone ? (
+                    <>
+                      Сейчас: <strong>{myZone.name}</strong>
+                    </>
+                  ) : (
+                    'Позиция не задана — выберите район назначения.'
+                  )}
+                </p>
+                {myPosition?.zoneKey !== focusZone.zoneKey && (
+                  <>
+                    {myVehicles.length > 0 && (
+                      <label className="nri-modal__field">
+                        <span>Транспорт</span>
+                        <select
+                          value={moveVehicleId}
+                          onChange={(e) => {
+                            setMoveVehicleId(e.target.value);
+                            setMoveOverload(false);
+                          }}
+                        >
+                          <option value="">Пешком (медленнее)</option>
+                          {myVehicles.map((v) => {
+                            const def = getVehicleDef(v.catalogId);
+                            const label = v.label || def?.name || v.catalogId;
+                            return (
+                              <option key={v.id} value={v.id}>
+                                {label} · {def?.speed ?? '?'} spd · {def?.seats ?? '?'} мест
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+                    )}
+                    {moveVehicleId && selectedVehicleDef && (
+                      <label className="mono-text nri-scenario__check">
+                        <input
+                          type="checkbox"
+                          checked={moveOverload}
+                          onChange={(e) => setMoveOverload(e.target.checked)}
+                        />
+                        Перегруз мест (мастер получит уведомление — возможна полиция)
+                      </label>
+                    )}
+                    <button type="button" className="nri-modal__submit" disabled={busy} onClick={moveToZone}>
+                      Переместиться → {focusZone.name}
+                    </button>
+                    <p className="mono-text opacity-60">
+                      Время в пути фиксируется служебным сообщением мастеру в личке.
+                    </p>
+                  </>
+                )}
+                {myPosition?.zoneKey === focusZone.zoneKey && (
+                  <p className="mono-text nri-scenario__checkpoint-ok">Вы в этом районе.</p>
+                )}
+                {moveMsg && <p className="mono-text nri-city-map__travel-msg">{moveMsg}</p>}
+              </div>
+            )}
           </>
         ) : (
           <p className="mono-text nri-city-map__hover nri-city-map__hover--empty">
@@ -660,6 +791,19 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                       {z.pois.slice(0, 2).join(' · ')}
                     </text>
                   )}
+                </g>
+              );
+            })}
+            {positions.map((p) => {
+              const dot = positionDot(p);
+              if (!dot) return null;
+              const isMe = p.userId === currentUserId;
+              return (
+                <g key={`pos-${p.userId}`} className={`nri-city-map__player-pos ${isMe ? 'nri-city-map__player-pos--me' : ''}`}>
+                  <circle cx={dot.px} cy={dot.py} r={1.2} />
+                  <text x={dot.px} y={dot.py - 1.8} textAnchor="middle" className="nri-city-map__player-pos-label">
+                    {dot.label}
+                  </text>
                 </g>
               );
             })}

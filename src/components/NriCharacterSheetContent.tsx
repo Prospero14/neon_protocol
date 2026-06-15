@@ -14,6 +14,13 @@ import { parseAugmentedSheet, getBloodToxLimit } from '../logic/nriCyberInstall'
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
 import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
+import {
+  collectPlayerCyberEffects,
+  CYBER_EFFECT_LABELS,
+  hasCyberEffect,
+} from '../logic/nriCyberEffects';
+import { encumbranceLabel, inventoryCarriedLb, maxCarryLbFromSheet } from '../logic/nriEncumbrance';
+import { sheetAutoFillSummary } from '../logic/nriSheetStatus';
 import type { NriPlayerProfile } from '../logic/nriApi';
 
 type Props = {
@@ -49,6 +56,21 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
     ? getSheetCombatView(effectiveSheet, profile.classId as NriClassId, augmentations)
     : null;
   const gearAttacks = effectiveSheet ? attacksFromEquippedGear(effectiveSheet, inventory) : [];
+  const cyberEffects = useMemo(
+    () => collectPlayerCyberEffects(inventory, augmentations),
+    [inventory, augmentations]
+  );
+  const carriedLb = useMemo(
+    () => inventoryCarriedLb(inventory, augmentations),
+    [inventory, augmentations]
+  );
+  const maxCarryLb = useMemo(() => maxCarryLbFromSheet(sheet), [sheet]);
+  const encLabel = encumbranceLabel(carriedLb, maxCarryLb);
+  const classFeatures = sheet?.classFeatures?.length
+    ? sheet.classFeatures
+    : tpl
+      ? [tpl.signature, ...tpl.traits]
+      : [];
   const displayAttacks =
     gearAttacks.length > 0
       ? gearAttacks.map((a) => ({
@@ -93,8 +115,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         )}
         <span className="nri-c2185-sheet__brand">CARBON 2185 · CHARACTER SHEET</span>
         <p className="nri-c2185-sheet__note mono-text">
-          Шаблон по листу из правил — заполните на столе. Класс: {cls?.name ?? profile.classId}
-          {tpl ? ` (${tpl.carbonName})` : ''}.
+          {sheetAutoFillSummary(profile.sheet, profile.classId as NriClassId)}
         </p>
       </header>
 
@@ -147,7 +168,15 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         <Field label="VICE" value={sheet?.vice} />
         <Field
           label="WONLONGS"
-          value={sheet ? `₩${readWonlongs(sheet)}` : undefined}
+          value={
+            sheet
+              ? `₩${readWonlongs(sheet)}${
+                  hasCyberEffect(cyberEffects, 'currency_uv') || hasCyberEffect(cyberEffects, 'vision_uv')
+                    ? ' · УФ-метки видны'
+                    : ''
+                }`
+              : undefined
+          }
         />
       </div>
 
@@ -217,17 +246,17 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
 
       <section className="nri-c2185-block">
         <h4 className="nri-c2185-block__title">FEATURES AND TRAITS</h4>
-        {tpl && (
-          <>
-            <p className="mono-text nri-c2185-trait">{tpl.signature}</p>
-            <ul className="nri-c2185-trait-list">
-              {tpl.traits.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ul>
-          </>
+        <ul className="nri-c2185-trait-list">
+          {classFeatures.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+        {sheet?.vice && (
+          <p className="mono-text nri-c2185-trait">
+            <strong>Vice:</strong> {sheet.vice}
+          </p>
         )}
-        <p className="mono-text opacity-50">Доп. черты — заполнить на столе.</p>
+        {sheet?.notes && <p className="mono-text opacity-70">{sheet.notes}</p>}
       </section>
 
       <section className="nri-c2185-block">
@@ -236,7 +265,12 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           <ul className="nri-c2185-trait-list">
             <li>Armor: {tpl.armor}</li>
             <li>Weapons: {tpl.weapons}</li>
-            <li>Skills: {tpl.skillsPick}</li>
+            <li>
+              Skills (владение):{' '}
+              {(sheet?.skillProficiencies ?? []).length > 0
+                ? sheet!.skillProficiencies!.join(', ')
+                : blank}
+            </li>
             <li>Saves: {tpl.saveProficiencies.join(', ') || blank}</li>
           </ul>
         )}
@@ -261,6 +295,17 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           </ul>
         )}
       </section>
+
+      {cyberEffects.length > 0 && (
+        <section className="nri-c2185-block">
+          <h4 className="nri-c2185-block__title">CYBER ABILITIES</h4>
+          <ul className="nri-c2185-trait-list">
+            {cyberEffects.map((fx) => (
+              <li key={fx}>{CYBER_EFFECT_LABELS[fx]}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="nri-c2185-grid nri-c2185-grid--bio">
         <Field label="HEIGHT" value={sheet?.height} />
@@ -288,9 +333,9 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
             </ul>
           )}
         </div>
-        <p className="mono-text opacity-50">
-          Encumbered {sheet?.encumberedLb ?? blank} lb · Heavily encumbered {sheet?.heavilyEncumberedLb ?? blank} lb ·
-          Max carry {sheet?.maxCarryLb ?? blank} lb
+        <p className={`mono-text nri-c2185-encumbrance nri-c2185-encumbrance--${encLabel.status}`}>
+          Нагрузка: <strong>{encLabel.text}</strong>
+          {sheet?.weight && <span className="opacity-60"> · вес тела {sheet.weight}</span>}
         </p>
       </section>
 

@@ -36,6 +36,7 @@ import {
   sumInstalledBloodTox,
 } from '../logic/nriCyberInstall';
 import type { VaultRecipient } from './NriVaultTab';
+import { NriCyberProductPreview } from './NriSelectionPreview';
 
 type Props = {
   inviteCode: string;
@@ -492,6 +493,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
                       {meta.overload && ' · перегруз'}
                     </span>
                   </div>
+                  <NriCyberProductPreview product={p} compact />
                   <div className="nri-cyber__shop-actions">
                     <button
                       type="button"
@@ -525,11 +527,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
         <div className="nri-cyber__grant-modal">
           <div className="nri-cyber__grant-dialog">
             <h4 className="mono-text">Передать имплант: {grantProduct.name}</h4>
-            <p className="mono-text opacity-70">
-              BT сборки {productBuildMeta(grantProduct).bloodTox} · слот{' '}
-              {CYBER_SLOT_LABELS[productBuildMeta(grantProduct).slot as CyberSlot] ??
-                productBuildMeta(grantProduct).slot}
-            </p>
+            <NriCyberProductPreview product={grantProduct} />
             <div className="nri-cyber__grant-cols">
               <div>
                 <h5 className="mono-text">Игроки</h5>

@@ -27,6 +27,8 @@ export type NriSheetData = {
   xp?: number;
   wonlongs?: number;
   skillProficiencies?: string[];
+  /** Черты класса (signature + traits) — копия при генерации. */
+  classFeatures?: string[];
   attacks?: { name: string; atkBonus: number; damage: string }[];
   height?: string;
   weight?: string;

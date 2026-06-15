@@ -25,6 +25,7 @@ import {
   type NriSheetData,
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';
+import { defaultSkillsForClass } from './nriSkillPick';
 
 export type NriOriginId =
   | 'neo_tokyo'
@@ -491,6 +492,7 @@ export function buildFullCharacter(params: {
   characterName?: string;
   level?: number;
   rollStats?: boolean;
+  skillProficiencies?: string[];
 }): FullCharacterBuild {
   const arch = params.archetypeId ? NRI_NPC_ARCHETYPES.find((a) => a.id === params.archetypeId) : undefined;
   const abilities = params.rollStats !== false ? rollAbilityScores() : undefined;
@@ -514,6 +516,11 @@ export function buildFullCharacter(params: {
   const bloodToxLimit = bloodToxLimitFromCon(base.abilities.CON);
   const vice = generateVice(params.archetypeId);
   const dr = augmentations.some((a) => a.slot === 'torso') ? '1' : '0';
+  const tpl = getC2185ClassTemplate(params.classId);
+  const classFeatures = tpl ? [tpl.signature, ...tpl.traits] : [];
+  const skillProficiencies = params.skillProficiencies?.length
+    ? params.skillProficiencies
+    : defaultSkillsForClass(params.classId);
 
   let sheet: NriSheetData = enrichSheetCombat(
     {
@@ -539,6 +546,8 @@ export function buildFullCharacter(params: {
       augmentations,
       bloodToxCurrent,
       bloodToxLimit,
+      classFeatures,
+      skillProficiencies,
       ...encumbranceFromStr(base.abilities.STR),
       notes: arch?.isRobot ? 'Синтетик — уточните у мастера иммунитеты и ремонт.' : undefined,
     },

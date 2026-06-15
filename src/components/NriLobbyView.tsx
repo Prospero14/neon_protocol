@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -15,6 +15,7 @@ import {
   nriSetSpamBot,
   nriFetchWallet,
   nriPayAntispam,
+  vaultDeleteFile,
   type NriMember,
   type NriPlayerProfile,
   type NriSessionInfo,
@@ -23,15 +24,9 @@ import {
   type NriRosterPlayer,
   type NriWalletInfo,
 } from '../logic/nriApi';
-import {
-  archetypeForClass,
-  activityForClass,
-  buildFullCharacter,
-} from '../logic/nriCharacterGen';
-import type { NriClassId } from '../logic/nriClasses';
 import { chatFetchParticipants } from '../logic/chatApi';
 import { NeonChatPanel } from './services/NeonChatPanel';
-import GibsonIceHack from './games/GibsonIceHack';
+import { NriIceRunPanel } from './NriIceRunPanel';
 import { NriJoinProfileModal } from './NriJoinProfileModal';
 import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriPeopleHub, type PeopleSection } from './NriPeopleHub';
@@ -41,11 +36,14 @@ import { NriCyberPanel } from './NriCyberPanel';
 import { NriInventoryPanel } from './NriInventoryPanel';
 import { NriWalletPanel } from './NriWalletPanel';
 import { NriCityMapPanel } from './NriCityMapPanel';
+import { NriTransportPanel } from './NriTransportPanel';
+import { NriScenarioPanel } from './NriScenarioPanel';
+import { NriPlayerNotesPanel } from './NriPlayerNotesPanel';
 
 import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
 
-type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map';
+type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes';
 
 type Props = {
   inviteCode: string;
@@ -53,7 +51,7 @@ type Props = {
   onIceReward: (bits: number) => void;
 };
 
-export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward }) => {
+export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward: _onIceReward }) => {
   const { token, user } = useAuth();
   const [session, setSession] = useState<NriSessionInfo | null>(null);
   const [members, setMembers] = useState<NriMember[]>([]);
@@ -197,25 +195,16 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
 
   const saveProfile = async (
     displayName: string,
-    opts: { presetId?: string; classId?: string }
+    opts: { presetId?: string; sheet?: unknown }
   ) => {
     if (!authToken) return;
+    if (!opts.presetId) {
+      setProfileErr('Выберите персонажа из списка мастера.');
+      return;
+    }
     setProfileBusy(true);
     setProfileErr(null);
-    let sheet: unknown;
-    let inventory: unknown;
-    if (!opts.presetId && opts.classId) {
-      const built = buildFullCharacter({
-        classId: opts.classId as NriClassId,
-        originId: 'neo_tokyo',
-        activityId: activityForClass(opts.classId as NriClassId),
-        archetypeId: archetypeForClass(opts.classId as NriClassId),
-        characterName: displayName,
-      });
-      sheet = built.sheet;
-      inventory = [];
-    }
-    const saved = await nriSavePlayer(authToken, inviteCode, displayName, { ...opts, sheet, inventory });
+    const saved = await nriSavePlayer(authToken, inviteCode, displayName, opts);
     setProfileBusy(false);
     if (saved.ok) setProfile(saved.player);
     else setProfileErr(saved.error);
@@ -260,6 +249,9 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         if (p) setProfile(p);
       });
       if (session?.isHost || session?.isAdmin) loadRoster();
+    }
+    if (tab === 'transport' && authToken && (session?.isHost || session?.isAdmin)) {
+      loadRoster();
     }
   }, [
     tab,
@@ -413,6 +405,21 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             КИБЕР
           </button>
         )}
+        {(session?.isHost || session?.isAdmin) && (
+          <button type="button" className={tab === 'scenario' ? 'active' : ''} onClick={() => setTab('scenario')}>
+            <ScrollText size={14} /> СЦЕНАРИЙ
+          </button>
+        )}
+        {session && (
+          <button type="button" className={tab === 'transport' ? 'active' : ''} onClick={() => setTab('transport')}>
+            <Car size={14} /> ТРАНСПОРТ
+          </button>
+        )}
+        {profile && !session?.isHost && (
+          <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
+            <StickyNote size={14} /> ЗАМЕТКИ
+          </button>
+        )}
       </nav>
 
       <div className="nri-lobby__body">
@@ -448,11 +455,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           />
         )}
         {tab === 'ice' && (
-          <GibsonIceHack
-            onFinish={onIceReward}
-            nriInviteCode={inviteCode}
-            onOpenInventory={() => setTab('inventory')}
-          />
+          <NriIceRunPanel inviteCode={inviteCode} onOpenInventory={() => setTab('inventory')} />
         )}
         {tab === 'map' && session && user && (
           <NriCityMapPanel inviteCode={inviteCode} isHost={!!session.isHost} currentUserId={user.id} />
@@ -491,6 +494,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           <NriVaultTab
             files={vaultFiles}
             onCreate={createVaultFile}
+            onDelete={(fileId) => vaultDeleteFile(authToken!, fileId)}
             sendTarget={{ roomId: session.chatRoomId, roomLabel: 'чат стола' }}
             recipients={vaultRecipients}
           />
@@ -507,6 +511,23 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
         {tab === 'cyber' && (session?.isHost || session?.isAdmin) && (
           <NriCyberPanel inviteCode={inviteCode} recipients={vaultRecipients} />
+        )}
+        {tab === 'transport' && session && (
+          <NriTransportPanel
+            inviteCode={inviteCode}
+            isHost={!!session.isHost}
+            roster={roster}
+          />
+        )}
+        {tab === 'scenario' && (session?.isHost || session?.isAdmin) && (
+          <NriScenarioPanel inviteCode={inviteCode} />
+        )}
+        {tab === 'notes' && profile && !session?.isHost && (
+          <NriPlayerNotesPanel
+            inviteCode={inviteCode}
+            profile={profile}
+            onNotesUpdate={(privateNotes) => setProfile({ ...profile, privateNotes })}
+          />
         )}
       </div>
 

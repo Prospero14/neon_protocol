@@ -22,6 +22,18 @@ function defaultMegaLabel(zoneKey) {
     };
     return labels[mk] ?? null;
 }
+function normalizeZoneColor(raw) {
+    if (raw === undefined)
+        return undefined;
+    if (raw === null || raw === '')
+        return null;
+    if (typeof raw !== 'string')
+        return undefined;
+    const c = raw.trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(c))
+        return undefined;
+    return c.toLowerCase();
+}
 function loadZoneSeedFile() {
     const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-night-city-zones.json');
     const raw = readFileSync(p, 'utf8');
@@ -46,6 +58,7 @@ export function serializeMapZone(z) {
         corpName: z.corpName,
         locked: z.locked,
         megaDistrict: megaDistrictFor(z.zoneKey, z.megaDistrict),
+        color: z.color ?? null,
         pois,
         updatedAt: z.updatedAt?.getTime() ?? Date.now(),
     };
@@ -62,6 +75,7 @@ function seedRow(s) {
         h: s.h,
         corpName: s.corpName ?? null,
         megaDistrict: s.megaDistrict ?? defaultMegaLabel(s.zoneKey),
+        color: null,
         locked: s.locked ?? false,
         pois: s.pois ?? [],
     };
@@ -86,6 +100,7 @@ export async function ensureMapZonesSeeded(prisma) {
                     h: 0,
                     corpName: null,
                     megaDistrict: null,
+                    color: null,
                     locked: true,
                     pois: [],
                 },
@@ -112,6 +127,7 @@ export async function patchMapZone(prisma, zoneKey, payload) {
     const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
     if (!existing)
         return null;
+    const color = normalizeZoneColor(payload.color);
     if (typeof payload.megaDistrict === 'string' && payload.megaDistrict.trim()) {
         const label = payload.megaDistrict.trim().slice(0, 80);
         const mk = megaKeyFromZoneKey(zoneKey);
@@ -144,6 +160,7 @@ export async function patchMapZone(prisma, zoneKey, payload) {
             ...(payload.pois !== undefined
                 ? { pois: Array.isArray(payload.pois) ? payload.pois.map((p) => String(p).slice(0, 80)) : [] }
                 : {}),
+            ...(color !== undefined ? { color } : {}),
         },
     });
     return serializeMapZone(zone);

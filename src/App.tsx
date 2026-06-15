@@ -560,6 +560,7 @@ function App() {
         coopRole={gs.coopRole}
         onSwitchCoopClass={gs.switchCoopClass}
         onSwitchSessionMode={gs.switchSessionMode}
+        onReturnToSessionGate={gs.returnToSessionGate}
         coopWeekTheme={coopWeek}
         coopYardProgress={
           gs.sessionMode === 'coop'

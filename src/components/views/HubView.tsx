@@ -57,6 +57,8 @@ interface HubViewProps {
   onSwitchCoopClass?: (role: CoopRole) => void;
   /** Переключение соло/кооп без перелогина. */
   onSwitchSessionMode?: (mode: 'solo' | 'coop') => void;
+  /** Вернуться к выбору Solo / Co-op / НРИ. */
+  onReturnToSessionGate?: () => void;
   /** Кооп: тема «недели» и прогресс полигона */
   coopWeekTheme?: CoopWeeklyTheme | null;
   coopYardProgress?: { cleared: number; required: number; tierLabel: string } | null;
@@ -103,6 +105,7 @@ export const HubView: React.FC<HubViewProps> = ({
   coopRole = null,
   onSwitchCoopClass,
   onSwitchSessionMode,
+  onReturnToSessionGate,
   coopWeekTheme = null,
   coopYardProgress = null,
   coopStartupLeaderboard = [],
@@ -241,6 +244,27 @@ export const HubView: React.FC<HubViewProps> = ({
             <span className="meta-item" title="Игровые сутки: 12 ч игры ≈ 4 ч реального времени">
               ДЕНЬ {worldDay} · {gameTimeLabel} · {phaseLabelRu}
             </span>
+            {onReturnToSessionGate && (
+              <>
+                <span className="meta-divider">|</span>
+                <button
+                  type="button"
+                  className="meta-item"
+                  onClick={onReturnToSessionGate}
+                  style={{
+                    fontSize: '0.58rem',
+                    padding: '2px 8px',
+                    border: '1px solid #567',
+                    background: 'rgba(0,0,0,0.35)',
+                    color: '#aab',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                >
+                  РЕЖИМЫ
+                </button>
+              </>
+            )}
             {onSwitchSessionMode && (
               <span className="meta-divider">|</span>
             )}

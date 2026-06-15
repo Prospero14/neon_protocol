@@ -25,6 +25,7 @@ type Props = {
     gameId?: string;
     difficulty?: string;
   }) => Promise<VaultCreateResult>;
+  onDelete?: (fileId: string) => Promise<boolean>;
   sendTarget?: VaultSendTarget;
   recipients?: VaultRecipient[];
 };
@@ -32,6 +33,7 @@ type Props = {
 export const NriVaultTab: React.FC<Props> = ({
   files,
   onCreate,
+  onDelete,
   sendTarget,
   recipients = [],
 }) => {
@@ -106,6 +108,20 @@ export const NriVaultTab: React.FC<Props> = ({
     else setErr('Не удалось отправить в личку');
   };
 
+  const removeFile = async (fileId: string, title: string) => {
+    if (!onDelete || !window.confirm(`Удалить файл «${title}»?`)) return;
+    setSendBusyId(fileId);
+    setOpenMenuId(null);
+    const ok = await onDelete(fileId);
+    setSendBusyId(null);
+    if (ok) {
+      setList((prev) => prev.filter((f) => f.id !== fileId));
+      setNotice(`Файл «${title}» удалён`);
+    } else {
+      setErr('Не удалось удалить файл');
+    }
+  };
+
   const dmRecipients = recipients.filter((r) => r.userId !== user?.id);
 
   return (
@@ -161,36 +177,49 @@ export const NriVaultTab: React.FC<Props> = ({
                   </span>
                 )}
               </div>
-              {sendTarget && (
-                <div className="nri-vault__item-actions">
+              <div className="nri-vault__item-actions" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {onDelete && (
                   <button
                     type="button"
                     className="nri-vault__send-btn"
                     disabled={sending}
-                    onClick={() => setOpenMenuId(menuOpen ? null : f.id)}
-                    aria-label="Отправить файл"
+                    onClick={() => removeFile(f.id, f.title)}
+                    title="Удалить файл"
                   >
-                    {sending ? '…' : <MoreHorizontal size={16} />}
+                    {sending ? '…' : '✕'}
                   </button>
-                  {menuOpen && (
-                    <div className="nri-vault__menu">
-                      <button type="button" onClick={() => sendToRoom(f.id)}>
-                        <Send size={12} /> В {sendTarget.roomLabel}
-                      </button>
-                      {dmRecipients.length > 0 && (
-                        <>
-                          <span className="nri-vault__menu-divider mono-text">Личка</span>
-                          {dmRecipients.map((r) => (
-                            <button key={r.userId} type="button" onClick={() => sendToUser(f.id, r.userId, r.label)}>
-                              <Send size={12} /> {r.label}
-                            </button>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+                {sendTarget && (
+                  <>
+                    <button
+                      type="button"
+                      className="nri-vault__send-btn"
+                      disabled={sending}
+                      onClick={() => setOpenMenuId(menuOpen ? null : f.id)}
+                      aria-label="Отправить файл"
+                    >
+                      {sending ? '…' : <MoreHorizontal size={16} />}
+                    </button>
+                    {menuOpen && (
+                      <div className="nri-vault__menu">
+                        <button type="button" onClick={() => sendToRoom(f.id)}>
+                          <Send size={12} /> В {sendTarget.roomLabel}
+                        </button>
+                        {dmRecipients.length > 0 && (
+                          <>
+                            <span className="nri-vault__menu-divider mono-text">Личка</span>
+                            {dmRecipients.map((r) => (
+                              <button key={r.userId} type="button" onClick={() => sendToUser(f.id, r.userId, r.label)}>
+                                <Send size={12} /> {r.label}
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </li>
           );
         })}

@@ -22,6 +22,7 @@ import {
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 import { formatSignedMod } from '../logic/nriSheetCombat';
+import { NriCatalogItemPreview } from './NriSelectionPreview';
 
 type Props = {
   inviteCode: string;
@@ -251,6 +252,7 @@ export const NriInventoryPanel: React.FC<Props> = ({
                   })
                 : catalogOptions(catalog)}
             </select>
+            <NriCatalogItemPreview catalogId={catalogPick} />
             <button
               type="button"
               className="nri-vault__send-btn"

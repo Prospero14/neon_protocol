@@ -149,11 +149,6 @@ export const CoopLobbyView: React.FC<Props> = ({ playerDisplayName, coopRole, on
           <div>
             <div className="coop-lobby-kicker">CO-OP // WAITING_ZONE</div>
             <h1 className="coop-lobby-title">Сбор пати и общий канал</h1>
-            <p className="coop-lobby-sub">
-              Вы в сети как <strong>{playerDisplayName}</strong>{' '}
-              <CoopRoleBadge role={coopRole} size={14} />. Колода и прогресс полигона хранятся отдельно на каждый класс — смените роль
-              перед сбором пати, если нужно.
-            </p>
             <div className="coop-lobby-class-row" style={{ marginTop: 12 }}>
               {COOP_ROLES.map((r) => (
                 <button

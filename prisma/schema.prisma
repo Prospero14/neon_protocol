@@ -42,6 +42,9 @@ model NriSession {
   npcs       NriNpc[]
   cyberProducts NriCyberProduct[]
   mapMarkers NriMapMarker[]
+  vehicles   NriSessionVehicle[]
+  iceScores  NriIceScore[]
+  scenarioNodes NriScenarioNode[]
 }
 
 model NriSessionMember {
@@ -70,6 +73,7 @@ model NriPlayer {
   sheet       Json?
   portraitUrl String?
   presetId    String?
+  privateNotes String @default("")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -92,6 +96,54 @@ model NriPresetCharacter {
   createdAt       DateTime   @default(now())
 
   @@index([sessionId, claimedByUserId])
+}
+
+/** Транспорт стола — мастер выдаёт, все видят. */
+model NriSessionVehicle {
+  id              String     @id @default(uuid())
+  sessionId       String
+  session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  catalogId       String
+  label           String?
+  assignedUserId  String?
+  notes           String?
+  createdAt       DateTime   @default(now())
+
+  @@index([sessionId])
+}
+
+/** Результаты ICE Run за столом — рейтинг аркады. */
+model NriIceScore {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  displayName String
+  score       Int
+  exfilPct    Int        @default(0)
+  tracePct    Int        @default(0)
+  won         Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+
+  @@index([sessionId, score])
+}
+
+/** Узел сценария стола — основной сюжет и ответвления-квесты. */
+model NriScenarioNode {
+  id         String     @id @default(uuid())
+  sessionId  String
+  session    NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  parentId   String?
+  parent     NriScenarioNode?  @relation("ScenarioTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   NriScenarioNode[] @relation("ScenarioTree")
+  title      String
+  body       String     @default("")
+  sortOrder  Int        @default(0)
+  links      Json
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([sessionId, parentId])
 }
 
 /** НПС стола — чарник, портрет, инвентарь; мастер пишет в чат от их лица. */
@@ -157,6 +209,7 @@ model NriMapZone {
   h         Float
   corpName      String?
   megaDistrict  String?
+  color         String?
   locked        Boolean  @default(false)
   pois      Json?
   updatedAt DateTime @updatedAt

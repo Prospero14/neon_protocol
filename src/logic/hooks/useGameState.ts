@@ -787,6 +787,9 @@ export function useGameState() {
         'NEON_SERVICES',
       ];
       const savedView = gs.currentView as ViewType | undefined;
+      const nriCodeRaw = (gs as { nriInviteCode?: unknown }).nriInviteCode;
+      const nriCode = typeof nriCodeRaw === 'string' && nriCodeRaw.startsWith('NRI-') ? nriCodeRaw : null;
+      const resumeNri = savedView === 'NRI_LOBBY' && nriCode;
       if (savedView && deepViews.includes(savedView)) {
         setCurrentView(savedView);
       } else {
@@ -804,12 +807,15 @@ export function useGameState() {
       });
 
       if (gs.traits) setTraits(gs.traits);
-      if (gs.sessionMode === 'solo' || gs.sessionMode === 'coop' || gs.sessionMode === 'nri') {
-        setSessionMode(gs.sessionMode);
-      }
-      const nriCode = (gs as { nriInviteCode?: unknown }).nriInviteCode;
-      if (typeof nriCode === 'string' && nriCode.startsWith('NRI-')) {
+      if (resumeNri) {
+        setSessionMode('nri');
         setNriInviteCode(nriCode);
+      } else if (gs.sessionMode === 'coop') {
+        setSessionMode('coop');
+        setNriInviteCode(null);
+      } else {
+        setSessionMode('solo');
+        setNriInviteCode(null);
       }
       const crRaw = gs.coopRole as string | undefined;
       const cr =
@@ -1147,6 +1153,7 @@ export function useGameState() {
         }
         setSessionMode('solo');
         setCoopRole(null);
+        setNriInviteCode(null);
         setDevLanguageStack(null);
         setCoopStartupName(null);
         setCoopSquadFill('synthetic_bots');
@@ -1173,6 +1180,7 @@ export function useGameState() {
         syncGame({
           sessionMode: 'solo',
           coopRole: null,
+          nriInviteCode: undefined,
           devLanguageStack: null,
           coopStartupName: null,
           coopSquadFill: undefined,
@@ -1252,11 +1260,32 @@ export function useGameState() {
   const resumeEnterSoloHub = useCallback(() => {
     if (sessionMode === 'coop') {
       switchSessionMode('solo');
-    } else {
-      setCurrentView('HUB');
-      void syncGame({ currentView: 'HUB' });
+      return;
     }
+    if (sessionMode === 'nri') {
+      setSessionMode('solo');
+      setNriInviteCode(null);
+    }
+    setCurrentView('HUB');
+    void syncGame({
+      currentView: 'HUB',
+      sessionMode: 'solo',
+      nriInviteCode: undefined,
+    });
   }, [sessionMode, switchSessionMode, syncGame]);
+
+  const returnToSessionGate = useCallback(() => {
+    setSessionMode('solo');
+    setNriInviteCode(null);
+    setPendingNriInvite(null);
+    setCurrentView('SESSION_GATE');
+    window.location.hash = '';
+    void syncGame({
+      sessionMode: 'solo',
+      nriInviteCode: undefined,
+      currentView: 'SESSION_GATE',
+    });
+  }, [syncGame]);
 
   const resumeEnterCoopLobby = useCallback(
     (preferred?: CoopRole) => {
@@ -1819,6 +1848,7 @@ export function useGameState() {
     createNriTable,
     enterNriLobby,
     leaveNriLobby,
+    returnToSessionGate,
     nriInviteCode,
     pendingNriInvite,
     lastView, setLastView,

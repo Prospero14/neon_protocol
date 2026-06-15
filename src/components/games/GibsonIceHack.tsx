@@ -17,6 +17,9 @@ type Props = {
   difficulty?: IceDifficulty;
   nriInviteCode?: string;
   onOpenInventory?: () => void;
+  /** НРИ-стол: не показывать BITS в награде (рейтинг отдельно). */
+  tableLeaderboardMode?: boolean;
+  onRunComplete?: (result: { bits: number; exfilPct: number; tracePct: number; won: boolean }) => void;
 };
 
 const TRACE_MULT: Record<IceDifficulty, number> = { easy: 0.75, medium: 1, hard: 1.45 };
@@ -28,6 +31,8 @@ const GibsonIceHack: React.FC<Props> = ({
   difficulty = 'medium',
   nriInviteCode,
   onOpenInventory,
+  tableLeaderboardMode,
+  onRunComplete,
 }) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
@@ -45,6 +50,7 @@ const GibsonIceHack: React.FC<Props> = ({
   const [iceStatus, setIceStatus] = useState<NriIcePlayStatus | null>(null);
   const [banPopup, setBanPopup] = useState(false);
   const [resultReported, setResultReported] = useState(false);
+  const [runCompleteSent, setRunCompleteSent] = useState(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const exfilRef = useRef(0);
   const traceRef = useRef(0);
@@ -175,6 +181,7 @@ const GibsonIceHack: React.FC<Props> = ({
     exfilRef.current = 0;
     traceRef.current = 0;
     setResultReported(false);
+    setRunCompleteSent(false);
     setStatusLine('Подключение к периметру…');
   };
 
@@ -251,6 +258,15 @@ const GibsonIceHack: React.FC<Props> = ({
     },
     []
   );
+
+  useEffect(() => {
+    if (phase !== 'win' && phase !== 'busted') return;
+    if (runCompleteSent) return;
+    setRunCompleteSent(true);
+    const won = phase === 'win';
+    const bits = won ? iceRewardBits(exfil, iceTrace) : 0;
+    onRunComplete?.({ bits, exfilPct: exfil, tracePct: iceTrace, won });
+  }, [phase, exfil, iceTrace, runCompleteSent, onRunComplete]);
 
   const reward = iceRewardBits(exfil, iceTrace);
   const streakHint =
@@ -368,11 +384,20 @@ const GibsonIceHack: React.FC<Props> = ({
           {phase === 'busted' && iceStatus?.hardwareBanned && !iceStatus.canPlay && (
             <p className="ice-ban-warn mono-text">Следующий джек-ин заблокирован — бан по железу.</p>
           )}
-          {phase === 'win' && !icebreakerMode && <p className="ice-reward">+{reward} BITS</p>}
+          {phase === 'win' && !icebreakerMode && !tableLeaderboardMode && (
+            <p className="ice-reward">+{reward} BITS</p>
+          )}
+          {phase === 'win' && tableLeaderboardMode && (
+            <p className="ice-reward mono-text">+{reward} pts в рейтинг стола</p>
+          )}
           <div className="ice-result-actions">
             {phase === 'win' && (
-              <button type="button" className="ice-btn primary" onClick={() => onFinish(icebreakerMode ? 1 : reward)}>
-                {icebreakerMode ? '[ ФАЙЛ РАЗБЛОКИРОВАН ]' : '[ ЗАБРАТЬ LOOT ]'}
+              <button
+                type="button"
+                className="ice-btn primary"
+                onClick={() => onFinish(icebreakerMode ? 1 : tableLeaderboardMode ? 0 : reward)}
+              >
+                {icebreakerMode ? '[ ФАЙЛ РАЗБЛОКИРОВАН ]' : tableLeaderboardMode ? '[ В РЕЙТИНГ ]' : '[ ЗАБРАТЬ LOOT ]'}
               </button>
             )}
             <button type="button" className="ice-btn" onClick={tryAgain}>

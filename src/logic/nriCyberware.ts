@@ -3,6 +3,7 @@
  */
 
 import { abilityModifier } from './nriNpcGenerator';
+import type { CyberEffectId } from './nriCyberEffects';
 
 export type CyberSlot =
   | 'arm'
@@ -42,6 +43,8 @@ export type CyberPartDef = {
   powerWh: number;
   powerDrawW: number;
   features: string[];
+  /** Типизированные способности (УФ-зрение, смартлинк и т.д.). */
+  effects?: CyberEffectId[];
   costBase: number;
 };
 
@@ -85,6 +88,7 @@ export type CyberBuildResult = {
   powerWh: number;
   powerDrawW: number;
   features: string[];
+  effects: CyberEffectId[];
   priceWonlongs: number;
   overload: boolean;
   blocked: boolean;
@@ -332,33 +336,63 @@ export const CYBER_PARTS: CyberPartDef[] = [
   },
   {
     id: 'power_cell_s',
-    name: 'Топливная ячейка (малая)',
-    blurb: 'Компактная батарея — питает имплант несколько часов боя.',
+    name: 'Микроячейка (1)',
+    blurb: 'Компактная батарея — почти незаметна, хватает на лёгкие модули.',
     kind: 'power',
-    slots: ['arm', 'leg', 'torso', 'internal', 'external', 'cosmetic'],
+    slots: ['arm', 'leg', 'head', 'torso', 'internal', 'external', 'cosmetic'],
     c2185Mods: {},
     bloodTox: 1,
     cpuMhz: 0,
     ramGb: 0,
-    powerWh: 20,
+    powerWh: 18,
     powerDrawW: 0,
     features: [],
-    costBase: 400,
+    costBase: 350,
+  },
+  {
+    id: 'power_cell_m',
+    name: 'Стандартная ячейка (2)',
+    blurb: 'Средний блок питания — заметный бугор под кожей или на корпусе.',
+    kind: 'power',
+    slots: ['arm', 'leg', 'head', 'torso', 'internal', 'external'],
+    c2185Mods: {},
+    bloodTox: 1,
+    cpuMhz: 0,
+    ramGb: 0,
+    powerWh: 38,
+    powerDrawW: 0,
+    features: ['Имплант заметен со стороны'],
+    costBase: 550,
   },
   {
     id: 'power_cell_l',
-    name: 'Топливная ячейка (большая)',
-    blurb: 'Тяжёлый силовой блок в торс — долго держит энергоёмкие сборки.',
+    name: 'Усиленный силовой блок (3)',
+    blurb: 'Тяжёлая ячейка — сильно видно даже под одеждой, зато долго держит нагрузку.',
     kind: 'power',
-    slots: ['torso', 'internal'],
+    slots: ['torso', 'internal', 'external', 'head'],
     c2185Mods: { CON: 1 },
     bloodTox: 2,
     cpuMhz: 0,
     ramGb: 0,
-    powerWh: 60,
+    powerWh: 68,
     powerDrawW: 0,
-    features: [],
+    features: ['Сильно видно — не спрятать'],
     costBase: 900,
+  },
+  {
+    id: 'power_cell_xl',
+    name: 'Тяжёлый генератор (4)',
+    blurb: 'Массивный силовой кокон на черепе или торсе — питает всё, выглядит почти как шлем.',
+    kind: 'power',
+    slots: ['head', 'external', 'torso', 'internal'],
+    c2185Mods: { CON: 1, DEX: -1 },
+    bloodTox: 3,
+    cpuMhz: 0,
+    ramGb: 0,
+    powerWh: 115,
+    powerDrawW: 0,
+    features: ['Почти как шлем — массивный блок', 'Заметность максимальная'],
+    costBase: 1600,
   },
   {
     id: 'iface_neural_bus',
@@ -373,6 +407,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 6,
     features: ['Прямой доступ в сеть', 'Взлом +2'],
+    effects: ['net_deep_scan'],
     costBase: 3500,
   },
   {
@@ -403,7 +438,71 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 3,
     features: ['Ночное зрение', 'Восприятие +2'],
+    effects: ['vision_night'],
     costBase: 1100,
+  },
+  {
+    id: 'chassis_eye',
+    name: 'Глазной chassis',
+    blurb: 'Корпус киберглаза с разъёмами под оптику и сенсоры.',
+    kind: 'chassis',
+    slots: ['head', 'sensor'],
+    c2185Mods: {},
+    bloodTox: 1,
+    cpuMhz: 100,
+    ramGb: 0.25,
+    powerWh: 4,
+    powerDrawW: 1,
+    features: ['База для оптики'],
+    costBase: 400,
+  },
+  {
+    id: 'sensor_uv',
+    name: 'УФ-сканер',
+    blurb: 'Ультрафиолетовый модуль — видит скрытые метки на бумаге и валюте.',
+    kind: 'sensor',
+    slots: ['head', 'sensor', 'external'],
+    c2185Mods: { INT: 1 },
+    bloodTox: 1,
+    cpuMhz: 200,
+    ramGb: 0.25,
+    powerWh: 0,
+    powerDrawW: 4,
+    features: ['УФ-зрение', 'Метки на ₩'],
+    effects: ['vision_uv', 'currency_uv'],
+    costBase: 750,
+  },
+  {
+    id: 'sensor_thermal',
+    name: 'Тепловизор',
+    blurb: 'ИК-матрица — тепловые контуры людей и техники сквозь дым.',
+    kind: 'sensor',
+    slots: ['head', 'sensor', 'external'],
+    c2185Mods: { PEO: 1 },
+    bloodTox: 2,
+    cpuMhz: 350,
+    ramGb: 0.5,
+    powerWh: 0,
+    powerDrawW: 5,
+    features: ['Тепловизор', 'Восприятие +1'],
+    effects: ['vision_thermal'],
+    costBase: 1400,
+  },
+  {
+    id: 'sensor_rf',
+    name: 'RF-детектор',
+    blurb: 'Ловит радиомаяки, жучки и mesh-трафик на близкой дистанции.',
+    kind: 'sensor',
+    slots: ['head', 'sensor', 'external', 'internal'],
+    c2185Mods: { TEC: 1 },
+    bloodTox: 1,
+    cpuMhz: 150,
+    ramGb: 0.25,
+    powerWh: 0,
+    powerDrawW: 3,
+    features: ['Поиск слежки', 'Investigation +2'],
+    effects: ['surveillance_detect'],
+    costBase: 650,
   },
   {
     id: 'sensor_audio',
@@ -451,6 +550,38 @@ export const CYBER_PARTS: CyberPartDef[] = [
     costBase: 1000,
   },
   {
+    id: 'fw_smartlink',
+    name: 'Прошивка смартлинка',
+    blurb: 'Связывает зрение и оружие — прицеливание по нейроинтерфейсу.',
+    kind: 'firmware',
+    slots: ['neural', 'head', 'arm'],
+    c2185Mods: { DEX: 1 },
+    bloodTox: 2,
+    cpuMhz: 0,
+    ramGb: 0.5,
+    powerWh: 0,
+    powerDrawW: 3,
+    features: ['+1 к атаке умным оружием'],
+    effects: ['weapon_smartlink'],
+    costBase: 1200,
+  },
+  {
+    id: 'fw_conceal_weapon',
+    name: 'Маскировка оружия',
+    blurb: 'Скрывает сигнатуру встроенного оружия от сканеров и обычного осмотра.',
+    kind: 'firmware',
+    slots: ['arm', 'leg', 'torso', 'internal'],
+    c2185Mods: {},
+    bloodTox: 1,
+    cpuMhz: 0,
+    ramGb: 0.25,
+    powerWh: 0,
+    powerDrawW: 2,
+    features: ['+2 к скрытому ношению'],
+    effects: ['weapon_conceal'],
+    costBase: 800,
+  },
+  {
     id: 'armor_subdermal',
     name: 'Подкожная броня',
     blurb: 'Пластины под кожей — лучше держит удар, чуть мешает двигаться.',
@@ -478,6 +609,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 3,
     features: ['1d8 рубящего (ближний бой)'],
+    effects: ['weapon_conceal'],
     costBase: 1500,
   },
   {
@@ -493,6 +625,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 2,
     features: ['2d6 баллистика', 'Шум +'],
+    effects: ['weapon_smartlink'],
     costBase: 2200,
   },
   {
@@ -793,6 +926,42 @@ export const CYBER_BLUEPRINT_PRESETS: CyberBlueprint[] = [
   },
   {
     slot: 'head',
+    name: 'УФ-оптика',
+    partIds: ['chassis_eye', 'sensor_uv', 'power_cell_s'],
+    notes: 'Глаз + УФ-сканер + батарея — видны УФ-метки на валюте и документах.',
+  },
+  {
+    slot: 'head',
+    name: 'Тепловизионная оптика',
+    partIds: ['sensor_optics', 'sensor_thermal', 'power_cell_s'],
+    notes: 'Киберглаз + ИК — тепловые следы и засады.',
+  },
+  {
+    slot: 'head',
+    name: 'Смартлинк-глаз',
+    partIds: ['sensor_optics', 'fw_smartlink', 'power_cell_s'],
+    notes: 'Оптика + смартлинк — точная стрельба встроенным оружием.',
+  },
+  {
+    slot: 'head',
+    name: 'Контрразведка (аудио+RF)',
+    partIds: ['sensor_audio', 'sensor_rf', 'power_cell_s'],
+    notes: 'Слух + RF — жучки и скрытая слежка.',
+  },
+  {
+    slot: 'arm',
+    name: 'Скрытое лезвие',
+    partIds: ['chassis_limb_std', 'w_arm_blade', 'fw_conceal_weapon', 'power_cell_s'],
+    notes: 'Протез + клинок + маскировка — незаметно до выпадения.',
+  },
+  {
+    slot: 'arm',
+    name: 'Смарт-пистолет',
+    partIds: ['chassis_limb_std', 'w_arm_pistol', 'fw_smartlink', 'power_cell_s'],
+    notes: 'Встроенный пистолет со смартлинком.',
+  },
+  {
+    slot: 'head',
     name: 'Кибероптика + аудио',
     partIds: ['sensor_optics', 'sensor_audio', 'iface_mesh_radio', 'power_cell_s'],
     notes: 'Восприятие и расследование.',
@@ -966,12 +1135,14 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
   let bloodTox = 0;
   let price = 500;
   const features = new Set<string>();
+  const effects = new Set<CyberEffectId>();
 
   for (const p of parts) {
     sumMods(c2185Mods, p.c2185Mods);
     bloodTox += p.bloodTox;
     price += p.costBase;
     p.features.forEach((f) => features.add(f));
+    p.effects?.forEach((e) => effects.add(e));
   }
 
   sumMods(c2185Mods, tuningMods(totals));
@@ -1000,6 +1171,7 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
     powerWh,
     powerDrawW,
     features: [...features],
+    effects: [...effects],
     priceWonlongs: Math.round(price * (1 + bloodTox * 0.05)),
     overload,
     blocked,
@@ -1027,6 +1199,7 @@ export function blueprintToInventoryItem(blueprint: CyberBlueprint, build = buil
       cpuMhz: build.cpuMhz,
       ramGb: build.ramGb,
       features: build.features,
+      effects: build.effects,
     },
     priceWonlongs: build.priceWonlongs,
   };

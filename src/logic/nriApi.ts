@@ -1,6 +1,9 @@
 /** Клиент API столов НРИ (JWT). */
 
 import type { NriInventoryItem } from './nriInventory';
+import type { NriScenarioLinks, NriScenarioNode } from './nriScenario';
+
+export type { NriScenarioNode, NriScenarioLinks };
 
 export type NriMember = {
   userId: string;
@@ -122,6 +125,7 @@ export type NriPlayerProfile = {
   sheet?: unknown;
   portraitUrl?: string | null;
   presetId?: string | null;
+  privateNotes?: string;
 };
 
 export type NriRosterPlayer = NriPlayerProfile & {
@@ -254,16 +258,33 @@ export type NriNpc = {
   updatedAt: number;
 };
 
+export type NriPresetsResponse = {
+  presets: NriPresetCharacter[];
+  meta?: {
+    unclaimed: number;
+    publishedUnclaimed: number;
+    selectionRequired: boolean;
+  };
+};
+
 export async function nriFetchPresets(
   token: string,
   code: string
-): Promise<NriPresetCharacter[] | null> {
+): Promise<NriPresetsResponse | null> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/presets`, {
     headers: authHeaders(token),
   });
   const data = await parseJson(res);
   if (!res.ok) return null;
-  return data.presets ?? [];
+  return { presets: data.presets ?? [], meta: data.meta };
+}
+
+export async function vaultDeleteFile(token: string, fileId: string): Promise<boolean> {
+  const res = await fetch(`/neon_v1/services/vault/files/${encodeURIComponent(fileId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  return res.ok;
 }
 
 export async function nriCreatePreset(
@@ -703,6 +724,97 @@ export async function nriReportIceResult(
   return { ok: true, status: data.status as NriIcePlayStatus };
 }
 
+export type NriIceLeaderboardEntry = {
+  userId: string;
+  displayName: string;
+  score: number;
+  exfilPct: number;
+  tracePct: number;
+  at: number;
+};
+
+export async function nriFetchIceLeaderboard(
+  token: string,
+  code: string
+): Promise<NriIceLeaderboardEntry[]> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/leaderboard`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return [];
+  return data.entries ?? [];
+}
+
+export async function nriSubmitIceScore(
+  token: string,
+  code: string,
+  payload: { score: number; exfilPct: number; tracePct: number; won: boolean }
+): Promise<boolean> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/score`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  return res.ok;
+}
+
+export type NriTableVehicle = {
+  id: string;
+  catalogId: string;
+  label: string | null;
+  assignedUserId: string | null;
+  assignedDisplayName: string | null;
+  ownerClassId: string | null;
+  ownerSheet: unknown;
+  notes: string | null;
+  createdAt: number;
+};
+
+export async function nriFetchVehicles(token: string, code: string): Promise<NriTableVehicle[]> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return [];
+  return data.vehicles ?? [];
+}
+
+export async function nriCreateVehicle(
+  token: string,
+  code: string,
+  payload: { catalogId: string; label?: string; notes?: string; assignedUserId?: string | null }
+): Promise<{ ok: true; vehicle: NriTableVehicle } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось добавить транспорт') };
+  return { ok: true, vehicle: data.vehicle };
+}
+
+export async function nriPatchVehicle(
+  token: string,
+  code: string,
+  vehicleId: string,
+  patch: { label?: string | null; notes?: string | null; assignedUserId?: string | null }
+): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles/${encodeURIComponent(vehicleId)}`,
+    { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify(patch) }
+  );
+  return res.ok;
+}
+
+export async function nriDeleteVehicle(token: string, code: string, vehicleId: string): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles/${encodeURIComponent(vehicleId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
 export async function nriToggleEquip(
   token: string,
   code: string,
@@ -814,6 +926,7 @@ export type NriMapZone = {
   corpName: string | null;
   locked: boolean;
   pois: string[];
+  color: string | null;
   updatedAt: number;
 };
 
@@ -837,7 +950,7 @@ export async function nriPatchMapZone(
   token: string,
   code: string,
   zoneKey: string,
-  payload: { name?: string; corpName?: string | null; megaDistrict?: string; pois?: string[] }
+  payload: { name?: string; corpName?: string | null; megaDistrict?: string; pois?: string[]; color?: string | null }
 ): Promise<MapZonePatchResult> {
   const res = await fetch(
     `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(zoneKey)}`,
@@ -887,3 +1000,82 @@ export async function nriDeleteMapMarker(token: string, code: string, markerId: 
   );
   return res.ok;
 }
+
+export async function nriFetchScenario(token: string, code: string): Promise<NriScenarioNode[] | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/scenario`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.nodes ?? []) as NriScenarioNode[];
+}
+
+export async function nriCreateScenarioNode(
+  token: string,
+  code: string,
+  payload: {
+    parentId?: string | null;
+    title: string;
+    body?: string;
+    links?: NriScenarioLinks;
+    sortOrder?: number;
+  }
+): Promise<{ ok: true; node: NriScenarioNode } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/scenario`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать узел') };
+  return { ok: true, node: data.node as NriScenarioNode };
+}
+
+export async function nriPatchScenarioNode(
+  token: string,
+  code: string,
+  nodeId: string,
+  payload: Partial<{
+    title: string;
+    body: string;
+    links: NriScenarioLinks;
+    sortOrder: number;
+    parentId: string | null;
+  }>
+): Promise<{ ok: true; node: NriScenarioNode } | { ok: false; error: string }> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/scenario/${encodeURIComponent(nodeId)}`,
+    {
+      method: 'PATCH',
+      headers: authHeaders(token),
+      body: JSON.stringify(payload),
+    }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось обновить узел') };
+  return { ok: true, node: data.node as NriScenarioNode };
+}
+
+export async function nriDeleteScenarioNode(token: string, code: string, nodeId: string): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/scenario/${encodeURIComponent(nodeId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriSavePlayerNotes(
+  token: string,
+  code: string,
+  notes: string
+): Promise<{ ok: true; privateNotes: string } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player/notes`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ notes }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось сохранить заметки') };
+  return { ok: true, privateNotes: typeof data.privateNotes === 'string' ? data.privateNotes : notes };
+}
+

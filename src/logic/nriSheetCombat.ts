@@ -112,8 +112,12 @@ export function buildClassAttacks(sheet: NriSheetData, classId: NriClassId): C21
 }
 
 export function enrichSheetCombat(sheet: NriSheetData, classId: NriClassId): NriSheetData {
+  const tpl = getC2185ClassTemplate(classId);
+  const classFeatures =
+    sheet.classFeatures?.length ? sheet.classFeatures : tpl ? [tpl.signature, ...tpl.traits] : [];
   return {
     ...sheet,
+    classFeatures,
     skillProficiencies: sheet.skillProficiencies ?? [...CLASS_SKILL_DEFAULTS[classId]],
     attacks: sheet.attacks ?? buildClassAttacks(sheet, classId),
   };

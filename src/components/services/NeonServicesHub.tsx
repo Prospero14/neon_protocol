@@ -4,6 +4,7 @@ import { useAuth } from '../../logic/AuthContext';
 import { readNeonAuthToken } from '../../logic/authTokenStorage';
 import {
   vaultCreateGlobal,
+  vaultDeleteFile,
   vaultFetchGlobal,
   type NriVaultFile,
 } from '../../logic/nriApi';
@@ -131,6 +132,7 @@ export const NeonServicesHub: React.FC<Props> = ({ onIceReward, onBack }) => {
           <NriVaultTab
             files={vaultFiles}
             onCreate={createGlobalFile}
+            onDelete={(fileId) => vaultDeleteFile(authToken!, fileId)}
             sendTarget={
               generalRoomId
                 ? { roomId: generalRoomId, roomLabel: '#general' }

@@ -40,6 +40,7 @@ const roleLabel = (r: CoopRole) => COOP_ROLE_LABELS[r].title;
 
 export const CoopTeamSitrep: React.FC<Props> = ({
   coopRole,
+  roleMissionBlurb,
   squadFill,
   matchActiveRole = null,
   isMyTurn = false,

@@ -33,6 +33,7 @@ export type NriInventoryItem = {
     cpuMhz?: number;
     ramGb?: number;
     features?: string[];
+    effects?: string[];
   };
   priceWonlongs?: number;
   qty?: number;

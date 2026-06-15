@@ -15,6 +15,9 @@ import {
   getMegaWatermarks,
   megaFromZoneKey,
   megaKeyFromZoneKey,
+  ZONE_TYPE_DEFAULT_COLORS,
+  zoneDisplayColor,
+  zoneRectPaint,
   type NightCityDistrictType,
 } from '../logic/nriNightCityMap';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
@@ -103,12 +106,18 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [hoverZone, setHoverZone] = useState<NriMapZone | null>(null);
-  const [focusZone, setFocusZone] = useState<NriMapZone | null>(null);
+  const [selectedZoneKey, setSelectedZoneKey] = useState<string | null>(null);
   const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 0, w: DEFAULT_VIEW.w, h: DEFAULT_VIEW.h });
   const [editName, setEditName] = useState('');
   const [editMega, setEditMega] = useState('');
   const [editCorp, setEditCorp] = useState('');
   const [editPois, setEditPois] = useState('');
+  const [editColor, setEditColor] = useState('#5a9ee6');
+  const [colorUseDefault, setColorUseDefault] = useState(true);
+  const focusZone = useMemo(
+    () => (selectedZoneKey ? zones.find((z) => z.zoneKey === selectedZoneKey) ?? null : null),
+    [zones, selectedZoneKey]
+  );
   const [panning, setPanning] = useState(false);
 
   const refreshMarkers = useCallback(async () => {
@@ -124,7 +133,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     setZones(data.zones);
     setMapView(data.view);
     setViewBox({ x: 0, y: 0, w: data.view.w, h: data.view.h });
-    setFocusZone(null);
+    setSelectedZoneKey((prev) => (prev && data.zones.some((z) => z.zoneKey === prev) ? prev : null));
   }, [authToken, inviteCode]);
 
   useEffect(() => {
@@ -135,18 +144,22 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   }, [refreshZones, refreshMarkers]);
 
   useEffect(() => {
-    if (!hoverZone) {
+    if (!focusZone) {
       setEditName('');
       setEditMega('');
       setEditCorp('');
       setEditPois('');
+      setEditColor('#5a9ee6');
+      setColorUseDefault(true);
       return;
     }
-    setEditName(hoverZone.name);
-    setEditMega(zoneMega(hoverZone) ?? '');
-    setEditCorp(hoverZone.corpName ?? '');
-    setEditPois(hoverZone.pois?.join(', ') ?? '');
-  }, [hoverZone?.zoneKey, hoverZone?.name, hoverZone?.corpName, hoverZone?.pois, hoverZone?.megaDistrict]);
+    setEditName(focusZone.name);
+    setEditMega(zoneMega(focusZone) ?? '');
+    setEditCorp(focusZone.corpName ?? '');
+    setEditPois(focusZone.pois?.join(', ') ?? '');
+    setColorUseDefault(!focusZone.color);
+    setEditColor(zoneDisplayColor(focusZone));
+  }, [focusZone?.zoneKey, focusZone?.name, focusZone?.corpName, focusZone?.pois, focusZone?.megaDistrict, focusZone?.color, focusZone?.zoneType]);
 
   const isZoomedIn = viewBox.w < mapView.w - 1 || viewBox.x > 0.5 || viewBox.y > 0.5;
 
@@ -214,8 +227,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   };
 
   const resetView = () => {
-    setViewBox({ x: 0, y: 0, w: mapView.w, h: mapView.h });
-    setFocusZone(null);
+    clearZoneSelection();
   };
 
   const zoomToZone = (z: NriMapZone) => {
@@ -231,15 +243,29 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         mapView
       )
     );
-    setFocusZone(z);
-    setHoverZone(z);
+    setSelectedZoneKey(z.zoneKey);
+  };
+
+  const clearZoneSelection = () => {
+    setSelectedZoneKey(null);
+    setViewBox({ x: 0, y: 0, w: mapView.w, h: mapView.h });
   };
 
   const onZoneClick = (z: NriMapZone, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (panRef.current.moved || placeMode) return;
-    if (z.zoneType === 'highway' || z.zoneType === 'tunnel') return;
+    if (placeMode) return;
+    if (z.zoneType === 'tunnel') return;
+    if (selectedZoneKey === z.zoneKey) {
+      clearZoneSelection();
+      return;
+    }
     zoomToZone(z);
+    setHoverZone(null);
+  };
+
+  const onZonePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    panRef.current.moved = false;
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -318,12 +344,13 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   };
 
   const saveZoneEdits = async () => {
-    if (!authToken || !hoverZone) return;
+    if (!authToken || !focusZone) return;
     const payload: {
       name?: string;
       corpName?: string | null;
       megaDistrict?: string;
       pois?: string[];
+      color?: string | null;
     } = {};
     const name = editName.trim();
     const mega = editMega.trim();
@@ -332,21 +359,24 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       .split(',')
       .map((p) => p.trim())
       .filter(Boolean);
-    const curMega = zoneMega(hoverZone);
+    const curMega = zoneMega(focusZone);
 
-    if (name && name !== hoverZone.name) payload.name = name;
+    if (name && name !== focusZone.name) payload.name = name;
     if (mega && mega !== curMega) payload.megaDistrict = mega;
-    if (hoverZone.zoneType === 'corp' && corp !== (hoverZone.corpName ?? '')) {
+    if (focusZone.zoneType === 'corp' && corp !== (focusZone.corpName ?? '')) {
       payload.corpName = corp || null;
     }
-    const curPois = hoverZone.pois ?? [];
+    const curPois = focusZone.pois ?? [];
     if (pois.join('\0') !== curPois.join('\0')) payload.pois = pois;
+    const nextColor = colorUseDefault ? null : editColor.trim().toLowerCase();
+    const curColor = focusZone.color ?? null;
+    if (nextColor !== curColor) payload.color = nextColor;
 
     if (Object.keys(payload).length === 0) return;
 
     setBusy(true);
     setErr(null);
-    const res = await nriPatchMapZone(authToken, inviteCode, hoverZone.zoneKey, payload);
+    const res = await nriPatchMapZone(authToken, inviteCode, focusZone.zoneKey, payload);
     setBusy(false);
     if (!res.ok) {
       setErr(res.error);
@@ -356,27 +386,26 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       const data = await nriFetchMapZones(authToken, inviteCode);
       if (data) {
         setZones(data.zones);
-        const hit = data.zones.find((z) => z.zoneKey === hoverZone.zoneKey) ?? res.zone;
-        setHoverZone(hit);
-        if (focusZone?.zoneKey === hit.zoneKey) setFocusZone(hit);
+        const hit = data.zones.find((z) => z.zoneKey === focusZone.zoneKey) ?? res.zone;
+        setSelectedZoneKey(hit.zoneKey);
       }
     } else {
       setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
-      setHoverZone(res.zone);
+      setSelectedZoneKey(res.zone.zoneKey);
     }
-    if (focusZone?.zoneKey === res.zone.zoneKey) setFocusZone(res.zone);
   };
 
   const zoneEditsDirty =
-    !!hoverZone &&
-    (editName.trim() !== hoverZone.name ||
-      editMega.trim() !== (zoneMega(hoverZone) ?? '') ||
-      (hoverZone.zoneType === 'corp' && editCorp.trim() !== (hoverZone.corpName ?? '')) ||
+    !!focusZone &&
+    (editName.trim() !== focusZone.name ||
+      editMega.trim() !== (zoneMega(focusZone) ?? '') ||
+      (focusZone.zoneType === 'corp' && editCorp.trim() !== (focusZone.corpName ?? '')) ||
       editPois
         .split(',')
         .map((p) => p.trim())
         .filter(Boolean)
-        .join('\0') !== (hoverZone.pois ?? []).join('\0'));
+        .join('\0') !== (focusZone.pois ?? []).join('\0') ||
+      (colorUseDefault ? null : editColor.trim().toLowerCase()) !== (focusZone.color ?? null));
 
   const districtList = sortedZones(zones);
   const megaMarks = useMemo(() => {
@@ -389,8 +418,9 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     }
     return defaults.map((m) => ({ ...m, megaLabel: byKey.get(m.megaKey) ?? m.megaLabel }));
   }, [zones]);
-  const typeLabel = hoverZone
-    ? DISTRICT_TYPE_LABELS[hoverZone.zoneType as NightCityDistrictType] ?? hoverZone.zoneType
+  const panelZone = focusZone ?? hoverZone;
+  const typeLabel = panelZone
+    ? DISTRICT_TYPE_LABELS[panelZone.zoneType as NightCityDistrictType] ?? panelZone.zoneType
     : '';
 
   return (
@@ -400,8 +430,9 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         <div>
           <h2 className="nri-city-map__title">Найт-Сити · Carbon 2185</h2>
           <p className="mono-text opacity-70">
-            Шесть мегарайонов в духе CP2077. Колёсико — зум · ЛКМ — сдвиг · клик — приблизить.
-            {isHost ? ' Мастер может переименовать любой район и точки интереса.' : ''}
+            Клик по району — выбрать и приблизить · повторный клик — снять выделение.
+            Колёсико — зум · ЛКМ — сдвиг.
+            {isHost ? ' Редактирование доступно только для выбранного района.' : ''}
           </p>
         </div>
         <div className="nri-city-map__toolbar">
@@ -435,22 +466,23 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
 
       <div className="nri-city-map__hover-slot" aria-live="polite">
-        {hoverZone ? (
+        {panelZone ? (
           <>
-            <p className="mono-text nri-city-map__hover">
-              {zoneMega(hoverZone) && <span className="nri-city-map__mega-tag">{zoneMega(hoverZone)}</span>}
-              <strong>{hoverZone.name}</strong> · {typeLabel}
-              {hoverZone.locked && ' · доступ только корпам'}
-              {hoverZone.corpName && ` · ${hoverZone.corpName}`}
-              {hoverZone.pois?.length ? ` · ${hoverZone.pois.join(', ')}` : ''}
+            <p className={`mono-text nri-city-map__hover${focusZone ? ' nri-city-map__hover--selected' : ''}`}>
+              {focusZone && <span className="nri-city-map__selected-tag">выбран</span>}
+              {zoneMega(panelZone) && <span className="nri-city-map__mega-tag">{zoneMega(panelZone)}</span>}
+              <strong>{panelZone.name}</strong> · {typeLabel}
+              {panelZone.locked && ' · доступ только корпам'}
+              {panelZone.corpName && ` · ${panelZone.corpName}`}
+              {panelZone.pois?.length ? ` · ${panelZone.pois.join(', ')}` : ''}
             </p>
-            {isHost && hoverZone && (
+            {isHost && focusZone && (
               <div className="nri-city-map__zone-edit">
                 <label className="nri-city-map__zone-field mono-text">
                   <span>Название</span>
                   <input value={editName} onChange={(e) => setEditName(e.target.value)} />
                 </label>
-                {megaKeyFromZoneKey(hoverZone.zoneKey) && (
+                {megaKeyFromZoneKey(focusZone.zoneKey) && (
                   <label className="nri-city-map__zone-field mono-text">
                     <span>Мегарайон</span>
                     <input
@@ -460,7 +492,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     />
                   </label>
                 )}
-                {hoverZone.zoneType === 'corp' && (
+                {focusZone.zoneType === 'corp' && (
                   <label className="nri-city-map__zone-field mono-text">
                     <span>Корпорация</span>
                     <input value={editCorp} onChange={(e) => setEditCorp(e.target.value)} />
@@ -474,6 +506,30 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     placeholder="бар, рынок, засада…"
                   />
                 </label>
+                <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--color">
+                  <span>Цвет района</span>
+                  <div className="nri-city-map__color-row">
+                    <input
+                      type="color"
+                      value={editColor}
+                      disabled={colorUseDefault}
+                      onChange={(e) => {
+                        setColorUseDefault(false);
+                        setEditColor(e.target.value);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="nri-lobby__copy"
+                      onClick={() => {
+                        setColorUseDefault(true);
+                        setEditColor(ZONE_TYPE_DEFAULT_COLORS[focusZone.zoneType] ?? '#5a9ee6');
+                      }}
+                    >
+                      Стандарт
+                    </button>
+                  </div>
+                </label>
                 <button
                   type="button"
                   className="nri-modal__submit"
@@ -484,10 +540,13 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 </button>
               </div>
             )}
+            {isHost && !focusZone && (
+              <p className="mono-text nri-city-map__hover-hint">Кликните район на карте, чтобы выбрать его для переименования</p>
+            )}
           </>
         ) : (
           <p className="mono-text nri-city-map__hover nri-city-map__hover--empty">
-            Наведите на квартал или кликните, чтобы приблизить
+            Наведите на квартал или кликните, чтобы выбрать
           </p>
         )}
       </div>
@@ -544,11 +603,17 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 ['park', 'corp', 'mid', 'slum', 'industrial'].includes(z.zoneType) &&
                 z.w > 8 &&
                 z.h > 5;
-              const isFocused = focusZone?.zoneKey === z.zoneKey;
+              const isFocused = selectedZoneKey === z.zoneKey;
+              const isHovered = hoverZone?.zoneKey === z.zoneKey;
+              const rectPaint =
+                isFocused && !colorUseDefault
+                  ? zoneRectPaint(editColor, z.zoneType)
+                  : zoneRectPaint(z.color, z.zoneType);
               return (
                 <g
                   key={z.zoneKey}
                   className={`nri-city-map__zone-g ${isFocused ? 'focused' : ''}`}
+                  onPointerDown={onZonePointerDown}
                   onMouseEnter={() => setHoverZone(z)}
                   onMouseLeave={() => setHoverZone((prev) => (prev?.zoneKey === z.zoneKey ? null : prev))}
                   onClick={(e) => onZoneClick(z, e)}
@@ -560,7 +625,8 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     height={z.h}
                     className={`nri-city-map__zone nri-city-map__zone--${z.zoneType}${z.locked ? ' locked' : ''}`}
                     rx={z.zoneType === 'corp' ? 1.2 : z.zoneType === 'park' ? 1 : 0.4}
-                    filter={isFocused || hoverZone?.zoneKey === z.zoneKey ? 'url(#nc-glow)' : undefined}
+                    style={rectPaint}
+                    filter={isFocused || isHovered ? 'url(#nc-glow)' : undefined}
                   />
                   {showFo && (
                     <foreignObject

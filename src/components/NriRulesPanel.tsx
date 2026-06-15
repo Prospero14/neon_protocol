@@ -1,16 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { C2185_RULES } from '../logic/nriCarbon2185';
+import {
+  C2185_CLASS_GUIDES,
+  C2185_ENVIRONMENT_RULES,
+} from '../logic/nriCarbon2185RulesExtended';
 
 type Props = { onClose: () => void };
 
-export const NriRulesPanel: React.FC<Props> = ({ onClose }) => (
-  <div className="nri-modal-overlay" onClick={onClose}>
-    <div className="nri-modal nri-modal--wide nri-rules" onClick={(e) => e.stopPropagation()}>
-      <h2 className="nri-modal__title">Carbon 2185 — краткие правила</h2>
-      <p className="mono-text nri-modal__hint">
-        Сводка по Core Rulebook (Carbon 2185). Полный текст — в PDF правил.
-      </p>
-      {C2185_RULES.map((sec) => (
+type TabId = 'core' | 'environment' | 'classes';
+
+const TABS: { id: TabId; label: string; hint: string }[] = [
+  { id: 'core', label: 'Основное', hint: 'Характеристики, бой, лист' },
+  { id: 'environment', label: 'Состояния и среда', hint: 'стр. 133+ рульника' },
+  { id: 'classes', label: 'Классы', hint: 'стр. 27+ рульника' },
+];
+
+function RulesSections({ sections }: { sections: { title: string; lines: string[] }[] }) {
+  return (
+    <>
+      {sections.map((sec) => (
         <section key={sec.title} className="nri-rules__section">
           <h3 className="nri-rules__heading">{sec.title}</h3>
           <ul className="nri-rules__list">
@@ -20,9 +28,110 @@ export const NriRulesPanel: React.FC<Props> = ({ onClose }) => (
           </ul>
         </section>
       ))}
-      <button type="button" className="nri-modal__submit" onClick={onClose}>
-        Закрыть
-      </button>
+    </>
+  );
+}
+
+export const NriRulesPanel: React.FC<Props> = ({ onClose }) => {
+  const [tab, setTab] = useState<TabId>('core');
+
+  return (
+    <div className="nri-modal-overlay" onClick={onClose}>
+      <div className="nri-modal nri-modal--wide nri-rules" onClick={(e) => e.stopPropagation()}>
+        <h2 className="nri-modal__title">Carbon 2185 — правила</h2>
+        <p className="mono-text nri-modal__hint">
+          Сводка по Core Rulebook. Полный текст — в PDF правил Dragon Turtle Games.
+        </p>
+
+        <nav className="nri-rules__tabs" aria-label="Разделы правил">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={`nri-rules__tab ${tab === t.id ? 'active' : ''}`}
+              onClick={() => setTab(t.id)}
+              title={t.hint}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="nri-rules__body">
+          {tab === 'core' && <RulesSections sections={C2185_RULES} />}
+
+          {tab === 'environment' && <RulesSections sections={C2185_ENVIRONMENT_RULES} />}
+
+          {tab === 'classes' && (
+            <div className="nri-rules__classes">
+              {C2185_CLASS_GUIDES.map((cls) => (
+                <article key={cls.id} className="nri-rules__class-card">
+                  <header className="nri-rules__class-head">
+                    <h3 className="nri-rules__class-name">
+                      {cls.name}
+                      <span className="nri-rules__class-en">{cls.carbonName}</span>
+                    </h3>
+                    <p className="mono-text nri-rules__class-tag">{cls.tagline}</p>
+                  </header>
+                  <p className="nri-rules__class-summary">{cls.summary}</p>
+                  <dl className="nri-rules__class-meta mono-text">
+                    <div>
+                      <dt>Hit Die</dt>
+                      <dd>{cls.hitDie}</dd>
+                    </div>
+                    <div>
+                      <dt>Saves</dt>
+                      <dd>{cls.saves}</dd>
+                    </div>
+                    <div>
+                      <dt>Броня</dt>
+                      <dd>{cls.armor}</dd>
+                    </div>
+                    <div>
+                      <dt>Оружие</dt>
+                      <dd>{cls.weapons}</dd>
+                    </div>
+                  </dl>
+                  <section className="nri-rules__section">
+                    <h4 className="nri-rules__subheading">Уровни</h4>
+                    <ul className="nri-rules__level-list">
+                      {cls.levelFeatures.map((row) => (
+                        <li key={row.level}>
+                          <strong>{row.level} ур.</strong>
+                          <ul>
+                            {row.features.map((f) => (
+                              <li key={f}>{f}</li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  {cls.archetypes.length > 0 && (
+                    <section className="nri-rules__section">
+                      <h4 className="nri-rules__subheading">Архетипы / фокус</h4>
+                      {cls.archetypes.map((arch) => (
+                        <div key={arch.name} className="nri-rules__archetype">
+                          <h5 className="nri-rules__archetype-name">{arch.name}</h5>
+                          <ul className="nri-rules__list">
+                            {arch.lines.map((line) => (
+                              <li key={line}>{line}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <button type="button" className="nri-modal__submit" onClick={onClose}>
+          Закрыть
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};

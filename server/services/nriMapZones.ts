@@ -25,6 +25,15 @@ function defaultMegaLabel(zoneKey: string): string | null {
   return labels[mk] ?? null;
 }
 
+function normalizeZoneColor(raw: unknown): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === '') return null;
+  if (typeof raw !== 'string') return undefined;
+  const c = raw.trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(c)) return undefined;
+  return c.toLowerCase();
+}
+
 export type MapZoneRow = {
   zoneKey: string;
   sortOrder: number;
@@ -36,6 +45,7 @@ export type MapZoneRow = {
   h: number;
   corpName: string | null;
   megaDistrict: string | null;
+  color: string | null;
   locked: boolean;
   pois: string[] | null;
 };
@@ -77,6 +87,7 @@ export function serializeMapZone(z: {
   h: number;
   corpName: string | null;
   megaDistrict?: string | null;
+  color?: string | null;
   locked: boolean;
   pois: unknown;
   updatedAt?: Date;
@@ -94,6 +105,7 @@ export function serializeMapZone(z: {
     corpName: z.corpName,
     locked: z.locked,
     megaDistrict: megaDistrictFor(z.zoneKey, z.megaDistrict),
+    color: z.color ?? null,
     pois,
     updatedAt: z.updatedAt?.getTime() ?? Date.now(),
   };
@@ -111,6 +123,7 @@ function seedRow(s: ZoneSeed) {
     h: s.h,
     corpName: s.corpName ?? null,
     megaDistrict: s.megaDistrict ?? defaultMegaLabel(s.zoneKey),
+    color: null,
     locked: s.locked ?? false,
     pois: s.pois ?? [],
   };
@@ -137,6 +150,7 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
           h: 0,
           corpName: null,
           megaDistrict: null,
+          color: null,
           locked: true,
           pois: [],
         },
@@ -170,10 +184,13 @@ export async function patchMapZone(
     corpName?: string | null;
     megaDistrict?: string;
     pois?: string[];
+    color?: string | null;
   }
 ) {
   const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
   if (!existing) return null;
+
+  const color = normalizeZoneColor(payload.color);
 
   if (typeof payload.megaDistrict === 'string' && payload.megaDistrict.trim()) {
     const label = payload.megaDistrict.trim().slice(0, 80);
@@ -209,6 +226,7 @@ export async function patchMapZone(
       ...(payload.pois !== undefined
         ? { pois: Array.isArray(payload.pois) ? payload.pois.map((p) => String(p).slice(0, 80)) : [] }
         : {}),
+      ...(color !== undefined ? { color } : {}),
     },
   });
 

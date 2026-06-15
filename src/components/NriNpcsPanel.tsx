@@ -18,6 +18,8 @@ import {
 import { rollNpcName, parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
 import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheetContent } from './NriCharacterSheetContent';
+import { NriSkillPickField } from './NriSkillPickField';
+import { defaultSkillsForClass, validateSkillPick } from '../logic/nriSkillPick';
 
 type Props = {
   inviteCode: string;
@@ -41,6 +43,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
   const [originId, setOriginId] = useState<NriOriginId>('neo_tokyo');
   const [activityId, setActivityId] = useState<NriActivityId>('street');
   const [classId, setClassId] = useState<NriClassId>('merc');
+  const [pickedSkills, setPickedSkills] = useState<string[]>(() => defaultSkillsForClass('merc'));
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
@@ -71,16 +74,25 @@ export const NriNpcsPanel: React.FC<Props> = ({
   const pickArchetype = (id: NriNpcArchetypeId) => {
     setArchetypeId(id);
     const arch = NRI_NPC_ARCHETYPES.find((a) => a.id === id);
-    if (arch?.defaultClass) setClassId(arch.defaultClass);
+    if (arch?.defaultClass) {
+      setClassId(arch.defaultClass);
+      setPickedSkills(defaultSkillsForClass(arch.defaultClass));
+    }
   };
 
   const generatePreview = () => {
+    const skillErr = validateSkillPick(classId, pickedSkills);
+    if (skillErr) {
+      setErr(skillErr);
+      return;
+    }
     const built = buildFullCharacter({
       classId,
       originId,
       activityId,
       archetypeId,
       characterName: name.trim() || undefined,
+      skillProficiencies: pickedSkills,
     });
     setSheet(built.sheet);
     setMeta({ ...built.meta, npcArchetypeId: archetypeId });
@@ -199,12 +211,17 @@ export const NriNpcsPanel: React.FC<Props> = ({
               key={c.id}
               type="button"
               className={`nri-class-card ${classId === c.id ? 'active' : ''}`}
-              onClick={() => setClassId(c.id)}
+              onClick={() => {
+                setClassId(c.id);
+                setPickedSkills(defaultSkillsForClass(c.id));
+              }}
             >
               <strong>{c.name}</strong>
             </button>
           ))}
         </div>
+
+        <NriSkillPickField classId={classId} picked={pickedSkills} onChange={setPickedSkills} />
 
         <label className="nri-modal__field">
           <span>Имя (опционально до генерации)</span>

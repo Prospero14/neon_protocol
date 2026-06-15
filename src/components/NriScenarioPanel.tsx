@@ -1,0 +1,325 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, Save, Trash2 } from 'lucide-react';
+import { useAuth } from '../logic/AuthContext';
+import { readNeonAuthToken } from '../logic/authTokenStorage';
+import {
+  nriCreateScenarioNode,
+  nriDeleteScenarioNode,
+  nriFetchNpcs,
+  nriFetchScenario,
+  nriFetchVault,
+  nriPatchScenarioNode,
+  type NriNpc,
+  type NriScenarioNode,
+  type NriVaultFile,
+} from '../logic/nriApi';
+import { NRI_ITEM_CATALOG, searchCatalog } from '../logic/nriItemCatalog';
+import {
+  emptyScenarioLinks,
+  parseScenarioLinks,
+  scenarioDepth,
+  type NriScenarioLinks,
+} from '../logic/nriScenario';
+import { NriCatalogItemPreview } from './NriSelectionPreview';
+
+type Props = { inviteCode: string };
+
+function toggleId(list: string[], id: string): string[] {
+  return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+}
+
+export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
+  const { token } = useAuth();
+  const authToken = readNeonAuthToken() ?? token;
+  const [nodes, setNodes] = useState<NriScenarioNode[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [links, setLinks] = useState<NriScenarioLinks>(emptyScenarioLinks());
+  const [npcs, setNpcs] = useState<NriNpc[]>([]);
+  const [files, setFiles] = useState<NriVaultFile[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [previewCatalogId, setPreviewCatalogId] = useState<string | null>(null);
+  const [itemSearch, setItemSearch] = useState('');
+
+  const refresh = useCallback(async () => {
+    if (!authToken) return;
+    const [list, npcList, vault] = await Promise.all([
+      nriFetchScenario(authToken, inviteCode),
+      nriFetchNpcs(authToken, inviteCode),
+      nriFetchVault(authToken, inviteCode),
+    ]);
+    if (list) setNodes(list);
+    if (npcList) setNpcs(npcList);
+    if (vault) setFiles(vault);
+  }, [authToken, inviteCode]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const root = nodes.find((n) => !n.parentId);
+  const selected = nodes.find((n) => n.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!selected) {
+      setTitle('');
+      setBody('');
+      setLinks(emptyScenarioLinks());
+      return;
+    }
+    setTitle(selected.title);
+    setBody(selected.body);
+    setLinks(parseScenarioLinks(selected.links));
+  }, [selected]);
+
+  const filteredItems = useMemo(() => searchCatalog(itemSearch, 'all').slice(0, 40), [itemSearch]);
+
+  const tree = useMemo(() => {
+    const byParent = new Map<string | null, NriScenarioNode[]>();
+    for (const n of nodes) {
+      const key = n.parentId;
+      const arr = byParent.get(key) ?? [];
+      arr.push(n);
+      byParent.set(key, arr);
+    }
+    const walk = (parentId: string | null): React.ReactNode[] => {
+      const list = byParent.get(parentId) ?? [];
+      return list.flatMap((n) => {
+        const depth = scenarioDepth(nodes, n.id);
+        const isRoot = !n.parentId;
+        return [
+          <button
+            key={n.id}
+            type="button"
+            className={`nri-scenario__tree-item ${selectedId === n.id ? 'active' : ''}`}
+            style={{ paddingLeft: `${8 + depth * 14}px` }}
+            onClick={() => setSelectedId(n.id)}
+          >
+            {isRoot ? '◆ ' : '▸ '}
+            {n.title}
+          </button>,
+          ...walk(n.id),
+        ];
+      });
+    };
+    return walk(null);
+  }, [nodes, selectedId]);
+
+  const addRoot = async () => {
+    if (!authToken || root) return;
+    setBusy(true);
+    setErr(null);
+    const res = await nriCreateScenarioNode(authToken, inviteCode, {
+      title: 'Основной сценарий',
+      body: '',
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refresh();
+    setSelectedId(res.node.id);
+  };
+
+  const addQuest = async () => {
+    if (!authToken) return;
+    const parentId = selected?.id ?? root?.id;
+    if (!parentId) {
+      setErr('Сначала создайте основной сценарий.');
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    const res = await nriCreateScenarioNode(authToken, inviteCode, {
+      parentId,
+      title: 'Новый квест',
+      body: '',
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refresh();
+    setSelectedId(res.node.id);
+  };
+
+  const saveSelected = async () => {
+    if (!authToken || !selectedId) return;
+    setBusy(true);
+    setErr(null);
+    const res = await nriPatchScenarioNode(authToken, inviteCode, selectedId, {
+      title: title.trim() || 'Без названия',
+      body,
+      links,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refresh();
+  };
+
+  const removeSelected = async () => {
+    if (!authToken || !selectedId || !window.confirm('Удалить узел и все дочерние квесты?')) return;
+    setBusy(true);
+    await nriDeleteScenarioNode(authToken, inviteCode, selectedId);
+    setBusy(false);
+    setSelectedId(null);
+    await refresh();
+  };
+
+  const linkNpcName = (id: string) => npcs.find((n) => n.id === id)?.name ?? id;
+  const linkFileTitle = (id: string) => files.find((f) => f.id === id)?.title ?? id;
+  const linkItemName = (id: string) => NRI_ITEM_CATALOG.find((c) => c.id === id)?.name ?? id;
+
+  return (
+    <div className="nri-scenario">
+      <header className="nri-chars__head">
+        <h3 className="mono-text">Сценарий</h3>
+        <p className="mono-text opacity-70">
+          Основной сюжет и ответвления-квесты. Привязывайте НПС, предметы каталога и файлы из хранилища.
+        </p>
+        <div className="nri-scenario__toolbar">
+          {!root && (
+            <button type="button" className="nri-modal__submit" disabled={busy} onClick={addRoot}>
+              <Plus size={14} /> Основной сценарий
+            </button>
+          )}
+          <button type="button" className="nri-lobby__copy" disabled={busy || !root} onClick={addQuest}>
+            <Plus size={14} /> Квест / ветка
+          </button>
+        </div>
+      </header>
+
+      <div className="nri-scenario__layout">
+        <aside className="nri-scenario__tree">
+          <h4 className="mono-text">Структура</h4>
+          {tree.length === 0 && (
+            <p className="mono-text opacity-50">Пока пусто — создайте основной сценарий.</p>
+          )}
+          {tree}
+        </aside>
+
+        <div className="nri-scenario__editor">
+          {!selected && (
+            <p className="mono-text opacity-50">Выберите узел слева или создайте новый.</p>
+          )}
+          {selected && (
+            <>
+              <label className="nri-modal__field">
+                <span>{selected.parentId ? 'Квест / ветка' : 'Основной сценарий'}</span>
+                <input value={title} onChange={(e) => setTitle(e.target.value)} />
+              </label>
+              <label className="nri-modal__field">
+                <span>Описание</span>
+                <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} />
+              </label>
+
+              <section className="nri-scenario__links">
+                <h4 className="mono-text">Привязки</h4>
+
+                <div className="nri-scenario__link-block">
+                  <span className="mono-text">НПС</span>
+                  <ul className="nri-scenario__link-list">
+                    {npcs.map((n) => (
+                      <li key={n.id}>
+                        <label className="mono-text">
+                          <input
+                            type="checkbox"
+                            checked={links.npcIds.includes(n.id)}
+                            onChange={() => setLinks((l) => ({ ...l, npcIds: toggleId(l.npcIds, n.id) }))}
+                          />
+                          {n.name}
+                        </label>
+                      </li>
+                    ))}
+                    {npcs.length === 0 && <li className="mono-text opacity-50">Нет НПС на столе.</li>}
+                  </ul>
+                </div>
+
+                <div className="nri-scenario__link-block">
+                  <span className="mono-text">Предметы каталога</span>
+                  <input
+                    className="mono-text"
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    placeholder="Поиск предмета…"
+                  />
+                  <ul className="nri-scenario__link-list nri-scenario__link-list--scroll">
+                    {filteredItems.map((c) => (
+                      <li key={c.id}>
+                        <label className="mono-text">
+                          <input
+                            type="checkbox"
+                            checked={links.catalogIds.includes(c.id)}
+                            onChange={() => {
+                              setLinks((l) => ({ ...l, catalogIds: toggleId(l.catalogIds, c.id) }));
+                              setPreviewCatalogId(c.id);
+                            }}
+                          />
+                          {c.name}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  {previewCatalogId && links.catalogIds.includes(previewCatalogId) && (
+                    <NriCatalogItemPreview catalogId={previewCatalogId} />
+                  )}
+                </div>
+
+                <div className="nri-scenario__link-block">
+                  <span className="mono-text">Файлы хранилища</span>
+                  <ul className="nri-scenario__link-list">
+                    {files.map((f) => (
+                      <li key={f.id}>
+                        <label className="mono-text">
+                          <input
+                            type="checkbox"
+                            checked={links.fileIds.includes(f.id)}
+                            onChange={() => setLinks((l) => ({ ...l, fileIds: toggleId(l.fileIds, f.id) }))}
+                          />
+                          {f.title}
+                          {f.protected && ' 🔒'}
+                        </label>
+                      </li>
+                    ))}
+                    {files.length === 0 && (
+                      <li className="mono-text opacity-50">Нет файлов — создайте во вкладке «Файлохранилище».</li>
+                    )}
+                  </ul>
+                </div>
+
+                {(links.npcIds.length > 0 || links.catalogIds.length > 0 || links.fileIds.length > 0) && (
+                  <div className="nri-scenario__linked-summary mono-text opacity-70">
+                    <strong>Сводка:</strong>{' '}
+                    {links.npcIds.map(linkNpcName).join(', ')}
+                    {links.catalogIds.length > 0 &&
+                      `${links.npcIds.length ? ' · ' : ''}предметы: ${links.catalogIds.map(linkItemName).join(', ')}`}
+                    {links.fileIds.length > 0 &&
+                      `${links.npcIds.length || links.catalogIds.length ? ' · ' : ''}файлы: ${links.fileIds.map(linkFileTitle).join(', ')}`}
+                  </div>
+                )}
+              </section>
+
+              <div className="nri-presets__actions">
+                <button type="button" className="nri-lobby__close" disabled={busy} onClick={removeSelected}>
+                  <Trash2 size={14} /> Удалить
+                </button>
+                <button type="button" className="nri-modal__submit" disabled={busy} onClick={saveSelected}>
+                  <Save size={14} /> Сохранить
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {err && <p className="nri-lobby__err mono-text">{err}</p>}
+    </div>
+  );
+};

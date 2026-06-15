@@ -45,12 +45,17 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [list, npcList, vault] = await Promise.all([
+    const [scenarioRes, npcList, vault] = await Promise.all([
       nriFetchScenario(authToken, inviteCode),
       nriFetchNpcs(authToken, inviteCode),
       nriFetchVault(authToken, inviteCode),
     ]);
-    if (list) setNodes(list);
+    if (scenarioRes.ok) {
+      setNodes(scenarioRes.nodes);
+      setErr(null);
+    } else {
+      setErr(scenarioRes.error);
+    }
     if (npcList) setNpcs(npcList);
     if (vault) setFiles(vault);
   }, [authToken, inviteCode]);

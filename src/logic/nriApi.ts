@@ -168,7 +168,10 @@ function parseApiError(data: Record<string, unknown>, fallback: string): string 
     (typeof data.message === 'string' && data.message) ||
     (typeof data.error === 'string' && data.error) ||
     '';
-  if (/Cannot (GET|POST|PATCH|DELETE)|<!DOCTYPE html>/i.test(raw)) {
+  if (
+    data.code === 'API_NOT_FOUND' ||
+    /Cannot (GET|POST|PATCH|DELETE)|<!DOCTYPE html>/i.test(raw)
+  ) {
     return 'API не найден — перезапустите сервер: npm run build && npm start (порт 8080).';
   }
   if (raw) return raw;
@@ -1001,13 +1004,18 @@ export async function nriDeleteMapMarker(token: string, code: string, markerId: 
   return res.ok;
 }
 
-export async function nriFetchScenario(token: string, code: string): Promise<NriScenarioNode[] | null> {
+export async function nriFetchScenario(
+  token: string,
+  code: string
+): Promise<{ ok: true; nodes: NriScenarioNode[] } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/scenario`, {
     headers: authHeaders(token),
   });
   const data = await parseJson(res);
-  if (!res.ok) return null;
-  return (data.nodes ?? []) as NriScenarioNode[];
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось загрузить сценарий') };
+  }
+  return { ok: true, nodes: (data.nodes ?? []) as NriScenarioNode[] };
 }
 
 export async function nriCreateScenarioNode(

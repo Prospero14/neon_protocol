@@ -63,6 +63,37 @@ const adapter = new PrismaBetterSqlite3({
 
 const prisma = new PrismaClient({ adapter });
 
+/** Если migrate deploy пропущен (P3005), новые таблицы НРИ могут отсутствовать — db push. */
+function runDbPushSync(): void {
+  const prismaCli = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
+  if (!fs.existsSync(prismaCli)) return;
+  try {
+    execFileSync(process.execPath, [prismaCli, 'db', 'push', '--accept-data-loss'], {
+      cwd: process.cwd(),
+      env: { ...process.env },
+      stdio: 'inherit',
+    });
+    console.log('[NEON_BOOT] prisma db push: ok');
+  } catch (e) {
+    console.error('[NEON_BOOT] prisma db push failed:', e);
+  }
+}
+
+async function ensureNriSchemaSync(): Promise<void> {
+  try {
+    await prisma.nriPresetCharacter.findFirst({ select: { id: true } });
+  } catch {
+    console.warn('[NEON_BOOT] NriPresetCharacter missing — applying schema…');
+    runDbPushSync();
+  }
+  try {
+    await prisma.nriCyberProduct.findFirst({ select: { id: true } });
+  } catch {
+    console.warn('[NEON_BOOT] NriCyberProduct missing — applying schema…');
+    runDbPushSync();
+  }
+}
+
 let isDbReady = false;
 
 async function initDB() {
@@ -72,6 +103,7 @@ async function initDB() {
   try {
     await prisma.$connect();
     console.log('[NEON_CORE] Database connected successfully.');
+    await ensureNriSchemaSync();
     await seedAdmin();
     isDbReady = true;
     console.log('[NEON_CORE] INIT_COMPLETE: SYSTEM_READY');

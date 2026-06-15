@@ -10,11 +10,26 @@ import { createApp } from './createApp';
 
 const JWT_SECRET = 'test_neon_jwt_secret';
 
-function mockPrisma(): Pick<PrismaClient, 'user' | 'gameState' | 'coopStartupScore'> {
+function mockPrisma(): Pick<
+  PrismaClient,
+  | 'user'
+  | 'gameState'
+  | 'coopStartupScore'
+  | 'chatRoom'
+  | 'chatMessage'
+  | 'nriSession'
+  | 'nriSessionMember'
+  | 'nriPlayer'
+  | 'nriPresetCharacter'
+  | 'nriNpc'
+  | 'nriCyberProduct'
+  | '$transaction'
+> {
   return {
     user: {
       findUnique: vi.fn(),
       create: vi.fn(),
+      findMany: vi.fn(),
     } as unknown as PrismaClient['user'],
     gameState: {
       update: vi.fn(),
@@ -24,6 +39,59 @@ function mockPrisma(): Pick<PrismaClient, 'user' | 'gameState' | 'coopStartupSco
       findUnique: vi.fn(),
       upsert: vi.fn(),
     } as unknown as PrismaClient['coopStartupScore'],
+    chatRoom: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+    } as unknown as PrismaClient['chatRoom'],
+    chatMessage: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['chatMessage'],
+    nriSession: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    } as unknown as PrismaClient['nriSession'],
+    nriSessionMember: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      findMany: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['nriSessionMember'],
+    nriPlayer: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['nriPlayer'],
+    nriPresetCharacter: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      count: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['nriPresetCharacter'],
+    nriNpc: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['nriNpc'],
+    nriCyberProduct: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    } as unknown as PrismaClient['nriCyberProduct'],
+    $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   };
 }
 
@@ -216,5 +284,115 @@ describe('neon_v1 API (integration)', () => {
     expect(res.body.ok).toBe(true);
     expect(res.body.updated).toBe(true);
     expect(res.body.entry.score).toBe(500);
+  });
+
+  it('GET /neon_v1/services/health', async () => {
+    const res = await request(app()).get('/neon_v1/services/health').expect(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.services).toContain('chat');
+    expect(res.body.services).toContain('nri');
+  });
+
+  it('POST /neon_v1/services/nri/create + join', async () => {
+    const tok = jwt.sign({ userId: 'uid-nri' }, JWT_SECRET);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'uid-nri',
+      username: 'gm_user',
+    } as any);
+    vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.chatRoom.create).mockResolvedValue({
+      id: 'room-nri',
+      kind: 'nri',
+      slug: 'NRI-TEST',
+    } as any);
+    vi.mocked(prisma.nriSession.create).mockResolvedValue({
+      id: 'sess-1',
+      inviteCode: 'NRI-TEST',
+      hostUserId: 'uid-nri',
+      title: 'Test table',
+      chatRoomId: 'room-nri',
+      status: 'open',
+      spamBotEnabled: false,
+      host: { username: 'gm_user' },
+    } as any);
+    vi.mocked(prisma.nriSessionMember.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.nriSessionMember.upsert).mockResolvedValue({
+      id: 'mem-1',
+      sessionId: 'sess-1',
+      userId: 'uid-nri',
+      username: 'gm_user',
+      isHost: true,
+    } as any);
+
+    const createRes = await request(app())
+      .post('/neon_v1/services/nri/create')
+      .set('Authorization', `Bearer ${tok}`)
+      .send({ title: 'Test table' })
+      .expect(201);
+    expect(createRes.body.session.inviteCode).toBe('NRI-TEST');
+
+    vi.mocked(prisma.nriSession.findUnique).mockResolvedValue({
+      id: 'sess-1',
+      inviteCode: 'NRI-TEST',
+      hostUserId: 'uid-nri',
+      title: 'Test table',
+      chatRoomId: 'room-nri',
+      status: 'open',
+      spamBotEnabled: false,
+      host: { username: 'gm_user' },
+    } as any);
+
+    vi.mocked(prisma.nriSessionMember.findMany).mockResolvedValue([
+      {
+        id: 'mem-1',
+        sessionId: 'sess-1',
+        userId: 'uid-nri',
+        username: 'gm_user',
+        isHost: true,
+      },
+    ] as any);
+    vi.mocked(prisma.nriPlayer.findMany).mockResolvedValue([]);
+
+    const joinRes = await request(app())
+      .post('/neon_v1/services/nri/NRI-TEST/join')
+      .set('Authorization', `Bearer ${tok}`)
+      .expect(200);
+    expect(joinRes.body.session.chatRoomId).toBe('room-nri');
+    expect(joinRes.body.members.length).toBeGreaterThan(0);
+  });
+
+  it('POST /neon_v1/services/nri/:code/spam-bot (host only)', async () => {
+    const tok = jwt.sign({ userId: 'uid-nri' }, JWT_SECRET);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'uid-nri',
+      username: 'gm_user',
+    } as any);
+    vi.mocked(prisma.nriSession.findUnique).mockResolvedValue({
+      id: 'sess-1',
+      inviteCode: 'NRI-TEST',
+      hostUserId: 'uid-nri',
+      title: 'Test table',
+      chatRoomId: 'room-nri',
+      status: 'open',
+      spamBotEnabled: false,
+    } as any);
+    vi.mocked(prisma.nriSession.update).mockResolvedValue({
+      id: 'sess-1',
+      inviteCode: 'NRI-TEST',
+      hostUserId: 'uid-nri',
+      title: 'Test table',
+      chatRoomId: 'room-nri',
+      status: 'open',
+      spamBotEnabled: true,
+    } as any);
+    vi.mocked(prisma.chatMessage.create).mockResolvedValue({ id: 'm1' } as any);
+
+    const res = await request(app())
+      .post('/neon_v1/services/nri/NRI-TEST/spam-bot')
+      .set('Authorization', `Bearer ${tok}`)
+      .send({ enabled: true })
+      .expect(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.spamBotEnabled).toBe(true);
   });
 });

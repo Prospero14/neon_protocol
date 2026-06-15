@@ -8,20 +8,29 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
-const pkgPath = path.join(root, 'node_modules/mime-db/package.json');
-const target = path.join(root, 'node_modules/mime-db/db.json');
+const targets = [
+  path.join(root, 'node_modules/mime-db/db.json'),
+  path.join(root, 'node_modules/form-data/node_modules/mime-db/db.json'),
+];
 
-if (!fs.existsSync(pkgPath)) {
-  process.exit(0);
+for (const target of targets) {
+  const pkgDir = path.dirname(target);
+  const pkgPath = path.join(pkgDir, 'package.json');
+  if (!fs.existsSync(pkgPath)) continue;
+  const ver = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+  if (fs.existsSync(target) && fs.statSync(target).size > 10000) continue;
+  const url = `https://unpkg.com/mime-db@${ver}/db.json`;
+  try {
+    const buf = await download(url);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, buf);
+    console.log(`[ensure-mime-db] wrote ${target} (${buf.length} bytes)`);
+  } catch (e) {
+    console.warn('[ensure-mime-db] skip:', target, e?.message || e);
+  }
 }
-const ver = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
-if (fs.existsSync(target) && fs.statSync(target).size > 10000) {
-  process.exit(0);
-}
 
-const url = `https://unpkg.com/mime-db@${ver}/db.json`;
-
-function download() {
+function download(url) {
   return new Promise((resolve, reject) => {
     https
       .get(url, (res) => {
@@ -45,14 +54,4 @@ function download() {
       })
       .on('error', reject);
   });
-}
-
-try {
-  const buf = await download();
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, buf);
-  console.log(`[ensure-mime-db] wrote ${target} (${buf.length} bytes)`);
-} catch (e) {
-  console.warn('[ensure-mime-db] skip:', e?.message || e);
-  process.exit(0);
 }

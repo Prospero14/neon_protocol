@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, User, Map as MapIcon, Database, Book, ClipboardList } from 'lucide-react';
+import { Home, User, Map as MapIcon, Database, Book, ClipboardList, Radio } from 'lucide-react';
 
 interface ResponsiveNavProps {
   currentView: string;
@@ -19,6 +19,7 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
     { id: 'DECK_BUILDER', label: 'КОЛОДА', icon: Database },
     { id: 'MAP', label: 'РАДАР', icon: MapIcon },
     { id: 'QUEST_LOG', label: 'БЭКЛОГ', icon: ClipboardList },
+    { id: 'NEON_SERVICES', label: 'СЕРВИСЫ', icon: Radio },
     { id: 'REFERENCE', label: 'ДОКИ', icon: Book },
   ];
 

@@ -7,6 +7,7 @@ import type { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 import { mergeStartupRankings } from './coopStartupPregen.js';
+import { registerNeonServices } from './services/registerServices.js';
 
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
 function publicGameState(gs: Record<string, unknown> | null): Record<string, unknown> | null {
@@ -1250,6 +1251,8 @@ export function createApp(opts: CreateAppOptions) {
       return sendApiError(res, 500, 'STARTUP_RANK_SUBMIT_FAILED', 'Не удалось сохранить рейтинг.');
     }
   });
+
+  registerNeonServices(app, { prisma, jwtSecret, sendApiError });
 
   const DIST = path.join(process.cwd(), 'dist');
   const sendHtmlNoCache = (res: Response, file: string) => {

@@ -12,8 +12,11 @@ export interface SessionGateViewProps {
   playerName: string;
   homeDistrictId: string;
   coopClassProfiles: Partial<Record<CoopRole, CoopClassSave>>;
+  pendingNriInvite?: string | null;
   onEnterSolo: () => void;
   onEnterCoop: (role?: CoopRole) => void;
+  onCreateNri: (title?: string) => void;
+  onJoinNri: (code: string) => void;
   onOpenWizard: (mode: SessionMode) => void;
 }
 
@@ -22,12 +25,17 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   playerName,
   homeDistrictId,
   coopClassProfiles,
+  pendingNriInvite,
   onEnterSolo,
   onEnterCoop,
+  onCreateNri,
+  onJoinNri,
   onOpenWizard,
 }) => {
   const [phase, setPhase] = useState<Phase>('mode');
   const [pickedMode, setPickedMode] = useState<SessionMode | null>(null);
+  const [nriTitle, setNriTitle] = useState('');
+  const [nriCodeInput, setNriCodeInput] = useState(pendingNriInvite ?? '');
 
   const soloExists = creationResume?.soloPersonaExists ?? false;
   const coopExists = creationResume?.coopEstablished ?? false;
@@ -55,7 +63,12 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <p className="session-resume-gate__hint session-gate__hint">
             Затем — список персонажей этого режима и вход или создание нового профиля.
           </p>
-          <div className="session-resume-gate__actions session-gate__mode-row">
+          {pendingNriInvite && (
+            <div className="session-gate__nri-banner mono-text">
+              Приглашение на стол <strong>{pendingNriInvite}</strong> — выберите НРИ и войдите.
+            </div>
+          )}
+          <div className="session-resume-gate__actions session-gate__mode-row session-gate__mode-row--3">
             <button
               type="button"
               className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''}`}
@@ -75,6 +88,67 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
               <span className="session-gate__mode-sub">
                 {coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
               </span>
+            </button>
+            <button
+              type="button"
+              className="session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri"
+              onClick={() => pickMode('nri')}
+            >
+              <span className="session-gate__mode-title">НРИ</span>
+              <span className="session-gate__mode-sub">стол + чат по ссылке</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (pickedMode === 'nri') {
+    return (
+      <div className="session-resume-gate main-crt session-gate">
+        <div className="session-resume-gate__panel session-gate__panel">
+          <button type="button" className="session-gate__back" onClick={backToModes}>
+            ← режимы
+          </button>
+          <div className="session-resume-gate__kicker">NEON_PROTOCOL // НРИ</div>
+          <h1 className="session-resume-gate__title">Настольный стол</h1>
+          <p className="session-resume-gate__hint">
+            Мастер создаёт стол и шлёт ссылку друзьям. Игроки авторизуются и попадают в общее лобби с чатом.
+          </p>
+
+          <div className="session-gate__nri-block">
+            <h3 className="mono-text">Создать стол (мастер)</h3>
+            <input
+              className="session-gate__nri-input"
+              placeholder="Название кампании (необязательно)"
+              value={nriTitle}
+              onChange={(e) => setNriTitle(e.target.value)}
+              maxLength={80}
+            />
+            <button
+              type="button"
+              className="session-resume-btn session-gate__mode-btn--nri"
+              onClick={() => onCreateNri(nriTitle.trim() || undefined)}
+            >
+              Создать и получить ссылку
+            </button>
+          </div>
+
+          <div className="session-gate__nri-block">
+            <h3 className="mono-text">Войти по коду / ссылке</h3>
+            <input
+              className="session-gate__nri-input"
+              placeholder="NRI-XXXX"
+              value={nriCodeInput}
+              onChange={(e) => setNriCodeInput(e.target.value.toUpperCase())}
+            />
+            <button
+              type="button"
+              className="session-resume-btn session-gate__mode-btn--nri"
+              disabled={!nriCodeInput.trim()}
+              onClick={() => onJoinNri(nriCodeInput.trim().toUpperCase())}
+            >
+              Войти в лобби
             </button>
           </div>
         </div>

@@ -1,54 +1,12 @@
-import { altufyevo } from './altufyevo/index';
-import { vykhino } from './vykhino/index';
-import { maryino } from './maryino/index';
-import { chertanovo } from './chertanovo/index';
-import { south_west } from './south_west/index';
-import { teply_stan } from './teply_stan/index';
-import { izmailovo } from './izmailovo/index';
-import { bibirevo } from './bibirevo/index';
-import { tekstilschiki } from './tekstilschiki/index';
-import { perovo } from './perovo/index';
-import { sokol } from './sokol/index';
-import { vdnkh } from './vdnkh/index';
-import { hub } from './hub/index';
-import { sokolniki } from './sokolniki/index';
-import { fili } from './fili/index';
-import { taganka } from './taganka/index';
-import { mitino } from './mitino/index';
-import { academy } from './academy/index';
-import { metro_stub } from './metro_stub/index';
-import { coop_yard } from './coop_yard/index';
+import { ALL_DISTRICTS } from './mapNodes';
 import { punitive_dialogues } from './punitive/dialogues';
 import { NIGHT_CONTACT_DIALOGUES, NIGHT_CONTACT_PROFILES } from '../nightContacts';
 import { DAY_CONTACT_DIALOGUES, DAY_CONTACT_PROFILES } from '../dayContacts';
 
-import type { WorldDistrict } from './types';
-import type { MapNode } from '../mapData';
 import type { NpcProfile } from '../npcData';
 import type { DialogueTree } from '../dialogues';
 
-const ALL_DISTRICTS: WorldDistrict[] = [
-  altufyevo,
-  vykhino,
-  maryino,
-  chertanovo,
-  south_west,
-  teply_stan,
-  izmailovo,
-  bibirevo,
-  tekstilschiki,
-  perovo,
-  sokol,
-  vdnkh,
-  hub,
-  sokolniki,
-  fili,
-  taganka,
-  mitino,
-  academy,
-  metro_stub,
-  coop_yard
-];
+export { ALL_DISTRICTS, MAP_NODES } from './mapNodes';
 
 const SAFE_DAY_CONTACT_PROFILES = Array.isArray(DAY_CONTACT_PROFILES) ? DAY_CONTACT_PROFILES : [];
 const SAFE_NIGHT_CONTACT_PROFILES = Array.isArray(NIGHT_CONTACT_PROFILES) ? NIGHT_CONTACT_PROFILES : [];
@@ -57,17 +15,15 @@ const SAFE_DAY_CONTACT_DIALOGUES =
 const SAFE_NIGHT_CONTACT_DIALOGUES =
   NIGHT_CONTACT_DIALOGUES && typeof NIGHT_CONTACT_DIALOGUES === 'object' ? NIGHT_CONTACT_DIALOGUES : {};
 
-export const MAP_NODES: MapNode[] = ALL_DISTRICTS.map(d => d.node);
-
 export const NPC_LIBRARY: NpcProfile[] = [
-  ...ALL_DISTRICTS.flatMap(d => d.npcs),
+  ...ALL_DISTRICTS.flatMap((d) => d.npcs),
   ...SAFE_DAY_CONTACT_PROFILES,
-  ...SAFE_NIGHT_CONTACT_PROFILES
+  ...SAFE_NIGHT_CONTACT_PROFILES,
 ];
 
 export const DIALOGUE_TREES: Record<string, DialogueTree> = {
   ...ALL_DISTRICTS.reduce((acc, d) => ({ ...acc, ...d.dialogues }), {}),
   ...SAFE_DAY_CONTACT_DIALOGUES,
   ...SAFE_NIGHT_CONTACT_DIALOGUES,
-  ...punitive_dialogues
+  ...punitive_dialogues,
 };

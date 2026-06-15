@@ -14,6 +14,172 @@ model User {
   updatedAt    DateTime    @updatedAt
   gameState    GameState?
   coopStartupScore CoopStartupScore?
+  chatMessages ChatMessage[]
+  nriSessionsHosted NriSession[]
+  nriPlayers NriPlayer[]
+  nriSessionMembers NriSessionMember[]
+  nriVaultFilesCreated NriVaultFile[]
+  nriFileUnlocks NriFileUnlock[]
+}
+
+/** Стол НРИ: мастер создаёт, игроки заходят по inviteCode. */
+model NriSession {
+  id         String   @id @default(uuid())
+  inviteCode String   @unique
+  hostUserId String
+  host       User     @relation(fields: [hostUserId], references: [id], onDelete: Cascade)
+  title      String   @default("НРИ-сессия")
+  chatRoomId String   @unique
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  status     String   @default("open")
+  spamBotEnabled Boolean @default(false)
+  createdAt  DateTime @default(now())
+  players    NriPlayer[]
+  members    NriSessionMember[]
+  vaultFiles NriVaultFile[]
+  presets    NriPresetCharacter[]
+  npcs       NriNpc[]
+  cyberProducts NriCyberProduct[]
+}
+
+model NriSessionMember {
+  id         String     @id @default(uuid())
+  sessionId  String
+  session    NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username   String
+  isHost     Boolean    @default(false)
+  joinedAt   DateTime   @default(now())
+  lastSeenAt DateTime   @updatedAt
+
+  @@unique([sessionId, userId])
+}
+
+model NriPlayer {
+  id          String   @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String
+  classId     String
+  inventory   Json     @default("[]")
+  sheet       Json?
+  portraitUrl String?
+  presetId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([sessionId, userId])
+}
+
+/** Заранее заполненный чарник — игрок выбирает и закрепляет за собой. */
+model NriPresetCharacter {
+  id              String     @id @default(uuid())
+  sessionId       String
+  session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  label           String
+  classId         String
+  inventory       Json       @default("[]")
+  sheet           Json?
+  portraitUrl     String?
+  sortOrder       Int        @default(0)
+  claimedByUserId String?
+  createdAt       DateTime   @default(now())
+
+  @@index([sessionId, claimedByUserId])
+}
+
+/** НПС стола — чарник, портрет, инвентарь; мастер пишет в чат от их лица. */
+model NriNpc {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name        String
+  classId     String?
+  imageUrl    String?
+  inventory   Json       @default("[]")
+  sheet       Json?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+/** Киберимплант / товар лавки — blueprint + цена; позже привязка к НПС-торговцу. */
+model NriCyberProduct {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name        String
+  slot        String
+  blueprint   Json
+  build       Json
+  priceWonlongs Int      @default(0)
+  inShop      Boolean    @default(false)
+  vendorNpcId String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([sessionId, inShop])
+}
+
+model NriVaultFile {
+  id          String   @id @default(uuid())
+  sessionId   String?
+  session     NriSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title       String
+  body        String
+  protected   Boolean  @default(false)
+  gameId      String?
+  difficulty  String?
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  unlocks     NriFileUnlock[]
+}
+
+model NriFileUnlock {
+  id         String   @id @default(uuid())
+  fileId     String
+  file       NriVaultFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  unlockedAt DateTime @default(now())
+
+  @@unique([fileId, userId])
+}
+
+/** Мета комнаты чата (SPAM-бот #general и т.д.). */
+model ChatRoomMeta {
+  roomId          String   @id
+  room            ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  spamBotEnabled  Boolean  @default(false)
+}
+
+/** Комната чата: общий канал (`slug`), личка (`dmKey`) или стол НРИ (`kind=nri`). */
+model ChatRoom {
+  id         String        @id @default(uuid())
+  kind       String
+  slug       String?       @unique
+  dmKey      String?       @unique
+  createdAt  DateTime      @default(now())
+  messages   ChatMessage[]
+  nriSession NriSession?
+  meta       ChatRoomMeta?
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  payload   String?
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
 }
 
 /** Лучший результат игрока в рейтинге стартапов коопа (для GET /neon_v1/coop/startup-rankings). */

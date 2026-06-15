@@ -13,6 +13,8 @@ import { SPRING_CARD_LIBRARY } from '../springCards';
 import type { QuestState } from '../questEngine';
 import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../questEngine';
 import { useAuth } from '../AuthContext';
+import { readNeonAuthToken } from '../authTokenStorage';
+import { nriCreateSession, nriJoinSession, parseNriInviteFromHash } from '../nriApi';
 import { canUnlockClass } from '../preClassProgression';
 import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
@@ -54,7 +56,9 @@ export type ViewType =
   | 'REFERENCE'
   | 'FIXER_BAR'
   | 'QUEST_LOG'
-  | 'INTEL';
+  | 'INTEL'
+  | 'NEON_SERVICES'
+  | 'NRI_LOBBY';
 
 /** Флаги «соло / кооп персонаж» для экрана входа и мастера создания. */
 export type CreationResumeInfo = {
@@ -262,6 +266,10 @@ export function useGameState() {
   const [coopSquadFill, setCoopSquadFill] = useState<CoopSquadFill>('synthetic_bots');
   /** ID общего матча пати (сетевой кооп), если создан хостом. */
   const [coopMatchId, setCoopMatchId] = useState<string | null>(null);
+  const [nriInviteCode, setNriInviteCode] = useState<string | null>(null);
+  const [pendingNriInvite, setPendingNriInvite] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? parseNriInviteFromHash(window.location.hash) : null
+  );
   /** Снимки по классам коопа: колода, инвентарь, прогресс полигона (соло не использует). */
   const [coopClassProfiles, setCoopClassProfiles] = useState<Partial<Record<CoopRole, CoopClassSave>>>({});
   const coopClassProfilesRef = useRef<Partial<Record<CoopRole, CoopClassSave>>>({});
@@ -631,6 +639,7 @@ export function useGameState() {
       coopStartupLiquidated,
       coopSquadFill: sessionMode === 'coop' ? coopSquadFill : undefined,
       coopMatchId: sessionMode === 'coop' ? coopMatchId : undefined,
+      nriInviteCode: sessionMode === 'nri' ? nriInviteCode : undefined,
       coopClassProfiles: sessionMode === 'coop' ? coopClassProfiles : undefined,
       playerName: playerName,
       isCityMapUnlocked: isCityMapUnlocked,
@@ -774,6 +783,8 @@ export function useGameState() {
         'QUEST_LOG',
         'INTEL',
         'REFERENCE',
+        'NRI_LOBBY',
+        'NEON_SERVICES',
       ];
       const savedView = gs.currentView as ViewType | undefined;
       if (savedView && deepViews.includes(savedView)) {
@@ -793,7 +804,13 @@ export function useGameState() {
       });
 
       if (gs.traits) setTraits(gs.traits);
-      if (gs.sessionMode === 'solo' || gs.sessionMode === 'coop') setSessionMode(gs.sessionMode);
+      if (gs.sessionMode === 'solo' || gs.sessionMode === 'coop' || gs.sessionMode === 'nri') {
+        setSessionMode(gs.sessionMode);
+      }
+      const nriCode = (gs as { nriInviteCode?: unknown }).nriInviteCode;
+      if (typeof nriCode === 'string' && nriCode.startsWith('NRI-')) {
+        setNriInviteCode(nriCode);
+      }
       const crRaw = gs.coopRole as string | undefined;
       const cr =
         crRaw === 'devops'
@@ -913,6 +930,39 @@ export function useGameState() {
         }
       }
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    const h = window.location.hash.replace(/^#/, '').toLowerCase();
+    if (h === 'services' || h.startsWith('services/')) {
+      setCurrentView('NEON_SERVICES');
+      return;
+    }
+    const nriCode = parseNriInviteFromHash(window.location.hash);
+    if (nriCode) {
+      setPendingNriInvite(nriCode);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user) return;
+    const nriCode = parseNriInviteFromHash(window.location.hash);
+    if (!nriCode) return;
+    const authToken = readNeonAuthToken();
+    if (!authToken) return;
+    void (async () => {
+      const data = await nriJoinSession(authToken, nriCode);
+      if (!data) return;
+      setSessionMode('nri');
+      setNriInviteCode(nriCode);
+      setCurrentView('NRI_LOBBY');
+      void syncGameState({
+        sessionMode: 'nri',
+        nriInviteCode: nriCode,
+        currentView: 'NRI_LOBBY',
+      });
+    })();
+  }, [user?.id, syncGameState]);
 
   useEffect(() => {
     if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
@@ -1219,6 +1269,52 @@ export function useGameState() {
     },
     [switchSessionMode, coopRole],
   );
+
+  const enterNriLobby = useCallback(
+    async (code: string) => {
+      const normalized = code.trim().toUpperCase();
+      if (!normalized.startsWith('NRI-')) return false;
+      const authToken = readNeonAuthToken();
+      if (!authToken) return false;
+      const data = await nriJoinSession(authToken, normalized);
+      if (!data) return false;
+      setSessionMode('nri');
+      setNriInviteCode(normalized);
+      setPendingNriInvite(null);
+      setCurrentView('NRI_LOBBY');
+      window.location.hash = `nri/join/${normalized}`;
+      void syncGame({
+        sessionMode: 'nri',
+        nriInviteCode: normalized,
+        currentView: 'NRI_LOBBY',
+      });
+      return true;
+    },
+    [syncGame],
+  );
+
+  const createNriTable = useCallback(
+    async (title?: string) => {
+      const authToken = readNeonAuthToken();
+      if (!authToken) return false;
+      const session = await nriCreateSession(authToken, title);
+      if (!session) return false;
+      return enterNriLobby(session.inviteCode);
+    },
+    [enterNriLobby],
+  );
+
+  const leaveNriLobby = useCallback(() => {
+    setSessionMode('solo');
+    setNriInviteCode(null);
+    setCurrentView('SESSION_GATE');
+    window.location.hash = '';
+    void syncGame({
+      sessionMode: 'solo',
+      nriInviteCode: undefined,
+      currentView: 'SESSION_GATE',
+    });
+  }, [syncGame]);
 
   useEffect(() => {
     if (sessionMode !== 'coop' || !coopRole) return;
@@ -1720,6 +1816,11 @@ export function useGameState() {
     coopClassProfiles,
     resumeEnterSoloHub,
     resumeEnterCoopLobby,
+    createNriTable,
+    enterNriLobby,
+    leaveNriLobby,
+    nriInviteCode,
+    pendingNriInvite,
     lastView, setLastView,
     selectedDocId, setSelectedDocId,
     playerName, setPlayerName,

@@ -26,6 +26,9 @@ import IntelView from './components/IntelView';
 import { HubView } from './components/views/HubView';
 import { CoopLobbyView } from './components/CoopLobbyView';
 import { AuthForm } from './components/AuthForm';
+import { NeonServicesHub } from './components/services/NeonServicesHub';
+import { NriLobbyView } from './components/NriLobbyView';
+import './components/services/neon-services.css';
 import { IMPLANT_CATALOG } from './logic/hardware';
 import type { ViewType } from './logic/hooks/useGameState';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
@@ -109,8 +112,11 @@ function App() {
           playerName={gs.playerName}
           homeDistrictId={gs.homeDistrictId}
           coopClassProfiles={gs.coopClassProfiles}
+          pendingNriInvite={gs.pendingNriInvite}
           onEnterSolo={() => gs.resumeEnterSoloHub()}
           onEnterCoop={(role) => gs.resumeEnterCoopLobby(role)}
+          onCreateNri={(title) => void gs.createNriTable(title)}
+          onJoinNri={(code) => void gs.enterNriLobby(code)}
           onOpenWizard={(mode) => gs.openCharacterWizard(mode)}
         />
       );
@@ -131,6 +137,16 @@ function App() {
             gs.creationWizardLockedMode === 'coop' && gs.creationResume?.soloOnlyNeedsCoop ? 'solo_needs_coop' : 'none'
           }
           savedPlayerName={gs.playerName !== 'ID_НЕИЗВЕСТЕН' ? gs.playerName : ''}
+        />
+      );
+    }
+
+    if (gs.currentView === 'NRI_LOBBY' && gs.sessionMode === 'nri' && gs.nriInviteCode) {
+      return (
+        <NriLobbyView
+          inviteCode={gs.nriInviteCode}
+          onLeave={gs.leaveNriLobby}
+          onIceReward={(bits) => gs.setBits((b) => b + bits)}
         />
       );
     }
@@ -473,6 +489,18 @@ function App() {
       );
     }
 
+    if (gs.currentView === 'NEON_SERVICES') {
+      return (
+        <NeonServicesHub
+          onIceReward={(bits) => gs.setBits((b) => b + bits)}
+          onBack={() => {
+            window.location.hash = '';
+            gs.setCurrentView('HUB');
+          }}
+        />
+      );
+    }
+
     // Default: Return Hub View
     const coopWeek = gs.sessionMode === 'coop' ? coopThemeForWorldDay(gs.worldDay) : null;
     const coopTierCleared =
@@ -544,7 +572,16 @@ function App() {
     );
   };
 
-  const hideNav = ['SESSION_GATE', 'CREATION', 'COOP_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
+  const navigateView = (view: ViewType) => {
+    if (view === 'NEON_SERVICES') {
+      window.location.hash = 'services';
+    } else if (window.location.hash.replace(/^#/, '').startsWith('services')) {
+      window.location.hash = '';
+    }
+    gs.setCurrentView(view);
+  };
+
+  const hideNav = ['SESSION_GATE', 'CREATION', 'COOP_LOBBY', 'NRI_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
 
   if (gs.isLoading) return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
   if (!gs.user) return <AuthForm />;
@@ -554,7 +591,7 @@ function App() {
       {!hideNav && (
         <ResponsiveNav 
           currentView={gs.currentView} 
-          onViewChange={(v) => gs.setCurrentView(v as ViewType)} 
+          onViewChange={(v) => navigateView(v as ViewType)} 
           hp={gs.stress} 
           level={gs.classUnlocked ? 5 : 1} 
           maxStress={gs.maxStress} 

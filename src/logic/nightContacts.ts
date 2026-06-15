@@ -1,6 +1,6 @@
 import { DialogueBuilder } from './dialogueUtils';
 import type { DialogueTree } from './dialogues';
-import { defaultAwayVisitNodeIdForDistrict } from './mapData';
+import { defaultAwayVisitNodeIdForDistrict } from './mapNavUtils';
 import type { NpcProfile } from './world/types';
 
 type NightPhase = 'night';

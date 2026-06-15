@@ -22,7 +22,7 @@ import {
 export type { DevLanguageStack };
 export { DEV_LANGUAGE_STACKS, DEV_LANGUAGE_LABELS } from './decks/deckCatalog';
 
-export type SessionMode = 'solo' | 'coop';
+export type SessionMode = 'solo' | 'coop' | 'nri';
 
 /** Роль в коопе; в соло не используется (null). Минимальная «продуктовая» четвёрка. */
 export type CoopRole = 'developer' | 'qa' | 'admin' | 'pm';

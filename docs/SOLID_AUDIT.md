@@ -9,7 +9,7 @@
 | Модуль | Строк (≈) | Рекомендация |
 |--------|-----------|--------------|
 | `server/services/nriService.ts` | ~4250 | Роутеры по доменам: players, map, vault, items |
-| `server/createApp.ts` | ~3340 | `routes/auth.ts`, `routes/coop.ts`, static |
+| `server/createApp.ts` | ~298 | `routes/auth.ts`, static (coop → `mountCoopRoutes.ts`) |
 | `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
 | `src/logic/nriApi.ts` | ~1400 | `nriApi/session.ts`, `players.ts`, … |
 
@@ -24,7 +24,8 @@
 - [x] Coop **live-матчи** → `CoopLiveMatch` в SQLite (`server/coop/coopMatchStore.ts`)
 - [x] Персистентность БД: `NEON_DATA_DIR`, `/data` на Amvera (`persistenceMount` в `amvera.yml`)
 - [x] `server/coop/coopMatchStore.ts` + `server/databasePath.ts` (вынесено из монолита createApp)
-- [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (coop routes)
+- [x] `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts`
+- [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---
 

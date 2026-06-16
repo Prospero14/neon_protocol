@@ -12,13 +12,7 @@ import { buildTraineeDeck } from '../traineeDeck';
 import type { QuestState } from '../questEngine';
 import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../questEngine';
 import { useAuth } from '../AuthContext';
-import { readNeonAuthToken } from '../authTokenStorage';
-import { nriCreateSession, nriJoinSession, parseNriInviteFromHash } from '../nriApi';
-import {
-  markNriInviteGuestFromLanding,
-  readLandingNriInviteCode,
-  readNriGuestInviteCode,
-} from '../nriFeatureFlags';
+import { parseNriCodeFromGameState, useNriSession } from './useNriSession';
 import { canUnlockClass } from '../preClassProgression';
 import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
@@ -270,12 +264,6 @@ export function useGameState() {
   const [coopSquadFill, setCoopSquadFill] = useState<CoopSquadFill>('synthetic_bots');
   /** ID общего матча пати (сетевой кооп), если создан хостом. */
   const [coopMatchId, setCoopMatchId] = useState<string | null>(null);
-  const [nriInviteCode, setNriInviteCode] = useState<string | null>(null);
-  const [pendingNriInvite, setPendingNriInvite] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    markNriInviteGuestFromLanding();
-    return readLandingNriInviteCode() ?? parseNriInviteFromHash(window.location.hash);
-  });
   /** Снимки по классам коопа: колода, инвентарь, прогресс полигона (соло не использует). */
   const [coopClassProfiles, setCoopClassProfiles] = useState<Partial<Record<CoopRole, CoopClassSave>>>({});
   const coopClassProfilesRef = useRef<Partial<Record<CoopRole, CoopClassSave>>>({});
@@ -609,6 +597,16 @@ export function useGameState() {
     rollNpcPresence();
   }, [rollNpcPresence]);
 
+  const syncGameRef = useRef<(overrides?: Record<string, unknown>) => void | Promise<void>>(async () => {});
+
+  const nri = useNriSession({
+    userId: user?.id,
+    setSessionMode,
+    setCurrentView: (view) => setCurrentView(view as ViewType),
+    syncGame: (overrides) => void syncGameRef.current(overrides),
+    syncGameState,
+  });
+
   const syncGame = async (overrides: Record<string, unknown> = {}) => {
     if (!user) return;
     const nextSoloRuntimeCache =
@@ -645,7 +643,7 @@ export function useGameState() {
       coopStartupLiquidated,
       coopSquadFill: sessionMode === 'coop' ? coopSquadFill : undefined,
       coopMatchId: sessionMode === 'coop' ? coopMatchId : undefined,
-      nriInviteCode: sessionMode === 'nri' ? nriInviteCode : undefined,
+      nriInviteCode: sessionMode === 'nri' ? nri.nriInviteCode : undefined,
       coopClassProfiles: sessionMode === 'coop' ? coopClassProfiles : undefined,
       playerName: playerName,
       isCityMapUnlocked: isCityMapUnlocked,
@@ -670,6 +668,10 @@ export function useGameState() {
     };
     await syncGameState(state);
   };
+
+  useEffect(() => {
+    syncGameRef.current = syncGame;
+  });
 
   useEffect(() => {
     if (!user?.id) {
@@ -793,9 +795,8 @@ export function useGameState() {
         'NEON_SERVICES',
       ];
       const savedView = gs.currentView as ViewType | undefined;
-      const nriCodeRaw = (gs as { nriInviteCode?: unknown }).nriInviteCode;
-      const nriCode = typeof nriCodeRaw === 'string' && nriCodeRaw.startsWith('NRI-') ? nriCodeRaw : null;
-      const resumeNri = savedView === 'NRI_LOBBY' && nriCode;
+      const nriCode = parseNriCodeFromGameState(gs as Record<string, unknown>);
+      const resumeNri = savedView === 'NRI_LOBBY' && !!nriCode;
       if (savedView && deepViews.includes(savedView)) {
         setCurrentView(savedView);
       } else {
@@ -813,16 +814,7 @@ export function useGameState() {
       });
 
       if (gs.traits) setTraits(gs.traits);
-      if (resumeNri) {
-        setSessionMode('nri');
-        setNriInviteCode(nriCode);
-      } else if (gs.sessionMode === 'coop') {
-        setSessionMode('coop');
-        setNriInviteCode(null);
-      } else {
-        setSessionMode('solo');
-        setNriInviteCode(null);
-      }
+      nri.applyNriResumeFromSync(gs as Record<string, unknown>, savedView, resumeNri, nriCode);
       const crRaw = gs.coopRole as string | undefined;
       const cr =
         crRaw === 'devops'
@@ -944,39 +936,6 @@ export function useGameState() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!user) return;
-    const h = window.location.hash.replace(/^#/, '').toLowerCase();
-    if (h === 'services' || h.startsWith('services/')) {
-      setCurrentView('NEON_SERVICES');
-      return;
-    }
-    const nriCode = parseNriInviteFromHash(window.location.hash);
-    if (nriCode) {
-      setPendingNriInvite(nriCode);
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!user) return;
-    const nriCode = parseNriInviteFromHash(window.location.hash);
-    if (!nriCode) return;
-    const authToken = readNeonAuthToken();
-    if (!authToken) return;
-    void (async () => {
-      const data = await nriJoinSession(authToken, nriCode);
-      if (!data) return;
-      setSessionMode('nri');
-      setNriInviteCode(nriCode);
-      setCurrentView('NRI_LOBBY');
-      void syncGameState({
-        sessionMode: 'nri',
-        nriInviteCode: nriCode,
-        currentView: 'NRI_LOBBY',
-      });
-    })();
-  }, [user?.id, syncGameState]);
-
-  useEffect(() => {
     if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
   }, [currentView]);
 
@@ -995,7 +954,7 @@ export function useGameState() {
     isCityMapUnlocked, clockAnchorMs, gameClock.worldDay, trustedNpcContacts, messengerFeed, knownDistrictChannels,
     unlockedDistrictChannels, activeMessengerChannel, barContactDistricts,
     sessionMode, coopRole, devLanguageStack, coopStartupName, coopTierRank, coopYardCompletedMissionIds,
-    coopSprintConsecutiveLosses, coopStartupLiquidated, coopSquadFill, coopMatchId
+    coopSprintConsecutiveLosses, coopStartupLiquidated, coopSquadFill, coopMatchId, nri.nriInviteCode
   ]);
 
   const rewardForQuest = (q: QuestDefinition) => {
@@ -1159,7 +1118,7 @@ export function useGameState() {
         }
         setSessionMode('solo');
         setCoopRole(null);
-        setNriInviteCode(null);
+        nri.setNriInviteCode(null);
         setDevLanguageStack(null);
         setCoopStartupName(null);
         setCoopSquadFill('synthetic_bots');
@@ -1270,7 +1229,7 @@ export function useGameState() {
     }
     if (sessionMode === 'nri') {
       setSessionMode('solo');
-      setNriInviteCode(null);
+      nri.setNriInviteCode(null);
     }
     setCurrentView('HUB');
     void syncGame({
@@ -1282,8 +1241,8 @@ export function useGameState() {
 
   const returnToSessionGate = useCallback(() => {
     setSessionMode('solo');
-    setNriInviteCode(null);
-    setPendingNriInvite(null);
+    nri.setNriInviteCode(null);
+    nri.setPendingNriInvite(null);
     setCurrentView('SESSION_GATE');
     window.location.hash = '';
     void syncGame({
@@ -1305,54 +1264,7 @@ export function useGameState() {
     [switchSessionMode, coopRole],
   );
 
-  const enterNriLobby = useCallback(
-    async (code: string) => {
-      const normalized = code.trim().toUpperCase();
-      if (!normalized.startsWith('NRI-')) return false;
-      const authToken = readNeonAuthToken();
-      if (!authToken) return false;
-      const data = await nriJoinSession(authToken, normalized);
-      if (!data) return false;
-      setSessionMode('nri');
-      setNriInviteCode(normalized);
-      setPendingNriInvite(null);
-      setCurrentView('NRI_LOBBY');
-      window.location.hash = `nri/join/${normalized}`;
-      void syncGame({
-        sessionMode: 'nri',
-        nriInviteCode: normalized,
-        currentView: 'NRI_LOBBY',
-      });
-      return true;
-    },
-    [syncGame],
-  );
-
-  const createNriTable = useCallback(
-    async (title?: string) => {
-      const authToken = readNeonAuthToken();
-      if (!authToken) return false;
-      const session = await nriCreateSession(authToken, title);
-      if (!session) return false;
-      return enterNriLobby(session.inviteCode);
-    },
-    [enterNriLobby],
-  );
-
-  const leaveNriLobby = useCallback(() => {
-    setSessionMode('solo');
-    setNriInviteCode(null);
-    setCurrentView('SESSION_GATE');
-    window.location.hash = '';
-    void syncGame({
-      sessionMode: 'solo',
-      nriInviteCode: undefined,
-      currentView: 'SESSION_GATE',
-    });
-  }, [syncGame]);
-
   const soloCoopBlocked = false;
-  const nriGuestInviteCode = readNriGuestInviteCode();
 
   useEffect(() => {
     if (sessionMode !== 'coop' || !coopRole) return;
@@ -1854,14 +1766,14 @@ export function useGameState() {
     coopClassProfiles,
     resumeEnterSoloHub,
     resumeEnterCoopLobby,
-    createNriTable,
-    enterNriLobby,
-    leaveNriLobby,
+    createNriTable: nri.createNriTable,
+    enterNriLobby: nri.enterNriLobby,
+    leaveNriLobby: nri.leaveNriLobby,
     soloCoopBlocked,
-    nriGuestInviteCode,
+    nriGuestInviteCode: nri.nriGuestInviteCode,
     returnToSessionGate,
-    nriInviteCode,
-    pendingNriInvite,
+    nriInviteCode: nri.nriInviteCode,
+    pendingNriInvite: nri.pendingNriInvite,
     lastView, setLastView,
     selectedDocId, setSelectedDocId,
     playerName, setPlayerName,

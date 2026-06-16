@@ -38,8 +38,8 @@
 | # | Модуль | Следующий срез | Уже вынесено |
 |---|--------|----------------|--------------|
 | 1 | `nriService.ts` (~85 строк) | — (готово) | все route-модули + mount-only entry |
-| 2 | `createApp.ts` (~298 строк) | `routes/auth.ts` | coop + mountCoopRoutes |
-| 3 | `useGameState.ts` (~1900 строк) | `useNriSession`, `useCoopLobby`, `useSoloProgress` | — |
+| 2 | `createApp.ts` (~90 строк) | — (готово) | coop, auth routes, static |
+| 3 | `useGameState.ts` (~1850 строк) | `useCoopLobby`, `useSoloProgress` | `useNriSession` |
 | 4 | `nriApi.ts` (~20 строк barrel) | — (готово) | session, players, http, vault, wallet, map, scenario, … |
 
 ---
@@ -80,12 +80,12 @@
 | Метрика | Сейчас | Цель |
 |---------|--------|------|
 | `nriService.ts` строк | ~85 | < 800 на файл ✅ |
-| `createApp.ts` строк | ~298 | < 400 (+ mount*) |
-| `useGameState.ts` строк | ~1900 | < 600 на хук |
+| `createApp.ts` строк | ~90 | < 400 (+ mount*) ✅ |
+| `useGameState.ts` строк | ~1850 | < 600 на хук |
 | `nriApi.ts` строк | ~20 (barrel) | < 400 на модуль ✅ |
 | Vitest тесты | 128 | расти с каждым API-slice |
 | `npm run build` | зелёный | обязательно в CI |
 
 ---
 
-*Коммиты: `cef84e3` — map/vault/npc/cyber; следующий — session/vehicle/scenario + nriApi slices.*
+*Коммиты: `1ee5883` — NRI service/api complete; следующий — auth routes + useNriSession.*

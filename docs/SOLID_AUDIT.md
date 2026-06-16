@@ -9,7 +9,7 @@
 | Модуль | Строк (≈) | Рекомендация |
 |--------|-----------|--------------|
 | `server/services/nriService.ts` | ~85 | mount-only entry |
-| `server/createApp.ts` | ~298 | `routes/auth.ts`, static (coop → `mountCoopRoutes.ts`) |
+| `server/createApp.ts` | ~90 | static SPA only |
 | `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
 | `src/logic/nriApi.ts` | ~20 | barrel + `nriApi/*` slices |
 
@@ -30,7 +30,9 @@
 - [x] `src/logic/nriApi/session.ts` + `players.ts` (клиент)
 - [x] `nriSessionLobbyRoutes` / `nriVehicleRoutes` / `nriScenarioRoutes` — `nriService` mount-only
 - [x] `src/logic/nriApi/*` — vault, wallet, map, scenario, characters, cyber, vehicles, lore
-- [ ] Split `useGameState.ts` / `createApp.ts` (auth routes)
+- [x] `server/routes/auth.ts` — register/login/sync
+- [x] `useNriSession` hook (NRI lobby из `useGameState`)
+- [ ] Split `useGameState.ts` (coop/solo) / monorepo
 
 ---
 

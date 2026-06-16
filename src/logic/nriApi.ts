@@ -1308,7 +1308,7 @@ export async function nriSaveLoreWorld(token: string, code: string, body: string
 export async function nriCreateFaction(
   token: string,
   code: string,
-  payload: { name: string; description?: string; color?: string }
+  payload: { name: string; description?: string; color?: string; kind?: string; zoneKeys?: string[] }
 ): Promise<{ ok: true; faction: NriFaction } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/factions`, {
     method: 'POST',

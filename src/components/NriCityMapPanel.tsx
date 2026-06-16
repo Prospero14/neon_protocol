@@ -417,6 +417,10 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     } else {
       setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
       setSelectedZoneKey(res.zone.zoneKey);
+      if (payload.color !== undefined) {
+        setColorUseDefault(!res.zone.color);
+        setEditColor(zoneDisplayColor(res.zone));
+      }
     }
   };
 
@@ -579,11 +583,26 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 </label>
                 <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--color">
                   <span>Цвет района</span>
+                  <label className="mono-text nri-city-map__color-toggle">
+                    <input
+                      type="checkbox"
+                      checked={!colorUseDefault}
+                      onChange={(e) => {
+                        const custom = e.target.checked;
+                        setColorUseDefault(!custom);
+                        if (custom) {
+                          setEditColor(zoneDisplayColor(focusZone));
+                        }
+                      }}
+                    />
+                    Свой цвет
+                  </label>
                   <div className="nri-city-map__color-row">
                     <input
                       type="color"
                       value={editColor}
                       disabled={colorUseDefault}
+                      onClick={() => setColorUseDefault(false)}
                       onChange={(e) => {
                         setColorUseDefault(false);
                         setEditColor(e.target.value);
@@ -739,7 +758,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
               const rectPaint =
                 isFocused && !colorUseDefault
                   ? zoneRectPaint(editColor, z.zoneType)
-                  : zoneRectPaint(z.color, z.zoneType);
+                  : zoneRectPaint(z.color ?? null, z.zoneType);
               return (
                 <g
                   key={z.zoneKey}

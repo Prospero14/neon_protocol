@@ -181,9 +181,11 @@ model NriFaction {
   id              String     @id @default(uuid())
   sessionId       String
   session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  kind            String     @default("faction")
   name            String
   description     String     @default("")
   color           String?
+  zoneKeys        Json       @default("[]")
   memberPlayerIds Json
   memberNpcIds    Json
   createdAt       DateTime   @default(now())
@@ -204,6 +206,7 @@ model NriLorePlace {
   x                    Float?
   y                    Float?
   sourceScenarioNodeId String?
+  sourceFactionId      String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 

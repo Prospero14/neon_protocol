@@ -3468,6 +3468,15 @@
   min-width: 120px;
 }
 
+.nri-city-map__color-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
 .nri-city-map__color-row {
   display: flex;
   align-items: center;
@@ -3820,6 +3829,14 @@
 .nri-lore__list { list-style: none; padding: 0; margin: 0; }
 .nri-lore__world, .nri-lore__factions, .nri-lore__places { margin-top: 10px; }
 .nri-lore__place-edit { margin-top: 8px; }
+.nri-lore__faction-preview {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  color: #7efcff;
+}
+.nri-lore__hint { margin: 4px 0 8px; font-size: 0.85rem; }
+.nri-lore__zone-list { max-height: 220px; overflow-y: auto; }
 
 .nri-host-alerts {
   margin-bottom: 12px;

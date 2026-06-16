@@ -8,7 +8,7 @@ import { catalogToServerInventoryItem } from './nriItemCatalogServer.js';
 import { antispamPrice, isSpamPaused, readWonlongs, writeWonlongs } from './nriWallet.js';
 import { applyIceRunResult, buildIcePlayStatus, maybeAutoClearIceBan, } from './nriIceBan.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
-import { mountNriLoreTravelRoutes } from './nriLoreTravel.js';
+import { mountNriLoreTravelRoutes, propagatePlaceUpdate } from './nriLoreTravel.js';
 import { mountNriItemTransferRoutes } from './nriItemTransfer.js';
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function genInviteCode() {
@@ -849,7 +849,7 @@ export function mountNriService(app, deps) {
                     existing.title;
                 const lorePlaceId = typeof mergedLinks.lorePlaceId === 'string' ? mergedLinks.lorePlaceId : null;
                 if (lorePlaceId) {
-                    await prisma.nriLorePlace.update({
+                    const updatedPlace = await prisma.nriLorePlace.update({
                         where: { id: lorePlaceId },
                         data: {
                             title: placeTitle.slice(0, 120),
@@ -858,6 +858,7 @@ export function mountNriService(app, deps) {
                             sourceScenarioNodeId: nodeId,
                         },
                     });
+                    await propagatePlaceUpdate(prisma, session.id, updatedPlace);
                 }
                 else {
                     const created = await prisma.nriLorePlace.create({
@@ -871,6 +872,7 @@ export function mountNriService(app, deps) {
                         },
                     });
                     mergedLinks = { ...mergedLinks, lorePlaceId: created.id };
+                    await propagatePlaceUpdate(prisma, session.id, created);
                 }
             }
             const updated = await prisma.nriScenarioNode.update({

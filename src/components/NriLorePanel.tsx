@@ -8,6 +8,7 @@ import {
   nriDeleteFaction,
   nriDeleteLoreEntry,
   nriFetchLore,
+  nriFetchMapZones,
   nriFetchNpcs,
   nriFetchRoster,
   nriPatchFaction,
@@ -16,9 +17,11 @@ import {
   type NriFaction,
   type NriLoreEntry,
   type NriLorePlace,
+  type NriMapZone,
   type NriNpc,
   type NriRosterPlayer,
 } from '../logic/nriApi';
+import { formatFactionTitle, NRI_FACTION_KINDS } from '../logic/nriFactionKinds';
 
 type Props = { inviteCode: string };
 
@@ -41,6 +44,7 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
   const [entries, setEntries] = useState<NriLoreEntry[]>([]);
   const [factions, setFactions] = useState<NriFaction[]>([]);
   const [places, setPlaces] = useState<NriLorePlace[]>([]);
+  const [mapZones, setMapZones] = useState<NriMapZone[]>([]);
   const [npcs, setNpcs] = useState<NriNpc[]>([]);
   const [roster, setRoster] = useState<NriRosterPlayer[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
@@ -51,10 +55,11 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [lore, npcList, players] = await Promise.all([
+    const [lore, npcList, players, mapData] = await Promise.all([
       nriFetchLore(authToken, inviteCode),
       nriFetchNpcs(authToken, inviteCode),
       nriFetchRoster(authToken, inviteCode),
+      nriFetchMapZones(authToken, inviteCode),
     ]);
     if (!lore) {
       setErr('Не удалось загрузить лор.');
@@ -64,6 +69,7 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
     setEntries(lore.entries ?? []);
     setFactions(lore.factions);
     setPlaces(lore.places);
+    if (mapData?.zones) setMapZones(mapData.zones.filter((z) => !z.zoneKey.startsWith('__')));
     if (npcList) setNpcs(npcList);
     if (players) setRoster(players);
   }, [authToken, inviteCode]);
@@ -195,7 +201,7 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
                     className={`nri-scenario__tree-item ${selectedFactionId === f.id ? 'active' : ''}`}
                     onClick={() => setSelectedFactionId(f.id)}
                   >
-                    {f.name}
+                    {f.displayName ?? formatFactionTitle(f.kind, f.name)}
                   </button>
                 </li>
               ))}
@@ -207,6 +213,7 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
                 roster={roster}
                 npcs={npcs}
                 allFactions={factions}
+                mapZones={mapZones}
                 busy={busy}
                 onSave={async (patch) => {
                   if (!authToken) return;
@@ -233,7 +240,8 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
       {tab === 'places' && (
         <div className="nri-lore__places">
           <p className="mono-text opacity-70">
-            Карточки мест из сценария (метка «в лор») и их описания для стола.
+            Карточки мест из сценария, районов карты (через фракции) и их описания для стола.
+            Правки названия и текста синхронизируются с картой и сценарием.
           </p>
           <ul className="nri-lore__list">
             {places.map((p) => (
@@ -249,7 +257,9 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
               </li>
             ))}
             {places.length === 0 && (
-              <li className="mono-text opacity-50">Пока нет — отметьте место в узле сценария «→ в лор».</li>
+              <li className="mono-text opacity-50">
+                Пока нет — привяжите районы к фракции или отметьте место в узле сценария «→ в лор».
+              </li>
             )}
           </ul>
           {selectedPlace && (
@@ -306,24 +316,45 @@ const FactionEditor: React.FC<{
   roster: NriRosterPlayer[];
   npcs: NriNpc[];
   allFactions: NriFaction[];
+  mapZones: NriMapZone[];
   busy: boolean;
   onSave: (patch: Partial<NriFaction>) => void;
   onDelete: () => void;
-}> = ({ faction, roster, npcs, allFactions, busy, onSave, onDelete }) => {
+}> = ({ faction, roster, npcs, allFactions, mapZones, busy, onSave, onDelete }) => {
+  const [kind, setKind] = useState(faction.kind || 'faction');
   const [name, setName] = useState(faction.name);
   const [description, setDescription] = useState(faction.description);
+  const [zoneKeys, setZoneKeys] = useState(faction.zoneKeys ?? []);
   const [memberPlayerIds, setMemberPlayerIds] = useState(faction.memberPlayerIds);
   const [memberNpcIds, setMemberNpcIds] = useState(faction.memberNpcIds);
 
   useEffect(() => {
+    setKind(faction.kind || 'faction');
     setName(faction.name);
     setDescription(faction.description);
+    setZoneKeys(faction.zoneKeys ?? []);
     setMemberPlayerIds(faction.memberPlayerIds);
     setMemberNpcIds(faction.memberNpcIds);
-  }, [faction.id, faction.name, faction.description, faction.memberPlayerIds, faction.memberNpcIds]);
+  }, [
+    faction.id,
+    faction.kind,
+    faction.name,
+    faction.description,
+    faction.zoneKeys,
+    faction.memberPlayerIds,
+    faction.memberNpcIds,
+  ]);
 
-  const toggleMember = (kind: 'player' | 'npc', id: string) => {
-    if (kind === 'player') {
+  const displayPreview = formatFactionTitle(kind, name);
+
+  const toggleZone = (zoneKey: string) => {
+    setZoneKeys((list) =>
+      list.includes(zoneKey) ? list.filter((z) => z !== zoneKey) : [...list, zoneKey]
+    );
+  };
+
+  const toggleMember = (memberKind: 'player' | 'npc', id: string) => {
+    if (memberKind === 'player') {
       setMemberPlayerIds((list) =>
         list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
       );
@@ -339,6 +370,17 @@ const FactionEditor: React.FC<{
 
   return (
     <div>
+      <p className="mono-text nri-lore__faction-preview">{displayPreview}</p>
+      <label className="nri-modal__field">
+        <span>Тип</span>
+        <select value={kind} onChange={(e) => setKind(e.target.value)}>
+          {NRI_FACTION_KINDS.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="nri-modal__field">
         <span>Название</span>
         <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -347,6 +389,30 @@ const FactionEditor: React.FC<{
         <span>Описание</span>
         <textarea value={description} rows={4} onChange={(e) => setDescription(e.target.value)} />
       </label>
+      <div className="nri-scenario__link-block">
+        <span className="mono-text">Районы на карте</span>
+        <p className="mono-text opacity-60 nri-lore__hint">
+          Выбранные районы появятся карточками во вкладке «Места».
+        </p>
+        <ul className="nri-scenario__link-list nri-lore__zone-list">
+          {mapZones.map((z) => (
+            <li key={z.zoneKey}>
+              <label className="mono-text">
+                <input
+                  type="checkbox"
+                  checked={zoneKeys.includes(z.zoneKey)}
+                  onChange={() => toggleZone(z.zoneKey)}
+                />
+                {z.name}
+                {z.megaDistrict && <span className="opacity-60"> · {z.megaDistrict}</span>}
+              </label>
+            </li>
+          ))}
+          {mapZones.length === 0 && (
+            <li className="mono-text opacity-50">Карта ещё не загружена.</li>
+          )}
+        </ul>
+      </div>
       <div className="nri-scenario__link-block">
         <span className="mono-text">Игроки</span>
         <ul className="nri-scenario__link-list">
@@ -360,11 +426,11 @@ const FactionEditor: React.FC<{
                 />
                 {p.displayName}
                 {memberPlayerIds.includes(p.userId) && (
-                  <span className="nri-faction-tag">{name.trim() || faction.name}</span>
+                  <span className="nri-faction-tag">{displayPreview}</span>
                 )}
                 {otherTags(p.userId, 'player').map((f) => (
                   <span key={f.id} className="nri-faction-tag nri-faction-tag--other" title="Другая фракция">
-                    {f.name}
+                    {f.displayName ?? formatFactionTitle(f.kind, f.name)}
                   </span>
                 ))}
               </label>
@@ -385,11 +451,11 @@ const FactionEditor: React.FC<{
                 />
                 {n.name}
                 {memberNpcIds.includes(n.id) && (
-                  <span className="nri-faction-tag">{name.trim() || faction.name}</span>
+                  <span className="nri-faction-tag">{displayPreview}</span>
                 )}
                 {otherTags(n.id, 'npc').map((f) => (
                   <span key={f.id} className="nri-faction-tag nri-faction-tag--other">
-                    {f.name}
+                    {f.displayName ?? formatFactionTitle(f.kind, f.name)}
                   </span>
                 ))}
               </label>
@@ -404,8 +470,10 @@ const FactionEditor: React.FC<{
           disabled={busy}
           onClick={() =>
             onSave({
+              kind,
               name: name.trim() || 'Без названия',
               description,
+              zoneKeys,
               memberPlayerIds,
               memberNpcIds,
             })
@@ -433,6 +501,13 @@ const PlaceEditor: React.FC<{
   }, [place.id, place.title, place.body]);
   return (
     <div className="nri-lore__place-edit">
+      {place.zoneKey && (
+        <p className="mono-text opacity-70 nri-lore__hint">
+          Район карты: <strong>{place.zoneKey}</strong>
+          {place.sourceFactionId ? ' · привязан к фракции' : ''}
+          {place.sourceScenarioNodeId ? ' · из сценария' : ''}
+        </p>
+      )}
       <label className="nri-modal__field">
         <span>Название</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} />

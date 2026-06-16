@@ -2,9 +2,12 @@
 
 export type NriFaction = {
   id: string;
+  kind: string;
   name: string;
+  displayName: string;
   description: string;
   color: string | null;
+  zoneKeys: string[];
   memberPlayerIds: string[];
   memberNpcIds: string[];
   createdAt: number;
@@ -29,6 +32,7 @@ export type NriLorePlace = {
   x: number | null;
   y: number | null;
   sourceScenarioNodeId: string | null;
+  sourceFactionId: string | null;
   createdAt: number;
   updatedAt: number;
 };

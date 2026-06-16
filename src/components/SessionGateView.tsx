@@ -14,7 +14,6 @@ export interface SessionGateViewProps {
   coopClassProfiles: Partial<Record<CoopRole, CoopClassSave>>;
   pendingNriInvite?: string | null;
   nriGuestInviteCode?: string | null;
-  soloCoopBlocked?: boolean;
   onEnterSolo: () => void;
   onEnterCoop: (role?: CoopRole) => void;
   onCreateNri: (title?: string) => void;
@@ -29,7 +28,6 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   coopClassProfiles,
   pendingNriInvite,
   nriGuestInviteCode,
-  soloCoopBlocked = false,
   onEnterSolo,
   onEnterCoop,
   onCreateNri,
@@ -50,7 +48,6 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const displayName = playerName !== 'ID_НЕИЗВЕСТЕН' ? playerName : '—';
 
   const pickMode = (mode: SessionMode) => {
-    if (soloCoopBlocked && (mode === 'solo' || mode === 'coop')) return;
     setPickedMode(mode);
     setPhase('roster');
   };
@@ -69,23 +66,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <p className="session-resume-gate__hint session-gate__hint">
             Затем — список персонажей этого режима и вход или создание нового профиля.
           </p>
-          {soloCoopBlocked && (
-            <div className="nri-dev-gate__banner mono-text">
-              <strong>Solo</strong> и <strong>Co-op</strong> — <strong>в разработке</strong>.
-              {nriCodeHint ? (
-                <>
-                  {' '}
-                  Режим <strong>НРИ</strong> доступен — стол <strong>{nriCodeHint}</strong>.
-                </>
-              ) : (
-                <>
-                  {' '}
-                  Режим <strong>НРИ</strong> доступен — создайте стол или войдите по коду.
-                </>
-              )}
-            </div>
-          )}
-          {nriCodeHint && !soloCoopBlocked && (
+          {nriCodeHint && (
             <div className="session-gate__nri-banner mono-text">
               Приглашение на стол <strong>{nriCodeHint}</strong> — выберите НРИ и войдите.
             </div>
@@ -93,29 +74,27 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <div className="session-resume-gate__actions session-gate__mode-row session-gate__mode-row--3">
             <button
               type="button"
-              className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''} ${soloCoopBlocked ? 'session-gate__mode-btn--disabled' : ''}`}
-              disabled={soloCoopBlocked}
+              className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''}`}
               onClick={() => pickMode('solo')}
             >
               <span className="session-gate__mode-title">SOLO</span>
               <span className="session-gate__mode-sub">
-                {soloCoopBlocked ? 'в разработке' : soloExists ? 'персонаж в сети' : 'профиль ещё не создан'}
+                {soloExists ? 'персонаж в сети' : 'профиль ещё не создан'}
               </span>
             </button>
             <button
               type="button"
-              className={`session-resume-btn session-resume-btn--coop session-gate__mode-btn ${coopExists ? 'session-gate__mode-btn--ready' : ''} ${soloCoopBlocked ? 'session-gate__mode-btn--disabled' : ''}`}
-              disabled={soloCoopBlocked}
+              className={`session-resume-btn session-resume-btn--coop session-gate__mode-btn ${coopExists ? 'session-gate__mode-btn--ready' : ''}`}
               onClick={() => pickMode('coop')}
             >
               <span className="session-gate__mode-title">CO-OP</span>
               <span className="session-gate__mode-sub">
-                {soloCoopBlocked ? 'в разработке' : coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
+                {coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
               </span>
             </button>
             <button
               type="button"
-              className={`session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri ${soloCoopBlocked ? 'session-gate__mode-btn--highlight' : ''}`}
+              className="session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri"
               onClick={() => pickMode('nri')}
             >
               <span className="session-gate__mode-title">НРИ</span>

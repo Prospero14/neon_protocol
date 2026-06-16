@@ -114,7 +114,6 @@ function App() {
           coopClassProfiles={gs.coopClassProfiles}
           pendingNriInvite={gs.pendingNriInvite}
           nriGuestInviteCode={gs.nriGuestInviteCode}
-          soloCoopBlocked={gs.soloCoopBlocked}
           onEnterSolo={() => gs.resumeEnterSoloHub()}
           onEnterCoop={(role) => gs.resumeEnterCoopLobby(role)}
           onCreateNri={(title) => void gs.createNriTable(title)}

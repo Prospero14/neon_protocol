@@ -1,7 +1,5 @@
 import { parseNriInviteFromHash } from './nriApi';
-import { isPlatformAdminUsername } from './platformAdmin';
 
-const NRI_GUEST_SESSION_KEY = 'neon_nri_invite_guest';
 const NRI_GUEST_CODE_SESSION_KEY = 'neon_nri_invite_code';
 
 export function readNriInviteFromLocation(): string | null {
@@ -27,17 +25,7 @@ export function readLandingNriInviteCode(): string | null {
 }
 
 export function markNriInviteGuestFromLanding(): string | null {
-  const code = readLandingNriInviteCode();
-  if (!code || typeof window === 'undefined') return code;
-  try {
-    localStorage.removeItem('neon_nri_invite_guest');
-    localStorage.removeItem('neon_nri_invite_code');
-    sessionStorage.setItem(NRI_GUEST_SESSION_KEY, '1');
-    sessionStorage.setItem(NRI_GUEST_CODE_SESSION_KEY, code);
-  } catch {
-    /* ignore */
-  }
-  return code;
+  return readLandingNriInviteCode();
 }
 
 export function readNriGuestInviteCode(): string | null {
@@ -47,20 +35,4 @@ export function readNriGuestInviteCode(): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Solo/Co-op на production закрыты для всех, кроме платформенных админов.
- * НРИ — доступно всем после авторизации.
- */
-export function isSoloCoopRestrictedOnDeploy(): boolean {
-  const flag = import.meta.env.VITE_SOLO_COOP_PUBLIC;
-  if (flag === 'true') return false;
-  if (flag === 'false') return true;
-  return !import.meta.env.DEV;
-}
-
-export function isSoloCoopBlockedForUser(username: string | undefined | null): boolean {
-  if (isPlatformAdminUsername(username)) return false;
-  return isSoloCoopRestrictedOnDeploy();
 }

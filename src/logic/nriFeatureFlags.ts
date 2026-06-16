@@ -1,4 +1,5 @@
 import { parseNriInviteFromHash } from './nriApi';
+import { isPlatformAdminUsername } from './platformAdmin';
 
 const NRI_GUEST_SESSION_KEY = 'neon_nri_invite_guest';
 const NRI_GUEST_CODE_SESSION_KEY = 'neon_nri_invite_code';
@@ -8,7 +9,7 @@ export function readNriInviteFromLocation(): string | null {
   return parseNriInviteFromHash(window.location.hash);
 }
 
-/** Код invite в URL при первой загрузке страницы (до любых редиректов в приложении). */
+/** Код invite в URL при первой загрузке страницы. */
 export function readLandingNriInviteCode(): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -25,10 +26,6 @@ export function readLandingNriInviteCode(): string | null {
   }
 }
 
-/**
- * Гость по invite-ссылке — только если открыл сайт с #nri/join/… в URL.
- * Создание стола мастером (hash выставляется уже в приложении) не помечает гостем.
- */
 export function markNriInviteGuestFromLanding(): string | null {
   const code = readLandingNriInviteCode();
   if (!code || typeof window === 'undefined') return code;
@@ -43,15 +40,6 @@ export function markNriInviteGuestFromLanding(): string | null {
   return code;
 }
 
-export function isNriInviteGuest(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return sessionStorage.getItem(NRI_GUEST_SESSION_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
 export function readNriGuestInviteCode(): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -62,8 +50,8 @@ export function readNriGuestInviteCode(): string | null {
 }
 
 /**
- * Solo/Co-op на production закрыты только для гостей по invite-ссылке.
- * НРИ (создание стола, вход, автоджойн) — всегда доступно всем после авторизации.
+ * Solo/Co-op на production закрыты для всех, кроме платформенных админов.
+ * НРИ — доступно всем после авторизации.
  */
 export function isSoloCoopRestrictedOnDeploy(): boolean {
   const flag = import.meta.env.VITE_SOLO_COOP_PUBLIC;
@@ -72,6 +60,7 @@ export function isSoloCoopRestrictedOnDeploy(): boolean {
   return !import.meta.env.DEV;
 }
 
-export function isSoloCoopBlockedForUser(): boolean {
-  return isNriInviteGuest() && isSoloCoopRestrictedOnDeploy();
+export function isSoloCoopBlockedForUser(username: string | undefined | null): boolean {
+  if (isPlatformAdminUsername(username)) return false;
+  return isSoloCoopRestrictedOnDeploy();
 }

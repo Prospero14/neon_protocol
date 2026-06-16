@@ -18,7 +18,10 @@ export function createJwtAuth(jwtSecret) {
     };
 }
 export const ADMIN_USERNAME = 'admin';
+const PLATFORM_ADMIN_USERNAMES = new Set(['admin', 'ProsperianSun']);
 export function isAdminUsername(username) {
-    return username === ADMIN_USERNAME;
+    if (!username)
+        return false;
+    return PLATFORM_ADMIN_USERNAMES.has(username);
 }
 //# sourceMappingURL=auth.js.map

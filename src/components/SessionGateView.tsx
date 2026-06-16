@@ -71,8 +71,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           </p>
           {soloCoopBlocked && (
             <div className="nri-dev-gate__banner mono-text">
-              <strong>Solo</strong> и <strong>Co-op</strong> — <strong>в разработке</strong> для гостей по
-              ссылке на НРИ-стол.
+              <strong>Solo</strong> и <strong>Co-op</strong> — <strong>в разработке</strong>.
               {nriCodeHint ? (
                 <>
                   {' '}

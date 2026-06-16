@@ -286,13 +286,13 @@ export function useGameState() {
   }, [coopClassProfiles]);
 
   const openCharacterWizard = useCallback((mode: SessionMode) => {
-    if ((mode === 'solo' || mode === 'coop') && isSoloCoopBlockedForUser()) {
+    if ((mode === 'solo' || mode === 'coop') && isSoloCoopBlockedForUser(user?.username)) {
       setCurrentView('SESSION_GATE');
       return;
     }
     setCreationWizardLockedMode(mode);
     setCurrentView('CREATION');
-  }, []);
+  }, [user?.username]);
 
   const cancelCharacterWizard = useCallback(() => {
     setCreationWizardLockedMode(null);
@@ -802,8 +802,14 @@ export function useGameState() {
       const nriCodeRaw = (gs as { nriInviteCode?: unknown }).nriInviteCode;
       const nriCode = typeof nriCodeRaw === 'string' && nriCodeRaw.startsWith('NRI-') ? nriCodeRaw : null;
       const resumeNri = savedView === 'NRI_LOBBY' && nriCode;
+      const blockedSoloCoop = isSoloCoopBlockedForUser(user.username);
+      const viewsAllowedWhenBlocked: ViewType[] = ['NRI_LOBBY', 'NEON_SERVICES'];
       if (savedView && deepViews.includes(savedView)) {
-        setCurrentView(savedView);
+        if (blockedSoloCoop && !viewsAllowedWhenBlocked.includes(savedView)) {
+          setCurrentView('SESSION_GATE');
+        } else {
+          setCurrentView(savedView);
+        }
       } else {
         setCurrentView('SESSION_GATE');
       }
@@ -822,8 +828,11 @@ export function useGameState() {
       if (resumeNri) {
         setSessionMode('nri');
         setNriInviteCode(nriCode);
-      } else if (gs.sessionMode === 'coop') {
+      } else if (!blockedSoloCoop && gs.sessionMode === 'coop') {
         setSessionMode('coop');
+        setNriInviteCode(null);
+      } else if (!blockedSoloCoop && gs.sessionMode === 'solo') {
+        setSessionMode('solo');
         setNriInviteCode(null);
       } else {
         setSessionMode('solo');
@@ -1270,7 +1279,7 @@ export function useGameState() {
   );
 
   const resumeEnterSoloHub = useCallback(() => {
-    if (isSoloCoopBlockedForUser()) {
+    if (isSoloCoopBlockedForUser(user?.username)) {
       setCurrentView('SESSION_GATE');
       return;
     }
@@ -1288,7 +1297,7 @@ export function useGameState() {
       sessionMode: 'solo',
       nriInviteCode: undefined,
     });
-  }, [sessionMode, switchSessionMode, syncGame]);
+  }, [sessionMode, switchSessionMode, syncGame, user?.username]);
 
   const returnToSessionGate = useCallback(() => {
     setSessionMode('solo');
@@ -1305,7 +1314,7 @@ export function useGameState() {
 
   const resumeEnterCoopLobby = useCallback(
     (preferred?: CoopRole) => {
-      if (isSoloCoopBlockedForUser()) {
+      if (isSoloCoopBlockedForUser(user?.username)) {
         setCurrentView('SESSION_GATE');
         return;
       }
@@ -1316,7 +1325,7 @@ export function useGameState() {
           : COOP_ROLES.find((r) => (merged[r]?.deckIds?.length ?? 0) > 0) ?? coopRole ?? 'developer';
       switchSessionMode('coop', pick);
     },
-    [switchSessionMode, coopRole],
+    [switchSessionMode, coopRole, user?.username],
   );
 
   const enterNriLobby = useCallback(
@@ -1365,7 +1374,7 @@ export function useGameState() {
     });
   }, [syncGame]);
 
-  const soloCoopBlocked = isSoloCoopBlockedForUser();
+  const soloCoopBlocked = isSoloCoopBlockedForUser(user?.username);
   const nriGuestInviteCode = readNriGuestInviteCode();
 
   useEffect(() => {

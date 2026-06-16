@@ -25,6 +25,9 @@ export type ApiErrorSender = (res: Response, status: number, code: string, messa
 
 export const ADMIN_USERNAME = 'admin';
 
+const PLATFORM_ADMIN_USERNAMES = new Set(['admin', 'ProsperianSun']);
+
 export function isAdminUsername(username: string | undefined | null): boolean {
-  return username === ADMIN_USERNAME;
+  if (!username) return false;
+  return PLATFORM_ADMIN_USERNAMES.has(username);
 }

@@ -15,10 +15,11 @@
 | Client `tsc` в `npm run build` | ✅ |
 | `docs/PITCH.md` | ✅ |
 | `server/services/nriCombatantRoutes.ts` — CRUD боевиков вынесен из `nriService` | ✅ |
-| HTTP-тест persist матча + 116 unit/integration тестов | ✅ |
 | `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts` | ✅ |
 | Серверная валидация `activeConditions` (`validateSheetConditions`) | ✅ |
-| Zod-схемы auth + `game/sync`, тип `GameSyncPayload` | ✅ (NRI routes — далее) |
+| Zod auth + `game/sync` + **ключевые NRI routes** (`shared/api-schemas/nri.ts`) | ✅ |
+| `nriPlayerRoutes`, `nriIceWalletRoutes`, `nriPresetRoutes` + `nriSessionHelpers` | ✅ |
+| `src/logic/nriApi/session.ts`, `players.ts`, `http.ts` | ✅ (частично) |
 
 ---
 
@@ -26,7 +27,7 @@
 
 | # | Задача | Зачем | Оценка |
 |---|--------|-------|--------|
-| 1 | **Zod-схемы ключевых NRI routes** (player PATCH, items/use, session join) | Дополнить auth/sync | 1–2 дня |
+| — | *(пусто — P0 закрыт)* | | |
 
 ---
 
@@ -34,10 +35,10 @@
 
 | # | Модуль | Следующий срез | Уже вынесено |
 |---|--------|----------------|--------------|
-| 4 | `nriService.ts` (~2900 строк) | `nriPlayerRoutes`, `nriIceWalletRoutes`, `nriPresetRoutes` | `nriItemTransfer`, `nriLoreTravel`, `nriCombatantRoutes`, `nriItemConsumeServer` |
-| 5 | `createApp.ts` (~300 строк) | `routes/auth.ts` | coop engine + match store + `mountCoopRoutes` |
-| 6 | `useGameState.ts` (~1900 строк) | `useNriSession`, `useCoopLobby`, `useSoloProgress` | — |
-| 7 | `nriApi.ts` (~1400 строк) | `nriApi/session.ts`, `players.ts`, `map.ts` | — |
+| 1 | `nriService.ts` (~1890 строк) | map/vault/npc/cyber routes | player, ice/wallet, preset, combatant, item transfer, lore travel |
+| 2 | `createApp.ts` (~298 строк) | `routes/auth.ts` | coop + mountCoopRoutes |
+| 3 | `useGameState.ts` (~1900 строк) | `useNriSession`, `useCoopLobby`, `useSoloProgress` | — |
+| 4 | `nriApi.ts` (~1140 строк) | wallet/map/scenario slices | session, players, http |
 
 ---
 
@@ -45,10 +46,10 @@
 
 | # | Задача | Примечание |
 |---|--------|------------|
-| 8 | Coop **party** persist (опционально) | Сейчас party восстанавливается из матча; invite после рестарта — заново heartbeat |
-| 9 | Coop **чат лобби** в Prisma или Redis | Сейчас in-memory, последние 120 сообщений |
-| 10 | **Горизонтальное масштабирование** coop SSE | `matchSseByMatchId` привязан к инстансу |
-| 11 | `useNpcDialogue` — пул **repeat** с `requireCompletedQuestId` на узлах | Диалоги уже передают gate в `addNode`, UI не фильтрует |
+| 5 | Coop **party** persist (опционально) | Сейчас party восстанавливается из матча; invite после рестарта — заново heartbeat |
+| 6 | Coop **чат лобби** в Prisma или Redis | Сейчас in-memory, последние 120 сообщений |
+| 7 | **Горизонтальное масштабирование** coop SSE | `matchSseByMatchId` привязан к инстансу |
+| 8 | `useNpcDialogue` — пул **repeat** с `requireCompletedQuestId` на узлах | Диалоги уже передают gate в `addNode`, UI не фильтрует |
 
 ---
 
@@ -56,10 +57,10 @@
 
 | # | Задача | Примечание |
 |---|--------|------------|
-| 12 | Postgres вместо SQLite (prod) | См. ARCHITECTURE §8 |
-| 13 | Monorepo `apps/web` + `apps/api` | После стабилизации API-контрактов |
-| 14 | E2E (Playwright): login → NRI стол → use item | Дополнение к Vitest |
-| 15 | `npm run typecheck:client` в CI отдельным job | Уже входит в `build` |
+| 9 | Postgres вместо SQLite (prod) | См. ARCHITECTURE §8 |
+| 10 | Monorepo `apps/web` + `apps/api` | После стабилизации API-контрактов |
+| 11 | E2E (Playwright): login → NRI стол → use item | Дополнение к Vitest |
+| 12 | `npm run typecheck:client` в CI отдельным job | Уже входит в `build` |
 
 ---
 
@@ -76,12 +77,13 @@
 
 | Метрика | Сейчас | Цель |
 |---------|--------|------|
-| `nriService.ts` строк | ~2920 | < 800 на файл |
+| `nriService.ts` строк | ~1890 | < 800 на файл |
 | `createApp.ts` строк | ~298 | < 400 (+ mount*) |
 | `useGameState.ts` строк | ~1900 | < 600 на хук |
-| Vitest тесты | 125 | расти с каждым API-slice |
+| `nriApi.ts` строк | ~1140 | < 400 на модуль |
+| Vitest тесты | 128 | расти с каждым API-slice |
 | `npm run build` | зелёный | обязательно в CI |
 
 ---
 
-*Коммиты: `a8e9e46` — mountCoopRoutes; `…` — validateSheetConditions.*
+*Коммиты: `a10db95` — Zod auth/sync; следующий — NRI routes split + Zod NRI.*

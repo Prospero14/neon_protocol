@@ -9,137 +9,18 @@ import type {
   NriPlayerPosition,
   NriScenarioProgress,
 } from './nriLore';
+import { nriAuthHeaders, nriParseJson, parseNriApiError } from './nriApi/http.js';
+import type { NriInventoryUpdateResult } from './nriApi/players.js';
+
+export * from './nriApi/session.js';
+export * from './nriApi/players.js';
 
 export type { NriScenarioNode, NriScenarioLinks };
 export type { NriFaction, NriLoreEntry, NriLorePlace, NriScenarioProgress, NriPlayerPosition, NriHostAlert } from './nriLore';
 
-export type NriMember = {
-  userId: string;
-  username: string;
-  isHost: boolean;
-  displayName?: string | null;
-};
-
-export type NriSessionInfo = {
-  id: string;
-  inviteCode: string;
-  title: string;
-  hostUsername: string;
-  chatRoomId: string;
-  status: string;
-  isHost?: boolean;
-  isAdmin?: boolean;
-  spamBotEnabled?: boolean;
-  spamPausedUntil?: number | null;
-  spamPausedActive?: boolean;
-};
-
-async function parseJson(res: Response) {
-  const t = await res.text();
-  try {
-    return JSON.parse(t);
-  } catch {
-    return { error: t };
-  }
-}
-
-function authHeaders(token: string): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-}
-
-export function parseNriInviteFromHash(hash: string): string | null {
-  const raw = hash.replace(/^#/, '').trim();
-  if (!raw) return null;
-  const parts = raw.split('/').filter(Boolean);
-  if (parts[0] !== 'nri') return null;
-  const code = (parts[1] === 'join' ? parts[2] : parts[1])?.trim().toUpperCase();
-  return code && code.startsWith('NRI-') ? code : null;
-}
-
-export function buildNriInviteUrl(inviteCode: string): string {
-  if (typeof window === 'undefined') return `#nri/join/${inviteCode}`;
-  return `${window.location.origin}${window.location.pathname}#nri/join/${inviteCode}`;
-}
-
-export async function nriFetchInfo(code: string): Promise<{ inviteCode: string; title: string; hostUsername: string } | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/info`);
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data;
-}
-
-export async function nriCreateSession(token: string, title?: string): Promise<NriSessionInfo | null> {
-  const res = await fetch('/neon_v1/services/nri/create', {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify({ title }),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.session ?? null;
-}
-
-export async function nriJoinSession(token: string, code: string): Promise<{
-  session: NriSessionInfo;
-  members: NriMember[];
-} | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/join`, {
-    method: 'POST',
-    headers: authHeaders(token),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { session: data.session, members: data.members ?? [] };
-}
-
-export async function nriFetchState(token: string, code: string): Promise<{
-  session: NriSessionInfo;
-  members: NriMember[];
-} | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/state`, {
-    headers: authHeaders(token),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { session: data.session, members: data.members ?? [] };
-}
-
-export async function nriCloseSession(token: string, code: string): Promise<boolean> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/close`, {
-    method: 'POST',
-    headers: authHeaders(token),
-  });
-  return res.ok;
-}
-
-export async function nriSetSpamBot(token: string, code: string, enabled: boolean): Promise<boolean> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/spam-bot`, {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify({ enabled }),
-  });
-  if (!res.ok) return false;
-  const data = await parseJson(res);
-  return data.ok === true;
-}
-
-export type NriPlayerProfile = {
-  displayName: string;
-  classId: string;
-  inventory?: NriInventoryItem[];
-  sheet?: unknown;
-  portraitUrl?: string | null;
-  presetId?: string | null;
-  privateNotes?: string;
-};
-
-export type NriRosterPlayer = NriPlayerProfile & {
-  userId: string;
-  username: string;
-};
+const parseJson = nriParseJson;
+const authHeaders = nriAuthHeaders;
+const parseApiError = parseNriApiError;
 
 export type NriVaultFile = {
   id: string;
@@ -177,26 +58,7 @@ function vaultCreateBody(payload: {
   });
 }
 
-function parseApiError(data: Record<string, unknown>, fallback: string): string {
-  const raw =
-    (typeof data.message === 'string' && data.message) ||
-    (typeof data.error === 'string' && data.error) ||
-    '';
-  if (
-    data.code === 'API_NOT_FOUND' ||
-    /Cannot (GET|POST|PATCH|DELETE)|<!DOCTYPE html>/i.test(raw)
-  ) {
-    return 'API не найден — перезапустите сервер: npm run build && npm start (порт 8080).';
-  }
-  if (raw) return raw;
-  return fallback;
-}
-
 const parseVaultError = parseApiError;
-
-export type NriSavePlayerResult =
-  | { ok: true; player: NriPlayerProfile }
-  | { ok: false; error: string };
 
 export type NriPresetCreateResult =
   | { ok: true; preset: NriPresetCharacter }
@@ -205,49 +67,6 @@ export type NriPresetCreateResult =
 export type NriNpcCreateResult =
   | { ok: true; npc: NriNpc }
   | { ok: false; error: string };
-
-export async function nriFetchPlayer(token: string, code: string): Promise<NriPlayerProfile | null | undefined> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player`, {
-    headers: authHeaders(token),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return undefined;
-  return data.player ?? null;
-}
-
-export async function nriFetchRoster(token: string, code: string): Promise<NriRosterPlayer[] | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/players`, {
-    headers: authHeaders(token),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.players ?? [];
-}
-
-export async function nriSavePlayer(
-  token: string,
-  code: string,
-  displayName: string,
-  opts: { classId?: string; presetId?: string; sheet?: unknown; inventory?: unknown }
-): Promise<NriSavePlayerResult> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player`, {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify({
-      displayName,
-      classId: opts.classId,
-      presetId: opts.presetId,
-      sheet: opts.sheet,
-      inventory: opts.inventory,
-    }),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) {
-    return { ok: false, error: parseApiError(data, 'Не удалось сохранить персонажа') };
-  }
-  if (!data.player) return { ok: false, error: 'Сервер не вернул профиль' };
-  return { ok: true, player: data.player };
-}
 
 export type NriPresetCharacter = {
   id: string;
@@ -709,10 +528,6 @@ export async function vaultUnlockFile(
   };
 }
 
-export type NriInventoryUpdateResult =
-  | { ok: true; inventory: NriInventoryItem[] }
-  | { ok: false; error: string };
-
 export type NriWalletTransferTargets = {
   players: { userId: string; displayName: string }[];
   npcs: { id: string; name: string; wonlongs: number }[];
@@ -923,95 +738,6 @@ export async function nriDeleteVehicle(token: string, code: string, vehicleId: s
   return res.ok;
 }
 
-export type NriUseItemResult =
-  | { ok: true; inventory: NriInventoryItem[]; sheet: unknown; applied: string[] }
-  | { ok: false; error: string };
-
-export async function nriUseItem(
-  token: string,
-  code: string,
-  itemId: string
-): Promise<NriUseItemResult> {
-  const res = await fetch(
-    `/neon_v1/services/nri/${encodeURIComponent(code)}/player/items/${encodeURIComponent(itemId)}/use`,
-    { method: 'POST', headers: authHeaders(token) }
-  );
-  const data = await parseJson(res);
-  if (!res.ok) {
-    return { ok: false, error: parseApiError(data, 'Не удалось использовать предмет') };
-  }
-  return {
-    ok: true,
-    inventory: data.inventory ?? [],
-    sheet: data.sheet,
-    applied: Array.isArray(data.applied) ? data.applied : [],
-  };
-}
-
-export async function nriToggleEquip(
-  token: string,
-  code: string,
-  itemId: string
-): Promise<NriInventoryUpdateResult> {
-  const res = await fetch(
-    `/neon_v1/services/nri/${encodeURIComponent(code)}/player/items/${encodeURIComponent(itemId)}/toggle-equip`,
-    { method: 'POST', headers: authHeaders(token) }
-  );
-  const data = await parseJson(res);
-  if (!res.ok) {
-    return { ok: false, error: parseApiError(data, 'Не удалось экипировать') };
-  }
-  return { ok: true, inventory: data.inventory ?? [] };
-}
-
-export async function nriGrantItem(
-  token: string,
-  code: string,
-  targetUserId: string,
-  catalogId: string,
-  opts?: { qty?: number; fromNpcId?: string }
-): Promise<NriInventoryUpdateResult> {
-  const res = await fetch(
-    `/neon_v1/services/nri/${encodeURIComponent(code)}/players/${encodeURIComponent(targetUserId)}/items/grant`,
-    {
-      method: 'POST',
-      headers: authHeaders(token),
-      body: JSON.stringify({
-        catalogId,
-        qty: opts?.qty,
-        fromNpcId: opts?.fromNpcId,
-      }),
-    }
-  );
-  const data = await parseJson(res);
-  if (!res.ok) {
-    return { ok: false, error: parseApiError(data, 'Не удалось выдать предмет') };
-  }
-  return { ok: true, inventory: data.inventory ?? [] };
-}
-
-export async function nriPatchPlayer(
-  token: string,
-  code: string,
-  userId: string,
-  payload: { displayName?: string; sheet?: unknown }
-): Promise<NriSavePlayerResult> {
-  const res = await fetch(
-    `/neon_v1/services/nri/${encodeURIComponent(code)}/players/${encodeURIComponent(userId)}`,
-    {
-      method: 'PATCH',
-      headers: authHeaders(token),
-      body: JSON.stringify(payload),
-    }
-  );
-  const data = await parseJson(res);
-  if (!res.ok) {
-    return { ok: false, error: parseApiError(data, 'Не удалось обновить персонажа') };
-  }
-  if (!data.player) return { ok: false, error: 'Сервер не вернул профиль' };
-  return { ok: true, player: data.player };
-}
-
 export async function nriGrantNpcItem(
   token: string,
   code: string,
@@ -1211,21 +937,6 @@ export async function nriDeleteScenarioNode(token: string, code: string, nodeId:
     { method: 'DELETE', headers: authHeaders(token) }
   );
   return res.ok;
-}
-
-export async function nriSavePlayerNotes(
-  token: string,
-  code: string,
-  notes: string
-): Promise<{ ok: true; privateNotes: string } | { ok: false; error: string }> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player/notes`, {
-    method: 'PATCH',
-    headers: authHeaders(token),
-    body: JSON.stringify({ notes }),
-  });
-  const data = await parseJson(res);
-  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось сохранить заметки') };
-  return { ok: true, privateNotes: typeof data.privateNotes === 'string' ? data.privateNotes : notes };
 }
 
 export async function nriFetchLore(

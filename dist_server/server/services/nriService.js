@@ -3,16 +3,20 @@ import { isAdminUsername } from './auth.js';
 import { isNriMember, listNriMembers, purgeNriSessionData, touchNriMember } from './nriMemberDb.js';
 import { startNriSpamBot, stopNriSpamBot } from './nriSpamBot.js';
 import { tryInstallCyberItem } from './nriCyberInstall.js';
-import { mergeInventoryItem, takeOneCatalogItem, toggleEquipServer } from './nriItemGrant.js';
-import { tryUseItemServer } from './nriItemConsumeServer.js';
+import { mergeInventoryItem } from './nriItemGrant.js';
 import { catalogToServerInventoryItem } from './nriItemCatalogServer.js';
-import { antispamPrice, isSpamPaused, readWonlongs, writeWonlongs } from './nriWallet.js';
-import { applyIceRunResult, buildIcePlayStatus, maybeAutoClearIceBan, } from './nriIceBan.js';
+import { isSpamPaused } from './nriWallet.js';
+import { maybeAutoClearIceBan } from './nriIceBan.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
 import { mountNriLoreTravelRoutes, propagatePlaceUpdate } from './nriLoreTravel.js';
 import { mountNriItemTransferRoutes } from './nriItemTransfer.js';
 import { mountNriCombatantRoutes } from './nriCombatantRoutes.js';
-import { rejectIfInvalidSheetConditions } from './sheetConditionGate.js';
+import { mountNriIceWalletRoutes } from './nriIceWalletRoutes.js';
+import { mountNriPlayerRoutes } from './nriPlayerRoutes.js';
+import { mountNriPresetRoutes } from './nriPresetRoutes.js';
+import { parseNriJsonField, requireNriHost, resolveNriSession } from './nriSessionHelpers.js';
+import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
+import { nriCreateSessionSchema, nriJoinSchema } from '../../shared/api-schemas/nri.js';
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function genInviteCode() {
     let tail = '';
@@ -20,19 +24,6 @@ function genInviteCode() {
         tail += INVITE_CHARS[Math.floor(Math.random() * INVITE_CHARS.length)];
     }
     return `NRI-${tail}`;
-}
-function mergePlayerSheetFromPreset(presetSheet, displayName, clientSheet) {
-    if (!presetSheet || typeof presetSheet !== 'object')
-        return undefined;
-    const base = { ...presetSheet };
-    const trimmed = displayName.trim().slice(0, 40);
-    let characterName = trimmed;
-    if (clientSheet && typeof clientSheet === 'object') {
-        const cn = clientSheet.characterName;
-        if (typeof cn === 'string' && cn.trim())
-            characterName = cn.trim().slice(0, 40);
-    }
-    return { ...base, characterName };
 }
 /** Микросервис столов НРИ: создание, вход по коду, лобби. */
 export function mountNriService(app, deps) {
@@ -43,6 +34,20 @@ export function mountNriService(app, deps) {
             select: { id: true, username: true },
         });
     }
+    const resolveSession = (code) => resolveNriSession(prisma, code);
+    const requireHost = requireNriHost;
+    const parseJsonField = parseNriJsonField;
+    const nriCtx = {
+        prisma,
+        jwtAuth,
+        sendApiError,
+        resolveUser,
+        resolveSession: (code) => resolveNriSession(prisma, code),
+        requireHost: requireNriHost,
+    };
+    mountNriIceWalletRoutes(app, nriCtx);
+    mountNriPlayerRoutes(app, nriCtx);
+    mountNriPresetRoutes(app, nriCtx);
     app.get('/neon_v1/services/nri/:code/info', async (req, res) => {
         const code = String(req.params.code ?? '').trim().toUpperCase();
         if (!code)
@@ -71,8 +76,10 @@ export function mountNriService(app, deps) {
         const auth = jwtAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const { title } = req.body;
-        const sessionTitle = typeof title === 'string' && title.trim() ? title.trim().slice(0, 80) : 'НРИ-сессия';
+        const parsed = parseRequestBody(nriCreateSessionSchema, req.body);
+        if (!parsed.ok)
+            return sendApiError(res, 400, 'NRI_CREATE_INVALID', parsed.message);
+        const sessionTitle = parsed.data.title?.trim() ? parsed.data.title.trim().slice(0, 80) : 'НРИ-сессия';
         try {
             const me = await resolveUser(auth);
             if (!me)
@@ -118,6 +125,9 @@ export function mountNriService(app, deps) {
         const auth = jwtAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const bodyParsed = parseRequestBody(nriJoinSchema, req.body);
+        if (!bodyParsed.ok)
+            return sendApiError(res, 400, 'NRI_JOIN_INVALID', bodyParsed.message);
         const code = String(req.params.code ?? '').trim().toUpperCase();
         if (!code)
             return sendApiError(res, 400, 'NRI_CODE_REQUIRED', 'Укажите код стола.');
@@ -225,32 +235,6 @@ export function mountNriService(app, deps) {
             return sendApiError(res, 500, 'NRI_CLOSE_FAILED', 'Не удалось закрыть стол.');
         }
     });
-    async function tableWonlongsSum(sessionId) {
-        const players = await prisma.nriPlayer.findMany({
-            where: { sessionId },
-            select: { sheet: true },
-        });
-        return players.reduce((s, p) => s + readWonlongs(p.sheet), 0);
-    }
-    async function iceTableAllBanned(sessionId) {
-        const players = await prisma.nriPlayer.findMany({
-            where: { sessionId },
-            select: { sheet: true, inventory: true },
-        });
-        if (!players.length)
-            return false;
-        return players.every((p) => {
-            const st = buildIcePlayStatus(p.sheet, p.inventory, false);
-            return st.hardwareBanned && !st.canPlay;
-        });
-    }
-    async function iceStatusForPlayer(sessionId, sheet, inventory) {
-        const cleared = maybeAutoClearIceBan(sheet, inventory);
-        const tableAllBanned = await iceTableAllBanned(sessionId);
-        const nextSheet = cleared ?? sheet;
-        const status = buildIcePlayStatus(nextSheet, inventory, tableAllBanned);
-        return { sheet: nextSheet, status, cleared: !!cleared };
-    }
     function sessionExtras(session) {
         const pausedUntil = session.spamPausedUntil?.getTime() ?? null;
         return {
@@ -295,253 +279,6 @@ export function mountNriService(app, deps) {
         catch (error) {
             console.error('nri/spam-bot:', error);
             return sendApiError(res, 500, 'NRI_SPAM_BOT_FAILED', 'Не удалось переключить SPAM-бота.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/wallet', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            const sum = await tableWonlongsSum(session.id);
-            const price = antispamPrice(sum);
-            const [otherPlayers, npcs] = await Promise.all([
-                prisma.nriPlayer.findMany({
-                    where: { sessionId: session.id, userId: { not: auth.userId } },
-                    select: { userId: true, displayName: true },
-                    orderBy: { displayName: 'asc' },
-                }),
-                prisma.nriNpc.findMany({
-                    where: { sessionId: session.id },
-                    select: { id: true, name: true, sheet: true },
-                    orderBy: { name: 'asc' },
-                }),
-            ]);
-            res.json({
-                wonlongs: player ? readWonlongs(player.sheet) : 0,
-                tableWonlongsSum: sum,
-                antispamPrice: price,
-                spamPausedUntil: session.spamPausedUntil?.getTime() ?? null,
-                spamPausedActive: isSpamPaused(session.spamPausedUntil),
-                spamBotEnabled: session.spamBotEnabled,
-                transferTargets: {
-                    players: otherPlayers.map((p) => ({ userId: p.userId, displayName: p.displayName })),
-                    npcs: npcs.map((n) => ({
-                        id: n.id,
-                        name: n.name,
-                        wonlongs: readWonlongs(n.sheet),
-                    })),
-                },
-            });
-        }
-        catch (error) {
-            console.error('nri/wallet get:', error);
-            return sendApiError(res, 500, 'NRI_WALLET_GET_FAILED', 'Не удалось загрузить кошелёк.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/antispam/pay', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            if (!session.spamBotEnabled) {
-                return sendApiError(res, 400, 'NRI_SPAM_OFF', 'SPAM-бот не активен на этом столе.');
-            }
-            if (isSpamPaused(session.spamPausedUntil)) {
-                return sendApiError(res, 409, 'NRI_SPAM_ALREADY_PAUSED', 'Антиспам уже оплачен.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const sum = await tableWonlongsSum(session.id);
-            const price = antispamPrice(sum);
-            const balance = readWonlongs(player.sheet);
-            if (balance < price) {
-                return sendApiError(res, 400, 'NRI_INSUFFICIENT_FUNDS', `Нужно ₩${price}, у вас ₩${balance}.`);
-            }
-            const pausedUntil = new Date(Date.now() + 60 * 60 * 1000);
-            const [updatedPlayer, updatedSession] = await prisma.$transaction([
-                prisma.nriPlayer.update({
-                    where: { id: player.id },
-                    data: { sheet: writeWonlongs(player.sheet, balance - price) },
-                }),
-                prisma.nriSession.update({
-                    where: { id: session.id },
-                    data: { spamPausedUntil: pausedUntil },
-                }),
-            ]);
-            res.json({
-                ok: true,
-                wonlongs: readWonlongs(updatedPlayer.sheet),
-                antispamPrice: price,
-                spamPausedUntil: updatedSession.spamPausedUntil?.getTime() ?? null,
-                spamPausedActive: true,
-            });
-        }
-        catch (error) {
-            console.error('nri/antispam pay:', error);
-            return sendApiError(res, 500, 'NRI_ANTISPAM_FAILED', 'Не удалось оплатить антиспам.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/ice/status', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const { sheet, status, cleared } = await iceStatusForPlayer(session.id, player.sheet, player.inventory);
-            if (cleared) {
-                await prisma.nriPlayer.update({
-                    where: { id: player.id },
-                    data: { sheet: sheet },
-                });
-            }
-            res.json(status);
-        }
-        catch (error) {
-            console.error('nri/ice status:', error);
-            return sendApiError(res, 500, 'NRI_ICE_STATUS_FAILED', 'Не удалось загрузить статус ICE.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/ice/result', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { won } = req.body;
-        if (typeof won !== 'boolean') {
-            return sendApiError(res, 400, 'NRI_ICE_WON', 'Укажите won: true|false.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const { sheet: nextSheet } = applyIceRunResult(player.sheet, won);
-            const { sheet, status } = await iceStatusForPlayer(session.id, nextSheet, player.inventory);
-            await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { sheet: sheet },
-            });
-            res.json({ ok: true, status });
-        }
-        catch (error) {
-            console.error('nri/ice result:', error);
-            return sendApiError(res, 500, 'NRI_ICE_RESULT_FAILED', 'Не удалось сохранить результат ICE.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/ice/leaderboard', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const rows = await prisma.nriIceScore.findMany({
-                where: { sessionId: session.id, won: true },
-                orderBy: [{ score: 'desc' }, { createdAt: 'asc' }],
-                take: 50,
-            });
-            const bestByUser = new Map();
-            for (const row of rows) {
-                const prev = bestByUser.get(row.userId);
-                if (!prev || row.score > prev.score)
-                    bestByUser.set(row.userId, row);
-            }
-            const leaderboard = [...bestByUser.values()].sort((a, b) => b.score - a.score);
-            res.json({
-                entries: leaderboard.map((r) => ({
-                    userId: r.userId,
-                    displayName: r.displayName,
-                    score: r.score,
-                    exfilPct: r.exfilPct,
-                    tracePct: r.tracePct,
-                    at: r.createdAt.getTime(),
-                })),
-            });
-        }
-        catch (error) {
-            console.error('nri/ice leaderboard:', error);
-            return sendApiError(res, 500, 'NRI_ICE_LB_FAILED', 'Не удалось загрузить рейтинг.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/ice/score', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { score, exfilPct, tracePct, won } = req.body;
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const pts = typeof score === 'number' && Number.isFinite(score) ? Math.max(0, Math.floor(score)) : 0;
-            const row = await prisma.nriIceScore.create({
-                data: {
-                    sessionId: session.id,
-                    userId: auth.userId,
-                    displayName: player.displayName,
-                    score: pts,
-                    exfilPct: typeof exfilPct === 'number' ? Math.round(exfilPct) : 0,
-                    tracePct: typeof tracePct === 'number' ? Math.round(tracePct) : 0,
-                    won: won === true,
-                },
-            });
-            res.status(201).json({
-                ok: true,
-                entry: {
-                    userId: row.userId,
-                    displayName: row.displayName,
-                    score: row.score,
-                    exfilPct: row.exfilPct,
-                    tracePct: row.tracePct,
-                    at: row.createdAt.getTime(),
-                },
-            });
-        }
-        catch (error) {
-            console.error('nri/ice score:', error);
-            return sendApiError(res, 500, 'NRI_ICE_SCORE_FAILED', 'Не удалось записать результат.');
         }
     });
     app.get('/neon_v1/services/nri/:code/vehicles', async (req, res) => {
@@ -924,185 +661,6 @@ export function mountNriService(app, deps) {
             return sendApiError(res, 500, 'NRI_SCENARIO_DELETE_FAILED', 'Не удалось удалить узел.');
         }
     });
-    app.patch('/neon_v1/services/nri/:code/player/notes', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { notes } = req.body;
-        if (typeof notes !== 'string') {
-            return sendApiError(res, 400, 'NRI_NOTES_REQUIRED', 'Укажите текст заметок.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const updated = await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { privateNotes: notes.slice(0, 50000) },
-            });
-            res.json({ ok: true, privateNotes: updated.privateNotes });
-        }
-        catch (error) {
-            console.error('nri/player notes:', error);
-            return sendApiError(res, 500, 'NRI_NOTES_SAVE_FAILED', 'Не удалось сохранить заметки.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/wonlongs/transfer', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { amount, toPlayerUserId, toNpcId, memo } = req.body;
-        if (typeof amount !== 'number' || amount <= 0 || !Number.isFinite(amount)) {
-            return sendApiError(res, 400, 'NRI_AMOUNT', 'Укажите сумму > 0.');
-        }
-        const amt = Math.floor(amount);
-        const toPlayer = typeof toPlayerUserId === 'string' && toPlayerUserId.trim() ? toPlayerUserId.trim() : null;
-        const toNpc = typeof toNpcId === 'string' && toNpcId.trim() ? toNpcId.trim() : null;
-        if (!toPlayer && !toNpc) {
-            return sendApiError(res, 400, 'NRI_TRANSFER_TARGET', 'Укажите получателя (игрок или НПС).');
-        }
-        if (toPlayer && toNpc) {
-            return sendApiError(res, 400, 'NRI_TRANSFER_ONE', 'Только один получатель за раз.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const sender = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!sender) {
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
-            }
-            const senderBal = readWonlongs(sender.sheet);
-            if (senderBal < amt) {
-                return sendApiError(res, 400, 'NRI_INSUFFICIENT_FUNDS', `Недостаточно ₩ (есть ${senderBal}).`);
-            }
-            if (toPlayer) {
-                if (toPlayer === auth.userId) {
-                    return sendApiError(res, 400, 'NRI_TRANSFER_SELF', 'Нельзя перевести себе.');
-                }
-                const recipient = await prisma.nriPlayer.findUnique({
-                    where: { sessionId_userId: { sessionId: session.id, userId: toPlayer } },
-                });
-                if (!recipient)
-                    return sendApiError(res, 404, 'NRI_RECIPIENT_NOT_FOUND', 'Игрок не найден.');
-                const recBal = readWonlongs(recipient.sheet);
-                await prisma.$transaction([
-                    prisma.nriPlayer.update({
-                        where: { id: sender.id },
-                        data: { sheet: writeWonlongs(sender.sheet, senderBal - amt) },
-                    }),
-                    prisma.nriPlayer.update({
-                        where: { id: recipient.id },
-                        data: { sheet: writeWonlongs(recipient.sheet, recBal + amt) },
-                    }),
-                ]);
-                res.json({
-                    ok: true,
-                    wonlongs: senderBal - amt,
-                    memo: memo ?? null,
-                    transfer: { to: 'player', userId: toPlayer, amount: amt },
-                });
-                return;
-            }
-            const npc = await prisma.nriNpc.findFirst({ where: { id: toNpc, sessionId: session.id } });
-            if (!npc)
-                return sendApiError(res, 404, 'NRI_NPC_NOT_FOUND', 'НПС не найден.');
-            const npcBal = readWonlongs(npc.sheet);
-            await prisma.$transaction([
-                prisma.nriPlayer.update({
-                    where: { id: sender.id },
-                    data: { sheet: writeWonlongs(sender.sheet, senderBal - amt) },
-                }),
-                prisma.nriNpc.update({
-                    where: { id: npc.id },
-                    data: { sheet: writeWonlongs(npc.sheet, npcBal + amt) },
-                }),
-            ]);
-            res.json({
-                ok: true,
-                wonlongs: senderBal - amt,
-                memo: memo ?? null,
-                transfer: { to: 'npc', npcId: npc.id, amount: amt },
-            });
-        }
-        catch (error) {
-            console.error('nri/wonlongs transfer:', error);
-            return sendApiError(res, 500, 'NRI_TRANSFER_FAILED', 'Не удалось перевести деньги.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/wonlongs/grant', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { playerUserId, amount, fromNpcId, memo } = req.body;
-        if (typeof playerUserId !== 'string' || !playerUserId.trim()) {
-            return sendApiError(res, 400, 'NRI_PLAYER_ID', 'Укажите playerUserId.');
-        }
-        if (typeof amount !== 'number' || amount <= 0) {
-            return sendApiError(res, 400, 'NRI_AMOUNT', 'Укажите сумму > 0.');
-        }
-        const amt = Math.floor(amount);
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const me = await resolveUser(auth);
-            if (!(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Выдаёт деньги только мастер.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: playerUserId.trim() } },
-            });
-            if (!player)
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Игрок не найден.');
-            let playerSheet = player.sheet;
-            if (typeof fromNpcId === 'string' && fromNpcId.trim()) {
-                const npc = await prisma.nriNpc.findFirst({
-                    where: { id: fromNpcId.trim(), sessionId: session.id },
-                });
-                if (!npc)
-                    return sendApiError(res, 404, 'NRI_NPC_NOT_FOUND', 'НПС не найден.');
-                const npcBal = readWonlongs(npc.sheet);
-                if (npcBal < amt) {
-                    return sendApiError(res, 400, 'NRI_NPC_FUNDS', `У НПС только ₩${npcBal}.`);
-                }
-                await prisma.nriNpc.update({
-                    where: { id: npc.id },
-                    data: { sheet: writeWonlongs(npc.sheet, npcBal - amt) },
-                });
-            }
-            const bal = readWonlongs(playerSheet);
-            const updated = await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { sheet: writeWonlongs(playerSheet, bal + amt) },
-            });
-            res.json({
-                ok: true,
-                playerUserId: player.userId,
-                wonlongs: readWonlongs(updated.sheet),
-                amount: amt,
-                memo: memo ?? null,
-            });
-        }
-        catch (error) {
-            console.error('nri/wonlongs grant:', error);
-            return sendApiError(res, 500, 'NRI_GRANT_FAILED', 'Не удалось выдать деньги.');
-        }
-    });
     function serializeVaultFile(f) {
         const hasPassword = !!f.passwordHash;
         const hasIce = !!f.gameId;
@@ -1173,23 +731,6 @@ export function mountNriService(app, deps) {
             },
         };
     }
-    async function resolveSession(code) {
-        return prisma.nriSession.findUnique({
-            where: { inviteCode: code },
-            include: { host: { select: { username: true } } },
-        });
-    }
-    function serializePlayer(p) {
-        return {
-            displayName: p.displayName,
-            classId: p.classId,
-            inventory: Array.isArray(p.inventory) ? p.inventory : [],
-            sheet: p.sheet ?? null,
-            portraitUrl: p.portraitUrl ?? null,
-            presetId: p.presetId ?? null,
-            privateNotes: p.privateNotes ?? '',
-        };
-    }
     function serializeScenarioNode(n) {
         return {
             id: n.id,
@@ -1200,21 +741,6 @@ export function mountNriService(app, deps) {
             links: n.links ?? {},
             createdAt: n.createdAt.getTime(),
             updatedAt: n.updatedAt.getTime(),
-        };
-    }
-    function serializePreset(p) {
-        return {
-            id: p.id,
-            label: p.label,
-            classId: p.classId,
-            inventory: Array.isArray(p.inventory) ? p.inventory : [],
-            sheet: p.sheet ?? null,
-            portraitUrl: p.portraitUrl,
-            publishedToPlayers: p.publishedToPlayers,
-            sortOrder: p.sortOrder,
-            claimed: !!p.claimedByUserId,
-            claimedByUserId: p.claimedByUserId,
-            createdAt: p.createdAt.getTime(),
         };
     }
     function serializeNpc(n) {
@@ -1230,220 +756,6 @@ export function mountNriService(app, deps) {
             updatedAt: n.updatedAt.getTime(),
         };
     }
-    function parseJsonField(raw) {
-        if (raw === null || raw === undefined)
-            return null;
-        return raw;
-    }
-    async function requireHost(session, auth, me) {
-        const platformAdmin = me ? isAdminUsername(me.username) : false;
-        if (session.hostUserId !== auth.userId && !platformAdmin) {
-            return false;
-        }
-        return true;
-    }
-    app.get('/neon_v1/services/nri/:code/player', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            res.json({ player: player ? serializePlayer(player) : null });
-        }
-        catch (error) {
-            console.error('nri/player get:', error);
-            return sendApiError(res, 500, 'NRI_PLAYER_GET_FAILED', 'Не удалось загрузить профиль.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/players', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            const isHost = session.hostUserId === auth.userId;
-            const platformAdmin = me ? isAdminUsername(me.username) : false;
-            if (!isHost && !platformAdmin) {
-                return sendApiError(res, 403, 'NRI_ROSTER_FORBIDDEN', 'Чарники доступны только мастеру.');
-            }
-            const players = await prisma.nriPlayer.findMany({
-                where: { sessionId: session.id },
-                include: { user: { select: { username: true } } },
-                orderBy: { displayName: 'asc' },
-            });
-            res.json({
-                players: players.map((p) => ({
-                    userId: p.userId,
-                    username: p.user.username,
-                    displayName: p.displayName,
-                    classId: p.classId,
-                    inventory: Array.isArray(p.inventory) ? p.inventory : [],
-                    sheet: p.sheet ?? null,
-                    portraitUrl: p.portraitUrl ?? null,
-                    presetId: p.presetId ?? null,
-                })),
-            });
-        }
-        catch (error) {
-            console.error('nri/players get:', error);
-            return sendApiError(res, 500, 'NRI_ROSTER_GET_FAILED', 'Не удалось загрузить чарников.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/player', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { displayName, classId, presetId, sheet, inventory } = req.body;
-        if (typeof displayName !== 'string' || !displayName.trim()) {
-            return sendApiError(res, 400, 'NRI_NAME_REQUIRED', 'Укажите имя персонажа.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const me = await resolveUser(auth);
-            if (!me)
-                return sendApiError(res, 401, 'NRI_USER_NOT_FOUND', 'Пользователь не найден.');
-            let player;
-            if (typeof presetId === 'string' && presetId.trim()) {
-                const preset = await prisma.nriPresetCharacter.findFirst({
-                    where: {
-                        id: presetId.trim(),
-                        sessionId: session.id,
-                        claimedByUserId: null,
-                        publishedToPlayers: true,
-                    },
-                });
-                if (!preset) {
-                    return sendApiError(res, 409, 'NRI_PRESET_TAKEN', 'Этот персонаж недоступен, уже занят или не опубликован.');
-                }
-                const mergedSheet = mergePlayerSheetFromPreset(preset.sheet, displayName.trim(), sheet);
-                if (mergedSheet && rejectIfInvalidSheetConditions(res, mergedSheet, sendApiError))
-                    return;
-                player = await prisma.$transaction(async (tx) => {
-                    await tx.nriPresetCharacter.update({
-                        where: { id: preset.id },
-                        data: { claimedByUserId: auth.userId },
-                    });
-                    return tx.nriPlayer.upsert({
-                        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-                        create: {
-                            sessionId: session.id,
-                            userId: auth.userId,
-                            displayName: displayName.trim().slice(0, 40),
-                            classId: preset.classId,
-                            inventory: preset.inventory ?? [],
-                            sheet: (mergedSheet ?? undefined),
-                            portraitUrl: preset.portraitUrl,
-                            presetId: preset.id,
-                        },
-                        update: {
-                            displayName: displayName.trim().slice(0, 40),
-                            classId: preset.classId,
-                            inventory: preset.inventory ?? [],
-                            sheet: (mergedSheet ?? undefined),
-                            portraitUrl: preset.portraitUrl,
-                            presetId: preset.id,
-                        },
-                    });
-                });
-            }
-            else {
-                const presetCount = await prisma.nriPresetCharacter.count({
-                    where: { sessionId: session.id, publishedToPlayers: true },
-                });
-                if (presetCount > 0) {
-                    return sendApiError(res, 400, 'NRI_PRESET_REQUIRED', 'Мастер подготовил персонажей — выберите одного из списка.');
-                }
-                if (typeof classId !== 'string' || !classId.trim()) {
-                    return sendApiError(res, 400, 'NRI_CLASS_REQUIRED', 'Выберите класс.');
-                }
-                const sheetPayload = sheet && typeof sheet === 'object' && sheet.abilities?.STR != null
-                    ? sheet
-                    : undefined;
-                if (sheetPayload && rejectIfInvalidSheetConditions(res, sheetPayload, sendApiError))
-                    return;
-                const inventoryPayload = Array.isArray(inventory) ? inventory : [];
-                player = await prisma.nriPlayer.upsert({
-                    where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-                    create: {
-                        sessionId: session.id,
-                        userId: auth.userId,
-                        displayName: displayName.trim().slice(0, 40),
-                        classId: classId.trim(),
-                        sheet: sheetPayload ?? undefined,
-                        inventory: inventoryPayload,
-                    },
-                    update: {
-                        displayName: displayName.trim().slice(0, 40),
-                        classId: classId.trim(),
-                        ...(sheetPayload ? { sheet: sheetPayload } : {}),
-                        inventory: inventoryPayload,
-                    },
-                });
-            }
-            await touchNriMember(prisma, session.id, auth.userId, me.username, session.hostUserId === auth.userId);
-            res.json({ player: serializePlayer(player) });
-        }
-        catch (error) {
-            console.error('nri/player post:', error);
-            return sendApiError(res, 500, 'NRI_PLAYER_SAVE_FAILED', 'Не удалось сохранить профиль.');
-        }
-    });
-    app.patch('/neon_v1/services/nri/:code/players/:userId', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const targetUserId = req.params.userId;
-        const { displayName, sheet } = req.body;
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            if (!(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Редактирует только мастер.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: targetUserId } },
-            });
-            if (!player)
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Игрок не найден.');
-            const prevSheet = player.sheet && typeof player.sheet === 'object' ? { ...player.sheet } : {};
-            const nextSheet = sheet !== undefined && sheet && typeof sheet === 'object'
-                ? { ...prevSheet, ...sheet }
-                : prevSheet;
-            if (rejectIfInvalidSheetConditions(res, nextSheet, sendApiError))
-                return;
-            const updated = await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: {
-                    ...(typeof displayName === 'string' && displayName.trim()
-                        ? { displayName: displayName.trim().slice(0, 40) }
-                        : {}),
-                    ...(sheet !== undefined ? { sheet: nextSheet } : {}),
-                },
-            });
-            res.json({ player: serializePlayer(updated) });
-        }
-        catch (error) {
-            console.error('nri/player patch:', error);
-            return sendApiError(res, 500, 'NRI_PLAYER_PATCH_FAILED', 'Не удалось обновить персонажа.');
-        }
-    });
     function serializeMapMarker(m, ctx) {
         const isHostMarker = m.kind === 'host' || m.kind === 'pin' || m.ownerUserId === ctx.hostUserId;
         return {
@@ -1737,195 +1049,6 @@ export function mountNriService(app, deps) {
         catch (error) {
             console.error('nri/vault post:', error);
             return sendApiError(res, 500, 'NRI_VAULT_CREATE_FAILED', 'Не удалось создать файл.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/presets', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            const isHost = session.hostUserId === auth.userId;
-            const platformAdmin = me ? isAdminUsername(me.username) : false;
-            const presets = await prisma.nriPresetCharacter.findMany({
-                where: {
-                    sessionId: session.id,
-                    ...(isHost || platformAdmin
-                        ? {}
-                        : { publishedToPlayers: true, claimedByUserId: null }),
-                },
-                orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-            });
-            const unclaimed = await prisma.nriPresetCharacter.count({
-                where: { sessionId: session.id, claimedByUserId: null },
-            });
-            const publishedUnclaimed = await prisma.nriPresetCharacter.count({
-                where: { sessionId: session.id, claimedByUserId: null, publishedToPlayers: true },
-            });
-            res.json({
-                presets: presets.map(serializePreset),
-                meta: { unclaimed, publishedUnclaimed, selectionRequired: unclaimed > 0 },
-            });
-        }
-        catch (error) {
-            console.error('nri/presets get:', error);
-            return sendApiError(res, 500, 'NRI_PRESETS_GET_FAILED', 'Не удалось загрузить персонажей.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/presets', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { label, classId, inventory, sheet, portraitUrl, sortOrder, publishedToPlayers } = req.body;
-        if (typeof label !== 'string' || !label.trim()) {
-            return sendApiError(res, 400, 'NRI_PRESET_LABEL', 'Укажите название пресета.');
-        }
-        if (typeof classId !== 'string' || !classId.trim()) {
-            return sendApiError(res, 400, 'NRI_CLASS_REQUIRED', 'Выберите класс.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const me = await resolveUser(auth);
-            if (!me || !(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Персонажей создаёт только мастер.');
-            }
-            const parsedPresetSheet = parseJsonField(sheet);
-            if (parsedPresetSheet !== null && rejectIfInvalidSheetConditions(res, parsedPresetSheet, sendApiError)) {
-                return;
-            }
-            const preset = await prisma.nriPresetCharacter.create({
-                data: {
-                    sessionId: session.id,
-                    label: label.trim().slice(0, 60),
-                    classId: classId.trim(),
-                    inventory: Array.isArray(inventory) ? inventory : [],
-                    sheet: parsedPresetSheet ?? undefined,
-                    portraitUrl: typeof portraitUrl === 'string' && portraitUrl.trim() ? portraitUrl.trim().slice(0, 2000) : null,
-                    sortOrder: typeof sortOrder === 'number' ? sortOrder : 0,
-                    publishedToPlayers: publishedToPlayers !== false,
-                },
-            });
-            res.status(201).json({ preset: serializePreset(preset) });
-        }
-        catch (error) {
-            console.error('nri/presets post:', error);
-            return sendApiError(res, 500, 'NRI_PRESET_CREATE_FAILED', 'Не удалось создать персонажа.');
-        }
-    });
-    app.patch('/neon_v1/services/nri/:code/presets/:presetId', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const presetId = req.params.presetId;
-        const { label, classId, inventory, sheet, portraitUrl, sortOrder, publishedToPlayers } = req.body;
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            if (!me || !(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Редактирует только мастер.');
-            }
-            const existing = await prisma.nriPresetCharacter.findFirst({
-                where: { id: presetId, sessionId: session.id },
-            });
-            if (!existing)
-                return sendApiError(res, 404, 'NRI_PRESET_NOT_FOUND', 'Персонаж не найден.');
-            if (existing.claimedByUserId) {
-                const changingStructure = (typeof classId === 'string' && classId.trim() && classId.trim() !== existing.classId) ||
-                    inventory !== undefined;
-                if (changingStructure) {
-                    return sendApiError(res, 409, 'NRI_PRESET_CLAIMED', 'Персонаж уже закреплён — меняйте только имя и бэкстори.');
-                }
-            }
-            const nextSheet = sheet !== undefined ? parseJsonField(sheet) ?? undefined : undefined;
-            if (nextSheet !== undefined && rejectIfInvalidSheetConditions(res, nextSheet, sendApiError))
-                return;
-            const preset = await prisma.nriPresetCharacter.update({
-                where: { id: presetId },
-                data: {
-                    ...(typeof label === 'string' && label.trim() ? { label: label.trim().slice(0, 60) } : {}),
-                    ...(typeof classId === 'string' && classId.trim() ? { classId: classId.trim() } : {}),
-                    ...(inventory !== undefined ? { inventory: Array.isArray(inventory) ? inventory : [] } : {}),
-                    ...(sheet !== undefined ? { sheet: nextSheet } : {}),
-                    ...(portraitUrl !== undefined
-                        ? {
-                            portraitUrl: typeof portraitUrl === 'string' && portraitUrl.trim()
-                                ? portraitUrl.trim().slice(0, 2000)
-                                : null,
-                        }
-                        : {}),
-                    ...(typeof sortOrder === 'number' ? { sortOrder } : {}),
-                    ...(typeof publishedToPlayers === 'boolean' ? { publishedToPlayers } : {}),
-                },
-            });
-            if (existing.claimedByUserId && (nextSheet || (typeof label === 'string' && label.trim()))) {
-                const player = await prisma.nriPlayer.findFirst({
-                    where: { sessionId: session.id, presetId: preset.id },
-                });
-                if (player) {
-                    const prevSheet = player.sheet && typeof player.sheet === 'object'
-                        ? { ...player.sheet }
-                        : {};
-                    const mergedPlayerSheet = nextSheet ? { ...prevSheet, ...nextSheet } : null;
-                    if (mergedPlayerSheet && rejectIfInvalidSheetConditions(res, mergedPlayerSheet, sendApiError)) {
-                        return;
-                    }
-                    await prisma.nriPlayer.update({
-                        where: { id: player.id },
-                        data: {
-                            ...(typeof label === 'string' && label.trim()
-                                ? { displayName: label.trim().slice(0, 40) }
-                                : {}),
-                            ...(mergedPlayerSheet ? { sheet: mergedPlayerSheet } : {}),
-                        },
-                    });
-                }
-            }
-            res.json({ preset: serializePreset(preset) });
-        }
-        catch (error) {
-            console.error('nri/presets patch:', error);
-            return sendApiError(res, 500, 'NRI_PRESET_UPDATE_FAILED', 'Не удалось обновить персонажа.');
-        }
-    });
-    app.delete('/neon_v1/services/nri/:code/presets/:presetId', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const presetId = req.params.presetId;
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            if (!me || !(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Удаляет только мастер.');
-            }
-            const existing = await prisma.nriPresetCharacter.findFirst({
-                where: { id: presetId, sessionId: session.id },
-            });
-            if (!existing)
-                return sendApiError(res, 404, 'NRI_PRESET_NOT_FOUND', 'Персонаж не найден.');
-            if (existing.claimedByUserId) {
-                return sendApiError(res, 409, 'NRI_PRESET_CLAIMED', 'Нельзя удалить закреплённого персонажа.');
-            }
-            await prisma.nriPresetCharacter.delete({ where: { id: presetId } });
-            res.json({ ok: true });
-        }
-        catch (error) {
-            console.error('nri/presets delete:', error);
-            return sendApiError(res, 500, 'NRI_PRESET_DELETE_FAILED', 'Не удалось удалить персонажа.');
         }
     });
     app.get('/neon_v1/services/nri/:code/npcs', async (req, res) => {
@@ -2400,134 +1523,6 @@ export function mountNriService(app, deps) {
         catch (error) {
             console.error('nri/cyber install:', error);
             return sendApiError(res, 500, 'NRI_CYBER_INSTALL_ERR', 'Не удалось установить имплант.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/player/items/:itemId/toggle-equip', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const itemId = String(req.params.itemId ?? '').trim();
-        if (!itemId)
-            return sendApiError(res, 400, 'NRI_ITEM_ID', 'Укажите предмет.');
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player)
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
-            const inv = Array.isArray(player.inventory) ? ([...player.inventory]) : [];
-            const next = toggleEquipServer(inv, itemId);
-            if (!next)
-                return sendApiError(res, 400, 'NRI_EQUIP_FAILED', 'Предмет нельзя экипировать.');
-            await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { inventory: next },
-            });
-            res.json({ ok: true, inventory: next });
-        }
-        catch (error) {
-            console.error('nri/toggle-equip:', error);
-            return sendApiError(res, 500, 'NRI_EQUIP_ERR', 'Не удалось сменить экипировку.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/player/items/:itemId/use', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const itemId = String(req.params.itemId ?? '').trim();
-        if (!itemId)
-            return sendApiError(res, 400, 'NRI_ITEM_ID', 'Укажите предмет.');
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
-            });
-            if (!player)
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
-            const inv = Array.isArray(player.inventory) ? ([...player.inventory]) : [];
-            const result = tryUseItemServer(player.sheet, inv, itemId);
-            if (!result.ok) {
-                return sendApiError(res, 400, 'NRI_USE_FAILED', result.reason);
-            }
-            await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { sheet: result.sheet, inventory: result.inventory },
-            });
-            res.json({ ok: true, inventory: result.inventory, sheet: result.sheet, applied: result.applied });
-        }
-        catch (error) {
-            console.error('nri/use-item:', error);
-            return sendApiError(res, 500, 'NRI_USE_ERR', 'Не удалось использовать предмет.');
-        }
-    });
-    app.post('/neon_v1/services/nri/:code/players/:userId/items/grant', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const targetUserId = req.params.userId;
-        const { catalogId, qty, fromNpcId } = req.body;
-        if (typeof catalogId !== 'string' || !catalogId.trim()) {
-            return sendApiError(res, 400, 'NRI_CATALOG_ID', 'Укажите catalogId.');
-        }
-        try {
-            const session = await resolveSession(code);
-            if (!session || session.status !== 'open') {
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
-            }
-            const me = await resolveUser(auth);
-            const isHost = session.hostUserId === auth.userId;
-            const platformAdmin = me ? isAdminUsername(me.username) : false;
-            if (!isHost && !platformAdmin) {
-                return sendApiError(res, 403, 'NRI_GRANT_FORBIDDEN', 'Выдавать предметы может только мастер.');
-            }
-            const player = await prisma.nriPlayer.findUnique({
-                where: { sessionId_userId: { sessionId: session.id, userId: targetUserId } },
-            });
-            if (!player)
-                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Игрок не найден.');
-            const item = catalogToServerInventoryItem(catalogId.trim());
-            if (!item)
-                return sendApiError(res, 400, 'NRI_CATALOG_UNKNOWN', 'Неизвестный предмет каталога.');
-            if (typeof qty === 'number' && qty > 1)
-                item.qty = qty;
-            let npcName = null;
-            if (typeof fromNpcId === 'string' && fromNpcId.trim()) {
-                const npc = await prisma.nriNpc.findFirst({
-                    where: { id: fromNpcId.trim(), sessionId: session.id },
-                });
-                if (!npc)
-                    return sendApiError(res, 404, 'NRI_NPC_NOT_FOUND', 'НПС не найден.');
-                npcName = npc.name;
-                const npcInv = Array.isArray(npc.inventory) ? [...npc.inventory] : [];
-                const taken = takeOneCatalogItem(npcInv, catalogId.trim());
-                if (taken.taken) {
-                    await prisma.nriNpc.update({
-                        where: { id: npc.id },
-                        data: { inventory: taken.inventory },
-                    });
-                }
-            }
-            const inv = Array.isArray(player.inventory) ? [...player.inventory] : [];
-            const next = mergeInventoryItem(inv, item);
-            await prisma.nriPlayer.update({
-                where: { id: player.id },
-                data: { inventory: next },
-            });
-            res.json({ ok: true, inventory: next });
-        }
-        catch (error) {
-            console.error('nri/grant item:', error);
-            return sendApiError(res, 500, 'NRI_GRANT_ERR', 'Не удалось выдать предмет.');
         }
     });
     app.post('/neon_v1/services/nri/:code/npcs/:npcId/items/grant', async (req, res) => {

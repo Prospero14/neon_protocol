@@ -8,7 +8,7 @@
 
 | Модуль | Строк (≈) | Рекомендация |
 |--------|-----------|--------------|
-| `server/services/nriService.ts` | ~4250 | Роутеры по доменам: players, map, vault, items |
+| `server/services/nriService.ts` | ~1890 | map, vault, npc, cyber, scenario |
 | `server/createApp.ts` | ~298 | `routes/auth.ts`, static (coop → `mountCoopRoutes.ts`) |
 | `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
 | `src/logic/nriApi.ts` | ~1400 | `nriApi/session.ts`, `players.ts`, … |
@@ -25,9 +25,10 @@
 - [x] Персистентность БД: `NEON_DATA_DIR`, `/data` на Amvera (`persistenceMount` в `amvera.yml`)
 - [x] `server/coop/coopMatchStore.ts` + `server/databasePath.ts` (вынесено из монолита createApp)
 - [x] `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts`
-- [x] `shared/nri-domain/validateSheetConditions.ts` — серверная проверка condition id на PATCH листа
-- [x] `shared/api-schemas/` — Zod auth + game/sync, `GameSyncPayload`
-- [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (auth routes)
+- [x] `shared/api-schemas/nri.ts` — Zod для player/preset/ice/wallet NRI routes
+- [x] `nriPlayerRoutes` / `nriIceWalletRoutes` / `nriPresetRoutes` + `nriSessionHelpers`
+- [x] `src/logic/nriApi/session.ts` + `players.ts` (клиент)
+- [ ] Разрезать `nriService.ts` (map/vault/npc) / `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---
 

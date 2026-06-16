@@ -25,6 +25,7 @@
 - [x] Персистентность БД: `NEON_DATA_DIR`, `/data` на Amvera (`persistenceMount` в `amvera.yml`)
 - [x] `server/coop/coopMatchStore.ts` + `server/databasePath.ts` (вынесено из монолита createApp)
 - [x] `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts`
+- [x] `shared/nri-domain/validateSheetConditions.ts` — серверная проверка condition id на PATCH листа
 - [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---

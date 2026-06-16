@@ -472,4 +472,34 @@ describe('neon_v1 API (integration)', () => {
     const conds = res.body.sheet.activeConditions as { id: string }[];
     expect(conds.some((c) => c.id === 'intoxicated_mild')).toBe(true);
   });
+
+  it('PATCH player sheet rejects unknown condition id', async () => {
+    const tok = jwt.sign({ userId: 'host-1' }, JWT_SECRET);
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: 'host-1', username: 'gm' } as any);
+    vi.mocked(prisma.nriSession.findUnique).mockResolvedValue({
+      id: 'sess-1',
+      inviteCode: 'NRI-COND',
+      hostUserId: 'host-1',
+      status: 'open',
+    } as any);
+    vi.mocked(prisma.nriPlayer.findUnique).mockResolvedValue({
+      id: 'pl-1',
+      sessionId: 'sess-1',
+      userId: 'pl-user',
+      sheet: { abilities: {}, activeConditions: [] },
+    } as any);
+
+    const res = await request(app())
+      .patch('/neon_v1/services/nri/NRI-COND/players/pl-user')
+      .set('Authorization', `Bearer ${tok}`)
+      .send({
+        sheet: {
+          activeConditions: [{ id: 'god_mode', label: 'cheat', appliedAt: 1 }],
+        },
+      })
+      .expect(400);
+
+    expect(res.body.code).toBe('INVALID_CONDITION_ID');
+    expect(prisma.nriPlayer.update).not.toHaveBeenCalled();
+  });
 });

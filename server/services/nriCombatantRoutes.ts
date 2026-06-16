@@ -3,6 +3,7 @@
 import type { Express } from 'express';
 import type { PrismaClient } from '@prisma/client';
 import type { ApiErrorSender, JwtAuth } from './auth.js';
+import { rejectIfInvalidSheetConditions } from './sheetConditionGate.js';
 
 export type NriCombatantRouteDeps = {
   prisma: PrismaClient;
@@ -99,6 +100,8 @@ export function mountNriCombatantRoutes(app: Express, deps: NriCombatantRouteDep
       if (!me || !(await requireHost(session, auth, me))) {
         return sendApiError(res, 403, 'NRI_NOT_HOST', 'Боевиков создаёт только мастер.');
       }
+      const parsedSheet = parseJsonField(sheet);
+      if (parsedSheet !== null && rejectIfInvalidSheetConditions(res, parsedSheet, sendApiError)) return;
       const combatant = await prisma.nriCombatant.create({
         data: {
           sessionId: session.id,
@@ -108,7 +111,7 @@ export function mountNriCombatantRoutes(app: Express, deps: NriCombatantRouteDep
           threatTier: tier,
           imageUrl: typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim().slice(0, 2000) : null,
           inventory: Array.isArray(inventory) ? inventory : [],
-          sheet: parseJsonField(sheet) ?? undefined,
+          sheet: parsedSheet ?? undefined,
           notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
         },
       });

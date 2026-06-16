@@ -17,6 +17,7 @@
 | `server/services/nriCombatantRoutes.ts` — CRUD боевиков вынесен из `nriService` | ✅ |
 | HTTP-тест persist матча + 116 unit/integration тестов | ✅ |
 | `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts` | ✅ |
+| Серверная валидация `activeConditions` (`validateSheetConditions`) | ✅ |
 
 ---
 
@@ -24,9 +25,8 @@
 
 | # | Задача | Зачем | Оценка |
 |---|--------|-------|--------|
-| 1 | **Серверная валидация condition id** при PATCH листа / мастерских статусов | Античит, единый домен `shared/nri-domain` | 0.5 дня |
-| 2 | **OpenAPI или Zod-схемы** для `/neon_v1/auth/*`, `game/sync`, ключевых NRI routes | Регрессии при рефакторинге | 2–3 дня |
-| 3 | **Тип `GameSyncPayload`** вместо `any` в sync | LSP, меньше silent-багов | 1 день |
+| 1 | **OpenAPI или Zod-схемы** для `/neon_v1/auth/*`, `game/sync`, ключевых NRI routes | Регрессии при рефакторинге | 2–3 дня |
+| 2 | **Тип `GameSyncPayload`** вместо `any` в sync | LSP, меньше silent-багов | 1 день |
 
 ---
 
@@ -79,9 +79,9 @@
 | `nriService.ts` строк | ~2920 | < 800 на файл |
 | `createApp.ts` строк | ~298 | < 400 (+ mount*) |
 | `useGameState.ts` строк | ~1900 | < 600 на хук |
-| Vitest тесты | 116 | расти с каждым API-slice |
+| Vitest тесты | 121 | расти с каждым API-slice |
 | `npm run build` | зелёный | обязательно в CI |
 
 ---
 
-*Коммиты: `6e265cc` — coop engine + combatant routes; следующий — mountCoopRoutes + auth slice.*
+*Коммиты: `a8e9e46` — mountCoopRoutes; `…` — validateSheetConditions.*

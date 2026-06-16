@@ -12,6 +12,7 @@ import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.
 import { mountNriLoreTravelRoutes, propagatePlaceUpdate } from './nriLoreTravel.js';
 import { mountNriItemTransferRoutes } from './nriItemTransfer.js';
 import { mountNriCombatantRoutes } from './nriCombatantRoutes.js';
+import { rejectIfInvalidSheetConditions } from './sheetConditionGate.js';
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function genInviteCode() {
     let tail = '';
@@ -1328,12 +1329,14 @@ export function mountNriService(app, deps) {
                 if (!preset) {
                     return sendApiError(res, 409, 'NRI_PRESET_TAKEN', 'Этот персонаж недоступен, уже занят или не опубликован.');
                 }
+                const mergedSheet = mergePlayerSheetFromPreset(preset.sheet, displayName.trim(), sheet);
+                if (mergedSheet && rejectIfInvalidSheetConditions(res, mergedSheet, sendApiError))
+                    return;
                 player = await prisma.$transaction(async (tx) => {
                     await tx.nriPresetCharacter.update({
                         where: { id: preset.id },
                         data: { claimedByUserId: auth.userId },
                     });
-                    const mergedSheet = mergePlayerSheetFromPreset(preset.sheet, displayName.trim(), sheet);
                     return tx.nriPlayer.upsert({
                         where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
                         create: {
@@ -1370,6 +1373,8 @@ export function mountNriService(app, deps) {
                 const sheetPayload = sheet && typeof sheet === 'object' && sheet.abilities?.STR != null
                     ? sheet
                     : undefined;
+                if (sheetPayload && rejectIfInvalidSheetConditions(res, sheetPayload, sendApiError))
+                    return;
                 const inventoryPayload = Array.isArray(inventory) ? inventory : [];
                 player = await prisma.nriPlayer.upsert({
                     where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
@@ -1421,6 +1426,8 @@ export function mountNriService(app, deps) {
             const nextSheet = sheet !== undefined && sheet && typeof sheet === 'object'
                 ? { ...prevSheet, ...sheet }
                 : prevSheet;
+            if (rejectIfInvalidSheetConditions(res, nextSheet, sendApiError))
+                return;
             const updated = await prisma.nriPlayer.update({
                 where: { id: player.id },
                 data: {
@@ -1790,13 +1797,17 @@ export function mountNriService(app, deps) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_NOT_HOST', 'Персонажей создаёт только мастер.');
             }
+            const parsedPresetSheet = parseJsonField(sheet);
+            if (parsedPresetSheet !== null && rejectIfInvalidSheetConditions(res, parsedPresetSheet, sendApiError)) {
+                return;
+            }
             const preset = await prisma.nriPresetCharacter.create({
                 data: {
                     sessionId: session.id,
                     label: label.trim().slice(0, 60),
                     classId: classId.trim(),
                     inventory: Array.isArray(inventory) ? inventory : [],
-                    sheet: parseJsonField(sheet) ?? undefined,
+                    sheet: parsedPresetSheet ?? undefined,
                     portraitUrl: typeof portraitUrl === 'string' && portraitUrl.trim() ? portraitUrl.trim().slice(0, 2000) : null,
                     sortOrder: typeof sortOrder === 'number' ? sortOrder : 0,
                     publishedToPlayers: publishedToPlayers !== false,
@@ -1837,6 +1848,8 @@ export function mountNriService(app, deps) {
                 }
             }
             const nextSheet = sheet !== undefined ? parseJsonField(sheet) ?? undefined : undefined;
+            if (nextSheet !== undefined && rejectIfInvalidSheetConditions(res, nextSheet, sendApiError))
+                return;
             const preset = await prisma.nriPresetCharacter.update({
                 where: { id: presetId },
                 data: {
@@ -1863,13 +1876,17 @@ export function mountNriService(app, deps) {
                     const prevSheet = player.sheet && typeof player.sheet === 'object'
                         ? { ...player.sheet }
                         : {};
+                    const mergedPlayerSheet = nextSheet ? { ...prevSheet, ...nextSheet } : null;
+                    if (mergedPlayerSheet && rejectIfInvalidSheetConditions(res, mergedPlayerSheet, sendApiError)) {
+                        return;
+                    }
                     await prisma.nriPlayer.update({
                         where: { id: player.id },
                         data: {
                             ...(typeof label === 'string' && label.trim()
                                 ? { displayName: label.trim().slice(0, 40) }
                                 : {}),
-                            ...(nextSheet ? { sheet: { ...prevSheet, ...nextSheet } } : {}),
+                            ...(mergedPlayerSheet ? { sheet: mergedPlayerSheet } : {}),
                         },
                     });
                 }

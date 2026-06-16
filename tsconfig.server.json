@@ -13,6 +13,6 @@
     "sourceMap": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["server/**/*.ts", "shared/nri-domain/**/*.ts"],
+  "include": ["server/**/*.ts", "shared/nri-domain/**/*.ts", "shared/api-schemas/**/*.ts"],
   "exclude": ["server/**/*.test.ts", "shared/**/*.test.ts", "node_modules", "dist_server"]
 }

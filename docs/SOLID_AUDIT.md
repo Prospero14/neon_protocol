@@ -26,6 +26,7 @@
 - [x] `server/coop/coopMatchStore.ts` + `server/databasePath.ts` (вынесено из монолита createApp)
 - [x] `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts`
 - [x] `shared/nri-domain/validateSheetConditions.ts` — серверная проверка condition id на PATCH листа
+- [x] `shared/api-schemas/` — Zod auth + game/sync, `GameSyncPayload`
 - [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---
@@ -35,7 +36,7 @@
 | Принцип | Статус | Заметка |
 |---------|--------|---------|
 | OCP | ⚠️ | Новый NRI endpoint = правки god-файлов |
-| LSP | ⚠️ | `game/sync` payload с `any` |
+| LSP | ⚠️ | `game/sync` типизирован (`GameSyncPayload`); NRI body — частично |
 | ISP | ⚠️ | Панели импортируют весь `nriApi` |
 | DIP | ⚠️ | Prisma/fetch напрямую; domain layer только для consume |
 

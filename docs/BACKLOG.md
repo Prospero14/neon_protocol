@@ -18,6 +18,7 @@
 | HTTP-тест persist матча + 116 unit/integration тестов | ✅ |
 | `server/coop/mountCoopRoutes.ts` — все `/neon_v1/coop/*` вынесены из `createApp.ts` | ✅ |
 | Серверная валидация `activeConditions` (`validateSheetConditions`) | ✅ |
+| Zod-схемы auth + `game/sync`, тип `GameSyncPayload` | ✅ (NRI routes — далее) |
 
 ---
 
@@ -25,8 +26,7 @@
 
 | # | Задача | Зачем | Оценка |
 |---|--------|-------|--------|
-| 1 | **OpenAPI или Zod-схемы** для `/neon_v1/auth/*`, `game/sync`, ключевых NRI routes | Регрессии при рефакторинге | 2–3 дня |
-| 2 | **Тип `GameSyncPayload`** вместо `any` в sync | LSP, меньше silent-багов | 1 день |
+| 1 | **Zod-схемы ключевых NRI routes** (player PATCH, items/use, session join) | Дополнить auth/sync | 1–2 дня |
 
 ---
 
@@ -79,7 +79,7 @@
 | `nriService.ts` строк | ~2920 | < 800 на файл |
 | `createApp.ts` строк | ~298 | < 400 (+ mount*) |
 | `useGameState.ts` строк | ~1900 | < 600 на хук |
-| Vitest тесты | 121 | расти с каждым API-slice |
+| Vitest тесты | 125 | расти с каждым API-slice |
 | `npm run build` | зелёный | обязательно в CI |
 
 ---

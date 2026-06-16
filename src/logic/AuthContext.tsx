@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import type { GameSyncPayload } from '../../shared/api-schemas/gameSync';
 import { readNeonAuthToken } from './authTokenStorage';
 
 interface User {
@@ -12,7 +13,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
-  syncGameState: (state: any) => Promise<void>;
+  syncGameState: (state: GameSyncPayload) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -52,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.href = '/'; // Force redirect to root and reload
   };
 
-  const syncGameState = async (state: any) => {
+  const syncGameState = async (state: GameSyncPayload) => {
     const authToken = readNeonAuthToken() ?? token;
     if (!authToken) return;
     try {

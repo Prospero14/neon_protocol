@@ -8,6 +8,9 @@ import path from 'path';
 import fs from 'fs';
 import { mountCoopRoutes } from './coop/mountCoopRoutes.js';
 import { registerNeonServices } from './services/registerServices.js';
+import { authCredentialsSchema } from '../shared/api-schemas/auth.js';
+import { gameSyncPayloadSchema } from '../shared/api-schemas/gameSync.js';
+import { parseRequestBody } from '../shared/api-schemas/parseBody.js';
 
 
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
@@ -87,12 +90,11 @@ export function createApp(opts: CreateAppOptions) {
 
   app.post('/neon_v1/auth/register', async (req, res) => {
     try {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const username = typeof body.username === 'string' ? body.username.trim() : '';
-      const password = typeof body.password === 'string' ? body.password : '';
-      if (!username || !password) {
-        return sendApiError(res, 400, 'REGISTER_INVALID_INPUT', 'Укажите логин и пароль.');
+      const parsed = parseRequestBody(authCredentialsSchema, req.body);
+      if (!parsed.ok) {
+        return sendApiError(res, 400, 'REGISTER_INVALID_INPUT', parsed.message);
       }
+      const { username, password } = parsed.data;
       const hashedPassword = await bcrypt.hash(password, 10);
       const starterDeck = [
         { id: 'script_ping', count: 1 },
@@ -137,11 +139,11 @@ export function createApp(opts: CreateAppOptions) {
 
   app.post('/neon_v1/auth/login', async (req, res) => {
     try {
-      const body = (req.body ?? {}) as Record<string, unknown>;
-      const username = typeof body.username === 'string' ? body.username.trim() : '';
-      const password = typeof body.password === 'string' ? body.password : '';
-      if (!username || !password)
+      const parsed = parseRequestBody(authCredentialsSchema, req.body);
+      if (!parsed.ok) {
         return sendApiError(res, 401, 'LOGIN_REJECTED', 'Неверный логин или пароль.');
+      }
+      const { username, password } = parsed.data;
       let user: any;
       try {
         user = await prisma.user.findUnique({ where: { username }, include: { gameState: true } });
@@ -198,7 +200,11 @@ export function createApp(opts: CreateAppOptions) {
         bodyToken;
       if (!token) return sendApiError(res, 401, 'SYNC_NO_TOKEN', 'Нет токена авторизации.');
       const decoded = jwt.verify(token, jwtSecret) as { userId: string };
-      const body = req.body as Record<string, unknown>;
+      const parsed = parseRequestBody(gameSyncPayloadSchema, req.body);
+      if (!parsed.ok) {
+        return sendApiError(res, 400, 'SYNC_INVALID_BODY', parsed.message);
+      }
+      const body = parsed.data;
       const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;
       let updatedState: unknown;
       try {

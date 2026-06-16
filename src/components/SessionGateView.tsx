@@ -4,7 +4,6 @@ import type { SessionMode, CoopRole } from '../logic/sessionMode';
 import { COOP_ROLES, COOP_ROLE_LABELS } from '../logic/sessionMode';
 import type { CoopClassSave } from '../logic/coopClassProfiles';
 import type { CreationResumeInfo } from '../logic/hooks/useGameState';
-import { isNriPublicEnabled } from '../logic/nriFeatureFlags';
 
 type Phase = 'mode' | 'roster';
 
@@ -14,6 +13,8 @@ export interface SessionGateViewProps {
   homeDistrictId: string;
   coopClassProfiles: Partial<Record<CoopRole, CoopClassSave>>;
   pendingNriInvite?: string | null;
+  nriGuestInviteCode?: string | null;
+  soloCoopBlocked?: boolean;
   onEnterSolo: () => void;
   onEnterCoop: (role?: CoopRole) => void;
   onCreateNri: (title?: string) => void;
@@ -27,6 +28,8 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   homeDistrictId,
   coopClassProfiles,
   pendingNriInvite,
+  nriGuestInviteCode,
+  soloCoopBlocked = false,
   onEnterSolo,
   onEnterCoop,
   onCreateNri,
@@ -36,7 +39,8 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const [phase, setPhase] = useState<Phase>('mode');
   const [pickedMode, setPickedMode] = useState<SessionMode | null>(null);
   const [nriTitle, setNriTitle] = useState('');
-  const [nriCodeInput, setNriCodeInput] = useState(pendingNriInvite ?? '');
+  const nriCodeHint = pendingNriInvite ?? nriGuestInviteCode ?? '';
+  const [nriCodeInput, setNriCodeInput] = useState(nriCodeHint);
 
   const soloExists = creationResume?.soloPersonaExists ?? false;
   const coopExists = creationResume?.coopEstablished ?? false;
@@ -44,9 +48,9 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const coopSlotsFull = existingCoopRoles.length >= COOP_ROLES.length;
   const homeLabel = MAP_NODES.find((n) => n.id === homeDistrictId)?.name ?? homeDistrictId;
   const displayName = playerName !== 'ID_НЕИЗВЕСТЕН' ? playerName : '—';
-  const nriEnabled = isNriPublicEnabled();
 
   const pickMode = (mode: SessionMode) => {
+    if (soloCoopBlocked && (mode === 'solo' || mode === 'coop')) return;
     setPickedMode(mode);
     setPhase('roster');
   };
@@ -65,48 +69,58 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <p className="session-resume-gate__hint session-gate__hint">
             Затем — список персонажей этого режима и вход или создание нового профиля.
           </p>
-          {pendingNriInvite && !nriEnabled && (
+          {soloCoopBlocked && (
             <div className="nri-dev-gate__banner mono-text">
-              Стол <strong>{pendingNriInvite}</strong> — режим НРИ <strong>в разработке</strong> на этом сервере.
-              Выберите Solo или Co-op.
+              <strong>Solo</strong> и <strong>Co-op</strong> — <strong>в разработке</strong> для гостей по
+              ссылке на НРИ-стол.
+              {nriCodeHint ? (
+                <>
+                  {' '}
+                  Вернитесь к столу <strong>{nriCodeHint}</strong> через режим НРИ.
+                </>
+              ) : (
+                ' Используйте режим НРИ.'
+              )}
             </div>
           )}
-          {pendingNriInvite && nriEnabled && (
+          {nriCodeHint && !soloCoopBlocked && (
             <div className="session-gate__nri-banner mono-text">
-              Приглашение на стол <strong>{pendingNriInvite}</strong> — выберите НРИ и войдите.
+              Приглашение на стол <strong>{nriCodeHint}</strong> — выберите НРИ и войдите.
             </div>
           )}
-          <div className={`session-resume-gate__actions session-gate__mode-row ${nriEnabled ? 'session-gate__mode-row--3' : 'session-gate__mode-row--2'}`}>
+          <div className="session-resume-gate__actions session-gate__mode-row session-gate__mode-row--3">
             <button
               type="button"
-              className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''}`}
+              className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''} ${soloCoopBlocked ? 'session-gate__mode-btn--disabled' : ''}`}
+              disabled={soloCoopBlocked}
               onClick={() => pickMode('solo')}
             >
               <span className="session-gate__mode-title">SOLO</span>
               <span className="session-gate__mode-sub">
-                {soloExists ? 'персонаж в сети' : 'профиль ещё не создан'}
+                {soloCoopBlocked ? 'в разработке' : soloExists ? 'персонаж в сети' : 'профиль ещё не создан'}
               </span>
             </button>
             <button
               type="button"
-              className={`session-resume-btn session-resume-btn--coop session-gate__mode-btn ${coopExists ? 'session-gate__mode-btn--ready' : ''}`}
+              className={`session-resume-btn session-resume-btn--coop session-gate__mode-btn ${coopExists ? 'session-gate__mode-btn--ready' : ''} ${soloCoopBlocked ? 'session-gate__mode-btn--disabled' : ''}`}
+              disabled={soloCoopBlocked}
               onClick={() => pickMode('coop')}
             >
               <span className="session-gate__mode-title">CO-OP</span>
               <span className="session-gate__mode-sub">
-                {coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
+                {soloCoopBlocked ? 'в разработке' : coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
               </span>
             </button>
-            {nriEnabled && (
             <button
               type="button"
               className="session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri"
               onClick={() => pickMode('nri')}
             >
               <span className="session-gate__mode-title">НРИ</span>
-              <span className="session-gate__mode-sub">стол + чат по ссылке</span>
+              <span className="session-gate__mode-sub">
+                {nriCodeHint ? `стол ${nriCodeHint}` : 'стол + чат по ссылке'}
+              </span>
             </button>
-            )}
           </div>
         </div>
       </div>

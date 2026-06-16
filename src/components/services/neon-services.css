@@ -1239,6 +1239,11 @@
   text-align: left;
 }
 
+.session-gate__mode-btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .session-gate__mode-btn--nri {
   border-color: rgba(200, 140, 255, 0.5) !important;
 }

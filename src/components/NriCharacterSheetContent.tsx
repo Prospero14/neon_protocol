@@ -165,7 +165,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           label="CURRENT BLOOD TOX"
           value={augmentations.length > 0 || bloodToxCurrent > 0 ? String(bloodToxCurrent) : '0'}
         />
-        <Field label="VICE" value={sheet?.vice} />
+        <Field label="ПОРОК" value={sheet?.vice} />
         <Field
           label="WONLONGS"
           value={
@@ -253,7 +253,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         </ul>
         {sheet?.vice && (
           <p className="mono-text nri-c2185-trait">
-            <strong>Vice:</strong> {sheet.vice}
+            <strong>Порок:</strong> {sheet.vice}
           </p>
         )}
         {sheet?.notes && <p className="mono-text opacity-70">{sheet.notes}</p>}

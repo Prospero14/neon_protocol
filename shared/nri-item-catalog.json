@@ -1,7 +1,7 @@
 [
   {
     "id": "cons_cola",
-    "name": "Spritely Cola",
+    "name": "Бодрая кола",
     "blurb": "Газировка с синтетическим сахаром. +1 к настроению, 0 к бою.",
     "category": "consumable",
     "slot": "quick",
@@ -12,7 +12,7 @@
   },
   {
     "id": "cons_noodles",
-    "name": "Synth Noodles Cup",
+    "name": "Стакан синто-лапши",
     "blurb": "Лапша из автомата. Сытость на пару часов.",
     "category": "consumable",
     "slot": "quick",
@@ -23,7 +23,7 @@
   },
   {
     "id": "cons_medstim",
-    "name": "MediStim (однораз.)",
+    "name": "МедиСтим (однораз.)",
     "blurb": "Наноботы в шприце — на столе восстанавливает 1d8 HP (действие).",
     "category": "consumable",
     "slot": "quick",
@@ -34,7 +34,7 @@
   },
   {
     "id": "drug_boost",
-    "name": "Boost (стим)",
+    "name": "Буст (стим)",
     "blurb": "Уличный стимулятор. На 10 мин +1 DEX; потом усталость (мастер).",
     "category": "drug",
     "slot": "quick",
@@ -48,7 +48,7 @@
   },
   {
     "id": "drug_synthcoke",
-    "name": "Synthcoke",
+    "name": "Синтококаин",
     "blurb": "Корп-чистый кокаин-аналог. Эйфория, риск зависимости.",
     "category": "drug",
     "slot": "quick",
@@ -59,7 +59,7 @@
   },
   {
     "id": "w_mono_knife",
-    "name": "Mono-knife",
+    "name": "Мононож",
     "blurb": "Мономолекулярное лезвие — стандарт улицы.",
     "category": "weapon",
     "slot": "weapon",
@@ -76,7 +76,7 @@
   },
   {
     "id": "w_katana",
-    "name": "Katana",
+    "name": "Катана",
     "blurb": "Классическая сабля — стиль и урон.",
     "category": "weapon",
     "slot": "weapon",
@@ -111,7 +111,7 @@
   },
   {
     "id": "w_pistol",
-    "name": "Heavy Pistol",
+    "name": "Тяжёлый пистолет",
     "blurb": "Стандартный пистолет 10mm.",
     "category": "weapon",
     "slot": "weapon",
@@ -128,7 +128,7 @@
   },
   {
     "id": "w_smg",
-    "name": "Compact SMG",
+    "name": "Компактный ПП",
     "blurb": "Автоматический пистолет-пулемёт.",
     "category": "weapon",
     "slot": "weapon",
@@ -145,7 +145,7 @@
   },
   {
     "id": "w_shotgun",
-    "name": "Pump Shotgun",
+    "name": "Помповый дробовик",
     "blurb": "Помповый дробовик — близко и больно.",
     "category": "weapon",
     "slot": "weapon",
@@ -162,7 +162,7 @@
   },
   {
     "id": "a_light_jacket",
-    "name": "Light armored jacket",
+    "name": "Лёгкая бронекуртка",
     "blurb": "Куртка с кевларовыми вставками.",
     "category": "armor",
     "slot": "armor",
@@ -174,7 +174,7 @@
   },
   {
     "id": "a_medium_vest",
-    "name": "Medium armor vest",
+    "name": "Средний бронежилет",
     "blurb": "Плитник среднего класса.",
     "category": "armor",
     "slot": "armor",
@@ -189,7 +189,7 @@
   },
   {
     "id": "a_corp_suit",
-    "name": "Armored corp suit",
+    "name": "Бронекостюм корпа",
     "blurb": "Костюм с тонкой бронёй — выглядит дорого.",
     "category": "armor",
     "slot": "armor",
@@ -205,7 +205,7 @@
   },
   {
     "id": "g_cyberdeck",
-    "name": "Cyberdeck (basic)",
+    "name": "Кибердека (базовая)",
     "blurb": "Дека для хакинга — не оружие, но без неё ICE не взять.",
     "category": "gear",
     "slot": "accessory",
@@ -237,7 +237,7 @@
   },
   {
     "id": "g_binoculars",
-    "name": "Optics binoculars",
+    "name": "Бинокль с дальномером",
     "blurb": "Оптика с дальномером — +1 к Perception на дистанции (мастер).",
     "category": "gear",
     "slot": "accessory",
@@ -248,7 +248,7 @@
   },
   {
     "id": "g_lockpick",
-    "name": "Lockpick set",
+    "name": "Набор отмычек",
     "blurb": "Отмычки и bypass-инструменты.",
     "category": "gear",
     "slot": "accessory",
@@ -262,7 +262,7 @@
   },
   {
     "id": "g_medkit",
-    "name": "Field medkit",
+    "name": "Полевая аптечка",
     "blurb": "Аптечка — Medicine +1 при лечении союзников.",
     "category": "gear",
     "slot": "accessory",
@@ -276,7 +276,7 @@
   },
   {
     "id": "g_jammer",
-    "name": "Pocket jammer",
+    "name": "Карманный глушитель",
     "blurb": "Глушит локальные сигналы на 1 мин (1/день).",
     "category": "gear",
     "slot": "accessory",
@@ -287,7 +287,7 @@
   },
   {
     "id": "g_interface",
-    "name": "Interface plugs",
+    "name": "Интерфейсные разъёмы",
     "blurb": "Разъёмы для прямого подключения к деке.",
     "category": "gear",
     "slot": "accessory",
@@ -298,7 +298,7 @@
   },
   {
     "id": "ammo_9mm",
-    "name": "9mm ammo (30 rds)",
+    "name": "Патроны 9 мм (30)",
     "blurb": "Патроны для пистолета / SMG.",
     "category": "ammo",
     "slot": "quick",
@@ -309,7 +309,7 @@
   },
   {
     "id": "g_smart_glasses",
-    "name": "Smart glasses",
+    "name": "Умные очки",
     "blurb": "AR-линзы — доп. слой данных в периферии.",
     "category": "gear",
     "slot": "accessory",
@@ -323,7 +323,7 @@
   },
   {
     "id": "g_chrome_hand",
-    "name": "Chrome knuckles",
+    "name": "Хромовые кастеты",
     "blurb": "Кастет с хромом — ближний бой без открытого оружия.",
     "category": "weapon",
     "slot": "weapon",
@@ -338,77 +338,1371 @@
       "ближний"
     ]
   },
-  {"id":"w_revolver","name":"Revolver .44","blurb":"Тяжёлый револьвер — надёжный ствол улицы.","category":"weapon","slot":"weapon","attack":{"damageDice":"2d6","damageType":"ballistic","ability":"DEX"},"priceWonlongs":420,"tags":["оружие","дальний"]},
-  {"id":"w_assault_rifle","name":"Assault rifle","blurb":"Штурмовая винтовка с селектором огня.","category":"weapon","slot":"weapon","attack":{"damageDice":"2d8","damageType":"ballistic","ability":"DEX"},"priceWonlongs":1200,"tags":["оружие","дальний"]},
-  {"id":"w_sniper","name":"Sniper rifle","blurb":"Снайперская — дальний бой, нужен навык.","category":"weapon","slot":"weapon","attack":{"damageDice":"3d8","damageType":"ballistic","ability":"DEX"},"priceWonlongs":1800,"tags":["оружие","дальний"]},
-  {"id":"w_machete","name":"Machete","blurb":"Мачете для джунглей и переулков.","category":"weapon","slot":"weapon","attack":{"damageDice":"1d6","damageType":"slashing","ability":"STR"},"priceWonlongs":90,"tags":["оружие","ближний"]},
-  {"id":"w_taser","name":"Taser X2","blurb":"Электрошокер — оглушение (мастер).","category":"weapon","slot":"weapon","attack":{"damageDice":"1d4","damageType":"blunt","ability":"DEX"},"priceWonlongs":280,"tags":["оружие","ближний"]},
-  {"id":"w_frag_grenade","name":"Frag grenade","blurb":"Осколочная — одноразовая, радиус (мастер).","category":"weapon","slot":"quick","priceWonlongs":150,"tags":["оружие","взрыв"]},
-  {"id":"w_lmg","name":"LMG squad","blurb":"Ручной пулемёт — подавление огнём.","category":"weapon","slot":"weapon","attack":{"damageDice":"2d10","damageType":"ballistic","ability":"STR"},"c2185Mods":{"DEX":-1},"priceWonlongs":2200,"tags":["оружие","дальний"]},
-  {"id":"w_monowire","name":"Monowire whip","blurb":"Мононить в кибер-руке — стиль assassin.","category":"weapon","slot":"weapon","attack":{"damageDice":"2d6","damageType":"slashing","ability":"DEX"},"priceWonlongs":950,"tags":["оружие","ближний","кибер"]},
-  {"id":"w_dartgun","name":"Dart pistol","blurb":"Дротики с ядом или транквилизатором.","category":"weapon","slot":"weapon","attack":{"damageDice":"1d4","damageType":"piercing","ability":"DEX"},"priceWonlongs":380,"tags":["оружие","дальний"]},
-  {"id":"w_riot_baton","name":"Riot baton","blurb":"Полицейская дубинка с разрядом.","category":"weapon","slot":"weapon","attack":{"damageDice":"1d6","damageType":"blunt","ability":"STR"},"priceWonlongs":140,"tags":["оружие","ближний"]},
-  {"id":"w_chainsaw","name":"Chainsaw (mod)","blurb":"Бензопила — шумно, страшно, эффективно.","category":"weapon","slot":"weapon","attack":{"damageDice":"2d6","damageType":"slashing","ability":"STR"},"priceWonlongs":650,"tags":["оружие","ближний"]},
-  {"id":"w_crossbow","name":"Crossbow (silent)","blurb":"Арбалет с глушителем механики.","category":"weapon","slot":"weapon","attack":{"damageDice":"1d8","damageType":"piercing","ability":"DEX"},"priceWonlongs":320,"tags":["оружие","дальний","скрытное"]},
-  {"id":"a_heavy_plate","name":"Heavy plate carrier","blurb":"Тяжёлый плитник — максимум защиты.","category":"armor","slot":"armor","acBonus":4,"c2185Mods":{"DEX":-2},"priceWonlongs":1500,"tags":["броня"]},
-  {"id":"a_riot_helmet","name":"Riot helmet","blurb":"Шлем с забралом — защита головы.","category":"armor","slot":"accessory","acBonus":1,"priceWonlongs":180,"tags":["броня"]},
-  {"id":"a_ballistic_shield","name":"Ballistic shield","blurb":"Щит SWAT — укрытие +1 AC (мастер).","category":"armor","slot":"accessory","acBonus":2,"c2185Mods":{"DEX":-1},"priceWonlongs":700,"tags":["броня"]},
-  {"id":"a_stealth_cloak","name":"Stealth cloak","blurb":"Маскировка и IR-поглощение.","category":"armor","slot":"armor","acBonus":1,"c2185Mods":{"DEX":1},"priceWonlongs":550,"tags":["броня","скрытное"]},
-  {"id":"a_riot_gear","name":"Riot gear set","blurb":"Комплект силовика — торс и ноги.","category":"armor","slot":"armor","acBonus":3,"c2185Mods":{"DEX":-1},"priceWonlongs":1100,"tags":["броня"]},
-  {"id":"a_synthskin_suit","name":"Synthskin bodysuit","blurb":"Вторая кожа — лёгкая защита, незаметность.","category":"armor","slot":"armor","acBonus":1,"priceWonlongs":400,"tags":["броня","косметика"]},
-  {"id":"a_gas_hood","name":"Chem hood","blurb":"Капюшон с фильтром — химзащита головы.","category":"armor","slot":"accessory","priceWonlongs":120,"tags":["броня","хим"]},
-  {"id":"a_exec_overcoat","name":"Exec overcoat","blurb":"Пальто с броневставками — стиль корпа.","category":"armor","slot":"armor","acBonus":2,"c2185Mods":{"PEO":1},"priceWonlongs":900,"tags":["броня","корп"]},
-  {"id":"g_drone_scout","name":"Scout micro-drone","blurb":"Разведдрон — Perception на дистанции (мастер).","category":"gear","slot":"accessory","c2185Mods":{"INT":1},"priceWonlongs":520,"tags":["тех","разведка"]},
-  {"id":"g_grapple_gun","name":"Grapple launcher","blurb":"Крюк-катушка для вертикального доступа.","category":"gear","slot":"accessory","priceWonlongs":380,"tags":["тех","мобильность"]},
-  {"id":"g_flashbang","name":"Flashbang","blurb":"Светошумовая — ослепление (1 бой).","category":"gear","slot":"quick","priceWonlongs":60,"tags":["тактика"]},
-  {"id":"g_emp_grenade","name":"EMP grenade","blurb":"Импульс — глушит кибер и дроны.","category":"gear","slot":"quick","priceWonlongs":220,"tags":["тех","тактика"]},
-  {"id":"g_translator","name":"Auto-translator","blurb":"Нейро-переводчик диалектов мегаполиса.","category":"gear","slot":"accessory","c2185Mods":{"PEO":1},"priceWonlongs":290,"tags":["тех","социал"]},
-  {"id":"g_forgery_kit","name":"Forgery kit","blurb":"Подделка документов и пропусков.","category":"gear","slot":"accessory","c2185Mods":{"INT":1},"priceWonlongs":340,"tags":["криминал"]},
-  {"id":"g_data_shard","name":"Encrypted data shard","blurb":"Шард с данными — квестовый или продажный.","category":"gear","slot":"accessory","priceWonlongs":0,"tags":["данные"]},
-  {"id":"g_trauma_injector","name":"Trauma team beacon","blurb":"Маяк Trauma Team — один вызов (мастер).","category":"gear","slot":"quick","priceWonlongs":500,"tags":["медицина","корп"]},
-  {"id":"g_climbing_kit","name":"Climbing kit","blurb":"Верёвка, лазы, магниты — Athletics.","category":"gear","slot":"accessory","priceWonlongs":110,"tags":["выживание"]},
-  {"id":"g_gas_mask","name":"Gas mask","blurb":"Противогаз — фильтрация токсинов.","category":"gear","slot":"accessory","priceWonlongs":95,"tags":["хим"]},
-  {"id":"g_thermal_goggles","name":"Thermal goggles","blurb":"Тепловизор — видеть в темноте.","category":"gear","slot":"accessory","c2185Mods":{"INT":1},"priceWonlongs":420,"tags":["разведка"]},
-  {"id":"g_voice_mask","name":"Voice modulator","blurb":"Смена голоса — Deception.","category":"gear","slot":"accessory","priceWonlongs":260,"tags":["социал"]},
-  {"id":"g_credstick","name":"Credstick (blank)","blurb":"Пустой кредстик — для серых переводов.","category":"gear","slot":"accessory","priceWonlongs":25,"tags":["экономика"]},
-  {"id":"g_fake_sinner","name":"Fake SIN","blurb":"Поддельный ID — один сеанс проверки (мастер).","category":"gear","slot":"accessory","priceWonlongs":800,"tags":["криминал"]},
-  {"id":"g_toolkit","name":"Tech toolkit","blurb":"Инструменты механика — Mechanics +1.","category":"gear","slot":"accessory","c2185Mods":{"TEC":1},"priceWonlongs":175,"tags":["тех"]},
-  {"id":"g_holoprojector","name":"Holoprojector","blurb":"Голограмма для отвлечения.","category":"gear","slot":"accessory","priceWonlongs":310,"tags":["тех","тактика"]},
-  {"id":"g_burner_phone","name":"Burner phone","blurb":"Одноразовый номер — без трассировки.","category":"gear","slot":"accessory","priceWonlongs":40,"tags":["коммс"]},
-  {"id":"g_rebreather","name":"Rebreather","blurb":"Ребризер — дыхание под водой 30 мин.","category":"gear","slot":"accessory","priceWonlongs":280,"tags":["выживание"]},
-  {"id":"g_signal_scanner","name":"Signal scanner","blurb":"Сканер сетей — Hacking prep.","category":"gear","slot":"accessory","c2185Mods":{"TEC":1},"priceWonlongs":360,"tags":["тех","хакинг"]},
-  {"id":"g_handcuffs","name":"Magn cuffs","blurb":"Магнитные наручники.","category":"gear","slot":"accessory","priceWonlongs":70,"tags":["тактика"]},
-  {"id":"g_chameleon_coat","name":"Chameleon liner","blurb":"Активный камуфляж — Stealth (мастер).","category":"gear","slot":"accessory","priceWonlongs":680,"tags":["скрытное"]},
-  {"id":"cons_water","name":"Filtered water","blurb":"Очищенная вода в тубе.","category":"consumable","slot":"quick","priceWonlongs":2,"tags":["еда"]},
-  {"id":"cons_rations","name":"MRE ration","blurb":"Сухпаёк корп-армии.","category":"consumable","slot":"quick","priceWonlongs":15,"tags":["еда"]},
-  {"id":"cons_coffee","name":"Synth coffee","blurb":"Кофеин — снимает −1 усталости (мастер).","category":"consumable","slot":"quick","priceWonlongs":5,"tags":["еда"]},
-  {"id":"cons_protein_bar","name":"Protein bar","blurb":"Белковый батончик — быстрая сытость.","category":"consumable","slot":"quick","priceWonlongs":6,"tags":["еда"]},
-  {"id":"cons_antirad","name":"Anti-rad pills","blurb":"Йодид и нанофильтры — радиация (мастер).","category":"consumable","slot":"quick","priceWonlongs":45,"tags":["медицина"]},
-  {"id":"cons_bandage","name":"Bandage pack","blurb":"Бинты — стабилизация 1d4 HP (действие).","category":"consumable","slot":"quick","priceWonlongs":25,"tags":["медицина"]},
-  {"id":"cons_sleep_patch","name":"Sleep patch","blurb":"Патч сна — 4 часа отдыха за 1 час.","category":"consumable","slot":"quick","priceWonlongs":35,"tags":["медицина"]},
-  {"id":"cons_antidote","name":"Broad antidote","blurb":"Универсальный антидот — один тип яда.","category":"consumable","slot":"quick","priceWonlongs":90,"tags":["медицина"]},
-  {"id":"cons_energy","name":"Energy drink MAX","blurb":"Энергетик — +1 Initiative на бой.","category":"consumable","slot":"quick","priceWonlongs":12,"tags":["еда"]},
-  {"id":"cons_hotdog","name":"Street hotdog","blurb":"Хот-дог с соусом неизвестного происхождения.","category":"consumable","slot":"quick","priceWonlongs":4,"tags":["еда"]},
-  {"id":"cons_oxygen","name":"Oxygen can","blurb":"Баллон кислорода — 10 мин в дыму.","category":"consumable","slot":"quick","priceWonlongs":30,"tags":["выживание"]},
-  {"id":"drug_bliss","name":"Bliss tab","blurb":"Эйфорик — социальные бонусы, риск зависимости.","category":"drug","slot":"quick","c2185Mods":{"PEO":1},"priceWonlongs":80,"tags":["нарко"]},
-  {"id":"drug_shard","name":"Shard dust","blurb":"Кристаллический стим — +1 REF на час.","category":"drug","slot":"quick","c2185Mods":{"DEX":1},"priceWonlongs":120,"tags":["нарко"]},
-  {"id":"drug_redline","name":"Redline","blurb":"Военный стим — +2 STR, crash после.","category":"drug","slot":"quick","c2185Mods":{"STR":2},"priceWonlongs":180,"tags":["нарко","боевой"]},
-  {"id":"drug_dorph","name":"Dorph","blurb":"Обезболивающий — игнор 1 уровня ранения (мастер).","category":"drug","slot":"quick","priceWonlongs":95,"tags":["нарко","медицина"]},
-  {"id":"drug_braindance","name":"Braindance chip","blurb":"BD-чип — эскапизм, −1 INT после (мастер).","category":"drug","slot":"quick","priceWonlongs":60,"tags":["нарко","развлечение"]},
-  {"id":"drug_nanohaze","name":"Nanohaze","blurb":"Нано-туман — галлюцинации, +1 к креативу (мастер).","category":"drug","slot":"quick","priceWonlongs":140,"tags":["нарко"]},
-  {"id":"drug_blacklace","name":"Black Lace","blurb":"Боевой наркотик — ярость, потеря контроля.","category":"drug","slot":"quick","c2185Mods":{"STR":2,"DEX":-1},"priceWonlongs":250,"tags":["нарко","боевой"]},
-  {"id":"drug_juice","name":"Juice vial","blurb":"Уличный коктейль — случайный эффект (мастер).","category":"drug","slot":"quick","priceWonlongs":40,"tags":["нарко"]},
-  {"id":"ammo_10mm","name":"10mm ammo (30 rds)","blurb":"Патроны для тяжёлого пистолета.","category":"ammo","slot":"quick","priceWonlongs":45,"tags":["боеприпасы"]},
-  {"id":"ammo_12g","name":"12g shells (10 rds)","blurb":"Патроны для дробовика.","category":"ammo","slot":"quick","priceWonlongs":55,"tags":["боеприпасы"]},
-  {"id":"ammo_556","name":"5.56mm (60 rds)","blurb":"Штурмовые патроны NATO-стиля.","category":"ammo","slot":"quick","priceWonlongs":90,"tags":["боеприпасы"]},
-  {"id":"ammo_762","name":"7.62mm (40 rds)","blurb":"Патроны для снайперки и LMG.","category":"ammo","slot":"quick","priceWonlongs":110,"tags":["боеприпасы"]},
-  {"id":"ammo_arrow","name":"Bolts (12)","blurb":"Болты для арбалета.","category":"ammo","slot":"quick","priceWonlongs":35,"tags":["боеприпасы"]},
-  {"id":"ammo_tranq","name":"Tranq darts (6)","blurb":"Транквилизатор для дротикомёта.","category":"ammo","slot":"quick","priceWonlongs":70,"tags":["боеприпасы"]},
-  {"id":"ammo_rocket","name":"RPG single round","blurb":"Одна ракета — осторожно с отдачей.","category":"ammo","slot":"quick","priceWonlongs":400,"tags":["боеприпасы","взрыв"]},
-  {"id":"ammo_flametank","name":"Flamethrower tank","blurb":"Баллон топлива для огнемёта.","category":"ammo","slot":"quick","priceWonlongs":180,"tags":["боеприпасы"]},
-  {"id":"g_messenger_case","name":"Courier case","blurb":"Запечатанный кейс — не открывать до доставки.","category":"gear","slot":"accessory","priceWonlongs":0,"tags":["квест"]},
-  {"id":"g_corpo_badge","name":"Corpo badge (clone)","blurb":"Клон пропуска — один уровень доступа (мастер).","category":"gear","slot":"accessory","c2185Mods":{"PEO":1},"priceWonlongs":600,"tags":["корп"]},
-  {"id":"w_stun_baton","name":"Stun baton (charged)","blurb":"Электродубинка с полным зарядом.","category":"weapon","slot":"weapon","attack":{"damageDice":"1d6","damageType":"blunt","ability":"STR"},"priceWonlongs":200,"tags":["оружие","ближний"]},
-  {"id":"cons_smokes","name":"Synth cigarettes","blurb":"Пачка синто-сигарет — vice refill.","category":"consumable","slot":"quick","priceWonlongs":10,"tags":["еда","vice"]},
-  {"id":"g_netrunner_pack","name":"Netrunner travel pack","blurb":"Дека, кабели, ICE-breaker утилиты в рюкзаке.","category":"gear","slot":"accessory","c2185Mods":{"TEC":1,"INT":1},"priceWonlongs":1100,"tags":["тех","хакинг"]}
+  {
+    "id": "w_revolver",
+    "name": "Револьвер .44",
+    "blurb": "Тяжёлый револьвер — надёжный ствол улицы.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d6",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 420,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_assault_rifle",
+    "name": "Штурмовая винтовка",
+    "blurb": "Штурмовая винтовка с селектором огня.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d8",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 1200,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_sniper",
+    "name": "Снайперская винтовка",
+    "blurb": "Снайперская — дальний бой, нужен навык.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "3d8",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 1800,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_machete",
+    "name": "Мачете",
+    "blurb": "Мачете для джунглей и переулков.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d6",
+      "damageType": "slashing",
+      "ability": "STR"
+    },
+    "priceWonlongs": 90,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "w_taser",
+    "name": "Электрошокер X2",
+    "blurb": "Электрошокер — оглушение (мастер).",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d4",
+      "damageType": "blunt",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 280,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "w_frag_grenade",
+    "name": "Осколочная граната",
+    "blurb": "Осколочная — одноразовая, радиус (мастер).",
+    "category": "weapon",
+    "slot": "quick",
+    "priceWonlongs": 150,
+    "tags": [
+      "оружие",
+      "взрыв"
+    ]
+  },
+  {
+    "id": "w_lmg",
+    "name": "Ручной пулемёт",
+    "blurb": "Ручной пулемёт — подавление огнём.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d10",
+      "damageType": "ballistic",
+      "ability": "STR"
+    },
+    "c2185Mods": {
+      "DEX": -1
+    },
+    "priceWonlongs": 2200,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_monowire",
+    "name": "Кнут-мононить",
+    "blurb": "Мононить в кибер-руке — стиль assassin.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d6",
+      "damageType": "slashing",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 950,
+    "tags": [
+      "оружие",
+      "ближний",
+      "кибер"
+    ]
+  },
+  {
+    "id": "w_dartgun",
+    "name": "Дротикомёт",
+    "blurb": "Дротики с ядом или транквилизатором.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d4",
+      "damageType": "piercing",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 380,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_riot_baton",
+    "name": "Полицейская дубинка",
+    "blurb": "Полицейская дубинка с разрядом.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d6",
+      "damageType": "blunt",
+      "ability": "STR"
+    },
+    "priceWonlongs": 140,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "w_chainsaw",
+    "name": "Бензопила (мод)",
+    "blurb": "Бензопила — шумно, страшно, эффективно.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d6",
+      "damageType": "slashing",
+      "ability": "STR"
+    },
+    "priceWonlongs": 650,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "w_crossbow",
+    "name": "Арбалет (тихий)",
+    "blurb": "Арбалет с глушителем механики.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d8",
+      "damageType": "piercing",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 320,
+    "tags": [
+      "оружие",
+      "дальний",
+      "скрытное"
+    ]
+  },
+  {
+    "id": "a_heavy_plate",
+    "name": "Тяжёлый плитник",
+    "blurb": "Тяжёлый плитник — максимум защиты.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 4,
+    "c2185Mods": {
+      "DEX": -2
+    },
+    "priceWonlongs": 1500,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_riot_helmet",
+    "name": "Шлем силовика",
+    "blurb": "Шлем с забралом — защита головы.",
+    "category": "armor",
+    "slot": "accessory",
+    "acBonus": 1,
+    "priceWonlongs": 180,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_ballistic_shield",
+    "name": "Баллистический щит",
+    "blurb": "Щит SWAT — укрытие +1 AC (мастер).",
+    "category": "armor",
+    "slot": "accessory",
+    "acBonus": 2,
+    "c2185Mods": {
+      "DEX": -1
+    },
+    "priceWonlongs": 700,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_stealth_cloak",
+    "name": "Плащ маскировки",
+    "blurb": "Маскировка и IR-поглощение.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 1,
+    "c2185Mods": {
+      "DEX": 1
+    },
+    "priceWonlongs": 550,
+    "tags": [
+      "броня",
+      "скрытное"
+    ]
+  },
+  {
+    "id": "a_riot_gear",
+    "name": "Комплект силовика",
+    "blurb": "Комплект силовика — торс и ноги.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 3,
+    "c2185Mods": {
+      "DEX": -1
+    },
+    "priceWonlongs": 1100,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_synthskin_suit",
+    "name": "Костюм синто-кожи",
+    "blurb": "Вторая кожа — лёгкая защита, незаметность.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 1,
+    "priceWonlongs": 400,
+    "tags": [
+      "броня",
+      "косметика"
+    ]
+  },
+  {
+    "id": "a_gas_hood",
+    "name": "Химкапюшон",
+    "blurb": "Капюшон с фильтром — химзащита головы.",
+    "category": "armor",
+    "slot": "accessory",
+    "priceWonlongs": 120,
+    "tags": [
+      "броня",
+      "хим"
+    ]
+  },
+  {
+    "id": "a_exec_overcoat",
+    "name": "Пальто топ-менеджера",
+    "blurb": "Пальто с броневставками — стиль корпа.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 2,
+    "c2185Mods": {
+      "PEO": 1
+    },
+    "priceWonlongs": 900,
+    "tags": [
+      "броня",
+      "корп"
+    ]
+  },
+  {
+    "id": "g_drone_scout",
+    "name": "Развед-дрон",
+    "blurb": "Разведдрон — Perception на дистанции (мастер).",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "INT": 1
+    },
+    "priceWonlongs": 520,
+    "tags": [
+      "тех",
+      "разведка"
+    ]
+  },
+  {
+    "id": "g_grapple_gun",
+    "name": "Крюк-катушка",
+    "blurb": "Крюк-катушка для вертикального доступа.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 380,
+    "tags": [
+      "тех",
+      "мобильность"
+    ]
+  },
+  {
+    "id": "g_flashbang",
+    "name": "Светошумовая граната",
+    "blurb": "Светошумовая — ослепление (1 бой).",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 60,
+    "tags": [
+      "тактика"
+    ]
+  },
+  {
+    "id": "g_emp_grenade",
+    "name": "ЭМИ-граната",
+    "blurb": "Импульс — глушит кибер и дроны.",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 220,
+    "tags": [
+      "тех",
+      "тактика"
+    ]
+  },
+  {
+    "id": "g_translator",
+    "name": "Автопереводчик",
+    "blurb": "Нейро-переводчик диалектов мегаполиса.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "PEO": 1
+    },
+    "priceWonlongs": 290,
+    "tags": [
+      "тех",
+      "социал"
+    ]
+  },
+  {
+    "id": "g_forgery_kit",
+    "name": "Набор для подделок",
+    "blurb": "Подделка документов и пропусков.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "INT": 1
+    },
+    "priceWonlongs": 340,
+    "tags": [
+      "криминал"
+    ]
+  },
+  {
+    "id": "g_data_shard",
+    "name": "Зашифрованный шард",
+    "blurb": "Шард с данными — квестовый или продажный.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 0,
+    "tags": [
+      "данные"
+    ]
+  },
+  {
+    "id": "g_trauma_injector",
+    "name": "Маяк Trauma Team",
+    "blurb": "Маяк Trauma Team — один вызов (мастер).",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 500,
+    "tags": [
+      "медицина",
+      "корп"
+    ]
+  },
+  {
+    "id": "g_climbing_kit",
+    "name": "Альпинистский набор",
+    "blurb": "Верёвка, лазы, магниты — Athletics.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 110,
+    "tags": [
+      "выживание"
+    ]
+  },
+  {
+    "id": "g_gas_mask",
+    "name": "Противогаз",
+    "blurb": "Противогаз — фильтрация токсинов.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 95,
+    "tags": [
+      "хим"
+    ]
+  },
+  {
+    "id": "g_thermal_goggles",
+    "name": "Тепловизор",
+    "blurb": "Тепловизор — видеть в темноте.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "INT": 1
+    },
+    "priceWonlongs": 420,
+    "tags": [
+      "разведка"
+    ]
+  },
+  {
+    "id": "g_voice_mask",
+    "name": "Голосовой модулятор",
+    "blurb": "Смена голоса — Deception.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 260,
+    "tags": [
+      "социал"
+    ]
+  },
+  {
+    "id": "g_credstick",
+    "name": "Пустой кредстик",
+    "blurb": "Пустой кредстик — для серых переводов.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 25,
+    "tags": [
+      "экономика"
+    ]
+  },
+  {
+    "id": "g_fake_sinner",
+    "name": "Поддельный SIN",
+    "blurb": "Поддельный ID — один сеанс проверки (мастер).",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 800,
+    "tags": [
+      "криминал"
+    ]
+  },
+  {
+    "id": "g_toolkit",
+    "name": "Технабор",
+    "blurb": "Инструменты механика — Mechanics +1.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "TEC": 1
+    },
+    "priceWonlongs": 175,
+    "tags": [
+      "тех"
+    ]
+  },
+  {
+    "id": "g_holoprojector",
+    "name": "Голопроектор",
+    "blurb": "Голограмма для отвлечения.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 310,
+    "tags": [
+      "тех",
+      "тактика"
+    ]
+  },
+  {
+    "id": "g_burner_phone",
+    "name": "Одноразовый телефон",
+    "blurb": "Одноразовый номер — без трассировки.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 40,
+    "tags": [
+      "коммс"
+    ]
+  },
+  {
+    "id": "g_rebreather",
+    "name": "Ребризер",
+    "blurb": "Ребризер — дыхание под водой 30 мин.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 280,
+    "tags": [
+      "выживание"
+    ]
+  },
+  {
+    "id": "g_signal_scanner",
+    "name": "Сканер сигналов",
+    "blurb": "Сканер сетей — Hacking prep.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "TEC": 1
+    },
+    "priceWonlongs": 360,
+    "tags": [
+      "тех",
+      "хакинг"
+    ]
+  },
+  {
+    "id": "g_handcuffs",
+    "name": "Магнитные наручники",
+    "blurb": "Магнитные наручники.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 70,
+    "tags": [
+      "тактика"
+    ]
+  },
+  {
+    "id": "g_chameleon_coat",
+    "name": "Хамелеон-подкладка",
+    "blurb": "Активный камуфляж — Stealth (мастер).",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 680,
+    "tags": [
+      "скрытное"
+    ]
+  },
+  {
+    "id": "cons_water",
+    "name": "Фильтрованная вода",
+    "blurb": "Очищенная вода в тубе.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 2,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_rations",
+    "name": "Сухпаёк MRE",
+    "blurb": "Сухпаёк корп-армии.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 15,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_coffee",
+    "name": "Синто-кофе",
+    "blurb": "Кофеин — снимает −1 усталости (мастер).",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 5,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_protein_bar",
+    "name": "Протеиновый батончик",
+    "blurb": "Белковый батончик — быстрая сытость.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 6,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_antirad",
+    "name": "Антирад-таблетки",
+    "blurb": "Йодид и нанофильтры — радиация (мастер).",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 45,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_bandage",
+    "name": "Бинты",
+    "blurb": "Бинты — стабилизация 1d4 HP (действие).",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 25,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_sleep_patch",
+    "name": "Патч сна",
+    "blurb": "Патч сна — 4 часа отдыха за 1 час.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 35,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_antidote",
+    "name": "Универсальный антидот",
+    "blurb": "Универсальный антидот — один тип яда.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 90,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_energy",
+    "name": "Энергетик MAX",
+    "blurb": "Энергетик — +1 Initiative на бой.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 12,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_hotdog",
+    "name": "Уличный хот-дог",
+    "blurb": "Хот-дог с соусом неизвестного происхождения.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 4,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_oxygen",
+    "name": "Баллон кислорода",
+    "blurb": "Баллон кислорода — 10 мин в дыму.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 30,
+    "tags": [
+      "выживание"
+    ]
+  },
+  {
+    "id": "drug_bliss",
+    "name": "Таблетка Bliss",
+    "blurb": "Эйфорик — социальные бонусы, риск зависимости.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "PEO": 1
+    },
+    "priceWonlongs": 80,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_shard",
+    "name": "Пыль Shard",
+    "blurb": "Кристаллический стим — +1 REF на час.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "DEX": 1
+    },
+    "priceWonlongs": 120,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_redline",
+    "name": "Редлайн",
+    "blurb": "Военный стим — +2 STR, crash после.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "STR": 2
+    },
+    "priceWonlongs": 180,
+    "tags": [
+      "нарко",
+      "боевой"
+    ]
+  },
+  {
+    "id": "drug_dorph",
+    "name": "Дорф",
+    "blurb": "Обезболивающий — игнор 1 уровня ранения (мастер).",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 95,
+    "tags": [
+      "нарко",
+      "медицина"
+    ]
+  },
+  {
+    "id": "drug_braindance",
+    "name": "Чип braindance",
+    "blurb": "BD-чип — эскапизм, −1 INT после (мастер).",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 60,
+    "tags": [
+      "нарко",
+      "развлечение"
+    ]
+  },
+  {
+    "id": "drug_nanohaze",
+    "name": "Нанотуман",
+    "blurb": "Нано-туман — галлюцинации, +1 к креативу (мастер).",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 140,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_blacklace",
+    "name": "Чёрное кружево",
+    "blurb": "Боевой наркотик — ярость, потеря контроля.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "STR": 2,
+      "DEX": -1
+    },
+    "priceWonlongs": 250,
+    "tags": [
+      "нарко",
+      "боевой"
+    ]
+  },
+  {
+    "id": "drug_juice",
+    "name": "Ампула Juice",
+    "blurb": "Уличный коктейль — случайный эффект (мастер).",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 40,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "ammo_10mm",
+    "name": "Патроны 10 мм (30)",
+    "blurb": "Патроны для тяжёлого пистолета.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 45,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_12g",
+    "name": "Патроны 12 калибра (10)",
+    "blurb": "Патроны для дробовика.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 55,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_556",
+    "name": "Патроны 5,56 мм (60)",
+    "blurb": "Штурмовые патроны NATO-стиля.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 90,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_762",
+    "name": "Патроны 7,62 мм (40)",
+    "blurb": "Патроны для снайперки и LMG.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 110,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_arrow",
+    "name": "Болты (12)",
+    "blurb": "Болты для арбалета.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 35,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_tranq",
+    "name": "Транк-дротики (6)",
+    "blurb": "Транквилизатор для дротикомёта.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 70,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_rocket",
+    "name": "Ракета РПГ (1 шт.)",
+    "blurb": "Одна ракета — осторожно с отдачей.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 400,
+    "tags": [
+      "боеприпасы",
+      "взрыв"
+    ]
+  },
+  {
+    "id": "ammo_flametank",
+    "name": "Баллон огнемёта",
+    "blurb": "Баллон топлива для огнемёта.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 180,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "g_messenger_case",
+    "name": "Курьерский кейс",
+    "blurb": "Запечатанный кейс — не открывать до доставки.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 0,
+    "tags": [
+      "квест"
+    ]
+  },
+  {
+    "id": "g_corpo_badge",
+    "name": "Клон корп-пропуска",
+    "blurb": "Клон пропуска — один уровень доступа (мастер).",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "PEO": 1
+    },
+    "priceWonlongs": 600,
+    "tags": [
+      "корп"
+    ]
+  },
+  {
+    "id": "w_stun_baton",
+    "name": "Электродубинка (заряд)",
+    "blurb": "Электродубинка с полным зарядом.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d6",
+      "damageType": "blunt",
+      "ability": "STR"
+    },
+    "priceWonlongs": 200,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "cons_smokes",
+    "name": "Синто-сигареты",
+    "blurb": "Пачка синто-сигарет — подпитка порока.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 10,
+    "tags": [
+      "еда",
+      "порок"
+    ]
+  },
+  {
+    "id": "g_netrunner_pack",
+    "name": "Набор нетраннера",
+    "blurb": "Дека, кабели, ICE-breaker утилиты в рюкзаке.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "TEC": 1,
+      "INT": 1
+    },
+    "priceWonlongs": 1100,
+    "tags": [
+      "тех",
+      "хакинг"
+    ]
+  },
+  {
+    "id": "cons_ramen",
+    "name": "Рамен быстрого приготовления",
+    "blurb": "Порция лапши с бульоном — стандарт смены.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 7,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_synth_meat",
+    "name": "Синто-стейк",
+    "blurb": "Лабораторное мясо — редкая роскошь для бедных.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 45,
+    "tags": [
+      "еда"
+    ]
+  },
+  {
+    "id": "cons_glucose",
+    "name": "Глюкозный гель",
+    "blurb": "Быстрая энергия — +1 к одной проверке ВЫН (мастер).",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 18,
+    "tags": [
+      "еда",
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_nanobalm",
+    "name": "Нанобальзам",
+    "blurb": "Мазь с наноботами — стабилизирует 1d4 HP вне боя.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 85,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "cons_stimm",
+    "name": "Stimm (боевой)",
+    "blurb": "Боевой обезбол: 2d4+2 HP, риск зависимости DC15.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 1000,
+    "tags": [
+      "медицина",
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_crush",
+    "name": "Crush",
+    "blurb": "Уличный ад: +2 к попаданию, разрушает органы. DC22.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "STR": 2
+    },
+    "priceWonlongs": 75,
+    "tags": [
+      "нарко",
+      "боевой"
+    ]
+  },
+  {
+    "id": "drug_rapid_o",
+    "name": "Rapid-o",
+    "blurb": "Стим братвы: +1 реакция/раунд, +5 фт. скорость на 1 мин.",
+    "category": "drug",
+    "slot": "quick",
+    "c2185Mods": {
+      "DEX": 1
+    },
+    "priceWonlongs": 12000,
+    "tags": [
+      "нарко",
+      "боевой"
+    ]
+  },
+  {
+    "id": "drug_devils_fire",
+    "name": "Devil's Fire",
+    "blurb": "Сопротивление огню/холоду; без дозы — рвёт импланты.",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 12000,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_slash",
+    "name": "Slash",
+    "blurb": "Дешёвый аналог Crush в глаз: +1 урон ближнего боя.",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 1000,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "drug_synthohol",
+    "name": "Синто-спирт",
+    "blurb": "Дешёвый алкоголь — снимает стресс, портит рефлексы.",
+    "category": "drug",
+    "slot": "quick",
+    "priceWonlongs": 12,
+    "tags": [
+      "нарко"
+    ]
+  },
+  {
+    "id": "w_tactical_knife",
+    "name": "Тактический нож",
+    "blurb": "Складной клинок с серрейтором.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d4",
+      "damageType": "piercing",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 95,
+    "tags": [
+      "оружие",
+      "ближний",
+      "скрытное"
+    ]
+  },
+  {
+    "id": "w_combat_axe",
+    "name": "Боевой топор",
+    "blurb": "Тяжёлый топор для штурма.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "1d10",
+      "damageType": "slashing",
+      "ability": "STR"
+    },
+    "priceWonlongs": 280,
+    "tags": [
+      "оружие",
+      "ближний"
+    ]
+  },
+  {
+    "id": "w_machine_pistol",
+    "name": "Автоматический пистолет",
+    "blurb": "Скорострельный пистолет для ближнего боя.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d4",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 480,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_combat_shotgun",
+    "name": "Боевой дробовик",
+    "blurb": "Полуавтомат — залп на близкой дистанции.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "3d4",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 900,
+    "tags": [
+      "оружие",
+      "дальний"
+    ]
+  },
+  {
+    "id": "w_rail_pistol",
+    "name": "Рельсотрон (пистолет)",
+    "blurb": "Экспериментальный EM-ствол — пробивает лёгкую броню.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d6",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 3500,
+    "tags": [
+      "оружие",
+      "дальний",
+      "тех"
+    ]
+  },
+  {
+    "id": "w_flamethrower",
+    "name": "Огнемёт",
+    "blurb": "Поток пламени — опасен в закрытых помещениях.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "3d6",
+      "damageType": "fire",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 2800,
+    "tags": [
+      "оружие",
+      "дальний",
+      "взрыв"
+    ]
+  },
+  {
+    "id": "w_rpg_launcher",
+    "name": "РПГ-7 (однораз.)",
+    "blurb": "Гранатомёт — один выстрел, много последствий.",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "4d10",
+      "damageType": "fire",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 4500,
+    "tags": [
+      "оружие",
+      "взрыв"
+    ]
+  },
+  {
+    "id": "a_underarmor",
+    "name": "Подброневик",
+    "blurb": "Тонкий слой под одеждой — +1 AC незаметно.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 1,
+    "priceWonlongs": 180,
+    "tags": [
+      "броня",
+      "скрытное"
+    ]
+  },
+  {
+    "id": "a_tactical_helmet",
+    "name": "Тактический шлем",
+    "blurb": "Шлем с креплением под оптику.",
+    "category": "armor",
+    "slot": "accessory",
+    "acBonus": 1,
+    "priceWonlongs": 220,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_motorcycle_jacket",
+    "name": "Мото-куртка с броней",
+    "blurb": "Кожа + кевлар — стиль номадов.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 2,
+    "priceWonlongs": 320,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "a_full_body_armor",
+    "name": "Полный бронекомплект",
+    "blurb": "Тяжёлая защита штурмовика.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 5,
+    "c2185Mods": {
+      "DEX": -2
+    },
+    "priceWonlongs": 2200,
+    "tags": [
+      "броня"
+    ]
+  },
+  {
+    "id": "g_crowbar",
+    "name": "Лом",
+    "blurb": "Преимущество на СИЛ, где нужен рычаг.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 35,
+    "tags": [
+      "тех"
+    ]
+  },
+  {
+    "id": "g_duct_tape",
+    "name": "Скотч-лента",
+    "blurb": "Чинит всё на 10 минут (мастер).",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 8,
+    "tags": [
+      "тех"
+    ]
+  },
+  {
+    "id": "g_nanopack",
+    "name": "Нанопак",
+    "blurb": "Инъектор наноботов — полевое лечение.",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 45,
+    "tags": [
+      "медицина"
+    ]
+  },
+  {
+    "id": "g_walkie",
+    "name": "Рация",
+    "blurb": "Зашифрованная связь до 0,5 мили.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 350,
+    "tags": [
+      "коммс"
+    ]
+  },
+  {
+    "id": "g_pocket_comp",
+    "name": "Карманный компьютер",
+    "blurb": "Базовый терминал — сеть и заметки.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "INT": 1
+    },
+    "priceWonlongs": 250,
+    "tags": [
+      "тех"
+    ]
+  },
+  {
+    "id": "g_rope_carbon",
+    "name": "Канат карбоновый (15 м)",
+    "blurb": "Лёгкий трос для спуска и фиксации.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 55,
+    "tags": [
+      "выживание"
+    ]
+  },
+  {
+    "id": "g_smoke_grenade",
+    "name": "Дымовая шашка",
+    "blurb": "Завеса для отхода — 1 бой.",
+    "category": "gear",
+    "slot": "quick",
+    "priceWonlongs": 50,
+    "tags": [
+      "тактика"
+    ]
+  },
+  {
+    "id": "ammo_44",
+    "name": "Патроны .44 (20)",
+    "blurb": "Для тяжёлого револьвера.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 55,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_shot_slug",
+    "name": "Пули 12 калибра (10)",
+    "blurb": "Точные пули для дробовика.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 65,
+    "tags": [
+      "боеприпасы"
+    ]
+  },
+  {
+    "id": "ammo_em_cell",
+    "name": "ЭМ-ячейки (5)",
+    "blurb": "Питание для рельсотрона.",
+    "category": "ammo",
+    "slot": "quick",
+    "priceWonlongs": 120,
+    "tags": [
+      "боеприпасы",
+      "тех"
+    ]
+  }
 ]

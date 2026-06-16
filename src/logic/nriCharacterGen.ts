@@ -25,6 +25,7 @@ import {
   type NriSheetData,
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';
+import { rollViceD100 } from './nriVices100';
 import { defaultSkillsForClass } from './nriSkillPick';
 
 export type NriOriginId =
@@ -252,21 +253,6 @@ const EYE_OPTIONS = [
   'серые',
 ] as const;
 
-const VICE_BY_ARCH: Record<NriNpcArchetypeId, string[]> = {
-  civilian: ['Synthohol', 'Nicotine', 'Gambling'],
-  street_bum: ['Cheap synthohol', 'Nicotine patches', 'Scrap inhalants'],
-  addict: ['Synthcoke', 'Neuro-stim', 'Black ICE trip'],
-  merchant: ['Gambling', 'Nicotine', 'Corporate stim'],
-  ripperdoc: ['Medical stims', 'Nicotine', 'Adrenaline shots'],
-  gang: ['Combat stims', 'Synthcoke', 'Nicotine'],
-  corp_exec: ['Corporate stim', 'Wine synth', 'Nicotine'],
-  robot: ['Power surge', 'Firmware patches', 'None documented'],
-  cop: ['Nicotine', 'Combat stims', 'Synthohol'],
-  fixer: ['Gambling', 'Nicotine', 'Synthohol'],
-  netrunner: ['ICE rush', 'Data binge', 'Neuro-stim'],
-  mercenary: ['Combat stims', 'Nicotine', 'Synthohol'],
-};
-
 const ARCH_AUG_SLOTS: Record<NriNpcArchetypeId, string[]> = {
   civilian: [],
   street_bum: ['cosmetic'],
@@ -369,9 +355,8 @@ function generateBio(
   };
 }
 
-function generateVice(archetypeId?: NriNpcArchetypeId, rng: SeededRng = new SeededRng(Math.random() * 0x7fffffff)): string {
-  if (archetypeId) return rng.pick(VICE_BY_ARCH[archetypeId]);
-  return rng.pick(['Synthohol', 'Nicotine', 'Gambling', 'None documented'] as const);
+function generateVice(_archetypeId?: NriNpcArchetypeId, rng: SeededRng = new SeededRng(Math.random() * 0x7fffffff)): string {
+  return rollViceD100(rng).text;
 }
 
 function encumbranceFromStr(str: number): Pick<NriSheetData, 'encumberedLb' | 'heavilyEncumberedLb' | 'maxCarryLb'> {

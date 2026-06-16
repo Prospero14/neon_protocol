@@ -4,14 +4,24 @@ import {
   C2185_CLASS_GUIDES,
   C2185_ENVIRONMENT_RULES,
 } from '../logic/nriCarbon2185RulesExtended';
+import {
+  C2185_COMBAT_RULES,
+  C2185_CYBERPSYCHOSIS_RULES,
+  C2185_ECONOMY_RULES,
+  C2185_LIFE_RULES,
+} from '../logic/nriCarbon2185RulesLifeEconomyCombat';
 
 type Props = { onClose: () => void };
 
-type TabId = 'core' | 'environment' | 'classes';
+type TabId = 'core' | 'life' | 'economy' | 'combat' | 'cyberpsychosis' | 'environment' | 'classes';
 
 const TABS: { id: TabId; label: string; hint: string }[] = [
-  { id: 'core', label: 'Основное', hint: 'Характеристики, бой, лист' },
-  { id: 'environment', label: 'Состояния и среда', hint: 'стр. 133+ рульника' },
+  { id: 'core', label: 'Основное', hint: 'Характеристики, лист' },
+  { id: 'life', label: 'Жизнь', hint: 'стр. 100–108 рульника' },
+  { id: 'economy', label: 'Экономика', hint: 'стр. 110–115' },
+  { id: 'combat', label: 'Бой', hint: 'стр. 116–126' },
+  { id: 'cyberpsychosis', label: 'Киберпсихоз', hint: 'Blood Tox, стр. 87' },
+  { id: 'environment', label: 'Среда', hint: 'стр. 133+ рульника' },
   { id: 'classes', label: 'Классы', hint: 'стр. 27+ рульника' },
 ];
 
@@ -59,6 +69,14 @@ export const NriRulesPanel: React.FC<Props> = ({ onClose }) => {
 
         <div className="nri-rules__body">
           {tab === 'core' && <RulesSections sections={C2185_RULES} />}
+
+          {tab === 'life' && <RulesSections sections={C2185_LIFE_RULES} />}
+
+          {tab === 'economy' && <RulesSections sections={C2185_ECONOMY_RULES} />}
+
+          {tab === 'combat' && <RulesSections sections={C2185_COMBAT_RULES} />}
+
+          {tab === 'cyberpsychosis' && <RulesSections sections={C2185_CYBERPSYCHOSIS_RULES} />}
 
           {tab === 'environment' && <RulesSections sections={C2185_ENVIRONMENT_RULES} />}
 

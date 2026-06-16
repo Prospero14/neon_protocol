@@ -8,7 +8,7 @@
 
 | Модуль | Строк (≈) | Рекомендация |
 |--------|-----------|--------------|
-| `server/services/nriService.ts` | ~1890 | map, vault, npc, cyber, scenario |
+| `server/services/nriService.ts` | ~740 | scenario, vehicles, session lobby |
 | `server/createApp.ts` | ~298 | `routes/auth.ts`, static (coop → `mountCoopRoutes.ts`) |
 | `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
 | `src/logic/nriApi.ts` | ~1400 | `nriApi/session.ts`, `players.ts`, … |
@@ -28,7 +28,8 @@
 - [x] `shared/api-schemas/nri.ts` — Zod для player/preset/ice/wallet NRI routes
 - [x] `nriPlayerRoutes` / `nriIceWalletRoutes` / `nriPresetRoutes` + `nriSessionHelpers`
 - [x] `src/logic/nriApi/session.ts` + `players.ts` (клиент)
-- [ ] Разрезать `nriService.ts` (map/vault/npc) / `useGameState.ts` / `createApp.ts` (auth routes)
+- [x] `nriMapRoutes` / `nriVaultRoutes` / `nriNpcRoutes` / `nriCyberRoutes`
+- [ ] Разрезать `nriService.ts` (scenario/vehicles) / `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---
 

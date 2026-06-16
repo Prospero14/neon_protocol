@@ -19,6 +19,7 @@
 | Серверная валидация `activeConditions` (`validateSheetConditions`) | ✅ |
 | Zod auth + `game/sync` + **ключевые NRI routes** (`shared/api-schemas/nri.ts`) | ✅ |
 | `nriPlayerRoutes`, `nriIceWalletRoutes`, `nriPresetRoutes` + `nriSessionHelpers` | ✅ |
+| `nriMapRoutes`, `nriVaultRoutes`, `nriNpcRoutes`, `nriCyberRoutes` — map/vault/npc/cyber из `nriService` | ✅ |
 | `src/logic/nriApi/session.ts`, `players.ts`, `http.ts` | ✅ (частично) |
 
 ---
@@ -35,7 +36,7 @@
 
 | # | Модуль | Следующий срез | Уже вынесено |
 |---|--------|----------------|--------------|
-| 1 | `nriService.ts` (~1890 строк) | map/vault/npc/cyber routes | player, ice/wallet, preset, combatant, item transfer, lore travel |
+| 1 | `nriService.ts` (~740 строк) | scenario, vehicles, session lobby | player, ice/wallet, preset, map, vault, npc, cyber, combatant, item transfer, lore travel |
 | 2 | `createApp.ts` (~298 строк) | `routes/auth.ts` | coop + mountCoopRoutes |
 | 3 | `useGameState.ts` (~1900 строк) | `useNriSession`, `useCoopLobby`, `useSoloProgress` | — |
 | 4 | `nriApi.ts` (~1140 строк) | wallet/map/scenario slices | session, players, http |
@@ -77,7 +78,7 @@
 
 | Метрика | Сейчас | Цель |
 |---------|--------|------|
-| `nriService.ts` строк | ~1890 | < 800 на файл |
+| `nriService.ts` строк | ~740 | < 800 на файл |
 | `createApp.ts` строк | ~298 | < 400 (+ mount*) |
 | `useGameState.ts` строк | ~1900 | < 600 на хук |
 | `nriApi.ts` строк | ~1140 | < 400 на модуль |
@@ -86,4 +87,4 @@
 
 ---
 
-*Коммиты: `a10db95` — Zod auth/sync; следующий — NRI routes split + Zod NRI.*
+*Коммиты: `93ded1d` — NRI player/ice/preset split; следующий — map/vault/npc/cyber routes.*

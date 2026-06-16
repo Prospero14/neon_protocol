@@ -184,7 +184,7 @@ export const NriWalletPanel: React.FC<Props> = ({
           ) : (
             <>
               <p className="mono-text opacity-70">
-                Цена: ₩{wallet?.antispamPrice ?? '…'} — формула (сумма ₩ всех игроков × 2) ÷ 4.
+                Цена: ₩{wallet?.antispamPrice ?? '…'}.
                 Тишина на 1 час для всего стола.
               </p>
               <button

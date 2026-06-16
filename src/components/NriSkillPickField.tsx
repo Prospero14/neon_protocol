@@ -1,6 +1,7 @@
 import React from 'react';
-import { classSkillPool } from '../logic/nriSkillPick';
+import { C2185_SKILLS } from '../logic/nriCarbon2185';
 import type { NriClassId } from '../logic/nriClasses';
+import { classSkillPool } from '../logic/nriSkillPick';
 
 type Props = {
   classId: NriClassId;
@@ -26,7 +27,7 @@ export const NriSkillPickField: React.FC<Props> = ({ classId, picked, onChange, 
   return (
     <div className="nri-skill-pick">
       <p className="mono-text nri-skill-pick__hint">
-        Навыки класса: выберите {pickCount} из {options.length}
+        Всего в системе {C2185_SKILLS.length} навыков; класс выбирает {pickCount} из {options.length} своего пула.
       </p>
       <ul className="nri-skill-pick__list">
         {options.map((name) => {

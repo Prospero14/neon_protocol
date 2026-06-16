@@ -7,6 +7,7 @@ import { isNriMember, listNriMembers, purgeNriSessionData, touchNriMember } from
 import { startNriSpamBot, stopNriSpamBot } from './nriSpamBot.js';
 import { tryInstallCyberItem } from './nriCyberInstall.js';
 import { mergeInventoryItem, takeOneCatalogItem, toggleEquipServer, type InvItem } from './nriItemGrant.js';
+import { tryUseItemServer } from './nriItemConsumeServer.js';
 import { catalogToServerInventoryItem } from './nriItemCatalogServer.js';
 import { antispamPrice, isSpamPaused, readWonlongs, writeWonlongs } from './nriWallet.js';
 import {
@@ -2669,6 +2670,37 @@ export function mountNriService(app: Express, deps: NriServiceDeps) {
     } catch (error) {
       console.error('nri/toggle-equip:', error);
       return sendApiError(res, 500, 'NRI_EQUIP_ERR', 'Не удалось сменить экипировку.');
+    }
+  });
+
+  app.post('/neon_v1/services/nri/:code/player/items/:itemId/use', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const itemId = String(req.params.itemId ?? '').trim();
+    if (!itemId) return sendApiError(res, 400, 'NRI_ITEM_ID', 'Укажите предмет.');
+    try {
+      const session = await resolveSession(code);
+      if (!session || session.status !== 'open') {
+        return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+      }
+      const player = await prisma.nriPlayer.findUnique({
+        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+      });
+      if (!player) return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
+      const inv = Array.isArray(player.inventory) ? ([...(player.inventory as InvItem[])] ) : [];
+      const result = tryUseItemServer(player.sheet, inv, itemId);
+      if (!result.ok) {
+        return sendApiError(res, 400, 'NRI_USE_FAILED', result.reason);
+      }
+      await prisma.nriPlayer.update({
+        where: { id: player.id },
+        data: { sheet: result.sheet as object, inventory: result.inventory as object[] },
+      });
+      res.json({ ok: true, inventory: result.inventory, sheet: result.sheet, applied: result.applied });
+    } catch (error) {
+      console.error('nri/use-item:', error);
+      return sendApiError(res, 500, 'NRI_USE_ERR', 'Не удалось использовать предмет.');
     }
   });
 

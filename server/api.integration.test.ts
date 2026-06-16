@@ -64,6 +64,7 @@ function mockPrisma(): Pick<
       findMany: vi.fn(),
       findUnique: vi.fn(),
       upsert: vi.fn(),
+      update: vi.fn(),
       deleteMany: vi.fn(),
     } as unknown as PrismaClient['nriPlayer'],
     nriPresetCharacter: {
@@ -394,5 +395,47 @@ describe('neon_v1 API (integration)', () => {
       .expect(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.spamBotEnabled).toBe(true);
+  });
+
+  it('POST /neon_v1/services/nri/:code/player/items/:itemId/use', async () => {
+    const tok = jwt.sign({ userId: 'uid-use' }, JWT_SECRET);
+    const sheet = {
+      abilities: { STR: 10, DEX: 14, CON: 12, INT: 10, TEC: 10, PEO: 10 },
+      hp: 20,
+      hpMax: 20,
+      activeConditions: [],
+    };
+    const inventory = [
+      { id: 'item-1', catalogId: 'drug_synthohol', name: 'Синто-спирт', slot: 'quick' },
+    ];
+    vi.mocked(prisma.nriSession.findUnique).mockResolvedValue({
+      id: 'sess-use',
+      inviteCode: 'NRI-USE',
+      hostUserId: 'uid-other',
+      status: 'open',
+    } as any);
+    vi.mocked(prisma.nriPlayer.findUnique).mockResolvedValue({
+      id: 'pl-1',
+      sessionId: 'sess-use',
+      userId: 'uid-use',
+      sheet,
+      inventory,
+    } as any);
+    vi.mocked(prisma.nriPlayer.update).mockImplementation(async ({ data }) => ({
+      id: 'pl-1',
+      sheet: data.sheet,
+      inventory: data.inventory,
+    }) as any);
+
+    const res = await request(app())
+      .post('/neon_v1/services/nri/NRI-USE/player/items/item-1/use')
+      .set('Authorization', `Bearer ${tok}`)
+      .expect(200);
+
+    expect(res.body.ok).toBe(true);
+    expect(res.body.inventory).toEqual([]);
+    expect(res.body.applied).toBeDefined();
+    const conds = res.body.sheet.activeConditions as { id: string }[];
+    expect(conds.some((c) => c.id === 'intoxicated_mild')).toBe(true);
   });
 });

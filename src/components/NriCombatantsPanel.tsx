@@ -100,6 +100,7 @@ export const NriCombatantsPanel: React.FC<Props> = ({ inviteCode }) => {
       archetypeId,
       level,
       characterName: name.trim() || undefined,
+      nickname: meta.nickname,
       skillProficiencies: pickedSkills,
     });
     setSheet(built.sheet);
@@ -239,7 +240,7 @@ export const NriCombatantsPanel: React.FC<Props> = ({ inviteCode }) => {
           <span>Имя / позывной</span>
           <div className="nri-presets__name-row">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Случайное при генерации…" />
-            <button type="button" className="nri-lobby__copy" onClick={() => setName(rollNpcName())} title="Случайное имя">
+            <button type="button" className="nri-lobby__copy" onClick={() => setName(rollNpcName(originId))} title="Случайное имя">
               <Dices size={14} />
             </button>
           </div>

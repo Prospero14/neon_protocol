@@ -922,6 +922,31 @@ export async function nriDeleteVehicle(token: string, code: string, vehicleId: s
   return res.ok;
 }
 
+export type NriUseItemResult =
+  | { ok: true; inventory: NriInventoryItem[]; sheet: unknown; applied: string[] }
+  | { ok: false; error: string };
+
+export async function nriUseItem(
+  token: string,
+  code: string,
+  itemId: string
+): Promise<NriUseItemResult> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/player/items/${encodeURIComponent(itemId)}/use`,
+    { method: 'POST', headers: authHeaders(token) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось использовать предмет') };
+  }
+  return {
+    ok: true,
+    inventory: data.inventory ?? [],
+    sheet: data.sheet,
+    applied: Array.isArray(data.applied) ? data.applied : [],
+  };
+}
+
 export async function nriToggleEquip(
   token: string,
   code: string,

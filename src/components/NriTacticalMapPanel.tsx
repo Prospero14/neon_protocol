@@ -3,7 +3,6 @@ import { MapPin, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
 import { getNriClass } from '../logic/nriClasses';
 import { sendNriChatMessage } from '../logic/nriChatDispatch';
 import { chatSendFile, chatSendFileToUser } from '../logic/chatApi';
-import { nriCreateVaultFile } from '../logic/nriApi';
 import {
   buildTacticalSvg,
   CLASS_TOKEN_COLORS,
@@ -17,7 +16,7 @@ import {
   type TacticalPresetId,
   type TacticalToken,
 } from '../logic/nriTacticalMap';
-import type { NriRosterPlayer } from '../logic/nriApi';
+import { nriCreateVaultFile, nriFetchCombatants, type NriCombatant, type NriRosterPlayer } from '../logic/nriApi';
 import { NriChatSendBar } from './NriChatSendBar';
 import type { VaultRecipient } from './NriVaultTab';
 
@@ -55,6 +54,8 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
   const [obstacles, setObstacles] = useState<TacticalObstacle[]>([]);
   const [placeMode, setPlaceMode] = useState<PlaceMode>('select');
   const [enemyName, setEnemyName] = useState('Враг');
+  const [combatants, setCombatants] = useState<NriCombatant[]>([]);
+  const [pickedCombatantId, setPickedCombatantId] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -83,6 +84,18 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
   }, [roster]);
 
   useEffect(() => {
+    nriFetchCombatants(authToken, nriCode).then((list) => {
+      if (list) setCombatants(list);
+    });
+    const t = setInterval(() => {
+      nriFetchCombatants(authToken, nriCode).then((list) => {
+        if (list) setCombatants(list);
+      });
+    }, 12_000);
+    return () => clearInterval(t);
+  }, [authToken, nriCode]);
+
+  useEffect(() => {
     if (!tokens.some((t) => t.kind === 'player') && roster.length > 0) {
       syncPlayers();
     }
@@ -101,12 +114,17 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
     if (dragId) return;
     const { x, y } = pctFromEvent(e);
     if (placeMode === 'enemy') {
+      const combatant = pickedCombatantId
+        ? combatants.find((c) => c.id === pickedCombatantId)
+        : undefined;
       setTokens((prev) => [
         ...prev,
         {
-          id: newTokenId('en'),
+          id: combatant ? `cb_${combatant.id}` : newTokenId('en'),
           kind: 'enemy',
-          label: enemyName.trim() || 'Враг',
+          label: combatant?.name ?? (enemyName.trim() || 'Враг'),
+          classId: (combatant?.classId as TacticalToken['classId']) ?? undefined,
+          combatantId: combatant?.id,
           x,
           y,
         },
@@ -207,6 +225,26 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
         >
           <Plus size={14} /> Враг
         </button>
+        <label className="nri-tactical__field nri-tactical__field--combatant">
+          Боевик
+          <select
+            value={pickedCombatantId}
+            onChange={(e) => {
+              const id = e.target.value;
+              setPickedCombatantId(id);
+              const c = combatants.find((x) => x.id === id);
+              if (c) setEnemyName(c.name);
+            }}
+          >
+            <option value="">— вручную —</option>
+            {combatants.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+                {c.threatTier ? ` · ${c.threatTier}` : ''}
+              </option>
+            ))}
+          </select>
+        </label>
         <input
           className="nri-tactical__enemy-name"
           value={enemyName}

@@ -4,7 +4,7 @@ A high-fidelity cyberpunk RPG and collectible card game (CCG) engine built with 
 
 ## 🚀 Fullstack Integration (Alpha 0.09)
 
-The project now includes a **Node.js/Express** backend and **Prisma/PostgreSQL** persistence layer.
+The project includes a **Node.js/Express** backend and **Prisma/SQLite** persistence layer.
 
 - **Authentication**: JWT-based secure session management.
 - **Persistence**: Player HP, Bits, XP, Deck, and Artifacts are synced to the database.
@@ -28,6 +28,12 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
 
 > [!CAUTION]
 > **Data Persistence**: Since SQLite is a local file, players and their progress will be **reset whenever you push a new update** to GitHub. This is perfect for testing without costs!
+
+## 📚 Documentation
+
+- **[Architecture & stack](docs/ARCHITECTURE.md)** — tools, subsystems, API, migration paths
+- **[SOLID audit](docs/SOLID_AUDIT.md)** — technical debt checklist
+- **[Coop cards](docs/COOP_CARD_DOCUMENTATION.md)**
 
 ## 💻 Local Development
 

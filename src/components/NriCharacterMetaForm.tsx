@@ -1,4 +1,5 @@
 import React from 'react';
+import { Dices } from 'lucide-react';
 import {
   NRI_ACTIVITIES,
   NRI_ORIGINS,
@@ -6,6 +7,9 @@ import {
   type NriActivityId,
   type NriOriginId,
 } from '../logic/nriCharacterGen';
+import { rollCharacterName, rollNickname } from '../logic/nriNames';
+import { BACKSTORY_POOL_SIZE } from '../logic/nriBackstories';
+import { C2185_SKILLS } from '../logic/nriCarbon2185';
 import type { NriSheetData } from '../logic/nriNpcGenerator';
 
 type Props = {
@@ -20,15 +24,46 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
     onChange({ ...meta, [key]: value });
   };
 
+  const originId = meta.originId ?? 'neo_tokyo';
+  const activityId = meta.activityId ?? 'street';
+
   return (
     <div className="nri-meta-form">
-      <label className="nri-modal__field">
-        <span>Имя персонажа</span>
-        <input
-          value={meta.characterName ?? ''}
-          onChange={(e) => set('characterName', e.target.value)}
-          placeholder="Jackie Chow"
-        />
+      <label className="nri-meta-form__field-row">
+        <span className="nri-modal__field nri-meta-form__grow">
+          <span>Имя персонажа</span>
+          <input
+            value={meta.characterName ?? ''}
+            onChange={(e) => set('characterName', e.target.value)}
+            placeholder="Yuki Sato"
+          />
+        </span>
+        <button
+          type="button"
+          className="nri-lobby__copy"
+          title="Случайное имя по происхождению"
+          onClick={() => set('characterName', rollCharacterName(originId))}
+        >
+          <Dices size={14} />
+        </button>
+      </label>
+      <label className="nri-meta-form__field-row">
+        <span className="nri-modal__field nri-meta-form__grow">
+          <span>Кличка / позывной</span>
+          <input
+            value={meta.nickname ?? sheet?.nickname ?? ''}
+            onChange={(e) => set('nickname', e.target.value)}
+            placeholder="Тень"
+          />
+        </span>
+        <button
+          type="button"
+          className="nri-lobby__copy"
+          title="Кличка по деятельности"
+          onClick={() => set('nickname', rollNickname(activityId))}
+        >
+          <Dices size={14} />
+        </button>
       </label>
       <div className="nri-meta-form__row">
         <label className="nri-modal__field">
@@ -48,10 +83,7 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
       </div>
       <label className="nri-modal__field">
         <span>Происхождение</span>
-        <select
-          value={meta.originId ?? 'neo_tokyo'}
-          onChange={(e) => set('originId', e.target.value as NriOriginId)}
-        >
+        <select value={originId} onChange={(e) => set('originId', e.target.value as NriOriginId)}>
           {NRI_ORIGINS.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
@@ -61,10 +93,7 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
       </label>
       <label className="nri-modal__field">
         <span>Деятельность / карьера</span>
-        <select
-          value={meta.activityId ?? 'street'}
-          onChange={(e) => set('activityId', e.target.value as NriActivityId)}
-        >
+        <select value={activityId} onChange={(e) => set('activityId', e.target.value as NriActivityId)}>
           {NRI_ACTIVITIES.map((a) => (
             <option key={a.id} value={a.id}>
               {a.label}
@@ -72,6 +101,9 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
           ))}
         </select>
       </label>
+      <p className="mono-text nri-meta-form__hint opacity-60">
+        В системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {BACKSTORY_POOL_SIZE}+.
+      </p>
       <label className="nri-modal__field">
         <span>Карьера (текст)</span>
         <input value={meta.career ?? sheet?.career ?? ''} onChange={(e) => set('career', e.target.value)} />

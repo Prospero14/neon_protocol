@@ -1,36 +1,33 @@
-# Neon Protocol State: Stable World & Quest Audit
+# Neon Protocol — состояние проекта
 
-This document summarizes the state of the project as of the `feature/stable-world-audit` branch.
+Краткий снимок актуальных подсистем (обновлено 2026-06).
 
-## Key Accomplishments
+## NRI (Carbon 2185) — настольный режим
 
-### 1. Global Modularization (The "Altufyevo Gold Standard")
+- **Лобби** с вкладками: чат, карта, кошелёк, персонажи, кибер, сценарий, **МАСТЕР**, заметки.
+- **МАСТЕР**: схема боя (боевики из БД), кубики, статусы игроков, генерация (игроки / НПС / боевики).
+- **Статусы**: conditions на листе, мастер вешает вручную; расходники через `POST .../player/items/:id/use`.
+- **Shared domain**: `shared/nri-domain/` — conditions + consume (клиент и сервер).
+- **Каталог**: `shared/nri-item-catalog.json` + `shared/nri-consume-effects.json` (все consumable/drug покрыты).
 
-- All 18 districts of the world (Academy, Altufyevo, Bibirevo, Chertanovo, Fili, Hub, Izmailovo, Maryino, Mitino, Perovo, Sokol, Sokolniki, South West, Taganka, Tekstilschiki, Teply Stan, VDNKH, Vykhino) have been modularized.
-- Each district now has its own directory structure:
-  - `npcs/` - Individual NCP definitions and dialogues.
-  - `objects/` - Individual node definitions (bars, shops, terminals, combat).
-  - `index.ts` - Orchestrator for the district.
-- Resolved previous Out-of-Memory (OOM) issues by implementing a per-district validation system.
+## Solo / Coop
 
-### 2. Comprehensive Quest Audit
+- Solo: модульный мир (`src/logic/world/`), квесты, карточный бой.
+- Coop: in-memory лобби в `createApp.ts`, рейтинги в Prisma.
 
-- Performed a full scan of all 200+ dialogue files.
-- Identified and registered **47 missing quest IDs** in the central `QUEST_LIBRARY`.
-- Standardized quest types: `combat`, `talk`, `delivery`, `diagnostics`, `cert`, `access`.
-- Synchronized auto-generated combat quests with dialogue references.
+## Документация и качество
 
-### 3. Validation and Stability
+- `docs/ARCHITECTURE.md` — стек, связи, миграция бэк/фронт.
+- `docs/SOLID_AUDIT.md` — технический долг и план рефакторинга.
+- Тесты: `npm test` (логика + HTTP integration + catalog contracts).
+- Сборка: `npm run build` (Vite + tsc client noEmit + tsc server).
 
-- Global validation script (`scripts/validate-dialogues.ts`) now passes with **0 Errors and 0 Warnings** across the entire world.
-- All `awardQuestId`, `completeQuestId`, and `requireItemId` references are verified against the libraries.
+## Известный долг
 
-## System Architecture
-
-- **World Engine**: Uses `WorldDistrict` class for lazy-loading and encapsulation.
-- **Dialogue Builder**: Unified syntax for non-linear dialogue trees with quest gating.
-- **Quest Engine**: Centralized state management in `questEngine.ts` and `questData.ts`.
+- `nriService.ts`, `createApp.ts`, `useGameState.ts` — крупные модули (см. SOLID_AUDIT).
+- Coop in-memory не переживает рестарт процесса.
+- Мастерские статусы через PATCH листа — без серверной валидации condition id.
 
 ---
 
-*This branch serves as a stable base for the upcoming Combat System Overhaul.*
+*Ранее: ветка `feature/stable-world-audit` — модульный мир 18 районов, 0 ошибок validate-dialogues.*

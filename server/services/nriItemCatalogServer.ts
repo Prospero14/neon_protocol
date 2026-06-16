@@ -11,6 +11,7 @@ type CatalogItem = {
   name: string;
   blurb: string;
   slot: string;
+  category?: string;
   c2185Mods?: Record<string, number>;
   acBonus?: number;
   attack?: { damageDice: string; damageType: string; ability: string };

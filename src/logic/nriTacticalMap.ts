@@ -37,6 +37,7 @@ export type TacticalToken = {
   label: string;
   classId?: NriClassId;
   userId?: string;
+  combatantId?: string;
   x: number;
   y: number;
 };

@@ -9,10 +9,10 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "./dist_server",
-    "rootDir": "./server",
+    "rootDir": ".",
     "sourceMap": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["server/**/*.ts"],
-  "exclude": ["server/**/*.test.ts", "node_modules", "dist_server"]
+  "include": ["server/**/*.ts", "shared/nri-domain/**/*.ts"],
+  "exclude": ["server/**/*.test.ts", "shared/**/*.test.ts", "node_modules", "dist_server"]
 }

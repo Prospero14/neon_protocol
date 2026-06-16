@@ -1,0 +1,56 @@
+# SOLID-аудит Neon Protocol
+
+Чеклист для ревью. Контекст: `docs/ARCHITECTURE.md`.
+
+---
+
+## Критичные нарушения SRP
+
+| Модуль | Строк (≈) | Рекомендация |
+|--------|-----------|--------------|
+| `server/services/nriService.ts` | ~4250 | Роутеры по доменам: players, map, vault, items |
+| `server/createApp.ts` | ~3340 | `routes/auth.ts`, `routes/coop.ts`, static |
+| `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
+| `src/logic/nriApi.ts` | ~1400 | `nriApi/session.ts`, `players.ts`, … |
+
+---
+
+## Прогресс (2026-06)
+
+- [x] `shared/nri-domain/` — conditions + consumeApply (единый источник client/server)
+- [x] Все consumable/drug в каталоге имеют запись в `nri-consume-effects.json`
+- [x] HTTP-тест `POST .../player/items/:id/use`
+- [x] `npm run typecheck:client` — отдельная проверка клиента (в `build` пока только server `tsc` + vite)
+- [x] Документация ARCHITECTURE + STATE_OF_PROTOCOL
+- [ ] Разрезать `nriService.ts` / `useGameState.ts`
+- [ ] Контракты API (OpenAPI / Zod shared)
+- [ ] Серверная валидация PATCH sheet (статусы мастера)
+- [ ] Coop → persistent sessions
+
+---
+
+## OCP / LSP / ISP / DIP
+
+| Принцип | Статус | Заметка |
+|---------|--------|---------|
+| OCP | ⚠️ | Новый NRI endpoint = правки god-файлов |
+| LSP | ⚠️ | `game/sync` payload с `any` |
+| ISP | ⚠️ | Панели импортируют весь `nriApi` |
+| DIP | ⚠️ | Prisma/fetch напрямую; domain layer только для consume |
+
+---
+
+## Уже ок
+
+- District modules (`world/<id>/`)
+- Pure logic: `nriSkillPick`, `nriDice`, `shared/nri-domain`
+- Контрактные тесты JSON каталога
+
+---
+
+## Порядок рефакторинга
+
+1. Split `nriApi.ts` (без смены URL)
+2. Split `nriService.ts`
+3. Типы `GameSyncPayload`
+4. Monorepo `apps/web` + `apps/api` (см. ARCHITECTURE §8)

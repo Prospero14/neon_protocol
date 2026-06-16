@@ -1,5 +1,6 @@
 /** Генерация НПС по Carbon 2185 (2d6+5 × 6, HP по классу). */
 
+import { rollCharacterName } from './nriNames';
 import type { NriClassId } from './nriClasses';
 import { getC2185ClassTemplate } from './nriCarbon2185';
 import type { InstalledAugmentation } from './nriCyberInstall';
@@ -45,6 +46,12 @@ export type NriSheetData = {
   encumberedLb?: string;
   heavilyEncumberedLb?: string;
   maxCarryLb?: string;
+  /** Кличка / позывной. */
+  nickname?: string;
+  originId?: string;
+  activityId?: string;
+  /** Активные состояния (дебафы/бафы). */
+  activeConditions?: import('./nriConditions').SheetCondition[];
 };
 
 export function abilityModifier(score: number): number {
@@ -106,18 +113,7 @@ export function parseNriSheet(raw: unknown): NriSheetData | null {
   return o;
 }
 
-const NPC_FIRST = [
-  'Jackie', 'Raven', 'Mako', 'Yuki', 'Dex', 'Nova', 'Kai', 'Lena', 'Rook', 'Sable',
-  'Viktor', 'Mei', 'Juno', 'Cyrus', 'Zara', 'Hiro', 'Nix', 'Tess', 'Wolf', 'Iris',
-] as const;
-
-const NPC_LAST = [
-  'Chow', 'Vega', 'Sato', 'Kane', 'Cross', 'Hayashi', 'Reed', 'Voss', 'Tanaka', 'Mercer',
-  'Okada', 'Stone', 'Lin', 'Wright', 'Park', 'Ashford', 'Nguyen', 'Blake', 'Chen', 'Ross',
-] as const;
-
 /** Случайное имя в духе Carbon 2185 (таблицы random NPC). */
-export function rollNpcName(): string {
-  const pick = <T,>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)]!;
-  return `${pick(NPC_FIRST)} ${pick(NPC_LAST)}`;
+export function rollNpcName(originId?: Parameters<typeof rollCharacterName>[0]): string {
+  return rollCharacterName(originId ?? 'neo_tokyo');
 }

@@ -1,11 +1,10 @@
 import React from 'react';
-import { Dices, ScrollText, Skull, UserCircle, Users } from 'lucide-react';
+import { ScrollText, Users } from 'lucide-react';
 import { NriCharactersPanel } from './NriCharactersPanel';
 import { NriPresetsPanel } from './NriPresetsPanel';
 import { NriNpcsPanel } from './NriNpcsPanel';
-import { NriCombatantsPanel } from './NriCombatantsPanel';
 
-export type PeopleSection = 'chars' | 'npcs' | 'combatants' | 'players' | 'gen';
+export type PeopleSection = 'chars' | 'npcs' | 'players';
 
 type Props = {
   inviteCode: string;
@@ -19,9 +18,7 @@ type Props = {
 const SECTIONS: { id: PeopleSection; label: string; icon: React.ReactNode }[] = [
   { id: 'chars', label: 'Чарники', icon: <ScrollText size={13} /> },
   { id: 'npcs', label: 'НПС', icon: <Users size={13} /> },
-  { id: 'combatants', label: 'Боевики', icon: <Skull size={13} /> },
-  { id: 'players', label: 'Игроки', icon: <UserCircle size={13} /> },
-  { id: 'gen', label: 'Генерация', icon: <Dices size={13} /> },
+  { id: 'players', label: 'Игроки', icon: <Users size={13} /> },
 ];
 
 export const NriPeopleHub: React.FC<Props> = ({
@@ -47,6 +44,10 @@ export const NriPeopleHub: React.FC<Props> = ({
       ))}
     </nav>
 
+    <p className="mono-text nri-people-hub__hint opacity-60">
+      Генерация, боевики и схема боя — во вкладке <strong>МАСТЕР</strong>.
+    </p>
+
     <div className="nri-people-hub__body">
       {section === 'chars' && <NriCharactersPanel inviteCode={inviteCode} />}
       {section === 'npcs' && (
@@ -58,20 +59,7 @@ export const NriPeopleHub: React.FC<Props> = ({
           onOpenChat={onOpenChat}
         />
       )}
-      {section === 'combatants' && <NriCombatantsPanel inviteCode={inviteCode} />}
       {section === 'players' && <NriPresetsPanel inviteCode={inviteCode} mode="players" />}
-      {section === 'gen' && (
-        <div className="nri-people-gen">
-          <section className="nri-people-gen__block">
-            <h4 className="mono-text nri-people-gen__title">Персонажи для игроков</h4>
-            <NriPresetsPanel inviteCode={inviteCode} mode="gen" />
-          </section>
-          <section className="nri-people-gen__block">
-            <h4 className="mono-text nri-people-gen__title">НПС</h4>
-            <NriNpcsPanel inviteCode={inviteCode} mode="gen" selectedNpcId={null} onSelectNpc={() => {}} />
-          </section>
-        </div>
-      )}
     </div>
   </div>
 );

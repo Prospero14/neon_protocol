@@ -13,6 +13,7 @@ import { readWonlongs } from '../logic/nriWallet';
 import { parseAugmentedSheet, getBloodToxLimit } from '../logic/nriCyberInstall';
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
 import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
+import { applyConditionsToSheet } from '../logic/nriConditions';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
 import {
   collectPlayerCyberEffects,
@@ -47,7 +48,9 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
     [profile.sheet, profile.classId, profile.displayName]
   );
   const sheet = parseNriSheet(completed);
-  const effectiveSheet = sheet ? applyEquippedToSheet(sheet, inventory) : null;
+  const conditionedSheet = sheet ? applyConditionsToSheet(sheet) : null;
+  const effectiveSheet = conditionedSheet ? applyEquippedToSheet(conditionedSheet, inventory) : null;
+  const activeConditions = conditionedSheet?.activeConditions ?? [];
   const augSheet = parseAugmentedSheet(completed);
   const augmentations = augSheet?.augmentations ?? [];
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
@@ -295,6 +298,21 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           </ul>
         )}
       </section>
+
+      {activeConditions.length > 0 && (
+        <section className="nri-c2185-block nri-c2185-block--conditions">
+          <h4 className="nri-c2185-block__title">СТАТУСЫ / CONDITIONS</h4>
+          <ul className="nri-c2185-trait-list nri-condition-list">
+            {activeConditions.map((c) => (
+              <li key={`${c.id}-${c.appliedAt}`}>
+                <strong>{c.label}</strong>
+                {c.roundsLeft != null && <span className="opacity-70"> · {c.roundsLeft} р.</span>}
+                {c.notes && <span className="opacity-60"> — {c.notes}</span>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {cyberEffects.length > 0 && (
         <section className="nri-c2185-block">

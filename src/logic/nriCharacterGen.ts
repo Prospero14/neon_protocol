@@ -25,6 +25,8 @@ import {
   type NriSheetData,
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';
+import { generateRichBackstory } from './nriBackstories';
+import { formatCharacterDisplayName, rollCharacterName, rollNickname } from './nriNames';
 import { rollViceD100 } from './nriVices100';
 import { defaultSkillsForClass } from './nriSkillPick';
 
@@ -131,6 +133,7 @@ export function levelForThreatTier(tier: NriThreatTier): number {
 
 export type CharacterMetaDraft = {
   characterName?: string;
+  nickname?: string;
   level?: number;
   originId?: NriOriginId;
   activityId?: NriActivityId;
@@ -548,6 +551,7 @@ export type FullCharacterBuild = {
     originId: NriOriginId;
     activityId: NriActivityId;
     npcArchetypeId?: NriNpcArchetypeId;
+    nickname?: string;
   };
 };
 
@@ -557,6 +561,7 @@ export function buildFullCharacter(params: {
   activityId: NriActivityId;
   archetypeId?: NriNpcArchetypeId;
   characterName?: string;
+  nickname?: string;
   level?: number;
   rollStats?: boolean;
   skillProficiencies?: string[];
@@ -565,13 +570,16 @@ export function buildFullCharacter(params: {
   const abilities = params.rollStats !== false ? rollAbilityScores() : undefined;
   const base = buildSheetForClass(params.classId, abilities);
   const level = params.level ?? 1;
-  const name = params.characterName?.trim() || rollNpcName();
+  const name = params.characterName?.trim() || rollCharacterName(params.originId);
+  const nickname = params.nickname?.trim() || rollNickname(params.activityId);
+  const displayName = formatCharacterDisplayName(name, nickname);
   const influence = rollInfluence(params.activityId);
   const career = pick(CAREER_BY_ACTIVITY[params.activityId]);
   const age = params.archetypeId ? rollAge(params.archetypeId) : rollAge('civilian');
   const yearsServed = rollYears(params.activityId);
-  const backstory = generateBackstory({
+  const backstory = generateRichBackstory({
     name,
+    nickname,
     originId: params.originId,
     activityId: params.activityId,
     archetypeId: params.archetypeId,
@@ -597,8 +605,11 @@ export function buildFullCharacter(params: {
       proficiencyBonus: proficiencyForLevel(level),
       origin: originLabel(params.originId),
       activity: activityLabel(params.activityId),
+      originId: params.originId,
+      activityId: params.activityId,
       npcArchetype: arch?.label,
-      characterName: name,
+      characterName: displayName,
+      nickname,
       age,
       career,
       yearsServed,
@@ -628,11 +639,12 @@ export function buildFullCharacter(params: {
   return {
     sheet,
     meta: {
-      characterName: name,
+      characterName: displayName,
       level,
       originId: params.originId,
       activityId: params.activityId,
       npcArchetypeId: params.archetypeId,
+      nickname,
       age,
       career,
       yearsServed,
@@ -678,6 +690,7 @@ export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft):
     ...sheet,
     level,
     characterName: meta.characterName ?? sheet.characterName,
+    nickname: meta.nickname ?? sheet.nickname,
     origin,
     activity,
     npcArchetype: arch,
@@ -694,6 +707,9 @@ export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft):
 export function sheetToMetaDraft(sheet: NriSheetData | null | undefined, fallbackName?: string): CharacterMetaDraft {
   return {
     characterName: sheet?.characterName ?? fallbackName,
+    nickname: sheet?.nickname,
+    originId: sheet?.originId as NriOriginId | undefined,
+    activityId: sheet?.activityId as NriActivityId | undefined,
     level: sheet?.level ?? 1,
     age: sheet?.age,
     career: sheet?.career,

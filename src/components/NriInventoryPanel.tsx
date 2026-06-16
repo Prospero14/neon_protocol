@@ -5,12 +5,15 @@ import {
   nriGrantNpcItem,
   nriTransferItem,
   nriToggleEquip,
+  nriUseItem,
   type NriNpc,
   type NriPlayerProfile,
   type NriRosterPlayer,
 } from '../logic/nriApi';
 import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory';
 import { canEquipItem } from '../logic/nriItemEquip';
+import { getConsumeEffect } from '../logic/nriConsumeEffects';
+import { getCatalogItem } from '../logic/nriItemCatalog';
 import {
   ITEM_CATEGORY_LABELS,
   ITEM_CATEGORY_ORDER,
@@ -92,6 +95,28 @@ export const NriInventoryPanel: React.FC<Props> = ({
     onProfileUpdate({ ...profile, inventory: res.inventory });
   };
 
+  const useItem = async (item: NriInventoryItem) => {
+    if (!authToken) return;
+    setBusy(item.id);
+    setErr(null);
+    const res = await nriUseItem(authToken, inviteCode, item.id);
+    setBusy(null);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    onProfileUpdate({ ...profile, inventory: res.inventory, sheet: res.sheet });
+  };
+
+  const canUseItem = (item: NriInventoryItem) => {
+    if (canEquipItem(item)) return false;
+    const cat = item.catalogId ? getCatalogItem(item.catalogId) : undefined;
+    if (cat?.category === 'consumable' || cat?.category === 'drug' || item.slot === 'quick') {
+      return !!getConsumeEffect(item.catalogId);
+    }
+    return false;
+  };
+
   const grantToPlayer = async () => {
     if (!authToken || !catalogPick || !grantTarget) return;
     setBusy('grant');
@@ -170,7 +195,18 @@ export const NriInventoryPanel: React.FC<Props> = ({
                 onClick={() => toggleEquip(item.id)}
               >
                 <Zap size={14} />
-                {item.equipped ? 'Снять' : 'Использовать'}
+                {item.equipped ? 'Снять' : 'Надеть'}
+              </button>
+            )}
+            {canUseItem(item) && (
+              <button
+                type="button"
+                className="nri-inventory__equip"
+                disabled={busy === item.id}
+                onClick={() => useItem(item)}
+              >
+                <Zap size={14} />
+                Использовать
               </button>
             )}
           </li>

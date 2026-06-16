@@ -1164,10 +1164,79 @@
   gap: 10px;
 }
 
+.session-gate__mode-row--2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 @media (min-width: 640px) {
   .session-gate__mode-row--3 {
     grid-template-columns: 1fr 1fr 1fr;
   }
+
+  .session-gate__mode-row--2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.nri-dev-gate {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.nri-dev-gate__panel {
+  max-width: 420px;
+  width: 100%;
+  padding: 28px 24px;
+  border: 1px solid rgba(255, 180, 80, 0.35);
+  background: rgba(20, 10, 0, 0.55);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.nri-dev-gate__icon {
+  color: #ffb84d;
+  opacity: 0.9;
+}
+
+.nri-dev-gate__kicker {
+  font-size: 0.68rem;
+  opacity: 0.65;
+  letter-spacing: 0.08em;
+}
+
+.nri-dev-gate__title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #ffd54a;
+}
+
+.nri-dev-gate__text {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.nri-dev-gate__hint {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.nri-dev-gate__banner {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 180, 80, 0.45);
+  background: rgba(80, 40, 0, 0.25);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: left;
 }
 
 .session-gate__mode-btn--nri {
@@ -1650,6 +1719,87 @@
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+.nri-combatants__list-head {
+  margin: 20px 0 8px;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.nri-combatants__item {
+  flex-wrap: wrap;
+}
+
+.nri-combatants__main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nri-combatants__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nri-combatants__actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.nri-combatants__empty {
+  padding: 12px 0;
+}
+
+.nri-threat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.nri-threat-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.nri-threat-chip strong {
+  font-size: 0.82rem;
+}
+
+.nri-threat-chip.active {
+  border-color: rgba(255, 213, 74, 0.5);
+  background: rgba(255, 213, 74, 0.1);
+}
+
+.nri-threat-chip--street.active { border-color: rgba(120, 220, 140, 0.5); background: rgba(80, 180, 100, 0.12); }
+.nri-threat-chip--pro.active { border-color: rgba(255, 200, 80, 0.5); background: rgba(255, 180, 60, 0.1); }
+.nri-threat-chip--max.active { border-color: rgba(255, 90, 90, 0.55); background: rgba(200, 50, 50, 0.12); }
+
+.nri-threat-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.nri-threat-badge--street { color: #8fd9a0; border-color: rgba(120, 220, 140, 0.35); }
+.nri-threat-badge--pro { color: #ffd080; border-color: rgba(255, 200, 80, 0.35); }
+.nri-threat-badge--max { color: #ff8a8a; border-color: rgba(255, 90, 90, 0.4); }
 
 .nri-preset-pick-grid {
   display: grid;
@@ -2159,6 +2309,64 @@
   font-size: 0.72rem;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.nri-vault__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.nri-file-popup__hint {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.nri-file-popup__reward {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 213, 74, 0.35);
+  background: rgba(255, 213, 74, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nri-file-popup__reward code {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  color: #ffd54a;
+}
+
+.nri-vault__password {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 213, 74, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font-family: inherit;
+}
+
+.nri-file-popup__password {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.nri-file-popup__password input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 213, 74, 0.25);
+  background: rgba(0, 0, 0, 0.35);
+  color: inherit;
+  font-family: inherit;
+}
+
+.nri-file-popup__or {
+  text-align: center;
+  margin: 10px 0;
+  font-size: 0.75rem;
 }
 
 .nri-file-popup__body {

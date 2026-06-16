@@ -40,6 +40,7 @@ model NriSession {
   vaultFiles NriVaultFile[]
   presets    NriPresetCharacter[]
   npcs       NriNpc[]
+  combatants NriCombatant[]
   cyberProducts NriCyberProduct[]
   mapMarkers NriMapMarker[]
   vehicles   NriSessionVehicle[]
@@ -264,6 +265,25 @@ model NriNpc {
   updatedAt   DateTime   @updatedAt
 }
 
+/** Противник-боевик стола — лист для боя; только мастер. */
+model NriCombatant {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name        String
+  classId     String?
+  archetypeId String?
+  threatTier  String     @default("street")
+  imageUrl    String?
+  inventory   Json       @default("[]")
+  sheet       Json?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([sessionId])
+}
+
 /** Киберимплант / товар лавки — blueprint + цена; позже привязка к НПС-торговцу. */
 model NriCyberProduct {
   id          String     @id @default(uuid())
@@ -319,27 +339,31 @@ model NriMapZone {
 }
 
 model NriVaultFile {
-  id          String   @id @default(uuid())
-  sessionId   String?
-  session     NriSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  title       String
-  body        String
-  protected   Boolean  @default(false)
-  gameId      String?
-  difficulty  String?
-  createdById String
+  id             String   @id @default(uuid())
+  sessionId      String?
+  session        NriSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title          String
+  body           String
+  protected      Boolean  @default(false)
+  passwordHash   String?
+  /** Plaintext код-награда — только если пароль + ICE; выдаётся после мини-игры. */
+  iceRewardCode  String?
+  gameId         String?
+  difficulty     String?
+  createdById    String
   createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   unlocks     NriFileUnlock[]
 }
 
 model NriFileUnlock {
-  id         String   @id @default(uuid())
-  fileId     String
-  file       NriVaultFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  unlockedAt DateTime @default(now())
+  id          String    @id @default(uuid())
+  fileId      String
+  file        NriVaultFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  icePassedAt DateTime?
+  unlockedAt  DateTime?
 
   @@unique([fileId, userId])
 }

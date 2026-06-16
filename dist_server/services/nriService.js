@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import { isAdminUsername } from './auth.js';
 import { isNriMember, listNriMembers, purgeNriSessionData, touchNriMember } from './nriMemberDb.js';
 import { startNriSpamBot, stopNriSpamBot } from './nriSpamBot.js';
@@ -1098,14 +1099,73 @@ export function mountNriService(app, deps) {
         }
     });
     function serializeVaultFile(f) {
+        const hasPassword = !!f.passwordHash;
+        const hasIce = !!f.gameId;
+        const passwordIsIceReward = hasPassword && hasIce && !!f.iceRewardCode;
         return {
             id: f.id,
             title: f.title,
             body: f.body,
             protected: f.protected,
+            hasPassword,
+            passwordIsIceReward,
             gameId: f.gameId,
             difficulty: f.difficulty,
             createdAt: f.createdAt.getTime(),
+        };
+    }
+    function vaultIsDualReward(file) {
+        return !!file.passwordHash && !!file.gameId && !!file.iceRewardCode;
+    }
+    async function vaultBypassUnlock(file, userId) {
+        if (file.createdById === userId)
+            return true;
+        const me = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } });
+        if (me && isAdminUsername(me.username))
+            return true;
+        if (!file.sessionId)
+            return false;
+        const session = await prisma.nriSession.findUnique({
+            where: { id: file.sessionId },
+            select: { hostUserId: true },
+        });
+        return session?.hostUserId === userId;
+    }
+    async function parseVaultCreatePayload(body) {
+        const usePassword = body.usePassword === true;
+        let useIce = body.useIce === true;
+        if (!usePassword && !useIce && (body.isProtected === true || body.protected === true)) {
+            useIce = true;
+        }
+        const passwordRaw = typeof body.password === 'string' ? body.password.trim() : '';
+        if (usePassword && passwordRaw.length < 3) {
+            return {
+                error: useIce
+                    ? 'Укажите код-награду после ICE (мин. 3 символа).'
+                    : 'Пароль должен быть не короче 3 символов.',
+            };
+        }
+        if (!usePassword && !useIce) {
+            return {
+                data: {
+                    protected: false,
+                    passwordHash: null,
+                    iceRewardCode: null,
+                    gameId: null,
+                    difficulty: null,
+                },
+            };
+        }
+        const passwordHash = usePassword ? await bcrypt.hash(passwordRaw, 10) : null;
+        const iceRewardCode = usePassword && useIce ? passwordRaw.slice(0, 64) : null;
+        return {
+            data: {
+                protected: true,
+                passwordHash,
+                iceRewardCode,
+                gameId: useIce && typeof body.gameId === 'string' ? body.gameId : null,
+                difficulty: useIce && typeof body.difficulty === 'string' ? body.difficulty : null,
+            },
         };
     }
     async function resolveSession(code) {
@@ -1163,6 +1223,21 @@ export function mountNriService(app, deps) {
             notes: n.notes,
             createdAt: n.createdAt.getTime(),
             updatedAt: n.updatedAt.getTime(),
+        };
+    }
+    function serializeCombatant(c) {
+        return {
+            id: c.id,
+            name: c.name,
+            classId: c.classId,
+            archetypeId: c.archetypeId,
+            threatTier: c.threatTier,
+            imageUrl: c.imageUrl,
+            inventory: Array.isArray(c.inventory) ? c.inventory : [],
+            sheet: c.sheet ?? null,
+            notes: c.notes,
+            createdAt: c.createdAt.getTime(),
+            updatedAt: c.updatedAt.getTime(),
         };
     }
     function parseJsonField(raw) {
@@ -1620,7 +1695,7 @@ export function mountNriService(app, deps) {
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { title, body, protected: protectedAlias, isProtected, gameId, difficulty } = req.body;
+        const { title, body, protected: protectedAlias, isProtected, gameId, difficulty, password, usePassword, useIce } = req.body;
         if (typeof title !== 'string' || !title.trim()) {
             return sendApiError(res, 400, 'NRI_FILE_TITLE_REQUIRED', 'Укажите название файла.');
         }
@@ -1636,15 +1711,28 @@ export function mountNriService(app, deps) {
             if (!isHost && !platformAdmin) {
                 return sendApiError(res, 403, 'NRI_VAULT_FORBIDDEN', 'Создавать файлы может только мастер.');
             }
-            const protectedFlag = isProtected === true || protectedAlias === true;
+            const lock = await parseVaultCreatePayload({
+                password,
+                usePassword,
+                useIce,
+                isProtected,
+                protected: protectedAlias,
+                gameId,
+                difficulty,
+            });
+            if ('error' in lock) {
+                return sendApiError(res, 400, 'NRI_VAULT_PASSWORD_INVALID', lock.error ?? 'Некорректная защита файла.');
+            }
             const file = await prisma.nriVaultFile.create({
                 data: {
                     sessionId: session.id,
                     title: title.trim().slice(0, 80),
                     body: fileBody.slice(0, 8000),
-                    protected: protectedFlag,
-                    gameId: protectedFlag && typeof gameId === 'string' ? gameId : null,
-                    difficulty: protectedFlag && typeof difficulty === 'string' ? difficulty : null,
+                    protected: lock.data.protected,
+                    passwordHash: lock.data.passwordHash,
+                    iceRewardCode: lock.data.iceRewardCode,
+                    gameId: lock.data.gameId,
+                    difficulty: lock.data.difficulty,
                     createdById: auth.userId,
                 },
             });
@@ -1959,6 +2047,96 @@ export function mountNriService(app, deps) {
         catch (error) {
             console.error('nri/npcs delete:', error);
             return sendApiError(res, 500, 'NRI_NPC_DELETE_FAILED', 'Не удалось удалить НПС.');
+        }
+    });
+    app.get('/neon_v1/services/nri/:code/combatants', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Боевики доступны только мастеру.');
+            }
+            const combatants = await prisma.nriCombatant.findMany({
+                where: { sessionId: session.id },
+                orderBy: [{ threatTier: 'desc' }, { name: 'asc' }],
+            });
+            res.json({ combatants: combatants.map(serializeCombatant) });
+        }
+        catch (error) {
+            console.error('nri/combatants get:', error);
+            return sendApiError(res, 500, 'NRI_COMBATANTS_GET_FAILED', 'Не удалось загрузить боевиков.');
+        }
+    });
+    app.post('/neon_v1/services/nri/:code/combatants', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const { name, classId, archetypeId, threatTier, imageUrl, inventory, sheet, notes } = req.body;
+        if (typeof name !== 'string' || !name.trim()) {
+            return sendApiError(res, 400, 'NRI_COMBATANT_NAME', 'Укажите имя противника.');
+        }
+        const tier = threatTier === 'pro' || threatTier === 'max' || threatTier === 'street' ? threatTier : 'street';
+        try {
+            const session = await resolveSession(code);
+            if (!session || session.status !== 'open') {
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+            }
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Боевиков создаёт только мастер.');
+            }
+            const combatant = await prisma.nriCombatant.create({
+                data: {
+                    sessionId: session.id,
+                    name: name.trim().slice(0, 60),
+                    classId: typeof classId === 'string' && classId.trim() ? classId.trim() : null,
+                    archetypeId: typeof archetypeId === 'string' && archetypeId.trim() ? archetypeId.trim() : null,
+                    threatTier: tier,
+                    imageUrl: typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim().slice(0, 2000) : null,
+                    inventory: Array.isArray(inventory) ? inventory : [],
+                    sheet: parseJsonField(sheet) ?? undefined,
+                    notes: typeof notes === 'string' ? notes.slice(0, 2000) : null,
+                },
+            });
+            res.status(201).json({ combatant: serializeCombatant(combatant) });
+        }
+        catch (error) {
+            console.error('nri/combatants post:', error);
+            return sendApiError(res, 500, 'NRI_COMBATANT_CREATE_FAILED', 'Не удалось создать боевика.');
+        }
+    });
+    app.delete('/neon_v1/services/nri/:code/combatants/:combatantId', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const combatantId = req.params.combatantId;
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Удаляет только мастер.');
+            }
+            const existing = await prisma.nriCombatant.findFirst({
+                where: { id: combatantId, sessionId: session.id },
+            });
+            if (!existing)
+                return sendApiError(res, 404, 'NRI_COMBATANT_NOT_FOUND', 'Боевик не найден.');
+            await prisma.nriCombatant.delete({ where: { id: combatantId } });
+            res.json({ ok: true });
+        }
+        catch (error) {
+            console.error('nri/combatants delete:', error);
+            return sendApiError(res, 500, 'NRI_COMBATANT_DELETE_FAILED', 'Не удалось удалить боевика.');
         }
     });
     function serializeCyberProduct(row) {
@@ -2459,7 +2637,7 @@ export function mountNriService(app, deps) {
         const auth = jwtAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const { title, body, protected: protectedAlias, isProtected, gameId, difficulty } = req.body;
+        const { title, body, protected: protectedAlias, isProtected, gameId, difficulty, password, usePassword, useIce } = req.body;
         if (typeof title !== 'string' || !title.trim()) {
             return sendApiError(res, 400, 'NRI_FILE_TITLE_REQUIRED', 'Укажите название файла.');
         }
@@ -2469,15 +2647,28 @@ export function mountNriService(app, deps) {
             if (!me || !isAdminUsername(me.username)) {
                 return sendApiError(res, 403, 'VAULT_ADMIN_ONLY', 'Создавать файлы может только админ.');
             }
-            const protectedFlag = isProtected === true || protectedAlias === true;
+            const lock = await parseVaultCreatePayload({
+                password,
+                usePassword,
+                useIce,
+                isProtected,
+                protected: protectedAlias,
+                gameId,
+                difficulty,
+            });
+            if ('error' in lock) {
+                return sendApiError(res, 400, 'NRI_VAULT_PASSWORD_INVALID', lock.error ?? 'Некорректная защита файла.');
+            }
             const file = await prisma.nriVaultFile.create({
                 data: {
                     sessionId: null,
                     title: title.trim().slice(0, 80),
                     body: fileBody.slice(0, 8000),
-                    protected: protectedFlag,
-                    gameId: protectedFlag && typeof gameId === 'string' ? gameId : null,
-                    difficulty: protectedFlag && typeof difficulty === 'string' ? difficulty : null,
+                    protected: lock.data.protected,
+                    passwordHash: lock.data.passwordHash,
+                    iceRewardCode: lock.data.iceRewardCode,
+                    gameId: lock.data.gameId,
+                    difficulty: lock.data.difficulty,
                     createdById: auth.userId,
                 },
             });
@@ -2500,12 +2691,17 @@ export function mountNriService(app, deps) {
             const unlock = await prisma.nriFileUnlock.findUnique({
                 where: { fileId_userId: { fileId, userId: auth.userId } },
             });
-            const unlocked = !file.protected || !!unlock;
+            const bypass = await vaultBypassUnlock(file, auth.userId);
+            const dualReward = vaultIsDualReward(file);
+            const unlocked = !file.protected || bypass || !!unlock?.unlockedAt;
+            const icePassed = !!unlock?.icePassedAt;
             res.json({
                 file: serializeVaultFile(file),
                 unlocked,
+                icePassed,
                 canReadBody: unlocked,
                 body: unlocked ? file.body : undefined,
+                rewardPassword: icePassed && !unlocked && dualReward ? file.iceRewardCode ?? undefined : undefined,
             });
         }
         catch (error) {
@@ -2518,6 +2714,7 @@ export function mountNriService(app, deps) {
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const fileId = req.params.fileId;
+        const { password, viaIce } = req.body;
         try {
             const file = await prisma.nriVaultFile.findUnique({ where: { id: fileId } });
             if (!file)
@@ -2525,12 +2722,74 @@ export function mountNriService(app, deps) {
             if (!file.protected) {
                 return res.json({ ok: true, unlocked: true, body: file.body });
             }
-            await prisma.nriFileUnlock.upsert({
-                where: { fileId_userId: { fileId, userId: auth.userId } },
-                create: { fileId, userId: auth.userId },
-                update: {},
-            });
-            res.json({ ok: true, unlocked: true, body: file.body });
+            if (await vaultBypassUnlock(file, auth.userId)) {
+                return res.json({ ok: true, unlocked: true, body: file.body });
+            }
+            const hasPassword = !!file.passwordHash;
+            const hasIce = !!file.gameId;
+            const dualReward = vaultIsDualReward(file);
+            const passwordRaw = typeof password === 'string' ? password.trim() : '';
+            if (viaIce === true) {
+                if (!hasIce) {
+                    return sendApiError(res, 400, 'VAULT_ICE_NOT_AVAILABLE', 'Для этого файла нет ICE.');
+                }
+                if (dualReward) {
+                    await prisma.nriFileUnlock.upsert({
+                        where: { fileId_userId: { fileId, userId: auth.userId } },
+                        create: { fileId, userId: auth.userId, icePassedAt: new Date() },
+                        update: { icePassedAt: new Date() },
+                    });
+                    return res.json({
+                        ok: true,
+                        unlocked: false,
+                        icePassed: true,
+                        rewardPassword: file.iceRewardCode,
+                    });
+                }
+                await prisma.nriFileUnlock.upsert({
+                    where: { fileId_userId: { fileId, userId: auth.userId } },
+                    create: { fileId, userId: auth.userId, unlockedAt: new Date() },
+                    update: { unlockedAt: new Date() },
+                });
+                return res.json({ ok: true, unlocked: true, body: file.body });
+            }
+            if (dualReward) {
+                const progress = await prisma.nriFileUnlock.findUnique({
+                    where: { fileId_userId: { fileId, userId: auth.userId } },
+                });
+                if (!progress?.icePassedAt) {
+                    return sendApiError(res, 403, 'VAULT_ICE_REQUIRED', 'Сначала пройдите ICE, чтобы получить код доступа.');
+                }
+                if (!passwordRaw) {
+                    return sendApiError(res, 400, 'VAULT_PASSWORD_REQUIRED', 'Введите код доступа.');
+                }
+                if (!file.passwordHash || !(await bcrypt.compare(passwordRaw, file.passwordHash))) {
+                    return sendApiError(res, 403, 'VAULT_PASSWORD_WRONG', 'Неверный код доступа.');
+                }
+                await prisma.nriFileUnlock.update({
+                    where: { fileId_userId: { fileId, userId: auth.userId } },
+                    data: { unlockedAt: new Date() },
+                });
+                return res.json({ ok: true, unlocked: true, body: file.body });
+            }
+            if (hasPassword && !hasIce) {
+                if (!passwordRaw) {
+                    return sendApiError(res, 400, 'VAULT_PASSWORD_REQUIRED', 'Введите пароль.');
+                }
+                if (!file.passwordHash || !(await bcrypt.compare(passwordRaw, file.passwordHash))) {
+                    return sendApiError(res, 403, 'VAULT_PASSWORD_WRONG', 'Неверный пароль.');
+                }
+                await prisma.nriFileUnlock.upsert({
+                    where: { fileId_userId: { fileId, userId: auth.userId } },
+                    create: { fileId, userId: auth.userId, unlockedAt: new Date() },
+                    update: { unlockedAt: new Date() },
+                });
+                return res.json({ ok: true, unlocked: true, body: file.body });
+            }
+            if (hasIce) {
+                return sendApiError(res, 400, 'VAULT_ICE_REQUIRED', 'Пройдите ICE для доступа к файлу.');
+            }
+            return sendApiError(res, 403, 'VAULT_UNLOCK_FORBIDDEN', 'Файл нельзя разблокировать.');
         }
         catch (error) {
             console.error('vault/unlock:', error);

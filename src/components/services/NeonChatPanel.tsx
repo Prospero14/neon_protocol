@@ -447,8 +447,22 @@ export const NeonChatPanel: React.FC<Props> = ({
   const showHostServiceLog = !!(isTableHost && isNriTableChat);
   const showHostToolsTab = showHostServiceLog;
 
+  const effectiveDmRecipients = useMemo(() => {
+    const byId = new Map<string, { userId: string; label: string }>();
+    for (const r of dmRecipients) byId.set(r.userId, r);
+    for (const p of participants) {
+      if (p.isBot || !p.userId || p.userId === user?.id) continue;
+      if (!byId.has(p.userId)) {
+        byId.set(p.userId, { userId: p.userId, label: `@${p.username}` });
+      }
+    }
+    return [...byId.values()];
+  }, [dmRecipients, participants, user?.id]);
+
   const activeDmLabel = activeDmUserId
-    ? dmRecipients.find((r) => r.userId === activeDmUserId)?.label
+    ? effectiveDmRecipients.find((r) => r.userId === activeDmUserId)?.label ??
+      participants.find((p) => p.userId === activeDmUserId)?.username ??
+      null
     : null;
 
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
@@ -716,7 +730,7 @@ export const NeonChatPanel: React.FC<Props> = ({
               onChange={(e) => setComposeToUserId(e.target.value || null)}
             >
               <option value="">Стол (все)</option>
-              {dmRecipients.map((r) => (
+              {effectiveDmRecipients.map((r) => (
                 <option key={r.userId} value={r.userId}>
                   {r.label}
                 </option>
@@ -887,10 +901,10 @@ export const NeonChatPanel: React.FC<Props> = ({
             {tableChannel === 'dm' && !activeDmUserId && (
               <div className="neon-chat-dm-list neon-chat-dm-list--table">
                 <p className="mono-text opacity-70">Выберите игрока стола:</p>
-                {dmRecipients.length === 0 ? (
+                {effectiveDmRecipients.length === 0 ? (
                   <p className="mono-text opacity-50">Игроки ещё не за столом — личка появится после входа.</p>
                 ) : (
-                  dmRecipients.map((r) => (
+                  effectiveDmRecipients.map((r) => (
                     <button key={r.userId} type="button" className="neon-chat-dm-user" onClick={() => openDm(r.userId)}>
                       {r.label}
                     </button>

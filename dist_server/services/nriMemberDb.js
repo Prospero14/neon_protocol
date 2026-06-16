@@ -46,6 +46,7 @@ export async function purgeNriSessionData(prisma, session) {
         }),
         prisma.nriVaultFile.deleteMany({ where: { sessionId: session.id } }),
         prisma.nriNpc.deleteMany({ where: { sessionId: session.id } }),
+        prisma.nriCombatant.deleteMany({ where: { sessionId: session.id } }),
         prisma.nriPresetCharacter.deleteMany({ where: { sessionId: session.id } }),
         prisma.nriCyberProduct.deleteMany({ where: { sessionId: session.id } }),
         prisma.nriMapMarker.deleteMany({ where: { sessionId: session.id } }),

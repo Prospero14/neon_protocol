@@ -28,9 +28,11 @@ import { CoopLobbyView } from './components/CoopLobbyView';
 import { AuthForm } from './components/AuthForm';
 import { NeonServicesHub } from './components/services/NeonServicesHub';
 import { NriLobbyView } from './components/NriLobbyView';
+import { NriInDevelopmentView } from './components/NriInDevelopmentView';
 import './components/services/neon-services.css';
 import { IMPLANT_CATALOG } from './logic/hardware';
 import type { ViewType } from './logic/hooks/useGameState';
+import { readNriInviteFromLocation } from './logic/nriFeatureFlags';
 import { getStarterPackForQuest } from './logic/hooks/useGameState';
 import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
@@ -137,6 +139,15 @@ function App() {
             gs.creationWizardLockedMode === 'coop' && gs.creationResume?.soloOnlyNeedsCoop ? 'solo_needs_coop' : 'none'
           }
           savedPlayerName={gs.playerName !== 'ID_НЕИЗВЕСТЕН' ? gs.playerName : ''}
+        />
+      );
+    }
+
+    if (gs.currentView === 'NRI_DEV_GATE') {
+      return (
+        <NriInDevelopmentView
+          inviteCode={gs.pendingNriInvite ?? gs.nriInviteCode ?? readNriInviteFromLocation()}
+          onLeave={gs.leaveNriDevGate}
         />
       );
     }

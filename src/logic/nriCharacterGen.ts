@@ -102,6 +102,32 @@ export const NRI_NPC_ARCHETYPES: {
   { id: 'mercenary', label: 'Наёмник', blurb: 'Контракт, ствол, репутация.', defaultClass: 'merc' },
 ];
 
+/** Архетипы для генерации боевиков-противников. */
+export const NRI_COMBAT_ARCHETYPE_IDS = [
+  'gang',
+  'cop',
+  'mercenary',
+  'netrunner',
+  'robot',
+  'street_bum',
+] as const satisfies readonly NriNpcArchetypeId[];
+
+export const NRI_COMBAT_ARCHETYPES = NRI_NPC_ARCHETYPES.filter((a) =>
+  (NRI_COMBAT_ARCHETYPE_IDS as readonly string[]).includes(a.id)
+);
+
+export type NriThreatTier = 'street' | 'pro' | 'max';
+
+export const NRI_THREAT_TIERS: { id: NriThreatTier; label: string; blurb: string; level: number }[] = [
+  { id: 'street', label: 'Street', blurb: 'Уличный уровень — рядовые головорезы.', level: 1 },
+  { id: 'pro', label: 'Pro', blurb: 'Профи — опытные бойцы и спецназ.', level: 3 },
+  { id: 'max', label: 'Max', blurb: 'Элита — тяжёлый противник или мини-босс.', level: 5 },
+];
+
+export function levelForThreatTier(tier: NriThreatTier): number {
+  return NRI_THREAT_TIERS.find((t) => t.id === tier)?.level ?? 1;
+}
+
 export type CharacterMetaDraft = {
   characterName?: string;
   level?: number;

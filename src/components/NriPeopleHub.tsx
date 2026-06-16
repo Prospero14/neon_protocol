@@ -1,10 +1,11 @@
 import React from 'react';
-import { Dices, ScrollText, UserCircle, Users } from 'lucide-react';
+import { Dices, ScrollText, Skull, UserCircle, Users } from 'lucide-react';
 import { NriCharactersPanel } from './NriCharactersPanel';
 import { NriPresetsPanel } from './NriPresetsPanel';
 import { NriNpcsPanel } from './NriNpcsPanel';
+import { NriCombatantsPanel } from './NriCombatantsPanel';
 
-export type PeopleSection = 'chars' | 'npcs' | 'players' | 'gen';
+export type PeopleSection = 'chars' | 'npcs' | 'combatants' | 'players' | 'gen';
 
 type Props = {
   inviteCode: string;
@@ -18,6 +19,7 @@ type Props = {
 const SECTIONS: { id: PeopleSection; label: string; icon: React.ReactNode }[] = [
   { id: 'chars', label: 'Чарники', icon: <ScrollText size={13} /> },
   { id: 'npcs', label: 'НПС', icon: <Users size={13} /> },
+  { id: 'combatants', label: 'Боевики', icon: <Skull size={13} /> },
   { id: 'players', label: 'Игроки', icon: <UserCircle size={13} /> },
   { id: 'gen', label: 'Генерация', icon: <Dices size={13} /> },
 ];
@@ -56,6 +58,7 @@ export const NriPeopleHub: React.FC<Props> = ({
           onOpenChat={onOpenChat}
         />
       )}
+      {section === 'combatants' && <NriCombatantsPanel inviteCode={inviteCode} />}
       {section === 'players' && <NriPresetsPanel inviteCode={inviteCode} mode="players" />}
       {section === 'gen' && (
         <div className="nri-people-gen">

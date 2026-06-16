@@ -146,6 +146,8 @@ export type NriVaultFile = {
   title: string;
   body: string;
   protected: boolean;
+  hasPassword?: boolean;
+  passwordIsIceReward?: boolean;
   gameId: string | null;
   difficulty: string | null;
   createdAt: number;
@@ -158,14 +160,18 @@ export type VaultCreateResult =
 function vaultCreateBody(payload: {
   title: string;
   body: string;
-  protected: boolean;
+  usePassword?: boolean;
+  useIce?: boolean;
+  password?: string;
   gameId?: string;
   difficulty?: string;
 }) {
   return JSON.stringify({
     title: payload.title,
     body: payload.body,
-    isProtected: payload.protected,
+    usePassword: payload.usePassword === true,
+    useIce: payload.useIce === true,
+    password: payload.password,
     gameId: payload.gameId,
     difficulty: payload.difficulty,
   });
@@ -268,6 +274,24 @@ export type NriNpc = {
   createdAt: number;
   updatedAt: number;
 };
+
+export type NriCombatant = {
+  id: string;
+  name: string;
+  classId: string | null;
+  archetypeId: string | null;
+  threatTier: string;
+  imageUrl: string | null;
+  inventory: NriInventoryItem[];
+  sheet: unknown;
+  notes: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type NriCombatantCreateResult =
+  | { ok: true; combatant: NriCombatant }
+  | { ok: false; error: string };
 
 export type NriPresetsResponse = {
   presets: NriPresetCharacter[];
@@ -395,6 +419,54 @@ export async function nriCreateNpc(
 export async function nriDeleteNpc(token: string, code: string, npcId: string): Promise<boolean> {
   const res = await fetch(
     `/neon_v1/services/nri/${encodeURIComponent(code)}/npcs/${encodeURIComponent(npcId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriFetchCombatants(token: string, code: string): Promise<NriCombatant[] | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/combatants`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return data.combatants ?? [];
+}
+
+export async function nriCreateCombatant(
+  token: string,
+  code: string,
+  payload: {
+    name: string;
+    classId?: string;
+    archetypeId?: string;
+    threatTier?: string;
+    imageUrl?: string;
+    inventory?: NriInventoryItem[];
+    sheet?: unknown;
+    notes?: string;
+  }
+): Promise<NriCombatantCreateResult> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/combatants`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось создать боевика') };
+  }
+  if (!data.combatant) return { ok: false, error: 'Сервер не вернул боевика' };
+  return { ok: true, combatant: data.combatant };
+}
+
+export async function nriDeleteCombatant(
+  token: string,
+  code: string,
+  combatantId: string
+): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/combatants/${encodeURIComponent(combatantId)}`,
     { method: 'DELETE', headers: authHeaders(token) }
   );
   return res.ok;
@@ -542,7 +614,9 @@ export async function nriCreateVaultFile(
   payload: {
     title: string;
     body: string;
-    protected: boolean;
+    usePassword?: boolean;
+    useIce?: boolean;
+    password?: string;
     gameId?: string;
     difficulty?: string;
   }
@@ -572,7 +646,9 @@ export async function vaultCreateGlobal(
   payload: {
     title: string;
     body: string;
-    protected: boolean;
+    usePassword?: boolean;
+    useIce?: boolean;
+    password?: string;
     gameId?: string;
     difficulty?: string;
   }
@@ -593,23 +669,43 @@ export async function vaultCreateGlobal(
 export async function vaultFetchFile(
   token: string,
   fileId: string
-): Promise<{ file: NriVaultFile; unlocked: boolean; body?: string } | null> {
+): Promise<{ file: NriVaultFile; unlocked: boolean; icePassed?: boolean; rewardPassword?: string; body?: string } | null> {
   const res = await fetch(`/neon_v1/services/vault/files/${encodeURIComponent(fileId)}`, {
     headers: authHeaders(token),
   });
   const data = await parseJson(res);
   if (!res.ok) return null;
-  return { file: data.file, unlocked: data.unlocked, body: data.body };
+  return {
+    file: data.file,
+    unlocked: data.unlocked,
+    icePassed: data.icePassed,
+    rewardPassword: data.rewardPassword,
+    body: data.body,
+  };
 }
 
-export async function vaultUnlockFile(token: string, fileId: string): Promise<string | null> {
+export async function vaultUnlockFile(
+  token: string,
+  fileId: string,
+  opts?: { password?: string; viaIce?: boolean }
+): Promise<{ body: string | null; rewardPassword?: string; icePassed?: boolean; error?: string }> {
+  const bodyPayload: { password?: string; viaIce?: boolean } = {};
+  if (opts?.password) bodyPayload.password = opts.password;
+  if (opts?.viaIce) bodyPayload.viaIce = true;
   const res = await fetch(`/neon_v1/services/vault/files/${encodeURIComponent(fileId)}/unlock`, {
     method: 'POST',
     headers: authHeaders(token),
+    body: JSON.stringify(bodyPayload),
   });
   const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.body ?? null;
+  if (!res.ok) {
+    return { body: null, error: parseVaultError(data, 'Не удалось разблокировать') };
+  }
+  return {
+    body: data.body ?? null,
+    rewardPassword: typeof data.rewardPassword === 'string' ? data.rewardPassword : undefined,
+    icePassed: data.icePassed === true,
+  };
 }
 
 export type NriInventoryUpdateResult =

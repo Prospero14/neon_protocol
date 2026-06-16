@@ -64,7 +64,9 @@ export const NeonServicesHub: React.FC<Props> = ({ onIceReward, onBack }) => {
   const createGlobalFile = async (payload: {
     title: string;
     body: string;
-    protected: boolean;
+    usePassword?: boolean;
+    useIce?: boolean;
+    password?: string;
     gameId?: string;
     difficulty?: string;
   }) => {

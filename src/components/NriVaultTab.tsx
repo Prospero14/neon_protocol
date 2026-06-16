@@ -16,15 +16,19 @@ export type VaultRecipient = {
   label: string;
 };
 
+export type VaultCreatePayload = {
+  title: string;
+  body: string;
+  usePassword?: boolean;
+  useIce?: boolean;
+  password?: string;
+  gameId?: string;
+  difficulty?: string;
+};
+
 type Props = {
   files: NriVaultFile[];
-  onCreate: (payload: {
-    title: string;
-    body: string;
-    protected: boolean;
-    gameId?: string;
-    difficulty?: string;
-  }) => Promise<VaultCreateResult>;
+  onCreate: (payload: VaultCreatePayload) => Promise<VaultCreateResult>;
   onDelete?: (fileId: string) => Promise<boolean>;
   sendTarget?: VaultSendTarget;
   recipients?: VaultRecipient[];
@@ -43,7 +47,9 @@ export const NriVaultTab: React.FC<Props> = ({
   const [list, setList] = useState<NriVaultFile[]>(files);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [protectedFlag, setProtectedFlag] = useState(false);
+  const [usePassword, setUsePassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [useIce, setUseIce] = useState(false);
   const [gameId, setGameId] = useState(NRI_GAME_CATALOG[0]?.id ?? 'gibson_ice');
   const [difficulty, setDifficulty] = useState<IceDifficulty>('medium');
   const [busy, setBusy] = useState(false);
@@ -62,16 +68,24 @@ export const NriVaultTab: React.FC<Props> = ({
     return () => clearTimeout(t);
   }, [notice]);
 
+  const dualRewardMode = usePassword && useIce;
+
   const submit = async () => {
     if (!title.trim()) return;
+    if (usePassword && password.trim().length < 3) {
+      setErr(dualRewardMode ? 'Код-награда — минимум 3 символа' : 'Пароль — минимум 3 символа');
+      return;
+    }
     setBusy(true);
     setErr(null);
     const result = await onCreate({
       title: title.trim(),
       body,
-      protected: protectedFlag,
-      gameId: protectedFlag ? gameId : undefined,
-      difficulty: protectedFlag ? difficulty : undefined,
+      usePassword,
+      useIce,
+      password: usePassword ? password : undefined,
+      gameId: useIce ? gameId : undefined,
+      difficulty: useIce ? difficulty : undefined,
     });
     setBusy(false);
     if (result.ok) {
@@ -82,6 +96,9 @@ export const NriVaultTab: React.FC<Props> = ({
       });
       setTitle('');
       setBody('');
+      setPassword('');
+      setUsePassword(false);
+      setUseIce(false);
       setNotice(`Файл «${result.file.title}» создан`);
     } else {
       setErr(result.error);
@@ -108,21 +125,29 @@ export const NriVaultTab: React.FC<Props> = ({
     else setErr('Не удалось отправить в личку');
   };
 
-  const removeFile = async (fileId: string, title: string) => {
-    if (!onDelete || !window.confirm(`Удалить файл «${title}»?`)) return;
+  const removeFile = async (fileId: string, fileTitle: string) => {
+    if (!onDelete || !window.confirm(`Удалить файл «${fileTitle}»?`)) return;
     setSendBusyId(fileId);
     setOpenMenuId(null);
     const ok = await onDelete(fileId);
     setSendBusyId(null);
     if (ok) {
       setList((prev) => prev.filter((f) => f.id !== fileId));
-      setNotice(`Файл «${title}» удалён`);
+      setNotice(`Файл «${fileTitle}» удалён`);
     } else {
       setErr('Не удалось удалить файл');
     }
   };
 
   const dmRecipients = recipients.filter((r) => r.userId !== user?.id);
+
+  const lockLabel = (f: NriVaultFile) => {
+    if (!f.protected) return '📄';
+    const parts: string[] = ['🔒'];
+    if (f.hasPassword) parts.push('🔑');
+    if (f.gameId) parts.push('🧊');
+    return parts.join('');
+  };
 
   return (
     <div className="nri-vault">
@@ -135,10 +160,10 @@ export const NriVaultTab: React.FC<Props> = ({
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название файла" maxLength={80} />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Содержимое…" rows={6} maxLength={8000} />
         <label className="nri-vault__toggle">
-          <input type="checkbox" checked={protectedFlag} onChange={(e) => setProtectedFlag(e.target.checked)} />
-          Защищённый (icebreaker)
+          <input type="checkbox" checked={useIce} onChange={(e) => setUseIce(e.target.checked)} />
+          Защита ICE (мини-игра)
         </label>
-        {protectedFlag && (
+        {useIce && (
           <div className="nri-vault__game-pick">
             <select value={gameId} onChange={(e) => setGameId(e.target.value)}>
               {NRI_GAME_CATALOG.map((g) => (
@@ -151,6 +176,28 @@ export const NriVaultTab: React.FC<Props> = ({
               <option value="hard">Сложный</option>
             </select>
           </div>
+        )}
+        <label className="nri-vault__toggle">
+          <input type="checkbox" checked={usePassword} onChange={(e) => setUsePassword(e.target.checked)} />
+          {dualRewardMode ? 'Код-награда после ICE' : 'Защита паролем'}
+        </label>
+        {usePassword && (
+          <>
+            <input
+              type="text"
+              className="nri-vault__password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={dualRewardMode ? 'Код, который получит игрок после ICE' : 'Пароль (мин. 3 символа)'}
+              maxLength={64}
+              autoComplete="off"
+            />
+            {dualRewardMode && (
+              <p className="mono-text opacity-60 nri-vault__hint">
+                Игрок не знает код заранее — он выдаётся только после прохождения мини-игры.
+              </p>
+            )}
+          </>
         )}
         <button type="button" onClick={submit} disabled={busy || !title.trim()}>
           {busy ? '…' : 'Создать файл'}
@@ -169,11 +216,19 @@ export const NriVaultTab: React.FC<Props> = ({
             <li key={f.id} className="nri-vault__item">
               <div className="nri-vault__item-main">
                 <span className="nri-vault__item-title">
-                  {f.protected ? '🔒' : '📄'} {f.title}
+                  {lockLabel(f)} {f.title}
                 </span>
-                {f.protected && f.gameId && (
+                {f.protected && (
                   <span className="mono-text opacity-60 nri-vault__item-meta">
-                    {NRI_GAME_CATALOG.find((g) => g.id === f.gameId)?.title ?? f.gameId} · {f.difficulty}
+                    {f.passwordIsIceReward
+                      ? `ICE → код · ${NRI_GAME_CATALOG.find((g) => g.id === f.gameId)?.title ?? f.gameId}`
+                      : (
+                        <>
+                          {f.hasPassword && 'пароль'}
+                          {f.hasPassword && f.gameId && ' · '}
+                          {f.gameId && `${NRI_GAME_CATALOG.find((g) => g.id === f.gameId)?.title ?? f.gameId} · ${f.difficulty}`}
+                        </>
+                      )}
                   </span>
                 )}
               </div>

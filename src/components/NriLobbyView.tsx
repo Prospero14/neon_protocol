@@ -243,6 +243,8 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     if (tab === 'chat' && session?.chatRoomId) {
       loadRecipients();
       if (session?.isHost || session?.isAdmin) loadTableNpcs();
+      const t = setInterval(loadRecipients, 5000);
+      return () => clearInterval(t);
     }
     if (tab === 'inventory' && authToken) {
       nriFetchPlayer(authToken, inviteCode).then((p) => {
@@ -269,7 +271,9 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const createVaultFile = async (payload: {
     title: string;
     body: string;
-    protected: boolean;
+    usePassword?: boolean;
+    useIce?: boolean;
+    password?: string;
     gameId?: string;
     difficulty?: string;
   }) => {

@@ -15,6 +15,7 @@ import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../
 import { useAuth } from '../AuthContext';
 import { readNeonAuthToken } from '../authTokenStorage';
 import { nriCreateSession, nriJoinSession, parseNriInviteFromHash } from '../nriApi';
+import { isNriInviteEntry, isNriPublicEnabled } from '../nriFeatureFlags';
 import { canUnlockClass } from '../preClassProgression';
 import { QUEST_LIBRARY, type QuestDefinition } from '../questData';
 import { applyBitModifiers, baseQuestBits } from '../economy';
@@ -58,7 +59,8 @@ export type ViewType =
   | 'QUEST_LOG'
   | 'INTEL'
   | 'NEON_SERVICES'
-  | 'NRI_LOBBY';
+  | 'NRI_LOBBY'
+  | 'NRI_DEV_GATE';
 
 /** Флаги «соло / кооп персонаж» для экрана входа и мастера создания. */
 export type CreationResumeInfo = {
@@ -790,8 +792,12 @@ export function useGameState() {
       const nriCodeRaw = (gs as { nriInviteCode?: unknown }).nriInviteCode;
       const nriCode = typeof nriCodeRaw === 'string' && nriCodeRaw.startsWith('NRI-') ? nriCodeRaw : null;
       const resumeNri = savedView === 'NRI_LOBBY' && nriCode;
-      if (savedView && deepViews.includes(savedView)) {
+      if (resumeNri && !isNriPublicEnabled()) {
+        setCurrentView('NRI_DEV_GATE');
+      } else if (savedView && deepViews.includes(savedView)) {
         setCurrentView(savedView);
+      } else if (isNriInviteEntry() && !isNriPublicEnabled()) {
+        setCurrentView('NRI_DEV_GATE');
       } else {
         setCurrentView('SESSION_GATE');
       }
@@ -947,6 +953,9 @@ export function useGameState() {
     const nriCode = parseNriInviteFromHash(window.location.hash);
     if (nriCode) {
       setPendingNriInvite(nriCode);
+      if (!isNriPublicEnabled()) {
+        setCurrentView('NRI_DEV_GATE');
+      }
     }
   }, [user?.id]);
 
@@ -954,6 +963,11 @@ export function useGameState() {
     if (!user) return;
     const nriCode = parseNriInviteFromHash(window.location.hash);
     if (!nriCode) return;
+    if (!isNriPublicEnabled()) {
+      setPendingNriInvite(nriCode);
+      setCurrentView('NRI_DEV_GATE');
+      return;
+    }
     const authToken = readNeonAuthToken();
     if (!authToken) return;
     void (async () => {
@@ -1303,6 +1317,7 @@ export function useGameState() {
     async (code: string) => {
       const normalized = code.trim().toUpperCase();
       if (!normalized.startsWith('NRI-')) return false;
+      if (!isNriPublicEnabled()) return false;
       const authToken = readNeonAuthToken();
       if (!authToken) return false;
       const data = await nriJoinSession(authToken, normalized);
@@ -1324,6 +1339,7 @@ export function useGameState() {
 
   const createNriTable = useCallback(
     async (title?: string) => {
+      if (!isNriPublicEnabled()) return false;
       const authToken = readNeonAuthToken();
       if (!authToken) return false;
       const session = await nriCreateSession(authToken, title);
@@ -1336,6 +1352,19 @@ export function useGameState() {
   const leaveNriLobby = useCallback(() => {
     setSessionMode('solo');
     setNriInviteCode(null);
+    setCurrentView('SESSION_GATE');
+    window.location.hash = '';
+    void syncGame({
+      sessionMode: 'solo',
+      nriInviteCode: undefined,
+      currentView: 'SESSION_GATE',
+    });
+  }, [syncGame]);
+
+  const leaveNriDevGate = useCallback(() => {
+    setPendingNriInvite(null);
+    setNriInviteCode(null);
+    setSessionMode('solo');
     setCurrentView('SESSION_GATE');
     window.location.hash = '';
     void syncGame({
@@ -1848,6 +1877,7 @@ export function useGameState() {
     createNriTable,
     enterNriLobby,
     leaveNriLobby,
+    leaveNriDevGate,
     returnToSessionGate,
     nriInviteCode,
     pendingNriInvite,

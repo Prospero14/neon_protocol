@@ -4,6 +4,7 @@ import type { SessionMode, CoopRole } from '../logic/sessionMode';
 import { COOP_ROLES, COOP_ROLE_LABELS } from '../logic/sessionMode';
 import type { CoopClassSave } from '../logic/coopClassProfiles';
 import type { CreationResumeInfo } from '../logic/hooks/useGameState';
+import { isNriPublicEnabled } from '../logic/nriFeatureFlags';
 
 type Phase = 'mode' | 'roster';
 
@@ -43,6 +44,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const coopSlotsFull = existingCoopRoles.length >= COOP_ROLES.length;
   const homeLabel = MAP_NODES.find((n) => n.id === homeDistrictId)?.name ?? homeDistrictId;
   const displayName = playerName !== 'ID_НЕИЗВЕСТЕН' ? playerName : '—';
+  const nriEnabled = isNriPublicEnabled();
 
   const pickMode = (mode: SessionMode) => {
     setPickedMode(mode);
@@ -63,12 +65,18 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <p className="session-resume-gate__hint session-gate__hint">
             Затем — список персонажей этого режима и вход или создание нового профиля.
           </p>
-          {pendingNriInvite && (
+          {pendingNriInvite && !nriEnabled && (
+            <div className="nri-dev-gate__banner mono-text">
+              Стол <strong>{pendingNriInvite}</strong> — режим НРИ <strong>в разработке</strong> на этом сервере.
+              Выберите Solo или Co-op.
+            </div>
+          )}
+          {pendingNriInvite && nriEnabled && (
             <div className="session-gate__nri-banner mono-text">
               Приглашение на стол <strong>{pendingNriInvite}</strong> — выберите НРИ и войдите.
             </div>
           )}
-          <div className="session-resume-gate__actions session-gate__mode-row session-gate__mode-row--3">
+          <div className={`session-resume-gate__actions session-gate__mode-row ${nriEnabled ? 'session-gate__mode-row--3' : 'session-gate__mode-row--2'}`}>
             <button
               type="button"
               className={`session-resume-btn session-resume-btn--solo session-gate__mode-btn ${soloExists ? 'session-gate__mode-btn--ready' : ''}`}
@@ -89,6 +97,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
                 {coopExists ? `${existingCoopRoles.length} класс(ов)` : 'профиль ещё не создан'}
               </span>
             </button>
+            {nriEnabled && (
             <button
               type="button"
               className="session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri"
@@ -97,6 +106,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
               <span className="session-gate__mode-title">НРИ</span>
               <span className="session-gate__mode-sub">стол + чат по ссылке</span>
             </button>
+            )}
           </div>
         </div>
       </div>

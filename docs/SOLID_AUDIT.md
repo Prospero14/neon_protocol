@@ -8,10 +8,10 @@
 
 | Модуль | Строк (≈) | Рекомендация |
 |--------|-----------|--------------|
-| `server/services/nriService.ts` | ~740 | scenario, vehicles, session lobby |
+| `server/services/nriService.ts` | ~85 | mount-only entry |
 | `server/createApp.ts` | ~298 | `routes/auth.ts`, static (coop → `mountCoopRoutes.ts`) |
 | `src/logic/hooks/useGameState.ts` | ~1900 | `useSoloGame`, `useCoopLobby`, `useNriInvite` |
-| `src/logic/nriApi.ts` | ~1400 | `nriApi/session.ts`, `players.ts`, … |
+| `src/logic/nriApi.ts` | ~20 | barrel + `nriApi/*` slices |
 
 ---
 
@@ -28,8 +28,9 @@
 - [x] `shared/api-schemas/nri.ts` — Zod для player/preset/ice/wallet NRI routes
 - [x] `nriPlayerRoutes` / `nriIceWalletRoutes` / `nriPresetRoutes` + `nriSessionHelpers`
 - [x] `src/logic/nriApi/session.ts` + `players.ts` (клиент)
-- [x] `nriMapRoutes` / `nriVaultRoutes` / `nriNpcRoutes` / `nriCyberRoutes`
-- [ ] Разрезать `nriService.ts` (scenario/vehicles) / `useGameState.ts` / `createApp.ts` (auth routes)
+- [x] `nriSessionLobbyRoutes` / `nriVehicleRoutes` / `nriScenarioRoutes` — `nriService` mount-only
+- [x] `src/logic/nriApi/*` — vault, wallet, map, scenario, characters, cyber, vehicles, lore
+- [ ] Split `useGameState.ts` / `createApp.ts` (auth routes)
 
 ---
 

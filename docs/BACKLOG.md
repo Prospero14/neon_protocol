@@ -20,7 +20,8 @@
 | Zod auth + `game/sync` + **ключевые NRI routes** (`shared/api-schemas/nri.ts`) | ✅ |
 | `nriPlayerRoutes`, `nriIceWalletRoutes`, `nriPresetRoutes` + `nriSessionHelpers` | ✅ |
 | `nriMapRoutes`, `nriVaultRoutes`, `nriNpcRoutes`, `nriCyberRoutes` — map/vault/npc/cyber из `nriService` | ✅ |
-| `src/logic/nriApi/session.ts`, `players.ts`, `http.ts` | ✅ (частично) |
+| `nriSessionLobbyRoutes`, `nriVehicleRoutes`, `nriScenarioRoutes` — финальный срез `nriService` (~85 строк) | ✅ |
+| `nriApi/` — vault, wallet, map, scenario, characters, cyber, vehicles, lore | ✅ |
 
 ---
 
@@ -36,10 +37,10 @@
 
 | # | Модуль | Следующий срез | Уже вынесено |
 |---|--------|----------------|--------------|
-| 1 | `nriService.ts` (~740 строк) | scenario, vehicles, session lobby | player, ice/wallet, preset, map, vault, npc, cyber, combatant, item transfer, lore travel |
+| 1 | `nriService.ts` (~85 строк) | — (готово) | все route-модули + mount-only entry |
 | 2 | `createApp.ts` (~298 строк) | `routes/auth.ts` | coop + mountCoopRoutes |
 | 3 | `useGameState.ts` (~1900 строк) | `useNriSession`, `useCoopLobby`, `useSoloProgress` | — |
-| 4 | `nriApi.ts` (~1140 строк) | wallet/map/scenario slices | session, players, http |
+| 4 | `nriApi.ts` (~20 строк barrel) | — (готово) | session, players, http, vault, wallet, map, scenario, … |
 
 ---
 
@@ -78,13 +79,13 @@
 
 | Метрика | Сейчас | Цель |
 |---------|--------|------|
-| `nriService.ts` строк | ~740 | < 800 на файл |
+| `nriService.ts` строк | ~85 | < 800 на файл ✅ |
 | `createApp.ts` строк | ~298 | < 400 (+ mount*) |
 | `useGameState.ts` строк | ~1900 | < 600 на хук |
-| `nriApi.ts` строк | ~1140 | < 400 на модуль |
+| `nriApi.ts` строк | ~20 (barrel) | < 400 на модуль ✅ |
 | Vitest тесты | 128 | расти с каждым API-slice |
 | `npm run build` | зелёный | обязательно в CI |
 
 ---
 
-*Коммиты: `93ded1d` — NRI player/ice/preset split; следующий — map/vault/npc/cyber routes.*
+*Коммиты: `cef84e3` — map/vault/npc/cyber; следующий — session/vehicle/scenario + nriApi slices.*

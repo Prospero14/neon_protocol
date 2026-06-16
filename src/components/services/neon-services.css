@@ -1472,7 +1472,50 @@
 }
 
 .nri-rules__section {
-  margin: 0;
+  margin: 0 0 16px;
+}
+
+.nri-rules__sections {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nri-rules__tab-intro {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: rgba(220, 235, 255, 0.92);
+  background: rgba(0, 40, 60, 0.35);
+  border-left: 3px solid rgba(0, 255, 255, 0.45);
+}
+
+.nri-rules__section-intro {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: rgba(200, 210, 230, 0.88);
+}
+
+.nri-rules__examples {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(40, 20, 60, 0.35);
+  border: 1px solid rgba(180, 120, 255, 0.2);
+}
+
+.nri-rules__examples-label {
+  margin: 0 0 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(200, 160, 255, 0.85);
+}
+
+.nri-rules__list--examples li {
+  color: rgba(210, 200, 240, 0.9);
+  font-size: 0.82rem;
 }
 
 .nri-rules__tabs {
@@ -1517,6 +1560,10 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.nri-rules__sections .nri-rules__class-card {
+  margin-top: 4px;
 }
 
 .nri-rules__class-card {
@@ -3907,3 +3954,272 @@
   border-radius: 2px;
 }
 .nri-faction-tag--other { opacity: 0.55; border-style: dashed; }
+
+/* —— Master tools: tactical map + dice —— */
+.nri-master-tools__body {
+  padding-top: 8px;
+}
+
+.nri-chat-send-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+
+.nri-chat-send-bar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+.nri-chat-send-bar__field--grow {
+  flex: 1;
+  min-width: 140px;
+}
+
+.nri-chat-send-bar__field select {
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
+.nri-chat-send-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.nri-tactical__head,
+.nri-dice-panel__head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.nri-tactical__title,
+.nri-dice-panel__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.nri-tactical__hint,
+.nri-dice-panel__hint {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.nri-tactical__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.nri-tactical__field select,
+.nri-tactical__enemy-name {
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
+.nri-tactical__enemy-name {
+  width: 110px;
+}
+
+.nri-tactical__tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  color: rgba(200, 220, 255, 0.9);
+  cursor: pointer;
+}
+
+.nri-tactical__tool.active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.nri-tactical__board {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  background: #0a0e14;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.nri-tactical__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.nri-tactical__bg svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.nri-tactical__token {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--tok-stroke, #aaa);
+  background: var(--tok-fill, #333);
+  cursor: grab;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nri-tactical__token--enemy {
+  border-radius: 4px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 32px;
+  height: 32px;
+}
+
+.nri-tactical__token--enemy .nri-tactical__token-glyph,
+.nri-tactical__token--enemy .nri-tactical__token-label {
+  transform: rotate(-45deg);
+}
+
+.nri-tactical__token-glyph {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+
+.nri-tactical__token-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  font-size: 0.58rem;
+  white-space: nowrap;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(200, 220, 255, 0.9);
+  pointer-events: none;
+}
+
+.nri-tactical__token-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.nri-tactical__token:hover .nri-tactical__token-remove {
+  opacity: 1;
+}
+
+.nri-tactical__mode-hint,
+.nri-tactical__notice,
+.nri-dice-panel__notice {
+  margin: 8px 0 0;
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.nri-dice-panel__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.nri-dice-panel__controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+.nri-dice-panel__controls input,
+.nri-dice-panel__controls select {
+  padding: 6px 8px;
+  width: 72px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 255, 0.25);
+  color: inherit;
+  font-family: inherit;
+}
+
+.nri-dice-panel__result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: rgba(0, 40, 60, 0.35);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  font-family: var(--font-mono, monospace);
+}
+
+.nri-dice-panel__formula {
+  opacity: 0.75;
+}
+
+.nri-dice-panel__total {
+  font-size: 1.25rem;
+  color: var(--neon-cyan);
+}
+
+.nri-file-popup__svg {
+  max-height: 50vh;
+  overflow: auto;
+  margin-bottom: 12px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.nri-file-popup__svg svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nri-file-popup__img {
+  max-width: 100%;
+  margin-bottom: 12px;
+}

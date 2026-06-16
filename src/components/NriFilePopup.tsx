@@ -150,7 +150,16 @@ export const NriFilePopup: React.FC<Props> = ({ fileId, fileTitle, fileProtected
           </div>
         )}
         {unlocked && body && (
-          <pre className="nri-file-popup__body">{body}</pre>
+          body.trimStart().startsWith('<svg') ? (
+            <div
+              className="nri-file-popup__svg"
+              dangerouslySetInnerHTML={{ __html: body }}
+            />
+          ) : body.trimStart().startsWith('data:image') ? (
+            <img className="nri-file-popup__img" src={body} alt="" />
+          ) : (
+            <pre className="nri-file-popup__body">{body}</pre>
+          )
         )}
         <button type="button" className="nri-modal__submit" onClick={onClose}>
           Закрыть

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -39,11 +39,12 @@ import { NriCityMapPanel } from './NriCityMapPanel';
 import { NriTransportPanel } from './NriTransportPanel';
 import { NriScenarioHub } from './NriScenarioHub';
 import { NriPlayerNotesPanel } from './NriPlayerNotesPanel';
+import { NriMasterToolsHub } from './NriMasterToolsHub';
 
 import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
 
-type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes';
+type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes' | 'tools';
 
 type Props = {
   inviteCode: string;
@@ -255,6 +256,10 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     if (tab === 'transport' && authToken && (session?.isHost || session?.isAdmin)) {
       loadRoster();
     }
+    if (tab === 'tools' && authToken && (session?.isHost || session?.isAdmin)) {
+      loadRoster();
+      loadRecipients();
+    }
   }, [
     tab,
     authToken,
@@ -419,6 +424,11 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             <Car size={14} /> ТРАНСПОРТ
           </button>
         )}
+        {(session?.isHost || session?.isAdmin) && (
+          <button type="button" className={tab === 'tools' ? 'active' : ''} onClick={() => setTab('tools')}>
+            <Wrench size={14} /> МАСТЕР
+          </button>
+        )}
         {profile && !session?.isHost && (
           <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
             <StickyNote size={14} /> ЗАМЕТКИ
@@ -528,6 +538,17 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
         {tab === 'scenario' && (session?.isHost || session?.isAdmin) && (
           <NriScenarioHub inviteCode={inviteCode} />
+        )}
+        {tab === 'tools' && (session?.isHost || session?.isAdmin) && session.chatRoomId && authToken && (
+          <NriMasterToolsHub
+            inviteCode={inviteCode}
+            authToken={authToken}
+            roomId={session.chatRoomId}
+            roster={roster.filter((r) => members.some((m) => m.userId === r.userId && !m.isHost))}
+            recipients={vaultRecipients}
+            currentUserId={user?.id}
+            onVaultCreated={loadVault}
+          />
         )}
         {tab === 'notes' && profile && !session?.isHost && (
           <NriPlayerNotesPanel

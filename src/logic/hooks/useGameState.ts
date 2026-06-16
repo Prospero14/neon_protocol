@@ -17,8 +17,8 @@ import { readNeonAuthToken } from '../authTokenStorage';
 import { nriCreateSession, nriJoinSession, parseNriInviteFromHash } from '../nriApi';
 import {
   isSoloCoopBlockedForUser,
-  markNriInviteGuest,
-  markNriInviteGuestFromLocation,
+  markNriInviteGuestFromLanding,
+  readLandingNriInviteCode,
   readNriGuestInviteCode,
 } from '../nriFeatureFlags';
 import { canUnlockClass } from '../preClassProgression';
@@ -275,9 +275,8 @@ export function useGameState() {
   const [nriInviteCode, setNriInviteCode] = useState<string | null>(null);
   const [pendingNriInvite, setPendingNriInvite] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
-    const code = parseNriInviteFromHash(window.location.hash);
-    if (code) markNriInviteGuest(code);
-    return code;
+    markNriInviteGuestFromLanding();
+    return readLandingNriInviteCode() ?? parseNriInviteFromHash(window.location.hash);
   });
   /** Снимки по классам коопа: колода, инвентарь, прогресс полигона (соло не использует). */
   const [coopClassProfiles, setCoopClassProfiles] = useState<Partial<Record<CoopRole, CoopClassSave>>>({});
@@ -959,7 +958,6 @@ export function useGameState() {
     }
     const nriCode = parseNriInviteFromHash(window.location.hash);
     if (nriCode) {
-      markNriInviteGuest(nriCode);
       setPendingNriInvite(nriCode);
     }
   }, [user?.id]);
@@ -968,7 +966,6 @@ export function useGameState() {
     if (!user) return;
     const nriCode = parseNriInviteFromHash(window.location.hash);
     if (!nriCode) return;
-    markNriInviteGuest(nriCode);
     const authToken = readNeonAuthToken();
     if (!authToken) return;
     void (async () => {

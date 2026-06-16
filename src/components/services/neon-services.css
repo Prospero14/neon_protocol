@@ -1248,6 +1248,11 @@
   border-color: rgba(200, 140, 255, 0.5) !important;
 }
 
+.session-gate__mode-btn--highlight {
+  box-shadow: 0 0 12px rgba(200, 140, 255, 0.35);
+  border-color: rgba(200, 140, 255, 0.75) !important;
+}
+
 .session-gate__nri-banner {
   margin: 12px 0;
   padding: 10px;

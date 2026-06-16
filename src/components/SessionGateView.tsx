@@ -76,10 +76,13 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
               {nriCodeHint ? (
                 <>
                   {' '}
-                  Вернитесь к столу <strong>{nriCodeHint}</strong> через режим НРИ.
+                  Режим <strong>НРИ</strong> доступен — стол <strong>{nriCodeHint}</strong>.
                 </>
               ) : (
-                ' Используйте режим НРИ.'
+                <>
+                  {' '}
+                  Режим <strong>НРИ</strong> доступен — создайте стол или войдите по коду.
+                </>
               )}
             </div>
           )}
@@ -113,7 +116,7 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
             </button>
             <button
               type="button"
-              className="session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri"
+              className={`session-resume-btn session-gate__mode-btn session-gate__mode-btn--nri ${soloCoopBlocked ? 'session-gate__mode-btn--highlight' : ''}`}
               onClick={() => pickMode('nri')}
             >
               <span className="session-gate__mode-title">НРИ</span>

@@ -26,11 +26,12 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
   - **DATABASE_URL**: Leave blank (it will use the local `file:./dev.db`).
   - **JWT_SECRET**: Add any random string (e.g., `my_secret_123`).
 
-> [!CAUTION]
-> **Data Persistence**: Since SQLite is a local file, players and their progress will be **reset whenever you push a new update** to GitHub. This is perfect for testing without costs!
+> [!NOTE]
+> **Data persistence**: На Amvera включён `persistenceMount: /data` — SQLite (`dev.db`) и прогресс **сохраняются между redeploy**. Локально БД лежит в корне проекта; для кастомного пути задайте `NEON_DATA_DIR` или `DATABASE_URL=file:…`.
 
 ## 📚 Documentation
 
+- **[Product pitch](docs/PITCH.md)** — возможности сервиса для презентации проекта
 - **[Architecture & stack](docs/ARCHITECTURE.md)** — tools, subsystems, API, migration paths
 - **[SOLID audit](docs/SOLID_AUDIT.md)** — technical debt checklist
 - **[Coop cards](docs/COOP_CARD_DOCUMENTATION.md)**

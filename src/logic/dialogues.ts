@@ -42,6 +42,7 @@ export interface DialogueNode {
   speaker: string;
   text: string;
   options: DialogueOption[];
+  requireCompletedQuestId?: string;
 }
 
 export interface DialogueTree {

@@ -26,8 +26,12 @@ interface CombatHudBarProps {
 const CombatHudBar: React.FC<CombatHudBarProps> = ({
   phaseOrder = SDLC_PHASE_IDS_FULL,
   currentPhase, stress, cpu, cpuMax, ramMaxMb, lastLog, lastAiActionName, nextIntentName, isPlayerTurn = true, tzName,
-  playerProgress, aiProgress, onShowTzModal
+  playerProgress: _playerProgress,
+  aiProgress: _aiProgress,
+  onShowTzModal
 }) => {
+  void _playerProgress;
+  void _aiProgress;
   const hudPrimaryLine =
     !isPlayerTurn && nextIntentName
       ? `NEXT: ${nextIntentName}`

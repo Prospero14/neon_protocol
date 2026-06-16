@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import fs from 'fs';
 import { mergeStartupRankings } from './coopStartupPregen.js';
+import { loadActiveCoopMatches, partyIdForUser, persistCoopMatch, } from './coop/coopMatchStore.js';
 import { registerNeonServices } from './services/registerServices.js';
 /** Склеивает строку GameState из БД с clientSnapshot (расширенный прогресс клиента). */
 function publicGameState(gs) {
@@ -49,7 +50,8 @@ function sendApiError(res, status, code, message) {
     res.status(status).json({ error: message, code });
 }
 /**
- * HTTP API (auth, sync, coop lobby) + SPA static. Лобби — in-memory на инстанс приложения.
+ * HTTP API (auth, sync, coop lobby) + SPA static.
+ * Coop live-матчи — SQLite (CoopLiveMatch); presence-лобби — in-memory TTL.
  */
 export function createApp(opts) {
     const { prisma, jwtSecret, getIsDbReady, port, databaseUrl, isAmvera } = opts;
@@ -65,6 +67,19 @@ export function createApp(opts) {
     const matches = new Map();
     const matchByPartyId = new Map();
     const matchSseByMatchId = new Map();
+    void loadActiveCoopMatches(prisma).then((loaded) => {
+        for (const m of loaded) {
+            matches.set(m.id, m);
+            matchByPartyId.set(m.partyId, m.id);
+            parties.set(m.partyId, { id: m.partyId, hostId: m.hostId, memberIds: [...m.memberIds] });
+        }
+        if (loaded.length > 0) {
+            console.log(`[coop] restored ${loaded.length} active match(es) from DB`);
+        }
+    });
+    function schedulePersistMatch(match) {
+        void persistCoopMatch(prisma, match);
+    }
     function pushMatchEvent(match, type, actorUserId, payload) {
         match.seq += 1;
         const evt = {
@@ -78,6 +93,7 @@ export function createApp(opts) {
         if (match.events.length > 200)
             match.events.splice(0, match.events.length - 200);
         match.updatedAt = evt.ts;
+        schedulePersistMatch(match);
         const listeners = matchSseByMatchId.get(match.id);
         if (listeners && listeners.size > 0) {
             const frame = `event: match_update\ndata: ${JSON.stringify({ matchId: match.id, event: evt })}\n\n`;
@@ -489,13 +505,14 @@ export function createApp(opts) {
         const cname = typeof clientUsername === 'string' ? clientUsername : '';
         pruneLobbyUsers();
         const prev = lobbyByUser.get(auth.userId);
+        const restoredPartyId = prev?.partyId ?? partyIdForUser(parties, matches, auth.userId);
         lobbyByUser.set(auth.userId, {
             userId: auth.userId,
             clientUsername: cname,
             displayName: displayName.trim().slice(0, 48),
             coopRole: role,
             lastSeen: Date.now(),
-            partyId: prev?.partyId ?? null,
+            partyId: restoredPartyId,
         });
         const online = [...lobbyByUser.entries()]
             .filter(([id]) => id !== auth.userId)
@@ -710,6 +727,7 @@ export function createApp(opts) {
         };
         matches.set(match.id, match);
         matchByPartyId.set(party.id, match.id);
+        schedulePersistMatch(match);
         pushMatchEvent(match, 'match_created', auth.userId, { memberIds: match.memberIds });
         res.json({ ok: true, match: compactMatchView(match), reused: false });
     });

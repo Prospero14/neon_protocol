@@ -92,8 +92,6 @@ const MapRadarRail: React.FC<MapRadarRailProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [clockHintOpen]);
 
-  const rows = viewMode === 'DISTRICT' ? districtRows : cityRows.map((n) => ({ id: n.id, name: n.name, type: n.type, description: n.description }));
-
   return (
     <section className="map-radar-rail" aria-label="Реестр точек и время">
       <div className="map-rail-head">

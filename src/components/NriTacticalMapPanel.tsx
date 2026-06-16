@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
+import type { NriClassId } from '../logic/nriClasses';
 import { getNriClass } from '../logic/nriClasses';
 import { sendNriChatMessage } from '../logic/nriChatDispatch';
 import { chatSendFile, chatSendFileToUser } from '../logic/chatApi';
@@ -74,7 +75,7 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
       id: `pl_${p.userId}`,
       kind: 'player' as const,
       label: p.displayName || p.username,
-      classId: p.classId,
+      classId: p.classId as NriClassId,
       userId: p.userId,
       x: positions[i]?.x ?? 20 + i * 12,
       y: positions[i]?.y ?? 70,

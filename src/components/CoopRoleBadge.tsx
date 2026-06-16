@@ -1,4 +1,3 @@
-import React from 'react';
 import type { CoopRole } from '../logic/sessionMode';
 import { Code2, Bug, Server, Briefcase } from 'lucide-react';
 

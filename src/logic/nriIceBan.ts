@@ -1,7 +1,7 @@
 /** ICE Run: серия провалов, hardware ban, снятие через нейролинк или кибер-деку. */
 
 import type { InstalledAugmentation } from './nriCyberInstall';
-import { parseNriInventory, type NriInventoryItem } from './nriInventory';
+import { parseNriInventory } from './nriInventory';
 import { parseAugmentedSheet } from './nriCyberInstall';
 
 export const ICE_FAIL_STREAK_LIMIT = 3;

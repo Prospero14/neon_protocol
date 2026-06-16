@@ -416,6 +416,25 @@ model CoopStartupScore {
   updatedAt       DateTime @updatedAt
 }
 
+/** Активный кооп-матч (live_party) — JSON-состояние боя, переживает рестарт процесса. */
+model CoopLiveMatch {
+  id                        String   @id
+  partyId                   String   @unique
+  hostId                    String
+  status                    String
+  memberIds                 Json
+  roleByUserId              Json
+  shared                    Json
+  events                    Json
+  intentQueue               Json
+  seq                       Int      @default(0)
+  linkedObjectiveAwardedIds Json?
+  createdAt                 DateTime
+  updatedAt                 DateTime
+
+  @@index([status])
+}
+
 model GameState {
   id           String      @id @default(uuid())
   userId       String      @unique

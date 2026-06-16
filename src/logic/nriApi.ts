@@ -331,6 +331,7 @@ export async function nriCreatePreset(
     inventory?: NriInventoryItem[];
     sheet?: unknown;
     portraitUrl?: string;
+    publishedToPlayers?: boolean;
   }
 ): Promise<NriPresetCreateResult> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/presets`, {

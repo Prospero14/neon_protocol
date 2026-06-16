@@ -61,8 +61,20 @@ export class DialogueBuilder {
   /**
    * Add a generic dialogue node.
    */
-  addNode(id: string, speaker: string, text: string, options: DialogueOption[]): this {
-    this.tree.nodes[id] = { id, speaker, text: this.maybeEcho(id, text), options };
+  addNode(
+    id: string,
+    speaker: string,
+    text: string,
+    options: DialogueOption[],
+    gate?: { requireCompletedQuestId?: string },
+  ): this {
+    this.tree.nodes[id] = {
+      id,
+      speaker,
+      text: this.maybeEcho(id, text),
+      options,
+      ...gate,
+    };
     return this;
   }
 

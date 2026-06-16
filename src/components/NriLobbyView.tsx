@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Map, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, LogOut, Map as MapIcon, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -382,7 +382,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         </button>
         {session && (
           <button type="button" className={tab === 'map' ? 'active' : ''} onClick={() => setTab('map')}>
-            <Map size={14} /> КАРТА
+            <MapIcon size={14} /> КАРТА
           </button>
         )}
         {(profile || session?.isHost) && (

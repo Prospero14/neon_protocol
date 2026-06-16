@@ -4,7 +4,7 @@
  */
 
 import type { IntelFragment } from './intelFragments';
-import { INTEL_FRAGMENTS, getFragmentById, getThreadByFragment } from './intelFragments';
+import { INTEL_FRAGMENTS } from './intelFragments';
 
 const STORAGE_KEY = 'neon_protocol_intel_v1';
 
@@ -50,7 +50,6 @@ export function hasFragment(state: IntelState, id: string): boolean {
 export function collectFragment(state: IntelState, id: string): IntelState {
   if (state.collectedIds.includes(id)) return state;
 
-  const fragment = getFragmentById(id);
   const newState: IntelState = {
     ...state,
     collectedIds: [...state.collectedIds, id],

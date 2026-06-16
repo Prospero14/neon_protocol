@@ -18,16 +18,6 @@ export type CoopClassSave = {
   coopSprintConsecutiveLosses: number;
 };
 
-const EMPTY_SAVE: CoopClassSave = {
-  deckIds: [],
-  inventoryIds: [],
-  coopTierRank: 'junior',
-  coopYardCompletedMissionIds: [],
-  discoveredCardIds: [],
-  devLanguageStack: null,
-  coopSprintConsecutiveLosses: 0,
-};
-
 export function defaultCoopClassSave(
   role: CoopRole,
   devStack: DevLanguageStack | null

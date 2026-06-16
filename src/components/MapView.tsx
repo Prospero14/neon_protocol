@@ -496,7 +496,7 @@ const MapView: React.FC<MapViewProps> = ({
                               stroke={pillStroke}
                               strokeWidth="0.07"
                             />
-                            {sn.nameLines.map((line, li) => (
+                            {sn.nameLines.map((line: string, li: number) => (
                               <text
                                 key={li}
                                 x="0"

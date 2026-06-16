@@ -2,7 +2,7 @@
 
 import { getC2185ClassTemplate } from './nriCarbon2185';
 import type { NriClassId } from './nriClasses';
-import { parseNriSheet, type NriSheetData } from './nriNpcGenerator';
+import { parseNriSheet } from './nriNpcGenerator';
 
 export type SheetFieldStatus = { id: string; label: string; done: boolean };
 

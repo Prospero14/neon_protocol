@@ -52,7 +52,7 @@ interface HubViewProps {
   onNavigateToView: (view: string) => void;
   onNavigateToBarNode: (nodeId: string) => void;
   /** Кооп: смена класса (отдельные колоды и прогресс на роль). */
-  sessionMode?: 'solo' | 'coop';
+  sessionMode?: 'solo' | 'coop' | 'nri';
   coopRole?: CoopRole | null;
   onSwitchCoopClass?: (role: CoopRole) => void;
   /** Переключение соло/кооп без перелогина. */
@@ -85,7 +85,7 @@ export const HubView: React.FC<HubViewProps> = ({
   exploitCount,
   tutorialCompleted,
   worldDay,
-  dayPhase,
+  dayPhase: _dayPhase,
   gameTimeLabel,
   phaseLabelRu,
   trustedNpcContacts,
@@ -111,6 +111,7 @@ export const HubView: React.FC<HubViewProps> = ({
   coopStartupLeaderboard = [],
   onRefreshCoopStartupLeaderboard,
 }) => {
+  void _dayPhase;
   const [messageDraft, setMessageDraft] = React.useState('');
   const [startupLbOpen, setStartupLbOpen] = React.useState(false);
   const [startupLbDisplay, setStartupLbDisplay] = React.useState<StartupLeaderRow[]>(coopStartupLeaderboard);

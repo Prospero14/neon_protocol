@@ -52,13 +52,14 @@ function cyberProductToItem(p: NriCyberProduct): NriInventoryItem | null {
   return { ...item, id: `cyber_preset_${p.id}` };
 }
 
+const DEFAULT_CLASS_ID: NriClassId = 'merc';
+const DEFAULT_META: CharacterMetaDraft = { originId: 'neo_tokyo', activityId: 'street', level: 1 };
+
 export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [presets, setPresets] = useState<NriPresetCharacter[]>([]);
   const [cyberDrafts, setCyberDrafts] = useState<NriCyberProduct[]>([]);
-  const [classId, setClassId] = useState<NriClassId>('merc');
-  const [meta, setMeta] = useState<CharacterMetaDraft>({ originId: 'neo_tokyo', activityId: 'street', level: 1 });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -67,12 +68,8 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   const [editSheet, setEditSheet] = useState<NriSheetData | null>(null);
   const [editMeta, setEditMeta] = useState<CharacterMetaDraft>({});
   const [pendingPreset, setPendingPreset] = useState<PendingPreset | null>(null);
-  const [pickedSkills, setPickedSkills] = useState<string[]>(() => defaultSkillsForClass(classId));
+  const [pickedSkills] = useState<string[]>(() => defaultSkillsForClass(DEFAULT_CLASS_ID));
   const [editSkills, setEditSkills] = useState<string[]>([]);
-
-  useEffect(() => {
-    setPickedSkills(defaultSkillsForClass(classId));
-  }, [classId]);
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
@@ -89,13 +86,6 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     const t = setInterval(refresh, 8000);
     return () => clearInterval(t);
   }, [refresh]);
-
-  const inventoryFromCyber = (ids: string[]) =>
-    ids
-      .map((id) => cyberDrafts.find((c) => c.id === id))
-      .filter(Boolean)
-      .map((p) => cyberProductToItem(p!))
-      .filter(Boolean) as NriInventoryItem[];
 
   const remove = async (id: string) => {
     if (!authToken || !window.confirm('Удалить пресет?')) return;
@@ -186,7 +176,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
 
   const startWizard = () => {
     setPendingPreset(
-      buildPendingPreset(classId, meta.originId ?? 'neo_tokyo', meta.activityId ?? 'street', pickedSkills)
+      buildPendingPreset(DEFAULT_CLASS_ID, DEFAULT_META.originId ?? 'neo_tokyo', DEFAULT_META.activityId ?? 'street', pickedSkills)
     );
     setErr(null);
   };

@@ -786,10 +786,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                       height={Math.max(0, z.h - 0.6)}
                       className="nri-city-map__fo"
                     >
-                      <div
-                        xmlns="http://www.w3.org/1999/xhtml"
-                        className={`nri-city-map__fo-label nri-city-map__fo-label--${z.zoneType}`}
-                      >
+                      <div className={`nri-city-map__fo-label nri-city-map__fo-label--${z.zoneType}`}>
                         {lines.map((line) => (
                           <span key={line}>{line}</span>
                         ))}

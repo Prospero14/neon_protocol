@@ -13,19 +13,20 @@
 ## Solo / Coop
 
 - Solo: модульный мир (`src/logic/world/`), квесты, карточный бой.
-- Coop: in-memory лобби в `createApp.ts`, рейтинги в Prisma.
+- Coop: live-матчи в `CoopLiveMatch` (SQLite); presence-лобби in-memory; рейтинги в Prisma.
 
 ## Документация и качество
 
+- `docs/PITCH.md` — питч: возможности сервиса для презентации.
 - `docs/ARCHITECTURE.md` — стек, связи, миграция бэк/фронт.
 - `docs/SOLID_AUDIT.md` — технический долг и план рефакторинга.
 - Тесты: `npm test` (логика + HTTP integration + catalog contracts).
-- Сборка: `npm run build` (Vite + tsc client noEmit + tsc server).
+- Сборка: `npm run build` (Vite + client/server `tsc`).
 
 ## Известный долг
 
-- `nriService.ts`, `createApp.ts`, `useGameState.ts` — крупные модули (см. SOLID_AUDIT).
-- Coop in-memory не переживает рестарт процесса.
+- `nriService.ts`, `createApp.ts` (coop routes), `useGameState.ts` — крупные модули (см. SOLID_AUDIT).
+- Coop online-list (heartbeat) — in-memory, не критично для матчей.
 - Мастерские статусы через PATCH листа — без серверной валидации condition id.
 
 ---

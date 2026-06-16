@@ -9,7 +9,6 @@ import { PROFESSIONS, getProfessionById, type Profession } from '../professions'
 import type { CombatCard } from '../combatCards';
 import { CARD_LIBRARY, getCardById } from '../combatCards';
 import { buildTraineeDeck } from '../traineeDeck';
-import { SPRING_CARD_LIBRARY } from '../springCards';
 import type { QuestState } from '../questEngine';
 import { getTrackedQuest, acceptQuest, completeQuest, markQuestReady } from '../questEngine';
 import { useAuth } from '../AuthContext';

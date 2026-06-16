@@ -49,7 +49,7 @@ export function zoneDisplayColor(zone: { zoneType: string; color?: string | null
 
 export function zoneRectPaint(
   color: string | null | undefined,
-  zoneType: string
+  _zoneType: string
 ): { fill: string; stroke: string } | undefined {
   if (!color?.trim()) return undefined;
   const hex = color.trim();

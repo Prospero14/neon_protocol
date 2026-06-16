@@ -6,7 +6,7 @@ import './App.css';
 import './combat-hud.css';
 import { MAP_NODES } from './logic/mapData';
 import { getProfessionById } from './logic/professions';
-import { CARD_LIBRARY, getCardById } from './logic/combatCards';
+import { getCardById } from './logic/combatCards';
 import { TZ_LIBRARY } from './logic/combatTasks';
 import { SPRING_TZ_LIBRARY } from './logic/springTasks';
 import { QUEST_LIBRARY } from './logic/questData';
@@ -31,8 +31,6 @@ import { NriLobbyView } from './components/NriLobbyView';
 import './components/services/neon-services.css';
 import { IMPLANT_CATALOG } from './logic/hardware';
 import type { ViewType } from './logic/hooks/useGameState';
-import { getStarterPackForQuest } from './logic/hooks/useGameState';
-import type { CombatCard } from './logic/combatCards';
 import type { SkillMode } from './logic/skillMode';
 import { COOP_ROLES } from './logic/sessionMode';
 import {

@@ -13,10 +13,6 @@ function originLabel(id: NriOriginId): string {
   return NRI_ORIGINS.find((o) => o.id === id)?.label ?? id;
 }
 
-function activityLabel(id: NriActivityId): string {
-  return NRI_ACTIVITIES.find((a) => a.id === id)?.label ?? id;
-}
-
 function archetypeLabel(id: NriNpcArchetypeId): string {
   return NRI_NPC_ARCHETYPES.find((a) => a.id === id)?.label ?? id;
 }

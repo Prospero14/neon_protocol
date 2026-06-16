@@ -9,7 +9,7 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "node --loader ts-node/esm server/index.ts",
-    "build": "npx vite build && npx tsc --project tsconfig.server.json",
+    "build": "npx vite build && npx tsc -p tsconfig.app.json --noEmit && npx tsc --project tsconfig.server.json",
     "typecheck:client": "npx tsc -p tsconfig.app.json --noEmit",
     "build:full": "npx prisma generate && npm run build",
     "start": "node dist_server/server/index.js",

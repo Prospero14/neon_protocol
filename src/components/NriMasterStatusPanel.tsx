@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Minus, Plus, User } from 'lucide-react';
+import { AlertTriangle, Minus, User } from 'lucide-react';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 import { nriFetchRoster, nriPatchPlayer, type NriRosterPlayer } from '../logic/nriApi';
@@ -45,7 +45,7 @@ export const NriMasterStatusPanel: React.FC<Props> = ({
   const refresh = useCallback(async () => {
     if (!tok) return;
     const list = await nriFetchRoster(tok, inviteCode);
-    if (list) setRoster(list.filter((r) => !r.isHost));
+    if (list) setRoster(list);
   }, [tok, inviteCode]);
 
   useEffect(() => {

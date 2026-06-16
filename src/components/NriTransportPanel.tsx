@@ -13,7 +13,7 @@ import {
 import { getNriClass } from '../logic/nriClasses';
 import { parseNriSheet, abilityModifier } from '../logic/nriNpcGenerator';
 import { C2185_ABILITIES } from '../logic/nriCarbon2185';
-import { getVehicleDef, NRI_VEHICLE_CATALOG } from '../logic/nriVehicles';
+import { getVehicleDef, NRI_VEHICLE_CATALOG, type NriVehicleCatalogId } from '../logic/nriVehicles';
 import { NriVehicleCatalogPreview } from './NriSelectionPreview';
 
 type Props = {
@@ -26,7 +26,9 @@ export const NriTransportPanel: React.FC<Props> = ({ inviteCode, isHost, roster 
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [vehicles, setVehicles] = useState<NriTableVehicle[]>([]);
-  const [catalogId, setCatalogId] = useState(NRI_VEHICLE_CATALOG[0]?.id ?? 'thornton_galena');
+  const [catalogId, setCatalogId] = useState<NriVehicleCatalogId>(
+    (NRI_VEHICLE_CATALOG[0]?.id ?? 'thornton_galena') as NriVehicleCatalogId,
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -83,7 +85,7 @@ export const NriTransportPanel: React.FC<Props> = ({ inviteCode, isHost, roster 
 
       {isHost && (
         <div className="nri-transport__form">
-          <select value={catalogId} onChange={(e) => setCatalogId(e.target.value)}>
+          <select value={catalogId} onChange={(e) => setCatalogId(e.target.value as NriVehicleCatalogId)}>
             {NRI_VEHICLE_CATALOG.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}

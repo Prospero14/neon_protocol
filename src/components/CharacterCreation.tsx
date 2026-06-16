@@ -128,9 +128,9 @@ const CharacterCreation: React.FC<CharacterCreationProps> = ({
   const [sessionMode, setSessionMode] = useState<SessionMode>('solo');
   const [coopRole, setCoopRole] = useState<CoopRole | null>(null);
   const [devLanguageStack, setDevLanguageStack] = useState<DevLanguageStack>('java');
-  const [coopStartupName, setCoopStartupName] = useState('');
+  const [coopStartupName] = useState('');
   /** Ранг миссий полигона — вводит только PM после «пати». */
-  const [coopTierRank, setCoopTierRank] = useState<SkillMode>('junior');
+  const [coopTierRank] = useState<SkillMode>('junior');
 
   const districts = MAP_NODES.filter(n => n.tier === 1);
   const availableCoopRoles = COOP_ROLES.filter((role) => !coopRolesTaken.includes(role));

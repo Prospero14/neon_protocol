@@ -15,6 +15,7 @@ function mockPrisma(): Pick<
   | 'user'
   | 'gameState'
   | 'coopStartupScore'
+  | 'coopLiveMatch'
   | 'chatRoom'
   | 'chatMessage'
   | 'nriSession'
@@ -39,6 +40,11 @@ function mockPrisma(): Pick<
       findUnique: vi.fn(),
       upsert: vi.fn(),
     } as unknown as PrismaClient['coopStartupScore'],
+    coopLiveMatch: {
+      findMany: vi.fn().mockResolvedValue([]),
+      upsert: vi.fn().mockResolvedValue({}),
+      delete: vi.fn(),
+    } as unknown as PrismaClient['coopLiveMatch'],
     chatRoom: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -248,6 +254,34 @@ describe('neon_v1 API (integration)', () => {
 
     const leave = await request(a).post('/neon_v1/coop/party/leave').set('Authorization', `Bearer ${tokA}`).expect(200);
     expect(leave.body.party).toBeNull();
+  });
+
+  it('coop: match/create persists to CoopLiveMatch', async () => {
+    const a = app();
+    const tokHost = jwt.sign({ userId: 'uid-mh' }, JWT_SECRET);
+    const tokGuest = jwt.sign({ userId: 'uid-mg' }, JWT_SECRET);
+    await request(a)
+      .post('/neon_v1/coop/heartbeat')
+      .set('Authorization', `Bearer ${tokHost}`)
+      .send({ displayName: 'MatchHost', coopRole: 'admin', clientUsername: 'mh' });
+    await request(a)
+      .post('/neon_v1/coop/heartbeat')
+      .set('Authorization', `Bearer ${tokGuest}`)
+      .send({ displayName: 'MatchGuest', coopRole: 'developer', clientUsername: 'mg' });
+    await request(a)
+      .post('/neon_v1/coop/invite')
+      .set('Authorization', `Bearer ${tokHost}`)
+      .send({ targetDisplayName: 'MatchGuest' })
+      .expect(200);
+
+    vi.mocked(prisma.coopLiveMatch.upsert).mockClear();
+    const created = await request(a)
+      .post('/neon_v1/coop/match/create')
+      .set('Authorization', `Bearer ${tokHost}`)
+      .expect(200);
+    expect(created.body.ok).toBe(true);
+    expect(created.body.match?.id).toBeTruthy();
+    expect(vi.mocked(prisma.coopLiveMatch.upsert)).toHaveBeenCalled();
   });
 
   it('GET /neon_v1/coop/startup-rankings (Prisma mock)', async () => {

@@ -7,15 +7,16 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { createApp } from './createApp.js';
+import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
-const isAmvera = fs.existsSync('/data');
-const defaultDbPath = isAmvera ? '/data/dev.db' : path.join(process.cwd(), 'dev.db');
+const { dbPath: defaultDbPath, isPersistentMount: isAmvera } = resolveDatabaseFilePath();
 const defaultDbUrl = `file:${defaultDbPath}`;
 if (!process.env.DATABASE_URL) {
     process.env.DATABASE_URL = defaultDbUrl;
 }
+ensureDatabaseDirectory(defaultDbPath);
 console.log(`[NEON_BOOT] RESOLVED_DATABASE_URL: ${process.env.DATABASE_URL}`);
 console.log(`[NEON_BOOT] RESOLVED_FILE_PATH: ${defaultDbPath}`);
 /** Применяет миграции к SQLite на диске (/data на Amvera). Иначе старая БД без новых колонок ломает Prisma-запросы. */
@@ -98,6 +99,13 @@ async function ensureNriSchemaSync() {
     }
     catch {
         console.warn('[NEON_BOOT] NriCombatant missing — applying schema…');
+        runDbPushSync();
+    }
+    try {
+        await prisma.coopLiveMatch.findFirst({ select: { id: true } });
+    }
+    catch {
+        console.warn('[NEON_BOOT] CoopLiveMatch missing — applying schema…');
         runDbPushSync();
     }
 }

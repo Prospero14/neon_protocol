@@ -21,7 +21,6 @@ import {
   buildSheetForClass,
   parseNriSheet,
   rollAbilityScores,
-  rollNpcName,
   type NriSheetData,
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';

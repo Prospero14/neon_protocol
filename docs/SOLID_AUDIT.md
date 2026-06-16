@@ -20,12 +20,11 @@
 - [x] `shared/nri-domain/` — conditions + consumeApply (единый источник client/server)
 - [x] Все consumable/drug в каталоге имеют запись в `nri-consume-effects.json`
 - [x] HTTP-тест `POST .../player/items/:id/use`
-- [x] `npm run typecheck:client` — отдельная проверка клиента (в `build` пока только server `tsc` + vite)
-- [x] Документация ARCHITECTURE + STATE_OF_PROTOCOL
-- [ ] Разрезать `nriService.ts` / `useGameState.ts`
-- [ ] Контракты API (OpenAPI / Zod shared)
-- [ ] Серверная валидация PATCH sheet (статусы мастера)
-- [ ] Coop → persistent sessions
+- [x] `npm run build` включает `tsc -p tsconfig.app.json --noEmit` (legacy-типы зачищены)
+- [x] Coop **live-матчи** → `CoopLiveMatch` в SQLite (`server/coop/coopMatchStore.ts`)
+- [x] Персистентность БД: `NEON_DATA_DIR`, `/data` на Amvera (`persistenceMount` в `amvera.yml`)
+- [x] `server/coop/coopMatchStore.ts` + `server/databasePath.ts` (вынесено из монолита createApp)
+- [ ] Разрезать `nriService.ts` / `useGameState.ts` / `createApp.ts` (coop routes)
 
 ---
 

@@ -22,6 +22,8 @@
 | `nriMapRoutes`, `nriVaultRoutes`, `nriNpcRoutes`, `nriCyberRoutes` — map/vault/npc/cyber из `nriService` | ✅ |
 | `nriSessionLobbyRoutes`, `nriVehicleRoutes`, `nriScenarioRoutes` — финальный срез `nriService` (~85 строк) | ✅ |
 | `nriApi/` — vault, wallet, map, scenario, characters, cyber, vehicles, lore | ✅ |
+| `server/routes/auth.ts` — register/login/sync из `createApp` | ✅ |
+| `useNriSession.ts` — NRI lobby из `useGameState` | ✅ |
 
 ---
 

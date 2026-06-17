@@ -62,11 +62,16 @@ export function serializeCoopClassSave(params: {
   };
 }
 
-export function hydrateDeckFromIds(ids: string[]): CombatCard[] {
-  return ids.map((id) => getCardById(id)).filter((c): c is CombatCard => Boolean(c));
+export function hydrateDeckFromIds(ids: unknown): CombatCard[] {
+  if (!Array.isArray(ids)) return [];
+  return ids
+    .filter((x): x is string => typeof x === 'string')
+    .map((id) => getCardById(id))
+    .filter((c): c is CombatCard => Boolean(c));
 }
 
-export function hydrateInventoryFromIds(ids: string[]): CombatCard[] {
+export function hydrateInventoryFromIds(ids: unknown): CombatCard[] {
+  if (!Array.isArray(ids)) return [];
   const seen = new Set<string>();
   const out: CombatCard[] = [];
   for (const id of ids) {
@@ -79,7 +84,10 @@ export function hydrateInventoryFromIds(ids: string[]): CombatCard[] {
 }
 
 /** Применить сохранённый профиль к рантайму (колода с дубликатами по id, как в бою). */
-export function applyCoopClassSave(save: CoopClassSave): {
+export function applyCoopClassSave(
+  raw: CoopClassSave | unknown,
+  role: CoopRole = 'developer',
+): {
   activeDeck: CombatCard[];
   inventory: CombatCard[];
   coopTierRank: SkillMode;
@@ -88,6 +96,9 @@ export function applyCoopClassSave(save: CoopClassSave): {
   devLanguageStack: DevLanguageStack | null;
   coopSprintConsecutiveLosses: number;
 } {
+  const save =
+    normalizeCoopClassSave(raw) ??
+    defaultCoopClassSave(role, role === 'developer' ? 'java' : null);
   const activeDeck = hydrateDeckFromIds(save.deckIds);
   const inventory = hydrateInventoryFromIds(save.inventoryIds);
   return {
@@ -163,8 +174,12 @@ export function migrateLegacyCoopToProfiles(gs: {
 }): Partial<Record<CoopRole, CoopClassSave>> | null {
   const role = gs.coopRole as CoopRole | undefined;
   if (!role || !COOP_ROLES.includes(role)) return null;
-  const deckIds = (gs.activeDeck ?? []).map((c) => c.id).filter(Boolean);
-  const inventoryIds = (gs.inventory ?? []).map((c) => c.id).filter(Boolean);
+  const deckIds = Array.isArray(gs.activeDeck)
+    ? gs.activeDeck.map((c) => c.id).filter(Boolean)
+    : [];
+  const inventoryIds = Array.isArray(gs.inventory)
+    ? gs.inventory.map((c) => c.id).filter(Boolean)
+    : [];
   if (deckIds.length === 0 && inventoryIds.length === 0) return null;
   return {
     [role]: {

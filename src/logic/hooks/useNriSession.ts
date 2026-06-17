@@ -12,6 +12,7 @@ export type NriViewType = 'NRI_LOBBY' | 'SESSION_GATE' | 'NEON_SERVICES';
 
 type UseNriSessionDeps = {
   userId: string | undefined;
+  hydrationReady: boolean;
   setSessionMode: (mode: SessionMode) => void;
   setCurrentView: (view: NriViewType | string) => void;
   /** Полный merge solo-сохранения (enter/leave/auto-join). */
@@ -25,6 +26,7 @@ export function parseNriCodeFromGameState(gs: Record<string, unknown>): string |
 
 export function useNriSession({
   userId,
+  hydrationReady,
   setSessionMode,
   setCurrentView,
   syncGame,
@@ -112,7 +114,7 @@ export function useNriSession({
   }, [userId, setCurrentView]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !hydrationReady) return;
     const nriCode = parseNriInviteFromHash(window.location.hash);
     if (!nriCode) return;
     const authToken = readNeonAuthToken();
@@ -121,7 +123,7 @@ export function useNriSession({
       void enterNriLobby(nriCode);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [userId, enterNriLobby]);
+  }, [userId, hydrationReady, enterNriLobby]);
 
   const nriGuestInviteCode = readNriGuestInviteCode();
 

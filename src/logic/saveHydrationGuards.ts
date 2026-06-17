@@ -97,6 +97,22 @@ export function sanitizeClientGameState(raw: unknown): Record<string, unknown> |
     messengerFeed: Array.isArray(o.messengerFeed) ? o.messengerFeed : [],
     activeDeck: hydrateDeckEntries(o.activeDeck),
     inventory: hydrateDeckEntries(o.inventory),
-    coopClassProfiles: Object.keys(profiles).length > 0 ? profiles : o.coopClassProfiles,
+    coopClassProfiles: profiles,
+    soloRuntimeCache: parseSoloRuntimeCache(o.soloRuntimeCache) ?? undefined,
+  };
+}
+
+export function parseSoloRuntimeCache(raw: unknown): {
+  deckIds: string[];
+  inventoryIds: string[];
+  discoveredCardIds: string[];
+} | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (!Array.isArray(o.deckIds) || !Array.isArray(o.inventoryIds)) return null;
+  return {
+    deckIds: o.deckIds.filter((x): x is string => typeof x === 'string'),
+    inventoryIds: o.inventoryIds.filter((x): x is string => typeof x === 'string'),
+    discoveredCardIds: asStringArray(o.discoveredCardIds),
   };
 }

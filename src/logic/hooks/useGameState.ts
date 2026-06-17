@@ -47,6 +47,7 @@ import {
   asStringArray,
   hydrateDeckEntries,
   parseSolvedChainsStorage,
+  parseSoloRuntimeCache,
 } from '../saveHydrationGuards';
 import { reportClientError } from '../globalErrorHandler';
 import type { CoopSquadFill } from '../coopTeamFlow';
@@ -88,19 +89,6 @@ export type SoloRuntimeCache = {
   inventoryIds: string[];
   discoveredCardIds: string[];
 };
-
-function parseSoloRuntimeCache(raw: unknown): SoloRuntimeCache | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const o = raw as Record<string, unknown>;
-  if (!Array.isArray(o.deckIds) || !Array.isArray(o.inventoryIds)) return null;
-  return {
-    deckIds: o.deckIds.filter((x): x is string => typeof x === 'string'),
-    inventoryIds: o.inventoryIds.filter((x): x is string => typeof x === 'string'),
-    discoveredCardIds: Array.isArray(o.discoveredCardIds)
-      ? o.discoveredCardIds.filter((x): x is string => typeof x === 'string')
-      : [],
-  };
-}
 
 function serializeSoloRuntimeCache(params: {
   activeDeck: CombatCard[];
@@ -615,8 +603,11 @@ export function useGameState() {
 
   const syncGameRef = useRef<(overrides?: Record<string, unknown>) => void | Promise<void>>(async () => {});
 
+  const [hydrationReady, setHydrationReady] = useState(false);
+
   const nri = useNriSession({
     userId: user?.id,
+    hydrationReady,
     setSessionMode,
     setCurrentView: (view) => setCurrentView(view as ViewType),
     syncGame: (overrides) => void syncGameRef.current(overrides),
@@ -694,11 +685,13 @@ export function useGameState() {
       setCreationWizardLockedMode(null);
       soloRuntimeCacheRef.current = null;
       setHasSoloPersona(false);
+      setHydrationReady(false);
       return;
     }
     if (!user.gameState) {
       setCreationResume(null);
       setCurrentView('SESSION_GATE');
+      setHydrationReady(true);
       return;
     }
     try {
@@ -760,7 +753,7 @@ export function useGameState() {
       ) {
         const save = resumeProfiles[crEarly];
         if (save) {
-          const applied = applyCoopClassSave(save);
+          const applied = applyCoopClassSave(save, crEarly);
           setActiveDeck(applied.activeDeck);
           setInventory(applied.inventory);
           setCoopTierRank(applied.coopTierRank);
@@ -985,9 +978,11 @@ export function useGameState() {
           }
         }
       }
+      setHydrationReady(true);
     } catch (err) {
       reportClientError(err, 'gameState.hydrate');
       setCurrentView('SESSION_GATE');
+      setHydrationReady(true);
     }
   }, [user?.id]);
 
@@ -1124,7 +1119,7 @@ export function useGameState() {
       const loaded = merged[next] ?? defaultCoopClassSave(next, fallbackStack);
       setCoopClassProfiles({ ...merged, [next]: loaded });
       setCoopRole(next);
-      const applied = applyCoopClassSave(loaded);
+      const applied = applyCoopClassSave(loaded, next);
       setActiveDeck(applied.activeDeck);
       setInventory(applied.inventory);
       setCoopTierRank(applied.coopTierRank);
@@ -1232,7 +1227,7 @@ export function useGameState() {
       setSessionMode('coop');
       setCoopRole(role);
       setCoopClassProfiles({ ...merged, [role]: loaded });
-      const applied = applyCoopClassSave(loaded);
+      const applied = applyCoopClassSave(loaded, role);
       setActiveDeck(applied.activeDeck);
       setInventory(applied.inventory);
       setCoopTierRank(applied.coopTierRank);

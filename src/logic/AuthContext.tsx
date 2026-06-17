@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState } from 'react';
 import type { GameSyncPayload } from '../../shared/api-schemas/gameSync';
 import { readNeonAuthToken } from './authTokenStorage';
 import { sanitizeClientGameState } from './saveHydrationGuards';
+import { normalizeCoopClassProfiles } from './coopClassProfiles';
 
 interface User {
   id: string;
@@ -34,6 +35,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const parsed = JSON.parse(savedUser) as User;
       if (parsed.gameState) {
         parsed.gameState = sanitizeClientGameState(parsed.gameState) ?? parsed.gameState;
+      }
+      if (parsed.id) {
+        try {
+          const coopKey = `neon_v1_coop_class_profiles_${parsed.id}`;
+          const rawProfiles = localStorage.getItem(coopKey);
+          if (rawProfiles) {
+            const normalized = normalizeCoopClassProfiles(JSON.parse(rawProfiles));
+            if (Object.keys(normalized).length > 0) {
+              localStorage.setItem(coopKey, JSON.stringify(normalized));
+            } else {
+              localStorage.removeItem(coopKey);
+            }
+          }
+        } catch {
+          /* ignore */
+        }
       }
       return parsed;
     } catch {

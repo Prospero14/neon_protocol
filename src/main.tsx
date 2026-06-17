@@ -27,7 +27,11 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { report: { e
   }
 }
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  onUncaughtError: (error) => {
+    reportClientError(error, 'react.uncaught');
+  },
+}).render(
   <StrictMode>
     <GlobalErrorHost>
       <RootErrorBoundary>

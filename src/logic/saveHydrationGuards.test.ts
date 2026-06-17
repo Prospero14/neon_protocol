@@ -50,4 +50,11 @@ describe('saveHydrationGuards', () => {
     expect(out?.traits).toEqual([]);
     expect(out?.activeDeck).toEqual([]);
   });
+
+  it('sanitizeClientGameState drops corrupt coopClassProfiles', () => {
+    const out = sanitizeClientGameState({
+      coopClassProfiles: { developer: { deckIds: 'bad' } },
+    });
+    expect(out?.coopClassProfiles).toEqual({});
+  });
 });

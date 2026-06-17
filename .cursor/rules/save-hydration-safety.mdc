@@ -1,0 +1,42 @@
+---
+description: Защита от чёрного экрана — гидрация save/sync и итерируемые поля
+alwaysApply: true
+---
+
+# Save hydration & sync safety
+
+Корневая причина чёрного экрана: **битые поля в save** (`{}` вместо `[]`) + **частичный `game/sync`**, который затирал весь `gameState`.
+
+## Обязательно при работе с save / sync / localStorage
+
+1. **Merge, не replace** — патч `game/sync` и `syncGameState` всегда через `mergeGameStatePatch(prev, patch)`; на сервере `clientSnapshot` тоже `{ ...prev, ...body }`.
+2. **Sanitize после чтения** — login, reload из `neon_user`, ответ sync: `sanitizeClientGameState(...)` из `saveHydrationGuards.ts`.
+3. **Новые поля-массивы в save** — добавлять в `sanitizeClientGameState` через `asStringArray` / `hydrateDeckEntries` / `asQuestStates`, не полагаться на типы TS.
+4. **Нормализаторы** — если `normalizeCoopClassProfiles` (или аналог) вернул `{}` / `[]`, **не** подставлять сырой corrupt-объект из save.
+5. **`Array.isArray` перед spread/map** — для данных из save, API, `JSON.parse`, hash-route auto-join. Пример: `[...asStringArray(raw)]`, не `[...raw]`.
+6. **NRI auto-join** — только после `hydrationReady` в `useNriSession`; не вызывать `syncGameState` с 2–3 полями до полной гидрации.
+7. **Ошибки вне render** — `useEffect` / async: глобальный handler (`globalErrorHandler`, `GlobalErrorHost`, React 19 `onUncaughtError`), не только `ErrorBoundary`.
+
+## Канонические хелперы (не дублировать)
+
+- `saveHydrationGuards.ts`: `asStringArray`, `sanitizeClientGameState`, `hydrateDeckEntries`, `parseSoloRuntimeCache`
+- `coopClassProfiles.ts`: `normalizeCoopClassProfiles`, `applyCoopClassSave`
+- `AuthContext.tsx`: `mergeGameStatePatch` + sanitize на каждом пути записи
+
+## Перед коммитом затрагивающим save
+
+- Тест в `saveHydrationGuards.test.ts` на corrupt shape (`{}` вместо массива, битый nested object).
+- `npm test` + `npm run build`.
+
+## Антипаттерны
+
+```ts
+// ❌ частичный sync затирает save
+syncGameState({ sessionMode: 'nri', nriInviteCode, currentView });
+
+// ❌ spread без проверки
+const ids = [...gs.coopYardCompletedMissionIds];
+
+// ❌ fallback на сырой corrupt после normalize
+coopClassProfiles: normalized && Object.keys(normalized).length ? normalized : o.coopClassProfiles;
+```

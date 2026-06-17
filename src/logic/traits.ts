@@ -97,7 +97,8 @@ export const TRAITS: Trait[] = [
 ];
 
 export const getRandomTrait = (existingTraits: Trait[] = []): Trait | null => {
-  const existingIds = new Set(existingTraits.map(t => t.id));
+  const list = Array.isArray(existingTraits) ? existingTraits : [];
+  const existingIds = new Set(list.map((t) => t.id));
   const availableTraits = TRAITS.filter(t => !existingIds.has(t.id));
   if (availableTraits.length === 0) return null;
   return availableTraits[Math.floor(Math.random() * availableTraits.length)];

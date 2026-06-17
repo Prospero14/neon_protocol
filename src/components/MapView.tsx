@@ -558,7 +558,7 @@ const MapView: React.FC<MapViewProps> = ({
           }}
           objectiveNodeId={objectiveNodeId}
           highlightPoiIds={
-            coopCombatHighlightIds && coopCombatHighlightIds.length > 0
+            Array.isArray(coopCombatHighlightIds) && coopCombatHighlightIds.length > 0
               ? new Set(coopCombatHighlightIds)
               : null
           }

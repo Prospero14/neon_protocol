@@ -5,6 +5,7 @@
 
 import type { IntelFragment } from './intelFragments';
 import { INTEL_FRAGMENTS } from './intelFragments';
+import { asStringArray } from './saveHydrationGuards';
 
 const STORAGE_KEY = 'neon_protocol_intel_v1';
 
@@ -43,7 +44,7 @@ export function saveIntelState(state: IntelState): void {
 }
 
 export function hasFragment(state: IntelState, id: string): boolean {
-  return state.collectedIds.includes(id);
+  return asStringArray(state.collectedIds).includes(id);
 }
 
 /**
@@ -52,11 +53,12 @@ export function hasFragment(state: IntelState, id: string): boolean {
  * Возвращает новый state.
  */
 export function collectFragment(state: IntelState, id: string): IntelState {
-  if (state.collectedIds.includes(id)) return state;
+  const collectedIds = asStringArray(state.collectedIds);
+  if (collectedIds.includes(id)) return state;
 
   const newState: IntelState = {
     ...state,
-    collectedIds: [...state.collectedIds, id],
+    collectedIds: [...collectedIds, id],
     pendingReveal: id
   };
 

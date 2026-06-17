@@ -133,7 +133,7 @@ export function getSheetCombatView(
   const enriched = enrichSheetCombat(sheet, classId);
   const tpl = getC2185ClassTemplate(classId);
   const proficiencies = new Set(Array.isArray(enriched.skillProficiencies) ? enriched.skillProficiencies : []);
-  const saveProfs = new Set(tpl?.saveProficiencies ?? []);
+  const saveProfs = new Set(Array.isArray(tpl?.saveProficiencies) ? tpl.saveProficiencies : []);
 
   const saves = C2185_SAVING_THROWS.map((s) => {
     const ab = abilityKey(s.ability);

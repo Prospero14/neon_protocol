@@ -19,9 +19,10 @@ export type UseItemResult =
   | { ok: false; reason: string };
 
 function takeOneItem(items: NriInventoryItem[], itemId: string): { inventory: NriInventoryItem[]; item: NriInventoryItem | null } {
-  const idx = items.findIndex((i) => i.id === itemId);
-  if (idx < 0) return { inventory: items, item: null };
-  const copy = [...items];
+  const list = Array.isArray(items) ? items : [];
+  const idx = list.findIndex((i) => i.id === itemId);
+  if (idx < 0) return { inventory: list, item: null };
+  const copy = [...list];
   const cur = copy[idx]!;
   const qty = typeof cur.qty === 'number' ? cur.qty : 1;
   if (qty > 1) {

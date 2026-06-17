@@ -460,7 +460,10 @@ function App() {
     if (gs.currentView === 'REFERENCE') {
       return (
         <Documentation 
-          discoveredCardIds={new Set([...Array.from(gs.discoveredCardIds), ...gs.activeDeck.map((c) => c.id)])} 
+          discoveredCardIds={new Set([
+            ...Array.from(gs.discoveredCardIds),
+            ...(Array.isArray(gs.activeDeck) ? gs.activeDeck.map((c) => c.id) : []),
+          ])} 
           initialEntryId={gs.selectedDocId} 
           onBack={() => { gs.setCurrentView(gs.lastView); gs.setSelectedDocId(null); }} 
           solvedChains={gs.solvedChains}

@@ -18,6 +18,12 @@ import {
   type ChatUser,
 } from '../../logic/chatApi';
 import type { NriNpc, NriPlayerProfile, NriRosterPlayer, NriVaultFile } from '../../logic/nriApi';
+
+const MAX_CHAT_UI = 400;
+
+function trimChatMessages(list: ChatMessage[]): ChatMessage[] {
+  return list.length > MAX_CHAT_UI ? list.slice(-MAX_CHAT_UI) : list;
+}
 import { nriBroadcastItemTransfer } from '../../logic/nriApi';
 import { parseItemTransferPayload, nriItemStatsLine } from '../../logic/nriItemDisplay';
 import { SPAM_BOT_LABEL, SPAM_BOT_USERNAME, spamMessageVariant } from '../../logic/spamBotMeta';
@@ -256,6 +262,8 @@ export const NeonChatPanel: React.FC<Props> = ({
   const [showSpeakerSheet, setShowSpeakerSheet] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const lastTsRef = useRef(0);
+  const [historyDay, setHistoryDay] = useState(() => new Date().toISOString().slice(0, 10));
+  const [historyMode, setHistoryMode] = useState(false);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
@@ -287,20 +295,39 @@ export const NeonChatPanel: React.FC<Props> = ({
   }, [authToken, fixedRoomId, tableChannel]);
 
   const refreshMessages = useCallback(async () => {
-    if (!authToken || !activeRoomId) return;
+    if (!authToken || !activeRoomId || historyMode) return;
     const since = lastTsRef.current;
     const batch = await chatFetchMessages(authToken, activeRoomId, since > 0 ? since : 0);
     if (batch.length === 0) return;
     if (since === 0) {
-      setMessages(batch);
+      setMessages(trimChatMessages(batch));
     } else {
       setMessages((prev) => {
         const ids = new Set(prev.map((m) => m.id));
-        return [...prev, ...batch.filter((m) => !ids.has(m.id))];
+        return trimChatMessages([...prev, ...batch.filter((m) => !ids.has(m.id))]);
       });
     }
     lastTsRef.current = Math.max(...batch.map((m) => m.ts), lastTsRef.current);
-  }, [authToken, activeRoomId]);
+  }, [authToken, activeRoomId, historyMode]);
+
+  const restoreChatForDay = async () => {
+    if (!authToken || !activeRoomId || !historyDay) return;
+    const batch = await chatFetchMessages(authToken, activeRoomId, 0, historyDay);
+    setMessages(trimChatMessages(batch));
+    lastTsRef.current = batch.length ? Math.max(...batch.map((m) => m.ts)) : 0;
+    setHistoryMode(true);
+    setErr(null);
+  };
+
+  const returnToLiveChat = async () => {
+    setHistoryMode(false);
+    lastTsRef.current = 0;
+    setMessages([]);
+    if (!authToken || !activeRoomId) return;
+    const batch = await chatFetchMessages(authToken, activeRoomId, 0);
+    setMessages(trimChatMessages(batch));
+    lastTsRef.current = batch.length ? Math.max(...batch.map((m) => m.ts)) : 0;
+  };
 
   useEffect(() => {
     if (fixedRoomId && tableChannel === 'table') {
@@ -331,6 +358,7 @@ export const NeonChatPanel: React.FC<Props> = ({
     lastTsRef.current = 0;
     setMessages([]);
     setParticipants([]);
+    setHistoryMode(false);
     if (activeRoomId) {
       refreshMessages();
       refreshParticipants();
@@ -368,7 +396,7 @@ export const NeonChatPanel: React.FC<Props> = ({
     });
     if (msg) {
       if (roomId === activeRoomId) {
-        setMessages((prev) => [...prev, msg]);
+        setMessages((prev) => trimChatMessages([...prev, msg]));
         lastTsRef.current = Math.max(lastTsRef.current, msg.ts);
       }
       setInput('');
@@ -383,7 +411,7 @@ export const NeonChatPanel: React.FC<Props> = ({
     if (!authToken || !activeRoomId) return;
     const msg = await chatSendFile(authToken, activeRoomId, fileId);
     if (msg) {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => trimChatMessages([...prev, msg]));
       lastTsRef.current = Math.max(lastTsRef.current, msg.ts);
       setShowFilePicker(false);
       refreshRooms();
@@ -949,6 +977,26 @@ export const NeonChatPanel: React.FC<Props> = ({
               </div>
             )}
             {dmTransferBar}
+            {isTableHost && tableChannel === 'table' && (
+              <div className="neon-chat-history-bar mono-text">
+                <label>
+                  <span className="opacity-70">Архив чата</span>
+                  <input
+                    type="date"
+                    value={historyDay}
+                    onChange={(e) => setHistoryDay(e.target.value)}
+                  />
+                </label>
+                <button type="button" className="nri-lobby__copy" onClick={() => void restoreChatForDay()}>
+                  Восстановить за дату
+                </button>
+                {historyMode && (
+                  <button type="button" className="nri-lobby__copy" onClick={returnToLiveChat}>
+                    К текущему чату
+                  </button>
+                )}
+              </div>
+            )}
             {(tableChannel === 'table' || (tableChannel === 'dm' && activeDmUserId)) && (
               <>
             {adminTools}

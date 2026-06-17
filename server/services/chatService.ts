@@ -15,7 +15,7 @@ import {
 const PUBLIC_SLUG = 'general';
 const MAX_MESSAGE_LEN = 500;
 const MAX_MESSAGES_FETCH = 80;
-const MAX_NRI_MESSAGES_FETCH = 5000;
+const MAX_NRI_MESSAGES_FETCH = 500;
 
 function dmKeyFor(userA: string, userB: string): string {
   return [userA, userB].sort().join(':');
@@ -257,6 +257,7 @@ export function mountChatService(app: Express, deps: ChatServiceDeps) {
     const roomId = req.params.roomId;
     const sinceRaw = typeof req.query.since === 'string' ? Number(req.query.since) : 0;
     const since = Number.isFinite(sinceRaw) ? Math.max(0, sinceRaw) : 0;
+    const dayRaw = typeof req.query.day === 'string' ? req.query.day.trim() : '';
     try {
       const me = await resolveUser(auth);
       if (!me) return sendApiError(res, 401, 'CHAT_USER_NOT_FOUND', 'Пользователь не найден.');
@@ -266,7 +267,17 @@ export function mountChatService(app: Express, deps: ChatServiceDeps) {
       if (!allowed) return sendApiError(res, 403, 'CHAT_FORBIDDEN', 'Нет доступа к комнате.');
 
       let messages;
-      if (since > 0) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dayRaw)) {
+        const start = new Date(`${dayRaw}T00:00:00.000Z`);
+        const end = new Date(`${dayRaw}T23:59:59.999Z`);
+        const take = room.kind === 'nri' ? MAX_NRI_MESSAGES_FETCH : MAX_MESSAGES_FETCH;
+        messages = await prisma.chatMessage.findMany({
+          where: { roomId, createdAt: { gte: start, lte: end } },
+          orderBy: { createdAt: 'asc' },
+          take,
+          include: { user: { select: { username: true } } },
+        });
+      } else if (since > 0) {
         messages = await prisma.chatMessage.findMany({
           where: {
             roomId,

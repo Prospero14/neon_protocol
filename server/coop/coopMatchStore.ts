@@ -155,6 +155,19 @@ export async function persistCoopMatch(prisma: PrismaClient, match: CoopMatch): 
   }
 }
 
+export async function loadCoopMatchByPartyId(
+  prisma: PrismaClient,
+  partyId: string
+): Promise<CoopMatch | null> {
+  try {
+    const row = await prisma.coopLiveMatch.findUnique({ where: { partyId } });
+    if (!row) return null;
+    return rowToMatch(row);
+  } catch {
+    return null;
+  }
+}
+
 export async function deleteCoopMatch(prisma: PrismaClient, matchId: string): Promise<void> {
   try {
     await prisma.coopLiveMatch.delete({ where: { id: matchId } });

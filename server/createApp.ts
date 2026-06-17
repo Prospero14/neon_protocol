@@ -32,11 +32,18 @@ export function createApp(opts: CreateAppOptions) {
   mountAuthRoutes(app, { prisma, jwtSecret, sendApiError });
 
   app.get('/neon_v1/health', (_req, res) => {
+    const mem = process.memoryUsage();
     res.json({
       status: getIsDbReady() ? 'active' : 'initializing',
       port,
       dbPath: databaseUrl,
       isAmvera,
+      memoryMb: {
+        rss: Math.round(mem.rss / 1024 / 1024),
+        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        external: Math.round(mem.external / 1024 / 1024),
+      },
     });
   });
 

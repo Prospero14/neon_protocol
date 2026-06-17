@@ -84,10 +84,12 @@ export async function chatOpenDm(
 export async function chatFetchMessages(
   token: string,
   roomId: string,
-  since = 0
+  since = 0,
+  day?: string
 ): Promise<ChatMessage[]> {
   const qp = new URLSearchParams();
-  if (since > 0) qp.set('since', String(since));
+  if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) qp.set('day', day);
+  else if (since > 0) qp.set('since', String(since));
   const suffix = qp.toString() ? `?${qp.toString()}` : '';
   const res = await fetch(`/neon_v1/services/chat/rooms/${roomId}/messages${suffix}`, {
     headers: authHeaders(token),

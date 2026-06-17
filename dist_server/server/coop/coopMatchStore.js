@@ -68,6 +68,17 @@ export async function persistCoopMatch(prisma, match) {
         console.error('[coopMatchStore] persist failed:', e);
     }
 }
+export async function loadCoopMatchByPartyId(prisma, partyId) {
+    try {
+        const row = await prisma.coopLiveMatch.findUnique({ where: { partyId } });
+        if (!row)
+            return null;
+        return rowToMatch(row);
+    }
+    catch {
+        return null;
+    }
+}
 export async function deleteCoopMatch(prisma, matchId) {
     try {
         await prisma.coopLiveMatch.delete({ where: { id: matchId } });

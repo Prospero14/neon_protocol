@@ -115,6 +115,18 @@ async function ensureNriSchemaSync(): Promise<void> {
     console.warn('[NEON_BOOT] CoopLiveMatch missing — applying schema…');
     runDbPushSync();
   }
+  try {
+    await prisma.nriLoreEntry.findFirst({ select: { id: true } });
+  } catch {
+    console.warn('[NEON_BOOT] NriLoreEntry missing — applying schema…');
+    runDbPushSync();
+  }
+  try {
+    await prisma.nriFactionRelationState.findFirst({ select: { sessionId: true } });
+  } catch {
+    console.warn('[NEON_BOOT] NriFactionRelationState missing — applying schema…');
+    runDbPushSync();
+  }
 }
 
 let isDbReady = false;

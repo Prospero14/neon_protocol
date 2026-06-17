@@ -235,8 +235,10 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } }),
                 prisma.nriFaction.findMany({ where: { sessionId: session.id }, orderBy: { name: 'asc' } }),
                 prisma.nriLorePlace.findMany({ where: { sessionId: session.id }, orderBy: { title: 'asc' } }),
-                prisma.nriLoreEntry.findMany({ where: { sessionId: session.id }, orderBy: { sortOrder: 'asc' } }),
-                prisma.nriFactionRelationState.findUnique({ where: { sessionId: session.id } }),
+                prisma.nriLoreEntry.findMany({ where: { sessionId: session.id }, orderBy: { sortOrder: 'asc' } }).catch(() => []),
+                prisma.nriFactionRelationState
+                    .findUnique({ where: { sessionId: session.id } })
+                    .catch(() => null),
             ]);
             let entries = entriesRaw;
             if (entries.length === 0 && world?.body?.trim()) {
@@ -568,6 +570,34 @@ export function mountNriLoreTravelRoutes(app, deps) {
         catch (error) {
             console.error('nri/faction-relations patch:', error);
             return sendApiError(res, 500, 'NRI_FACTION_REL_PATCH_FAILED', 'Не удалось сохранить отношения фракций.');
+        }
+    });
+    app.post('/neon_v1/services/nri/:code/lore/places', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const { title, body } = req.body;
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Места создаёт только мастер.');
+            }
+            const place = await prisma.nriLorePlace.create({
+                data: {
+                    sessionId: session.id,
+                    title: typeof title === 'string' && title.trim() ? title.trim().slice(0, 120) : 'Новое место',
+                    body: typeof body === 'string' ? body.slice(0, 10000) : '',
+                },
+            });
+            res.status(201).json({ place: serializeLorePlace(place) });
+        }
+        catch (error) {
+            console.error('nri/place post:', error);
+            return sendApiError(res, 500, 'NRI_PLACE_CREATE_FAILED', 'Не удалось создать место.');
         }
     });
     app.patch('/neon_v1/services/nri/:code/lore/places/:placeId', async (req, res) => {

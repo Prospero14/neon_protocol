@@ -1,7 +1,7 @@
 /** Coop lobby, live match, startup rankings — /neon_v1/coop/* */
 import jwt from 'jsonwebtoken';
 import { mergeStartupRankings } from '../coopStartupPregen.js';
-import { loadActiveCoopMatches, partyIdForUser, persistCoopMatch, } from './coopMatchStore.js';
+import { loadActiveCoopMatches, loadCoopMatchByPartyId, partyIdForUser, persistCoopMatch, } from './coopMatchStore.js';
 import { checkReleaseResult, compactMatchView, recomputeTeamStress, resolveParallelWindow, } from './coopMatchEngine.js';
 export function mountCoopRoutes(app, deps) {
     const { prisma, jwtSecret, sendApiError } = deps;
@@ -27,6 +27,52 @@ export function mountCoopRoutes(app, deps) {
     function schedulePersistMatch(match) {
         void persistCoopMatch(prisma, match);
     }
+    function evictFinishedMatch(match) {
+        matches.delete(match.id);
+        if (matchByPartyId.get(match.partyId) === match.id) {
+            matchByPartyId.delete(match.partyId);
+        }
+        matchSseByMatchId.delete(match.id);
+    }
+    function pruneFinishedMatches() {
+        for (const match of matches.values()) {
+            if (match.status === 'finished')
+                evictFinishedMatch(match);
+        }
+    }
+    function broadcastMatchFrame(matchId, frame) {
+        const listeners = matchSseByMatchId.get(matchId);
+        if (!listeners?.size)
+            return;
+        for (const res of [...listeners]) {
+            try {
+                res.write(frame);
+            }
+            catch {
+                listeners.delete(res);
+            }
+        }
+        if (listeners.size === 0)
+            matchSseByMatchId.delete(matchId);
+    }
+    async function ensurePartyMatch(partyId) {
+        const cachedId = matchByPartyId.get(partyId);
+        if (cachedId) {
+            const hit = matches.get(cachedId);
+            if (hit && hit.status !== 'finished')
+                return hit;
+        }
+        for (const m of matches.values()) {
+            if (m.partyId === partyId && m.status !== 'finished')
+                return m;
+        }
+        const fromDb = await loadCoopMatchByPartyId(prisma, partyId);
+        if (!fromDb || fromDb.status === 'finished')
+            return null;
+        matches.set(fromDb.id, fromDb);
+        matchByPartyId.set(partyId, fromDb.id);
+        return fromDb;
+    }
     function pushMatchEvent(match, type, actorUserId, payload) {
         match.seq += 1;
         const evt = {
@@ -41,18 +87,7 @@ export function mountCoopRoutes(app, deps) {
             match.events.splice(0, match.events.length - 200);
         match.updatedAt = evt.ts;
         schedulePersistMatch(match);
-        const listeners = matchSseByMatchId.get(match.id);
-        if (listeners && listeners.size > 0) {
-            const frame = `event: match_update\ndata: ${JSON.stringify({ matchId: match.id, event: evt })}\n\n`;
-            for (const res of listeners) {
-                try {
-                    res.write(frame);
-                }
-                catch {
-                    // ignore broken stream
-                }
-            }
-        }
+        broadcastMatchFrame(match.id, `event: match_update\ndata: ${JSON.stringify({ matchId: match.id, event: evt })}\n\n`);
     }
     function lobbyAuth(req) {
         try {
@@ -73,6 +108,7 @@ export function mountCoopRoutes(app, deps) {
         }
     }
     function pruneLobbyUsers() {
+        pruneFinishedMatches();
         const now = Date.now();
         for (const [uid, u] of lobbyByUser) {
             if (now - u.lastSeen > LOBBY_TTL_MS) {
@@ -267,7 +303,7 @@ export function mountCoopRoutes(app, deps) {
         me.partyId = null;
         res.json({ ok: true, party: null });
     });
-    app.post('/neon_v1/coop/match/create', (req, res) => {
+    app.post('/neon_v1/coop/match/create', async (req, res) => {
         const auth = lobbyAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
@@ -281,12 +317,9 @@ export function mountCoopRoutes(app, deps) {
         if (party.hostId !== auth.userId) {
             return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может запускать общий бой.');
         }
-        const existingId = matchByPartyId.get(party.id);
-        if (existingId) {
-            const existing = matches.get(existingId);
-            if (existing && existing.status !== 'finished') {
-                return res.json({ ok: true, match: compactMatchView(existing), reused: true });
-            }
+        const resumed = await ensurePartyMatch(party.id);
+        if (resumed) {
+            return res.json({ ok: true, match: compactMatchView(resumed), reused: true });
         }
         const roleByUserId = {};
         for (const uid of party.memberIds) {
@@ -347,6 +380,32 @@ export function mountCoopRoutes(app, deps) {
         schedulePersistMatch(match);
         pushMatchEvent(match, 'match_created', auth.userId, { memberIds: match.memberIds });
         res.json({ ok: true, match: compactMatchView(match), reused: false });
+    });
+    app.post('/neon_v1/coop/match/resume', async (req, res) => {
+        const auth = lobbyAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'COOP_NO_TOKEN', 'Нет токена авторизации.');
+        pruneLobbyUsers();
+        const me = lobbyByUser.get(auth.userId);
+        if (!me?.partyId)
+            return sendApiError(res, 400, 'COOP_PARTY_REQUIRED', 'Сначала соберите группу.');
+        const party = parties.get(me.partyId);
+        if (!party)
+            return sendApiError(res, 400, 'COOP_PARTY_REQUIRED', 'Группа не найдена.');
+        if (party.hostId !== auth.userId) {
+            return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может возобновить матч.');
+        }
+        const fromDb = await loadCoopMatchByPartyId(prisma, party.id);
+        if (!fromDb) {
+            return sendApiError(res, 404, 'COOP_MATCH_NOT_FOUND', 'Сохранённый матч не найден.');
+        }
+        fromDb.status = fromDb.status === 'finished' ? 'active' : fromDb.status;
+        fromDb.updatedAt = Date.now();
+        matches.set(fromDb.id, fromDb);
+        matchByPartyId.set(party.id, fromDb.id);
+        schedulePersistMatch(fromDb);
+        pushMatchEvent(fromDb, 'match_resumed', auth.userId, {});
+        res.json({ ok: true, match: compactMatchView(fromDb) });
     });
     app.post('/neon_v1/coop/match/join', (req, res) => {
         const auth = lobbyAuth(req);
@@ -661,7 +720,18 @@ export function mountCoopRoutes(app, deps) {
             }
             match.status = 'finished';
             pushMatchEvent(match, action, auth.userId, {});
+            schedulePersistMatch(match);
+            evictFinishedMatch(match);
             return res.json({ ok: true, match: compactMatchView(match) });
+        }
+        if (action === 'pause_match') {
+            if (auth.userId !== match.hostId) {
+                return sendApiError(res, 403, 'COOP_HOST_ONLY', 'Только хост может поставить матч на паузу.');
+            }
+            match.status = 'active';
+            pushMatchEvent(match, action, auth.userId, {});
+            schedulePersistMatch(match);
+            return res.json({ ok: true, match: compactMatchView(match), paused: true });
         }
         return sendApiError(res, 400, 'COOP_ACTION_UNKNOWN', `Неизвестное действие: ${action}.`);
     });

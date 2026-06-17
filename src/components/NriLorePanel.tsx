@@ -5,6 +5,7 @@ import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
   nriCreateFaction,
   nriCreateLoreEntry,
+  nriCreateLorePlace,
   nriDeleteFaction,
   nriDeleteLoreEntry,
   nriFetchLore,
@@ -115,6 +116,19 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
     setBusy(false);
     if (!ok) setErr('Не удалось сохранить место.');
     else await refresh();
+  };
+
+  const addPlace = async () => {
+    if (!authToken) return;
+    setBusy(true);
+    const res = await nriCreateLorePlace(authToken, inviteCode, { title: 'Новое место' });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refresh();
+    setSelectedPlaceId(res.place.id);
   };
 
   const factionDraft = useMemo(
@@ -243,6 +257,9 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
             Карточки мест из сценария, районов карты (через фракции) и их описания для стола.
             Правки названия и текста синхронизируются с картой и сценарием.
           </p>
+          <button type="button" className="nri-lobby__copy" disabled={busy} onClick={addPlace}>
+            <Plus size={14} /> Место
+          </button>
           <ul className="nri-lore__list">
             {places.map((p) => (
               <li key={p.id}>

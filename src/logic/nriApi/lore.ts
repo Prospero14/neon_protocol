@@ -176,6 +176,21 @@ export async function nriDeleteFaction(token: string, code: string, factionId: s
   return res.ok;
 }
 
+export async function nriCreateLorePlace(
+  token: string,
+  code: string,
+  payload: { title?: string; body?: string }
+): Promise<{ ok: true; place: NriLorePlace } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/places`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать место') };
+  return { ok: true, place: data.place as NriLorePlace };
+}
+
 export async function nriPatchLorePlace(
   token: string,
   code: string,

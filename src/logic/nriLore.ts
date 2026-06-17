@@ -7,8 +7,10 @@ export type NriFaction = {
   kind: string;
   name: string;
   displayName: string;
+  summary: string;
   description: string;
   color: string | null;
+  iconId: string | null;
   zoneKeys: string[];
   memberPlayerIds: string[];
   memberNpcIds: string[];
@@ -19,6 +21,7 @@ export type NriFaction = {
 export type NriLoreEntry = {
   id: string;
   title: string;
+  summary: string;
   body: string;
   sortOrder: number;
   createdAt: number;
@@ -28,6 +31,7 @@ export type NriLoreEntry = {
 export type NriLorePlace = {
   id: string;
   title: string;
+  summary: string;
   body: string;
   zoneKey: string | null;
   mapMarkerId: string | null;
@@ -35,6 +39,8 @@ export type NriLorePlace = {
   y: number | null;
   sourceScenarioNodeId: string | null;
   sourceFactionId: string | null;
+  entityTag: string | null;
+  iconId: string | null;
   createdAt: number;
   updatedAt: number;
 };

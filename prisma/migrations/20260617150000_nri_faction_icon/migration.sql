@@ -1,0 +1,1 @@
+ALTER TABLE "NriFaction" ADD COLUMN "iconId" TEXT;

@@ -8,11 +8,13 @@ import {
   type NriActivityId,
   type NriOriginId,
 } from '../logic/nriCharacterGen';
+import { rollCareer } from '../logic/nriCareers';
 import { generateRichBackstory } from '../logic/nriBackstories';
 import { generateRichClothing } from '../logic/nriClothing';
 import { rollCharacterName, rollNickname } from '../logic/nriNames';
 import type { NriClassId } from '../logic/nriClasses';
 import type { NriSheetData } from '../logic/nriNpcGenerator';
+import type { NriFaction } from '../logic/nriLore';
 
 type Props = {
   meta: CharacterMetaDraft;
@@ -20,6 +22,7 @@ type Props = {
   sheet?: NriSheetData | null;
   showBackstory?: boolean;
   classId?: NriClassId;
+  factions?: NriFaction[];
 };
 
 export const NriCharacterMetaForm: React.FC<Props> = ({
@@ -28,6 +31,7 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
   sheet,
   showBackstory = true,
   classId,
+  factions = [],
 }) => {
   const set = <K extends keyof CharacterMetaDraft>(key: K, value: CharacterMetaDraft[K]) => {
     onChange({ ...meta, [key]: value });
@@ -38,16 +42,24 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
 
   const rollBackstory = () => {
     if (!classId) return;
+    const arch = meta.npcArchetypeId ?? archetypeForClass(classId);
     const name = (meta.characterName ?? sheet?.characterName ?? '').trim() || 'Без имени';
+    const career =
+      (meta.career ?? sheet?.career)?.trim() ||
+      rollCareer({ classId, activityId, archetypeId: arch });
     const text = generateRichBackstory({
       name,
       nickname: meta.nickname ?? sheet?.nickname,
       originId,
       activityId,
-      archetypeId: meta.npcArchetypeId ?? archetypeForClass(classId),
+      archetypeId: arch,
       classId,
+      career,
     });
     set('backstory', text);
+    if (!meta.career?.trim() && !sheet?.career?.trim()) {
+      set('career', career);
+    }
   };
 
   const rollClothing = () => {
@@ -94,7 +106,16 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
           type="button"
           className="nri-lobby__copy"
           title="Кличка по деятельности"
-          onClick={() => set('nickname', rollNickname(activityId))}
+          onClick={() =>
+            set(
+              'nickname',
+              rollNickname({
+                activityId,
+                classId,
+                archetypeId: meta.npcArchetypeId ?? (classId ? archetypeForClass(classId) : undefined),
+              })
+            )
+          }
         >
           <Dices size={14} />
         </button>
@@ -131,6 +152,20 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
           {NRI_ACTIVITIES.map((a) => (
             <option key={a.id} value={a.id}>
               {a.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="nri-modal__field">
+        <span>Фракция</span>
+        <select
+          value={meta.factionId ?? sheet?.factionId ?? ''}
+          onChange={(e) => set('factionId', e.target.value || null)}
+        >
+          <option value="">— без фракции —</option>
+          {factions.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.displayName || f.name}
             </option>
           ))}
         </select>

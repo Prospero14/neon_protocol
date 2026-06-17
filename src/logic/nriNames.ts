@@ -146,12 +146,45 @@ const NICKNAME_BY_ARCHETYPE: Partial<Record<NriNpcArchetypeId, readonly string[]
 };
 
 const CULT_REFERENCE_BY_ACTIVITY: Partial<Record<NriActivityId, readonly string[]>> = {
-  tech: ['Мотоко', 'Лейн', 'Гайвер', 'Кубрик', 'Киану'],
-  street: ['Спайк', 'Вулф', 'Такеши', 'Рэмбо', 'Бельмондо'],
-  military: ['Рипли', 'Рэмбо', 'Терминатор', 'Снейк', 'Курт Рассел'],
-  media: ['Нуар', 'Кэмерон', 'Кусто', 'Тарантино', 'Моне'],
-  criminal: ['Кайзер', 'Донни', 'Нео-Нуар', 'Гудфелла', 'Скала'],
+  tech: ['Мотоко', 'Лейн', 'Гайвер', 'Кубрик', 'Киану', 'Нейромант', 'Case', 'Zero Cool'],
+  street: ['Спайк', 'Вулф', 'Такеши', 'Рэмбо', 'Бельмондо', 'Соло', 'V', 'Джокер'],
+  military: ['Рипли', 'Рэмбо', 'Терминатор', 'Снейк', 'Курт Рассел', 'Dutch', 'Soap'],
+  media: ['Нуар', 'Кэмерон', 'Кусто', 'Тарантино', 'Моне', 'Холст', 'Праймтайм'],
+  criminal: ['Кайзер', 'Донни', 'Нео-Нуар', 'Гудфелла', 'Скала', 'Тихий', 'Крючок'],
+  corp: ['Тайлер', 'Патрик', 'Арасака', 'Милitech', 'Синий Лед', 'Бейдж-99'],
+  medical: ['Док', 'Хаус', 'Триаж', 'Скальпель', 'Рана'],
+  nomad: ['Макс', 'Фуриоза', 'Дорожный', 'Караван'],
 };
+
+const COMPOUND_ADJ = [
+  'Пепельный', 'Хромовой', 'Нулевой', 'Мокрый', 'Ржавый', 'Ночной', 'Багровый', 'Тихий',
+  'Ледяной', 'Слепой', 'Кислотный', 'Грязный', 'Стальной', 'Мёртвый', 'Серый', 'Чёрный',
+  'Неоновый', 'Синий', 'Голодный', 'Сломанный', 'Пустой', 'Дикий',
+] as const;
+
+const COMPOUND_NOUN = [
+  'Призрак', 'Клык', 'Шрам', 'Поток', 'Сигнал', 'Клинок', 'Пепел', 'Шторм', 'Канал',
+  'Патрон', 'Эхо', 'Дым', 'Рубеж', 'След', 'Порт', 'Маршрут', 'Глитч', 'Перегруз',
+  'Корпус', 'Прокси', 'Сбой', 'Каскад', 'Импульс', 'Фантом',
+] as const;
+
+const CYBER_SUFFIX = ['v2', '0x', 'MK-II', 'Prime', 'EX', 'Neo', 'Alt', 'Ghost', 'Cold', '404', 'X'] as const;
+
+function rollCompoundNickname(): string {
+  const roll = Math.random();
+  if (roll < 0.4) {
+    return `${pick(COMPOUND_ADJ)} ${pick(COMPOUND_NOUN)}`;
+  }
+  if (roll < 0.65) {
+    const pools = [
+      ...NICKNAME_BY_ACTIVITY.street,
+      ...NICKNAME_BY_ACTIVITY.criminal,
+      ...NICKNAME_BY_ACTIVITY.tech,
+    ];
+    return `${pick(pools)}-${pick(CYBER_SUFFIX)}`;
+  }
+  return `${pick(COMPOUND_NOUN)} ${String(Math.floor(Math.random() * 90) + 10)}`;
+}
 
 /** Полное имя с учётом происхождения. */
 export function rollCharacterName(originId: NriOriginId = 'neo_tokyo'): string {
@@ -172,15 +205,20 @@ export function rollNickname(activityOrParams: NriActivityId | RollNicknameParam
     typeof activityOrParams === 'string' ? { activityId: activityOrParams } : activityOrParams;
   const activityId = params.activityId ?? 'street';
   const refs = CULT_REFERENCE_BY_ACTIVITY[activityId] ?? [];
-  if (refs.length > 0 && Math.random() < 0.08) return pick(refs);
+  if (refs.length > 0 && Math.random() < 0.12) return pick(refs);
 
   const roll = Math.random();
-  if (params.classId && roll < 0.45) {
-    return pick(NICKNAME_BY_CLASS[params.classId] ?? NICKNAME_BY_ACTIVITY[activityId]);
+  if (params.classId && roll < 0.38) {
+    const fromClass = pick(NICKNAME_BY_CLASS[params.classId] ?? NICKNAME_BY_ACTIVITY[activityId]);
+    if (Math.random() < 0.35) return `${fromClass}-${pick(CYBER_SUFFIX)}`;
+    return fromClass;
   }
-  if (params.archetypeId && roll < 0.7) {
+  if (params.archetypeId && roll < 0.62) {
     const arch = NICKNAME_BY_ARCHETYPE[params.archetypeId];
     if (arch?.length) return pick(arch);
+  }
+  if (roll < 0.78) {
+    return rollCompoundNickname();
   }
   return pick(NICKNAME_BY_ACTIVITY[activityId] ?? NICKNAME_BY_ACTIVITY.street);
 }

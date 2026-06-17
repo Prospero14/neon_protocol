@@ -25,6 +25,10 @@ function trimChatMessages(list: ChatMessage[]): ChatMessage[] {
   return list.length > MAX_CHAT_UI ? list.slice(-MAX_CHAT_UI) : list;
 }
 import { nriBroadcastItemTransfer } from '../../logic/nriApi';
+import { nriFetchLoreCards } from '../../logic/nriApi';
+import type { LoreCardRef } from '../../../shared/nri-domain/loreCards';
+import { LoreMarkupInteractive } from '../LoreMarkupInteractive';
+import { LoreCardPopup } from '../LoreCardPopup';
 import { parseItemTransferPayload, nriItemStatsLine } from '../../logic/nriItemDisplay';
 import { SPAM_BOT_LABEL, SPAM_BOT_USERNAME, spamMessageVariant } from '../../logic/spamBotMeta';
 import { NriFilePopup } from '../NriFilePopup';
@@ -264,10 +268,40 @@ export const NeonChatPanel: React.FC<Props> = ({
   const lastTsRef = useRef(0);
   const [historyDay, setHistoryDay] = useState(() => new Date().toISOString().slice(0, 10));
   const [historyMode, setHistoryMode] = useState(false);
+  const [loreCards, setLoreCards] = useState<LoreCardRef[]>([]);
+  const [loreCardPopup, setLoreCardPopup] = useState<LoreCardRef | null>(null);
+  const [loreLinkErr, setLoreLinkErr] = useState<string | null>(null);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
   const spamActive = showGeneralSpamToggle ? generalSpam : roomSpamEnabled === true;
+
+  const refreshLoreCards = useCallback(async () => {
+    if (!authToken || !nriInviteCode) return;
+    const cards = await nriFetchLoreCards(authToken, nriInviteCode);
+    setLoreCards(cards);
+  }, [authToken, nriInviteCode]);
+
+  useEffect(() => {
+    refreshLoreCards();
+    if (!nriInviteCode) return;
+    const t = setInterval(refreshLoreCards, 20000);
+    return () => clearInterval(t);
+  }, [refreshLoreCards, nriInviteCode]);
+
+  useEffect(() => {
+    if (!loreLinkErr) return;
+    const t = window.setTimeout(() => setLoreLinkErr(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [loreLinkErr]);
+
+  const openLoreCard = useCallback((card: LoreCardRef) => {
+    if (!card?.title) {
+      setLoreLinkErr('Карточка повреждена или пуста.');
+      return;
+    }
+    setLoreCardPopup(card);
+  }, []);
 
   const refreshParticipants = useCallback(async () => {
     if (!authToken || !activeRoomId) return;
@@ -622,7 +656,20 @@ export const NeonChatPanel: React.FC<Props> = ({
           {m.isAdmin && '★ '}
           {m.username}
         </span>
-        <span className="neon-chat-text">{m.text}</span>
+        <span className="neon-chat-text">
+          {nriInviteCode && loreCards.length > 0 ? (
+            <LoreMarkupInteractive
+              text={m.text}
+              cards={loreCards}
+              onOpenCard={openLoreCard}
+              onBrokenLink={(title) =>
+                setLoreLinkErr(`Карточка «${title}» не найдена в лоре стола.`)
+              }
+            />
+          ) : (
+            m.text
+          )}
+        </span>
       </div>
     );
   };
@@ -1062,6 +1109,7 @@ export const NeonChatPanel: React.FC<Props> = ({
         )}
 
         {err && <p className="neon-chat-err mono-text">{err}</p>}
+        {loreLinkErr && <p className="neon-chat-lore-err mono-text">{loreLinkErr}</p>}
       </div>
 
       {showSpeakerSheet && speakerNpcProfile && (
@@ -1083,6 +1131,7 @@ export const NeonChatPanel: React.FC<Props> = ({
           }}
         />
       )}
+      <LoreCardPopup card={loreCardPopup} onClose={() => setLoreCardPopup(null)} />
     </div>
   );
 };

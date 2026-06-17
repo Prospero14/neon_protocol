@@ -4,7 +4,7 @@ import type { NriClassId } from './nriClasses';
 import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
 import { NRI_NPC_ARCHETYPES, NRI_ORIGINS } from './nriCharacterGen';
 import { getC2185ClassTemplate } from './nriCarbon2185';
-import { careerSectorHint, type CareerSector } from './nriCareers';
+import { careerSectorHint, rollCareer, type CareerSector } from './nriCareers';
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
@@ -307,7 +307,13 @@ export function generateRichBackstory(params: {
   const tpl = getC2185ClassTemplate(params.classId);
   const localizedName = russianizeName(params.name.trim() || 'Без имени');
   const display = params.nickname ? `${localizedName} «${params.nickname}»` : localizedName;
-  const career = params.career?.trim() || 'специалист без чёткой визитки';
+  const career =
+    params.career?.trim() ||
+    rollCareer({
+      classId: params.classId,
+      activityId: params.activityId,
+      archetypeId: params.archetypeId,
+    });
   const sector = careerSectorHint(career) ?? 'private';
   const template = pick(EXTRA_TEMPLATES);
   const closer = pick(ARCHETYPE_CLOSERS[arch]);

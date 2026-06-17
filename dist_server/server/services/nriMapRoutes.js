@@ -1,7 +1,7 @@
 /** Карта стола — zones, markers */
 import { isNriMember } from './nriMemberDb.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
-import { ensureSessionLorePlacesFromMap, syncLorePlacesFromZonePatch, } from './nriLoreTravel.js';
+import { ensureSessionLorePlacesFromMap, syncLorePlacesFromZonePatch, ensureSessionFactionsFromCorpZones, } from './nriLoreTravel.js';
 export function mountNriMapRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     function serializeMapMarker(m, ctx) {
@@ -71,6 +71,7 @@ export function mountNriMapRoutes(app, ctx) {
             const zones = await listMapZones(prisma);
             if (session.hostUserId === me.id) {
                 await ensureSessionLorePlacesFromMap(prisma, session.id);
+                await ensureSessionFactionsFromCorpZones(prisma, session.id);
             }
             res.json({ zones, view: { w: 240, h: 165 } });
         }
@@ -85,7 +86,7 @@ export function mountNriMapRoutes(app, ctx) {
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
         const zoneKey = req.params.zoneKey;
-        const { name, corpName, pois, megaDistrict, color } = req.body;
+        const { name, corpName, pois, megaDistrict, color, iconId } = req.body;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -95,7 +96,7 @@ export function mountNriMapRoutes(app, ctx) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Редактирует только мастер.');
             }
             await ensureMapZonesSeeded(prisma);
-            const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color });
+            const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color, iconId });
             if (!zone)
                 return sendApiError(res, 404, 'NRI_ZONE_NOT_FOUND', 'Район не найден.');
             await syncLorePlacesFromZonePatch(prisma, session.id, zone);

@@ -61,7 +61,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
   const [pickedSkills, setPickedSkills] = useState<string[]>(() => defaultSkillsForClass('merc'));
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [factionName, setFactionName] = useState('');
+  const [factionId, setFactionId] = useState('');
   const [disposition, setDisposition] = useState('0');
   const [factions, setFactions] = useState<NriFaction[]>([]);
   const [notes, setNotes] = useState('');
@@ -114,8 +114,8 @@ export const NriNpcsPanel: React.FC<Props> = ({
     displayName: f.displayName,
   }));
 
-  const resolveFactionId = (name: string) =>
-    factions.find((f) => f.name.trim().toLowerCase() === name.trim().toLowerCase())?.id;
+  const selectedFaction = factions.find((f) => f.id === factionId) ?? null;
+  const factionLabel = selectedFaction?.displayName || selectedFaction?.name || '';
 
   const generatePreview = () => {
     const skillErr = validateSkillPick(classId, pickedSkills);
@@ -132,13 +132,13 @@ export const NriNpcsPanel: React.FC<Props> = ({
       nickname: meta.nickname,
       skillProficiencies: pickedSkills,
     });
-    const factionId = resolveFactionId(factionName);
+    const pickedFactionId = factionId || undefined;
     const tattoos = rollNpcTattoos(
       {
         originId,
         activityId,
         archetypeId,
-        factionId,
+        factionId: pickedFactionId,
         augmentations: built.sheet.augmentations,
       },
       factionRefs
@@ -146,7 +146,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
     setSheet({
       ...built.sheet,
       tattoos,
-      factionId,
+      factionId: pickedFactionId,
       disposition: Number.isFinite(Number(disposition)) ? Number(disposition) : 0,
     });
     setMeta({ ...built.meta, npcArchetypeId: archetypeId });
@@ -166,13 +166,14 @@ export const NriNpcsPanel: React.FC<Props> = ({
       return;
     }
     const base = sheet;
-    const factionId = resolveFactionId(factionName) ?? base.factionId;
+    const pickedFactionId = factionId || base.factionId;
     const finalSheet = applyMetaToSheet(base, {
       ...meta,
       characterName: npcName,
       npcArchetypeId: archetypeId,
+      factionId: pickedFactionId ?? null,
     });
-    finalSheet.factionId = factionId;
+    finalSheet.factionId = pickedFactionId;
     finalSheet.disposition = Number.isFinite(Number(disposition)) ? Number(disposition) : finalSheet.disposition ?? 0;
     if (!finalSheet.tattoos?.length) {
       finalSheet.tattoos = rollNpcTattoos(
@@ -193,7 +194,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
       classId,
       imageUrl: imageUrl.trim() || undefined,
       sheet: finalSheet,
-      notes: mergeNpcNotes(factionName, notes.trim() || finalSheet.backstory || ''),
+      notes: mergeNpcNotes(factionLabel, notes.trim() || finalSheet.backstory || ''),
     });
     setBusy(false);
     if (!created.ok) {
@@ -202,7 +203,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
     }
     setName('');
     setImageUrl('');
-    setFactionName('');
+    setFactionId('');
     setNotes('');
     setSheet(null);
     await refresh();
@@ -311,17 +312,14 @@ export const NriNpcsPanel: React.FC<Props> = ({
 
         <label className="nri-modal__field">
           <span>Фракция</span>
-          <input
-            value={factionName}
-            onChange={(e) => setFactionName(e.target.value)}
-            placeholder="Выберите или введите…"
-            list={`nri-npc-factions-${inviteCode}`}
-          />
-          <datalist id={`nri-npc-factions-${inviteCode}`}>
+          <select value={factionId} onChange={(e) => setFactionId(e.target.value)}>
+            <option value="">— без фракции —</option>
             {factions.map((f) => (
-              <option key={f.id} value={f.name} />
+              <option key={f.id} value={f.id}>
+                {f.displayName || f.name}
+              </option>
             ))}
-          </datalist>
+          </select>
         </label>
         <label className="nri-modal__field">
           <span>Базовое отношение к игрокам (−100…+100)</span>

@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import type { PrismaClient } from '@prisma/client';
 import { resolveSharedJsonPath } from '../sharedDataPath.js';
+import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
 
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 
@@ -45,6 +46,7 @@ export type MapZoneRow = {
   corpName: string | null;
   megaDistrict: string | null;
   color: string | null;
+  iconId: string | null;
   locked: boolean;
   pois: string[] | null;
 };
@@ -87,6 +89,7 @@ export function serializeMapZone(z: {
   corpName: string | null;
   megaDistrict?: string | null;
   color?: string | null;
+  iconId?: string | null;
   locked: boolean;
   pois: unknown;
   updatedAt?: Date;
@@ -105,6 +108,7 @@ export function serializeMapZone(z: {
     locked: z.locked,
     megaDistrict: megaDistrictFor(z.zoneKey, z.megaDistrict),
     color: z.color ?? null,
+    iconId: z.iconId ?? defaultZoneIconId(z.zoneType, z.zoneKey),
     pois,
     updatedAt: z.updatedAt?.getTime() ?? Date.now(),
   };
@@ -123,6 +127,7 @@ function seedRow(s: ZoneSeed) {
     corpName: s.corpName ?? null,
     megaDistrict: s.megaDistrict ?? defaultMegaLabel(s.zoneKey),
     color: null,
+    iconId: defaultZoneIconId(s.zoneType, s.zoneKey),
     locked: s.locked ?? false,
     pois: s.pois ?? [],
   };
@@ -150,6 +155,7 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
           corpName: null,
           megaDistrict: null,
           color: null,
+          iconId: null,
           locked: true,
           pois: [],
         },
@@ -158,12 +164,17 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
     return;
   }
 
+  const existingKeys = new Set(
+    (await prisma.nriMapZone.findMany({ select: { zoneKey: true } })).map((z) => z.zoneKey)
+  );
+  const missing = seeds.filter((s) => !existingKeys.has(s.zoneKey));
+  if (missing.length > 0) {
+    await prisma.nriMapZone.createMany({ data: missing.map(seedRow) });
+  }
   const count = await prisma.nriMapZone.count({ where: { zoneKey: { not: '__layout__' } } });
-  if (count > 0) return;
-
-  await prisma.nriMapZone.createMany({
-    data: seeds.map(seedRow),
-  });
+  if (count === 0) {
+    await prisma.nriMapZone.createMany({ data: seeds.map(seedRow) });
+  }
 }
 
 export async function listMapZones(prisma: PrismaClient) {
@@ -184,12 +195,17 @@ export async function patchMapZone(
     megaDistrict?: string;
     pois?: string[];
     color?: string | null;
+    iconId?: string | null;
   }
 ) {
   const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
   if (!existing) return null;
 
   const color = normalizeZoneColor(payload.color);
+  const iconId =
+    payload.iconId !== undefined
+      ? normalizeZoneIconId(payload.iconId, existing.zoneType, zoneKey)
+      : undefined;
 
   if (typeof payload.megaDistrict === 'string' && payload.megaDistrict.trim()) {
     const label = payload.megaDistrict.trim().slice(0, 80);
@@ -226,6 +242,7 @@ export async function patchMapZone(
         ? { pois: Array.isArray(payload.pois) ? payload.pois.map((p) => String(p).slice(0, 80)) : [] }
         : {}),
       ...(color !== undefined ? { color } : {}),
+      ...(iconId !== undefined ? { iconId } : {}),
     },
   });
 

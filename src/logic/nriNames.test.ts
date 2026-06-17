@@ -55,4 +55,16 @@ describe('nriBackstories', () => {
     expect(text.length).toBeGreaterThan(40);
     expect(text).toMatch(/Тест|Тень|Enforcer|наёмник|Москва|Ветеран/i);
   });
+
+  it('rolls career when career omitted (no generic fallback phrase)', () => {
+    const text = generateRichBackstory({
+      name: 'Test User',
+      originId: 'neo_tokyo',
+      activityId: 'street',
+      archetypeId: 'civilian',
+      classId: 'merc',
+    });
+    expect(text).not.toContain('специалист без чёткой визитки');
+    expect(text.length).toBeGreaterThan(30);
+  });
 });

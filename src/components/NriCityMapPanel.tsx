@@ -25,6 +25,7 @@ import {
   zoneRectPaint,
   type NightCityDistrictType,
 } from '../logic/nriNightCityMap';
+import { resolveZoneIconHref } from '../../shared/nri-domain/zoneIcons';
 import { getVehicleDef } from '../logic/nriVehicles';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
@@ -767,6 +768,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 isFocused && !colorUseDefault
                   ? zoneRectPaint(editColor, z.zoneType)
                   : zoneRectPaint(z.color ?? null, z.zoneType);
+              const iconHref = resolveZoneIconHref(z.iconId, z.zoneType, z.zoneKey);
               return (
                 <g
                   key={z.zoneKey}
@@ -786,6 +788,17 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     style={rectPaint}
                     filter={isFocused || isHovered ? 'url(#nc-glow)' : undefined}
                   />
+                  {iconHref && (
+                    <image
+                      href={iconHref}
+                      x={z.x}
+                      y={z.y}
+                      width={z.w}
+                      height={z.h}
+                      preserveAspectRatio="xMidYMid meet"
+                      className="nri-city-map__zone-icon"
+                    />
+                  )}
                   {showFo && (
                     <foreignObject
                       x={z.x + 0.3}

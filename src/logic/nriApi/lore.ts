@@ -33,7 +33,7 @@ export async function nriFetchLore(
 export async function nriCreateLoreEntry(
   token: string,
   code: string,
-  payload: { title?: string; body?: string }
+  payload: { title?: string; summary?: string; body?: string }
 ): Promise<{ ok: true; entry: import('../nriLore').NriLoreEntry } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/entries`, {
     method: 'POST',
@@ -49,7 +49,7 @@ export async function nriPatchLoreEntry(
   token: string,
   code: string,
   entryId: string,
-  payload: { title?: string; body?: string }
+  payload: { title?: string; summary?: string; body?: string }
 ): Promise<boolean> {
   const res = await fetch(
     `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/entries/${encodeURIComponent(entryId)}`,
@@ -64,6 +64,18 @@ export async function nriDeleteLoreEntry(token: string, code: string, entryId: s
     { method: 'DELETE', headers: authHeaders(token) }
   );
   return res.ok;
+}
+
+export async function nriFetchLoreCards(
+  token: string,
+  code: string
+): Promise<import('../../../shared/nri-domain/loreCards').LoreCardRef[]> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/cards`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return [];
+  return (data.cards ?? []) as import('../../../shared/nri-domain/loreCards').LoreCardRef[];
 }
 
 export async function nriPatchFactionRelations(
@@ -139,7 +151,7 @@ export async function nriSaveLoreWorld(token: string, code: string, body: string
 export async function nriCreateFaction(
   token: string,
   code: string,
-  payload: { name: string; description?: string; color?: string; kind?: string; zoneKeys?: string[] }
+  payload: { name: string; description?: string; summary?: string; color?: string; kind?: string; zoneKeys?: string[] }
 ): Promise<{ ok: true; faction: NriFaction } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/factions`, {
     method: 'POST',
@@ -177,7 +189,7 @@ export async function nriDeleteFaction(token: string, code: string, factionId: s
 export async function nriCreateLorePlace(
   token: string,
   code: string,
-  payload: { title?: string; body?: string }
+  payload: { title?: string; summary?: string; body?: string }
 ): Promise<{ ok: true; place: NriLorePlace } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/places`, {
     method: 'POST',
@@ -193,7 +205,7 @@ export async function nriPatchLorePlace(
   token: string,
   code: string,
   placeId: string,
-  payload: { title?: string; body?: string }
+  payload: { title?: string; summary?: string; body?: string; entityTag?: string | null; iconId?: string | null }
 ): Promise<boolean> {
   const res = await fetch(
     `/neon_v1/services/nri/${encodeURIComponent(code)}/lore/places/${encodeURIComponent(placeId)}`,

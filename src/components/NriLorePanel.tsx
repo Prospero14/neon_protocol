@@ -23,6 +23,8 @@ import {
   type NriRosterPlayer,
 } from '../logic/nriApi';
 import { formatFactionTitle, NRI_FACTION_KINDS } from '../logic/nriFactionKinds';
+import { defaultZoneIconId, defaultEntityIconId, resolveEntityIconHref } from '../../shared/nri-domain/zoneIcons';
+import { NriEntityIconPicker } from './NriEntityIconPicker';
 
 type Props = { inviteCode: string };
 
@@ -110,10 +112,22 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
     setSelectedFactionId(res.faction.id);
   };
 
-  const savePlace = async (title: string, body: string) => {
+  const savePlace = async (
+    title: string,
+    summary: string,
+    body: string,
+    entityTag: string | null,
+    iconId: string | null
+  ) => {
     if (!authToken || !selectedPlace) return;
     setBusy(true);
-    const ok = await nriPatchLorePlace(authToken, inviteCode, selectedPlace.id, { title, body });
+    const ok = await nriPatchLorePlace(authToken, inviteCode, selectedPlace.id, {
+      title,
+      summary,
+      body,
+      entityTag,
+      iconId,
+    });
     setBusy(false);
     if (!ok) setErr('Не удалось сохранить место.');
     else await refresh();
@@ -199,10 +213,14 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
                 key={selectedEntry.id}
                 entry={selectedEntry}
                 busy={busy}
-                onSave={async (title, body) => {
+                onSave={async (title, summary, body) => {
                   if (!authToken) return;
                   setBusy(true);
-                  const ok = await nriPatchLoreEntry(authToken, inviteCode, selectedEntry.id, { title, body });
+                  const ok = await nriPatchLoreEntry(authToken, inviteCode, selectedEntry.id, {
+                    title,
+                    summary,
+                    body,
+                  });
                   setBusy(false);
                   if (!ok) setErr('Не удалось сохранить карточку.');
                   else await refresh();
@@ -328,7 +346,9 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
                 place={selectedPlace}
                 mapZone={selectedPlace.zoneKey ? zoneByKey.get(selectedPlace.zoneKey) : undefined}
                 busy={busy}
-                onSave={(title, body) => savePlace(title, body)}
+                onSave={(title, summary, body, entityTag, iconId) =>
+                  savePlace(title, summary, body, entityTag, iconId)
+                }
               />
             )}
           </div>
@@ -343,15 +363,17 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
 const EntryEditor: React.FC<{
   entry: NriLoreEntry;
   busy: boolean;
-  onSave: (title: string, body: string) => void;
+  onSave: (title: string, summary: string, body: string) => void;
   onDelete: () => void;
 }> = ({ entry, busy, onSave, onDelete }) => {
   const [title, setTitle] = useState(entry.title);
+  const [summary, setSummary] = useState(entry.summary ?? '');
   const [body, setBody] = useState(entry.body);
   useEffect(() => {
     setTitle(entry.title);
+    setSummary(entry.summary ?? '');
     setBody(entry.body);
-  }, [entry.id, entry.title, entry.body]);
+  }, [entry.id, entry.title, entry.summary, entry.body]);
   return (
     <div className="nri-lore__place-edit">
       <label className="nri-modal__field">
@@ -359,11 +381,21 @@ const EntryEditor: React.FC<{
         <input value={title} onChange={(e) => setTitle(e.target.value)} />
       </label>
       <label className="nri-modal__field">
-        <span>Текст</span>
+        <span>Краткая сводка (для чата)</span>
+        <textarea
+          className="mono-text"
+          rows={3}
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="1–3 предложения — увидят игроки при клике на ссылку в чате"
+        />
+      </label>
+      <label className="nri-modal__field">
+        <span>Полный лор</span>
         <textarea className="nri-notes__editor mono-text" rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
       </label>
       <div className="nri-presets__actions">
-        <button type="button" className="nri-modal__submit" disabled={busy} onClick={() => onSave(title, body)}>
+        <button type="button" className="nri-modal__submit" disabled={busy} onClick={() => onSave(title, summary, body)}>
           <Save size={14} /> Сохранить
         </button>
         <button type="button" className="nri-lobby__close" onClick={onDelete}>
@@ -384,17 +416,21 @@ const FactionEditor: React.FC<{
   onSave: (patch: Partial<NriFaction>) => void;
   onDelete: () => void;
 }> = ({ faction, roster, npcs, allFactions, mapZones, busy, onSave, onDelete }) => {
-  const [kind, setKind] = useState(faction.kind || 'faction');
+  const [kind, setKind] = useState(faction.kind || 'unknown');
   const [name, setName] = useState(faction.name);
+  const [summary, setSummary] = useState(faction.summary ?? '');
   const [description, setDescription] = useState(faction.description);
+  const [iconId, setIconId] = useState(faction.iconId ?? defaultEntityIconId(faction.kind));
   const [zoneKeys, setZoneKeys] = useState(faction.zoneKeys ?? []);
   const [memberPlayerIds, setMemberPlayerIds] = useState(faction.memberPlayerIds);
   const [memberNpcIds, setMemberNpcIds] = useState(faction.memberNpcIds);
 
   useEffect(() => {
-    setKind(faction.kind || 'faction');
+    setKind(faction.kind || 'unknown');
     setName(faction.name);
+    setSummary(faction.summary ?? '');
     setDescription(faction.description);
+    setIconId(faction.iconId ?? defaultEntityIconId(faction.kind));
     setZoneKeys(faction.zoneKeys ?? []);
     setMemberPlayerIds(faction.memberPlayerIds);
     setMemberNpcIds(faction.memberNpcIds);
@@ -402,13 +438,16 @@ const FactionEditor: React.FC<{
     faction.id,
     faction.kind,
     faction.name,
+    faction.summary,
     faction.description,
     faction.zoneKeys,
     faction.memberPlayerIds,
     faction.memberNpcIds,
+    faction.iconId,
   ]);
 
   const displayPreview = formatFactionTitle(kind, name);
+  const iconPreview = resolveEntityIconHref(iconId, kind);
 
   const toggleZone = (zoneKey: string) => {
     setZoneKeys((list) =>
@@ -433,7 +472,10 @@ const FactionEditor: React.FC<{
 
   return (
     <div>
-      <p className="mono-text nri-lore__faction-preview">{displayPreview}</p>
+      <p className="mono-text nri-lore__faction-preview">
+        {iconPreview && <img src={iconPreview} alt="" className="nri-lore__faction-icon" />}
+        {displayPreview}
+      </p>
       <label className="nri-modal__field">
         <span>Тип</span>
         <select value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -449,9 +491,24 @@ const FactionEditor: React.FC<{
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </label>
       <label className="nri-modal__field">
-        <span>Описание</span>
-        <textarea value={description} rows={4} onChange={(e) => setDescription(e.target.value)} />
+        <span>Краткая сводка (для чата)</span>
+        <textarea
+          value={summary}
+          rows={3}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder="1–3 предложения для поп-апа в чате"
+        />
       </label>
+      <label className="nri-modal__field">
+        <span>Полный лор</span>
+        <textarea value={description} rows={8} onChange={(e) => setDescription(e.target.value)} />
+      </label>
+      <NriEntityIconPicker
+        iconId={iconId}
+        onChange={setIconId}
+        disabled={busy}
+        label="Иконка фракции"
+      />
       <div className="nri-scenario__link-block">
         <span className="mono-text">Районы на карте</span>
         <p className="mono-text opacity-60 nri-lore__hint">
@@ -535,7 +592,9 @@ const FactionEditor: React.FC<{
             onSave({
               kind,
               name: name.trim() || 'Без названия',
+              summary,
               description,
+              iconId,
               zoneKeys,
               memberPlayerIds,
               memberNpcIds,
@@ -556,14 +615,24 @@ const PlaceEditor: React.FC<{
   place: NriLorePlace;
   mapZone?: NriMapZone;
   busy: boolean;
-  onSave: (title: string, body: string) => void;
+  onSave: (title: string, summary: string, body: string, entityTag: string | null, iconId: string | null) => void;
 }> = ({ place, mapZone, busy, onSave }) => {
   const [title, setTitle] = useState(place.title);
+  const [summary, setSummary] = useState(place.summary ?? '');
   const [body, setBody] = useState(place.body);
+  const [entityTag, setEntityTag] = useState(place.entityTag ?? '');
+  const [iconId, setIconId] = useState(
+    place.iconId ?? (mapZone ? defaultZoneIconId(mapZone.zoneType, mapZone.zoneKey) : 'mid')
+  );
   useEffect(() => {
     setTitle(place.title);
+    setSummary(place.summary ?? '');
     setBody(place.body);
-  }, [place.id, place.title, place.body]);
+    setEntityTag(place.entityTag ?? '');
+    setIconId(
+      place.iconId ?? (mapZone ? defaultZoneIconId(mapZone.zoneType, mapZone.zoneKey) : 'mid')
+    );
+  }, [place.id, place.title, place.summary, place.body, place.entityTag, place.iconId, mapZone?.zoneKey]);
   return (
     <div className="nri-lore__place-edit">
       {place.zoneKey && (
@@ -574,27 +643,54 @@ const PlaceEditor: React.FC<{
           {place.sourceFactionId ? ' · привязан к фракции' : ''}
           {place.sourceScenarioNodeId ? ' · из сценария' : ''}
           <br />
-          Сохранение названия обновит подпись района на карте.
+          Название и иконка синхронизируются с картой.
         </p>
       )}
+      <label className="nri-modal__field">
+        <span>Метка</span>
+        <select value={entityTag} onChange={(e) => setEntityTag(e.target.value)} disabled={busy}>
+          <option value="">— не задана —</option>
+          {NRI_FACTION_KINDS.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="nri-modal__field">
         <span>Название</span>
         <input value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
       </label>
       <label className="nri-modal__field">
-        <span>Описание места</span>
+        <span>Краткая сводка (для чата)</span>
+        <textarea
+          value={summary}
+          rows={3}
+          onChange={(e) => setSummary(e.target.value)}
+          disabled={busy}
+          placeholder="1–3 предложения — увидят игроки при клике на ссылку"
+        />
+      </label>
+      <label className="nri-modal__field">
+        <span>Полный лор</span>
         <textarea
           value={body}
-          rows={6}
+          rows={8}
           onChange={(e) => setBody(e.target.value)}
           disabled={busy}
         />
       </label>
+      <NriEntityIconPicker
+        iconId={iconId}
+        onChange={setIconId}
+        disabled={busy}
+        label={place.zoneKey ? 'Иконка района на карте' : 'Иконка места'}
+      />
       <button
         type="button"
         className="nri-modal__submit"
         disabled={busy}
-        onClick={() => onSave(title, body)}
+        onClick={() => onSave(title, summary, body, entityTag || null, iconId || null)}
       >
         <Save size={14} /> Сохранить карточку
       </button>

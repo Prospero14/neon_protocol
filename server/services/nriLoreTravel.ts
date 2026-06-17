@@ -12,7 +12,16 @@ import {
 } from './nriFactionKinds.js';
 import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
 import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
+import {
+  ensureNriFactionSchema,
+  ensureNriLorePlaceExtras,
+  ensureNriMapZoneIconColumn,
+} from './nriFactionSchema.js';
 import { parseFactionRelationMatrix } from '../../shared/nri-domain/factionRelations.js';
+import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards.js';
+import { isNriMember } from './nriMemberDb.js';
+import { defaultZoneIconId, defaultEntityIconId } from '../../shared/nri-domain/zoneIcons.js';
+import { normalizeEntityTag } from '../../shared/nri-domain/entityTags.js';
 
 type ZoneCenter = { zoneKey: string; x: number; y: number; w: number; h: number };
 
@@ -129,8 +138,10 @@ function serializeFaction(f: {
   id: string;
   kind: string;
   name: string;
+  summary?: string;
   description: string;
   color: string | null;
+  iconId?: string | null;
   zoneKeys: unknown;
   memberPlayerIds: unknown;
   memberNpcIds: unknown;
@@ -144,8 +155,10 @@ function serializeFaction(f: {
     kind,
     name,
     displayName: formatFactionTitle(kind, name),
+    summary: f.summary ?? '',
     description: f.description,
     color: f.color,
+    iconId: f.iconId ?? defaultEntityIconId(kind),
     zoneKeys: parseZoneKeys(f.zoneKeys),
     memberPlayerIds: parseIdList(f.memberPlayerIds),
     memberNpcIds: parseIdList(f.memberNpcIds),
@@ -157,6 +170,7 @@ function serializeFaction(f: {
 function serializeLoreEntry(e: {
   id: string;
   title: string;
+  summary?: string;
   body: string;
   sortOrder: number;
   createdAt: Date;
@@ -165,6 +179,7 @@ function serializeLoreEntry(e: {
   return {
     id: e.id,
     title: e.title,
+    summary: e.summary ?? '',
     body: e.body,
     sortOrder: e.sortOrder,
     createdAt: e.createdAt.getTime(),
@@ -175,6 +190,7 @@ function serializeLoreEntry(e: {
 function serializeLorePlace(p: {
   id: string;
   title: string;
+  summary?: string;
   body: string;
   zoneKey: string | null;
   mapMarkerId: string | null;
@@ -182,12 +198,15 @@ function serializeLorePlace(p: {
   y: number | null;
   sourceScenarioNodeId: string | null;
   sourceFactionId: string | null;
+  entityTag?: string | null;
+  iconId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
   return {
     id: p.id,
     title: p.title,
+    summary: p.summary ?? '',
     body: p.body,
     zoneKey: p.zoneKey,
     mapMarkerId: p.mapMarkerId,
@@ -195,6 +214,8 @@ function serializeLorePlace(p: {
     y: p.y,
     sourceScenarioNodeId: p.sourceScenarioNodeId,
     sourceFactionId: p.sourceFactionId,
+    entityTag: p.entityTag ?? null,
+    iconId: p.iconId ?? null,
     createdAt: p.createdAt.getTime(),
     updatedAt: p.updatedAt.getTime(),
   };
@@ -211,8 +232,15 @@ function placeBodyFromZone(zone: {
   return `${mega}Район Night City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
 }
 
+function placeSummaryFromZone(zone: { name: string; megaDistrict: string | null }): string {
+  const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
+  return `${mega}${zone.name}`;
+}
+
 export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessionId: string) {
   await ensureMapZonesSeeded(prisma);
+  await ensureNriLorePlaceExtras(prisma);
+  await ensureNriMapZoneIconColumn(prisma);
   const zones = await prisma.nriMapZone.findMany({
     where: { NOT: { zoneKey: { startsWith: '__' } } },
     orderBy: { sortOrder: 'asc' },
@@ -227,12 +255,26 @@ export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessi
   for (const zone of zones) {
     const hit = byZone.get(zone.zoneKey);
     const body = placeBodyFromZone(zone);
+    const summary = placeSummaryFromZone(zone);
+    const iconId = zone.iconId ?? defaultZoneIconId(zone.zoneType, zone.zoneKey);
+    const entityTag = zone.zoneType === 'corp' ? 'corp' : null;
     if (hit) {
+      const patch: {
+        title?: string;
+        body?: string;
+        summary?: string;
+        iconId?: string;
+        entityTag?: string | null;
+      } = {};
       if (!hit.body.trim()) {
-        await prisma.nriLorePlace.update({
-          where: { id: hit.id },
-          data: { title: zone.name, body },
-        });
+        patch.title = zone.name;
+        patch.body = body;
+      }
+      if (!hit.summary?.trim()) patch.summary = summary;
+      if (!hit.iconId) patch.iconId = iconId;
+      if (!hit.entityTag && entityTag) patch.entityTag = entityTag;
+      if (Object.keys(patch).length > 0) {
+        await prisma.nriLorePlace.update({ where: { id: hit.id }, data: patch });
       }
       continue;
     }
@@ -240,10 +282,47 @@ export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessi
       data: {
         sessionId,
         title: zone.name,
+        summary,
         body,
         zoneKey: zone.zoneKey,
+        iconId,
+        entityTag,
       },
     });
+  }
+}
+
+/** Авто-фракции для корпоративных клеток карты. */
+export async function ensureSessionFactionsFromCorpZones(prisma: PrismaClient, sessionId: string) {
+  await ensureMapZonesSeeded(prisma);
+  await ensureNriFactionSchema(prisma);
+  const corpZones = await prisma.nriMapZone.findMany({
+    where: { zoneType: 'corp', NOT: { zoneKey: { startsWith: '__' } } },
+    orderBy: { sortOrder: 'asc' },
+  });
+  if (corpZones.length === 0) return;
+  const factions = await prisma.nriFaction.findMany({ where: { sessionId } });
+  const zoneTaken = new Set<string>();
+  for (const f of factions) {
+    for (const zk of parseZoneKeys(f.zoneKeys)) zoneTaken.add(zk);
+  }
+  for (const zone of corpZones) {
+    if (zoneTaken.has(zone.zoneKey)) continue;
+    const name = (zone.corpName?.trim() || zone.name.trim() || zone.zoneKey).slice(0, 80);
+    const f = await prisma.nriFaction.create({
+      data: {
+        sessionId,
+        kind: 'corp',
+        name,
+        description: placeBodyFromZone(zone),
+        iconId: 'corp',
+        zoneKeys: [zone.zoneKey],
+        memberPlayerIds: [],
+        memberNpcIds: [],
+      },
+    });
+    zoneTaken.add(zone.zoneKey);
+    await syncFactionZonePlaces(prisma, sessionId, f.id, [zone.zoneKey], f.name, 'corp');
   }
 }
 
@@ -251,11 +330,20 @@ export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessi
 export async function syncLorePlacesFromZonePatch(
   prisma: PrismaClient,
   sessionId: string,
-  zone: { zoneKey: string; name: string; zoneType: string; corpName: string | null; megaDistrict?: string | null }
+  zone: {
+    zoneKey: string;
+    name: string;
+    zoneType: string;
+    corpName: string | null;
+    megaDistrict?: string | null;
+    iconId?: string | null;
+  }
 ) {
   const places = await prisma.nriLorePlace.findMany({
     where: { sessionId, zoneKey: zone.zoneKey },
   });
+  const iconId = zone.iconId ?? defaultZoneIconId(zone.zoneType, zone.zoneKey);
+  const entityTag = zone.zoneType === 'corp' ? 'corp' : null;
   if (places.length === 0) {
     await prisma.nriLorePlace.create({
       data: {
@@ -268,6 +356,8 @@ export async function syncLorePlacesFromZonePatch(
           megaDistrict: zone.megaDistrict ?? null,
         }),
         zoneKey: zone.zoneKey,
+        iconId,
+        entityTag,
       },
     });
     return;
@@ -284,6 +374,8 @@ export async function syncLorePlacesFromZonePatch(
       data: {
         title: zone.name,
         body: place.body.trim() ? place.body : bodyHint,
+        iconId: place.iconId ?? iconId,
+        entityTag: place.entityTag ?? entityTag,
       },
     });
   }
@@ -350,13 +442,28 @@ async function syncFactionZonePlaces(
 export async function propagatePlaceUpdate(
   prisma: PrismaClient,
   sessionId: string,
-  place: { id: string; title: string; body: string; zoneKey: string | null }
+  place: {
+    id: string;
+    title: string;
+    body: string;
+    zoneKey: string | null;
+    iconId?: string | null;
+    entityTag?: string | null;
+  }
 ) {
   if (place.zoneKey && !place.zoneKey.startsWith('__')) {
-    await patchMapZone(prisma, place.zoneKey, { name: place.title });
+    await patchMapZone(prisma, place.zoneKey, {
+      name: place.title,
+      ...(place.iconId != null ? { iconId: place.iconId } : {}),
+    });
     await prisma.nriLorePlace.updateMany({
       where: { sessionId, zoneKey: place.zoneKey, NOT: { id: place.id } },
-      data: { title: place.title, body: place.body },
+      data: {
+        title: place.title,
+        body: place.body,
+        ...(place.iconId != null ? { iconId: place.iconId } : {}),
+        ...(place.entityTag != null ? { entityTag: place.entityTag } : {}),
+      },
     });
   }
 
@@ -429,7 +536,10 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор доступен только мастеру.');
       }
       await ensureNriLoreEntryTable(prisma);
+      await ensureNriFactionSchema(prisma);
+      await ensureNriLorePlaceExtras(prisma);
       await ensureSessionLorePlacesFromMap(prisma, session.id);
+      await ensureSessionFactionsFromCorpZones(prisma, session.id);
 
       const world = await prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } });
       let factions: Awaited<ReturnType<typeof prisma.nriFaction.findMany>> = [];
@@ -440,6 +550,12 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         });
       } catch (factionErr) {
         console.error('nri/lore factions:', factionErr);
+        return sendApiError(
+          res,
+          500,
+          'NRI_FACTION_SCHEMA',
+          'Таблица фракций устарела — перезапустите сервер или выполните migrate.'
+        );
       }
       const places = await prisma.nriLorePlace.findMany({
         where: { sessionId: session.id },
@@ -488,6 +604,44 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     }
   });
 
+  app.get('/neon_v1/services/nri/:code/lore/cards', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    try {
+      const session = await resolveSession(code);
+      if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+      const me = await resolveUser(auth);
+      if (!me) return sendApiError(res, 401, 'NRI_USER_NOT_FOUND', 'Пользователь не найден.');
+      const allowed =
+        session.hostUserId === me.id ||
+        (await isNriMember(prisma, session.id, me.id)) ||
+        !!(await prisma.nriPlayer.findUnique({
+          where: { sessionId_userId: { sessionId: session.id, userId: me.id } },
+        }));
+      if (!allowed) {
+        return sendApiError(res, 403, 'NRI_LORE_CARDS_FORBIDDEN', 'Нет доступа к лору стола.');
+      }
+      await ensureNriLoreEntryTable(prisma);
+      await ensureNriFactionSchema(prisma);
+      await ensureSessionLorePlacesFromMap(prisma, session.id);
+      const [places, factions, entriesRaw] = await Promise.all([
+        prisma.nriLorePlace.findMany({ where: { sessionId: session.id } }),
+        prisma.nriFaction.findMany({ where: { sessionId: session.id } }),
+        listLoreEntries(prisma, session.id),
+      ]);
+      const cards = buildLoreCardIndex({
+        places: places.map(serializeLorePlace),
+        factions: factions.map(serializeFaction),
+        entries: entriesRaw.map(serializeLoreEntry),
+      });
+      res.json({ cards });
+    } catch (error) {
+      console.error('nri/lore cards get:', error);
+      return sendApiError(res, 500, 'NRI_LORE_CARDS_FAILED', 'Не удалось загрузить карточки лора.');
+    }
+  });
+
   app.patch('/neon_v1/services/nri/:code/lore/world', async (req, res) => {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
@@ -516,7 +670,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
-    const { title, body } = req.body as { title?: string; body?: string };
+    const { title, body, summary } = req.body as { title?: string; body?: string; summary?: string };
     try {
       const session = await resolveSession(code);
       if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -530,6 +684,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         data: {
           sessionId: session.id,
           title: typeof title === 'string' && title.trim() ? title.trim().slice(0, 120) : 'Новая карточка',
+          summary: typeof summary === 'string' ? summary.slice(0, 500) : '',
           body: typeof body === 'string' ? body.slice(0, 20000) : '',
           sortOrder: count,
         },
@@ -546,7 +701,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
     const entryId = req.params.entryId;
-    const { title, body } = req.body as { title?: string; body?: string };
+    const { title, body, summary } = req.body as { title?: string; body?: string; summary?: string };
     try {
       const session = await resolveSession(code);
       if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -562,6 +717,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         where: { id: entryId },
         data: {
           ...(typeof title === 'string' && title.trim() ? { title: title.trim().slice(0, 120) } : {}),
+          ...(typeof summary === 'string' ? { summary: summary.slice(0, 500) } : {}),
           ...(typeof body === 'string' ? { body: body.slice(0, 20000) } : {}),
         },
       });
@@ -600,12 +756,14 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
-    const { name, description, color, kind, zoneKeys } = req.body as {
+    const { name, description, summary, color, kind, zoneKeys, iconId } = req.body as {
       name?: string;
       description?: string;
+      summary?: string;
       color?: string;
       kind?: string;
       zoneKeys?: string[];
+      iconId?: string | null;
     };
     if (typeof name !== 'string' || !name.trim()) {
       return sendApiError(res, 400, 'NRI_FACTION_NAME', 'Укажите название фракции.');
@@ -617,13 +775,19 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       if (!me || !(await requireHost(session, auth, me))) {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Фракции создаёт только мастер.');
       }
+      await ensureNriFactionSchema(prisma);
       const f = await prisma.nriFaction.create({
         data: {
           sessionId: session.id,
           kind: normalizeFactionKind(kind),
           name: name.trim().slice(0, 80),
+          summary: typeof summary === 'string' ? summary.slice(0, 500) : '',
           description: typeof description === 'string' ? description.slice(0, 5000) : '',
           color: typeof color === 'string' ? color.slice(0, 20) : null,
+          iconId:
+            typeof iconId === 'string'
+              ? iconId.slice(0, 500)
+              : defaultEntityIconId(normalizeFactionKind(kind)),
           zoneKeys: parseZoneKeys(zoneKeys),
           memberPlayerIds: [],
           memberNpcIds: [],
@@ -650,14 +814,16 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
     const factionId = req.params.factionId;
-    const { name, description, color, memberPlayerIds, memberNpcIds, kind, zoneKeys } = req.body as {
+    const { name, description, summary, color, memberPlayerIds, memberNpcIds, kind, zoneKeys, iconId } = req.body as {
       name?: string;
       description?: string;
+      summary?: string;
       color?: string | null;
       memberPlayerIds?: string[];
       memberNpcIds?: string[];
       kind?: string;
       zoneKeys?: string[];
+      iconId?: string | null;
     };
     try {
       const session = await resolveSession(code);
@@ -676,10 +842,14 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
           ...(typeof name === 'string' && name.trim() ? { name: name.trim().slice(0, 80) } : {}),
           ...(kind !== undefined ? { kind: normalizeFactionKind(kind) } : {}),
           ...(typeof description === 'string' ? { description: description.slice(0, 5000) } : {}),
+          ...(typeof summary === 'string' ? { summary: summary.slice(0, 500) } : {}),
           ...(color !== undefined ? { color: color ? String(color).slice(0, 20) : null } : {}),
           ...(Array.isArray(zoneKeys) ? { zoneKeys: parseZoneKeys(zoneKeys) } : {}),
           ...(Array.isArray(memberPlayerIds) ? { memberPlayerIds } : {}),
           ...(Array.isArray(memberNpcIds) ? { memberNpcIds } : {}),
+          ...(iconId !== undefined
+            ? { iconId: typeof iconId === 'string' ? iconId.slice(0, 500) : null }
+            : {}),
         },
       });
       if (Array.isArray(zoneKeys) || kind !== undefined || typeof name === 'string') {
@@ -807,7 +977,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
-    const { title, body } = req.body as { title?: string; body?: string };
+    const { title, body, summary } = req.body as { title?: string; body?: string; summary?: string };
     try {
       const session = await resolveSession(code);
       if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -819,6 +989,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         data: {
           sessionId: session.id,
           title: typeof title === 'string' && title.trim() ? title.trim().slice(0, 120) : 'Новое место',
+          summary: typeof summary === 'string' ? summary.slice(0, 500) : '',
           body: typeof body === 'string' ? body.slice(0, 10000) : '',
         },
       });
@@ -834,7 +1005,13 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
     const placeId = req.params.placeId;
-    const { title, body } = req.body as { title?: string; body?: string };
+    const { title, body, summary, entityTag, iconId } = req.body as {
+      title?: string;
+      body?: string;
+      summary?: string;
+      entityTag?: string | null;
+      iconId?: string | null;
+    };
     try {
       const session = await resolveSession(code);
       if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -850,7 +1027,10 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
         where: { id: placeId },
         data: {
           ...(typeof title === 'string' && title.trim() ? { title: title.trim().slice(0, 120) } : {}),
+          ...(typeof summary === 'string' ? { summary: summary.slice(0, 500) } : {}),
           ...(typeof body === 'string' ? { body: body.slice(0, 10000) } : {}),
+          ...(entityTag !== undefined ? { entityTag: entityTag ? normalizeEntityTag(entityTag) : null } : {}),
+          ...(iconId !== undefined ? { iconId: typeof iconId === 'string' ? iconId.slice(0, 500) : null } : {}),
         },
       });
       await propagatePlaceUpdate(prisma, session.id, updated);

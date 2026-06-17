@@ -146,6 +146,8 @@ export type CharacterMetaDraft = {
   backstory?: string;
   clothing?: string;
   npcArchetypeId?: NriNpcArchetypeId;
+  /** id фракции из лора стола; пустая строка = без фракции */
+  factionId?: string | null;
 };
 
 function pick<T>(arr: readonly T[]): T {
@@ -708,6 +710,7 @@ export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft):
     corporateInfluence: meta.corporateInfluence ?? sheet.corporateInfluence,
     backstory: meta.backstory ?? sheet.backstory,
     clothing: meta.clothing ?? sheet.clothing,
+    factionId: meta.factionId !== undefined ? meta.factionId || undefined : sheet.factionId,
     proficiencyBonus: proficiencyForLevel(level),
   };
 }
@@ -726,6 +729,7 @@ export function sheetToMetaDraft(sheet: NriSheetData | null | undefined, fallbac
     corporateInfluence: sheet?.corporateInfluence,
     backstory: sheet?.backstory,
     clothing: sheet?.clothing,
+    factionId: sheet?.factionId ?? null,
   };
 }
 

@@ -3884,6 +3884,26 @@
   color: #7efcff;
 }
 .nri-lore__hint { margin: 4px 0 8px; font-size: 0.85rem; }
+.nri-lore-mark { background: rgba(0, 255, 255, 0.12); color: inherit; text-decoration: underline; text-decoration-color: rgba(0, 255, 255, 0.55); text-underline-offset: 2px; }
+.nri-lore-mark--btn { border: none; background: rgba(0, 255, 255, 0.12); font: inherit; padding: 0; cursor: pointer; }
+.nri-lore-mark--btn:disabled { cursor: default; opacity: 0.55; }
+.nri-lore-mark--explicit { text-decoration-style: solid; background: rgba(180, 120, 255, 0.14); text-decoration-color: rgba(180, 120, 255, 0.7); }
+.nri-lore-mark--unknown { text-decoration-style: dotted; }
+.nri-lore-mark--broken { text-decoration-style: wavy; color: #f0a8a8; }
+.neon-chat-lore-err { margin: 6px 12px 0; padding: 8px 10px; border: 1px solid rgba(255, 120, 120, 0.35); background: rgba(80, 20, 20, 0.35); color: #ffc9c9; border-radius: 4px; font-size: 0.85rem; }
+.nri-lore__faction-icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6px; opacity: 0.85; }
+.nri-lore-card-popup { position: fixed; inset: 0; z-index: 12000; display: flex; align-items: center; justify-content: center; }
+.nri-lore-card-popup__backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.65); }
+.nri-lore-card-popup__panel { position: relative; z-index: 1; width: min(420px, 92vw); max-height: 80vh; overflow: auto; padding: 18px 20px; border: 1px solid rgba(0,255,255,0.35); background: #0d1118; box-shadow: 0 0 24px rgba(0,255,255,0.15); border-radius: 6px; }
+.nri-lore-card-popup__close { position: absolute; top: 8px; right: 8px; border: none; background: transparent; color: inherit; cursor: pointer; opacity: 0.7; }
+.nri-lore-card-popup__icon { width: 56px; height: 56px; margin-bottom: 8px; opacity: 0.9; }
+.nri-lore-card-popup__kind { margin: 0 0 4px; font-size: 0.8rem; }
+.nri-lore-card-popup__body { margin-top: 10px; white-space: pre-wrap; line-height: 1.45; }
+.nri-city-map__zone-icon { pointer-events: none; opacity: 0.22; }
+.nri-lore__icon-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.nri-lore__icon-pick { width: 44px; height: 44px; padding: 4px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.25); cursor: pointer; border-radius: 4px; }
+.nri-lore__icon-pick.active { border-color: rgba(0,255,255,0.7); box-shadow: 0 0 8px rgba(0,255,255,0.25); }
+.nri-scenario__markup-preview { margin: 0; padding: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.2); border-radius: 4px; white-space: pre-wrap; line-height: 1.45; }
 .nri-lore__zone-list { max-height: 220px; overflow-y: auto; }
 
 .nri-host-alerts {

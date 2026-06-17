@@ -33,6 +33,7 @@ export type NriMapZone = {
   locked: boolean;
   pois: string[];
   color: string | null;
+  iconId?: string | null;
   updatedAt: number;
 };
 
@@ -56,7 +57,7 @@ export async function nriPatchMapZone(
   token: string,
   code: string,
   zoneKey: string,
-  payload: { name?: string; corpName?: string | null; megaDistrict?: string; pois?: string[]; color?: string | null }
+  payload: { name?: string; corpName?: string | null; megaDistrict?: string; pois?: string[]; color?: string | null; iconId?: string | null }
 ): Promise<MapZonePatchResult> {
   const res = await fetch(
     `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(zoneKey)}`,

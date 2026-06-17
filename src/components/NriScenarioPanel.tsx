@@ -5,6 +5,7 @@ import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
   nriCreateScenarioNode,
   nriDeleteScenarioNode,
+  nriFetchLore,
   nriFetchMapZones,
   nriFetchNpcs,
   nriFetchScenario,
@@ -17,6 +18,10 @@ import {
   type NriScenarioProgress,
   type NriVaultFile,
 } from '../logic/nriApi';
+import { LORE_MARKUP_HINT } from '../../shared/nri-domain/loreMarkup';
+import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards';
+import { LoreMarkupInteractive } from './LoreMarkupInteractive';
+import { LoreCardPopup } from './LoreCardPopup';
 import { NRI_ITEM_CATALOG, searchCatalog } from '../logic/nriItemCatalog';
 import {
   emptyScenarioLinks,
@@ -48,14 +53,18 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
   const [err, setErr] = useState<string | null>(null);
   const [previewCatalogId, setPreviewCatalogId] = useState<string | null>(null);
   const [itemSearch, setItemSearch] = useState('');
+  const [loreCards, setLoreCards] = useState<import('../../shared/nri-domain/loreCards').LoreCardRef[]>([]);
+  const [lorePopup, setLorePopup] = useState<import('../../shared/nri-domain/loreCards').LoreCardRef | null>(null);
+  const [loreLinkErr, setLoreLinkErr] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [scenarioRes, npcList, vault, zoneData] = await Promise.all([
+    const [scenarioRes, npcList, vault, zoneData, loreRes] = await Promise.all([
       nriFetchScenario(authToken, inviteCode),
       nriFetchNpcs(authToken, inviteCode),
       nriFetchVault(authToken, inviteCode),
       nriFetchMapZones(authToken, inviteCode),
+      nriFetchLore(authToken, inviteCode),
     ]);
     if (scenarioRes.ok) {
       setNodes(scenarioRes.nodes);
@@ -67,11 +76,26 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
     if (zoneData) setZones(zoneData.zones);
     if (npcList) setNpcs(npcList);
     if (vault) setFiles(vault);
+    if (loreRes.ok) {
+      const lore = loreRes.data;
+      const cards = buildLoreCardIndex({
+        places: lore.places,
+        factions: lore.factions,
+        entries: lore.entries ?? [],
+      });
+      setLoreCards(cards);
+    }
   }, [authToken, inviteCode]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!loreLinkErr) return;
+    const t = window.setTimeout(() => setLoreLinkErr(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [loreLinkErr]);
 
   const root = nodes.find((n) => !n.parentId);
   const selected = nodes.find((n) => n.id === selectedId) ?? null;
@@ -218,6 +242,7 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
         <p className="mono-text opacity-70">
           Основной сюжет и ответвления-квесты. Привязывайте НПС, предметы каталога и файлы из хранилища.
         </p>
+        <p className="mono-text opacity-60 nri-lore__hint">{LORE_MARKUP_HINT}</p>
         <div className="nri-scenario__toolbar">
           {!root && (
             <button type="button" className="nri-modal__submit" disabled={busy} onClick={addRoot}>
@@ -253,6 +278,21 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
                 <span>Описание</span>
                 <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} />
               </label>
+              {body.trim() && (
+                <div className="nri-modal__field">
+                  <span>Превью подсветки</span>
+                  <p className="mono-text nri-scenario__markup-preview">
+                    <LoreMarkupInteractive
+                      text={body}
+                      cards={loreCards}
+                      onOpenCard={setLorePopup}
+                      onBrokenLink={(title) =>
+                        setLoreLinkErr(`Карточка «${title}» не найдена — создайте её в лоре.`)
+                      }
+                    />
+                  </p>
+                </div>
+              )}
 
               <section className="nri-scenario__place">
                 <h4 className="mono-text">Место · лор</h4>
@@ -414,6 +454,8 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
       </div>
 
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
+      {loreLinkErr && <p className="nri-lobby__err mono-text">{loreLinkErr}</p>}
+      <LoreCardPopup card={lorePopup} onClose={() => setLorePopup(null)} />
     </div>
   );
 };

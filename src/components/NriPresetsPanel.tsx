@@ -6,9 +6,11 @@ import {
   nriCreatePreset,
   nriDeletePreset,
   nriFetchCyberProducts,
+  nriFetchLore,
   nriFetchPresets,
   nriPatchPreset,
   type NriCyberProduct,
+  type NriFaction,
   type NriPresetCharacter,
 } from '../logic/nriApi';
 import { NRI_CLASS_SEEDS } from '../logic/nriClassSeeds';
@@ -69,15 +71,18 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   const [editMeta, setEditMeta] = useState<CharacterMetaDraft>({});
   const [pendingPreset, setPendingPreset] = useState<PendingPreset | null>(null);
   const [editSkills, setEditSkills] = useState<string[]>([]);
+  const [factions, setFactions] = useState<NriFaction[]>([]);
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [list, cyber] = await Promise.all([
+    const [list, cyber, loreRes] = await Promise.all([
       nriFetchPresets(authToken, inviteCode),
       nriFetchCyberProducts(authToken, inviteCode),
+      nriFetchLore(authToken, inviteCode),
     ]);
     if (list !== null) setPresets(list.presets);
     if (cyber) setCyberDrafts(cyber);
+    if (loreRes.ok) setFactions(loreRes.data.factions);
   }, [authToken, inviteCode]);
 
   useEffect(() => {
@@ -300,6 +305,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             classId={pendingPreset.classId}
             meta={pendingPreset.meta}
             sheet={pendingPreset.sheet}
+            factions={factions}
             onChange={(m) =>
               setPendingPreset((prev) =>
                 prev ? { ...prev, meta: m, sheet: applyMetaToSheet(prev.sheet, m) } : prev,
@@ -439,6 +445,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             classId={presets.find((x) => x.id === editId)?.classId as NriClassId}
             meta={editMeta}
             sheet={editSheet ?? undefined}
+            factions={factions}
             onChange={(m) => {
               setEditMeta(m);
               if (editSheet) setEditSheet(applyMetaToSheet(editSheet, m));

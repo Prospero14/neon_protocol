@@ -6,6 +6,7 @@ import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.
 import {
   ensureSessionLorePlacesFromMap,
   syncLorePlacesFromZonePatch,
+  ensureSessionFactionsFromCorpZones,
 } from './nriLoreTravel.js';
 
 export type NriRouteContext = {
@@ -112,6 +113,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       const zones = await listMapZones(prisma);
       if (session.hostUserId === me.id) {
         await ensureSessionLorePlacesFromMap(prisma, session.id);
+        await ensureSessionFactionsFromCorpZones(prisma, session.id);
       }
       res.json({ zones, view: { w: 240, h: 165 } });
     } catch (error) {
@@ -125,12 +127,13 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
     const zoneKey = req.params.zoneKey;
-    const { name, corpName, pois, megaDistrict, color } = req.body as {
+    const { name, corpName, pois, megaDistrict, color, iconId } = req.body as {
       name?: string;
       corpName?: string | null;
       megaDistrict?: string;
       pois?: string[];
       color?: string | null;
+      iconId?: string | null;
     };
     try {
       const session = await resolveSession(code);
@@ -140,7 +143,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Редактирует только мастер.');
       }
       await ensureMapZonesSeeded(prisma);
-      const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color });
+      const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color, iconId });
       if (!zone) return sendApiError(res, 404, 'NRI_ZONE_NOT_FOUND', 'Район не найден.');
       await syncLorePlacesFromZonePatch(prisma, session.id, zone);
       res.json({ zone });

@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { ensureNriLoreEntryTable } from './services/nriLoreSchema.js';
+import { ensureNriFactionSchema } from './services/nriFactionSchema.js';
 import { createApp } from './createApp.js';
 import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
 dotenv.config();
@@ -131,6 +132,19 @@ async function ensureNriSchemaSync() {
     catch {
         console.warn('[NEON_BOOT] NriFactionRelationState missing — applying schema…');
         runDbPushSync();
+    }
+    try {
+        await prisma.nriFaction.findFirst({ select: { id: true, kind: true, zoneKeys: true } });
+    }
+    catch {
+        console.warn('[NEON_BOOT] NriFaction columns missing — ensuring schema…');
+        try {
+            await ensureNriFactionSchema(prisma);
+        }
+        catch (e) {
+            console.warn('[NEON_BOOT] NriFaction ensure failed, trying db push…', e);
+            runDbPushSync();
+        }
     }
 }
 let isDbReady = false;

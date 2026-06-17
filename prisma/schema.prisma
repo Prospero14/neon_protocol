@@ -178,6 +178,7 @@ model NriLoreEntry {
   sessionId String
   session   NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   title     String
+  summary   String     @default("")
   body      String     @default("")
   sortOrder Int        @default(0)
   createdAt DateTime   @default(now())
@@ -193,8 +194,10 @@ model NriFaction {
   session         NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   kind            String     @default("faction")
   name            String
+  summary         String     @default("")
   description     String     @default("")
   color           String?
+  iconId          String?
   zoneKeys        Json       @default("[]")
   memberPlayerIds Json
   memberNpcIds    Json
@@ -210,6 +213,7 @@ model NriLorePlace {
   sessionId            String
   session              NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   title                String
+  summary              String     @default("")
   body                 String     @default("")
   zoneKey              String?
   mapMarkerId          String?
@@ -217,6 +221,8 @@ model NriLorePlace {
   y                    Float?
   sourceScenarioNodeId String?
   sourceFactionId      String?
+  entityTag            String?
+  iconId               String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
@@ -346,6 +352,7 @@ model NriMapZone {
   corpName      String?
   megaDistrict  String?
   color         String?
+  iconId        String?
   locked        Boolean  @default(false)
   pois      Json?
   updatedAt DateTime @updatedAt

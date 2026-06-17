@@ -150,7 +150,15 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const refreshZones = useCallback(async () => {
     if (!authToken) return;
     const data = await nriFetchMapZones(authToken, inviteCode);
-    if (!data) return;
+    if (!data) {
+      setErr('Не удалось загрузить районы карты. Обновите страницу после деплоя или перезапустите сервер.');
+      return;
+    }
+    if (data.zones.length === 0) {
+      setErr('Карта пуста — на сервере не засеяны районы Night City.');
+    } else {
+      setErr(null);
+    }
     setZones(data.zones);
     setMapView(data.view);
     setViewBox({ x: 0, y: 0, w: data.view.w, h: data.view.h });

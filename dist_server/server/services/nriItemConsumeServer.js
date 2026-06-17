@@ -1,14 +1,13 @@
 /** Сервер: использование расходников (shared domain). */
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import { applyConsumeEffects } from '../../shared/nri-domain/consumeApply.js';
 import { takeOneInstanceItem } from './nriItemGrant.js';
 import { getServerCatalogItem } from './nriItemCatalogServer.js';
+import { resolveSharedJsonPath } from '../sharedDataPath.js';
 let consumeCache = null;
 function loadConsume() {
     if (!consumeCache) {
-        const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-consume-effects.json');
+        const p = resolveSharedJsonPath('nri-consume-effects.json');
         consumeCache = JSON.parse(readFileSync(p, 'utf8'));
     }
     return consumeCache;

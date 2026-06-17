@@ -1,7 +1,6 @@
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import type { PrismaClient } from '@prisma/client';
+import { resolveSharedJsonPath } from '../sharedDataPath.js';
 
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 
@@ -66,7 +65,7 @@ type ZoneSeed = {
 };
 
 function loadZoneSeedFile(): ZoneSeed[] {
-  const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-night-city-zones.json');
+  const p = resolveSharedJsonPath('nri-night-city-zones.json');
   const raw = readFileSync(p, 'utf8');
   return JSON.parse(raw) as ZoneSeed[];
 }

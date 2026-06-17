@@ -1,10 +1,9 @@
 /** Сервер: каталог предметов из shared JSON. */
 
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 
 import type { InvItem } from './nriItemGrant.js';
+import { resolveSharedJsonPath } from '../sharedDataPath.js';
 
 type CatalogItem = {
   id: string;
@@ -22,7 +21,7 @@ let cache: CatalogItem[] | null = null;
 
 function loadCatalog(): CatalogItem[] {
   if (!cache) {
-    const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-item-catalog.json');
+    const p = resolveSharedJsonPath('nri-item-catalog.json');
     cache = JSON.parse(readFileSync(p, 'utf8')) as CatalogItem[];
   }
   return cache;

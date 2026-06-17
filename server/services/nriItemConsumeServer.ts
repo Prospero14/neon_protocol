@@ -1,14 +1,13 @@
 /** Сервер: использование расходников (shared domain). */
 
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 
 import { applyConsumeEffects } from '../../shared/nri-domain/consumeApply.js';
 import type { ConsumableSheet, ConsumeEffectSpec } from '../../shared/nri-domain/types.js';
 import type { InvItem } from './nriItemGrant.js';
 import { takeOneInstanceItem } from './nriItemGrant.js';
 import { getServerCatalogItem } from './nriItemCatalogServer.js';
+import { resolveSharedJsonPath } from '../sharedDataPath.js';
 
 type Sheet = Record<string, unknown> & {
   abilities?: Record<string, number>;
@@ -22,7 +21,7 @@ let consumeCache: Record<string, ConsumeEffectSpec> | null = null;
 
 function loadConsume(): Record<string, ConsumeEffectSpec> {
   if (!consumeCache) {
-    const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-consume-effects.json');
+    const p = resolveSharedJsonPath('nri-consume-effects.json');
     consumeCache = JSON.parse(readFileSync(p, 'utf8')) as Record<string, ConsumeEffectSpec>;
   }
   return consumeCache;

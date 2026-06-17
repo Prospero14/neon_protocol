@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { resolveSharedJsonPath } from '../sharedDataPath.js';
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 function megaKeyFromZoneKey(zoneKey) {
     if (zoneKey.startsWith('corp_'))
@@ -35,7 +34,7 @@ function normalizeZoneColor(raw) {
     return c.toLowerCase();
 }
 function loadZoneSeedFile() {
-    const p = join(dirname(fileURLToPath(import.meta.url)), '../../shared/nri-night-city-zones.json');
+    const p = resolveSharedJsonPath('nri-night-city-zones.json');
     const raw = readFileSync(p, 'utf8');
     return JSON.parse(raw);
 }

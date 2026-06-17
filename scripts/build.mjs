@@ -3,6 +3,7 @@
  * Usage: node scripts/build.mjs [--full]
  */
 import { spawn, spawnSync } from 'node:child_process';
+import { cpSync, mkdirSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +15,19 @@ const bin = (name) => path.join(root, 'node_modules', '.bin', isWin ? `${name}.c
 
 function log(msg) {
   console.log(`[build] ${msg}`);
+}
+
+function copySharedJson() {
+  const src = path.join(root, 'shared');
+  const dest = path.join(root, 'dist_server', 'shared');
+  mkdirSync(dest, { recursive: true });
+  let n = 0;
+  for (const f of readdirSync(src)) {
+    if (!f.endsWith('.json')) continue;
+    cpSync(path.join(src, f), path.join(dest, f));
+    n += 1;
+  }
+  log(`shared json → dist_server (${n} files)`);
 }
 
 function runSync(label, cmd, args) {
@@ -72,6 +86,8 @@ async function main() {
   } catch {
     process.exit(1);
   }
+
+  copySharedJson();
 
   log(`done (${((Date.now() - tAll) / 1000).toFixed(1)}s total)`);
 }

@@ -24,11 +24,12 @@ export const NriFactionRelationsPanel: React.FC<Props> = ({ inviteCode, authToke
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const lore = await nriFetchLore(authToken, inviteCode);
-    if (!lore) {
-      setErr('Не удалось загрузить фракции. Создайте их во вкладке «Лор».');
+    const loreRes = await nriFetchLore(authToken, inviteCode);
+    if (!loreRes.ok) {
+      setErr(loreRes.error || 'Не удалось загрузить фракции. Создайте их во вкладке «Лор».');
       return;
     }
+    const lore = loreRes.data;
     setErr(null);
     setFactions(lore.factions);
     setMatrix(lore.factionRelations ?? { enabled: false, edges: {} });

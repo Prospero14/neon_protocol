@@ -56,16 +56,17 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
 
   const refresh = useCallback(async () => {
     if (!authToken) return;
-    const [lore, npcList, players, mapData] = await Promise.all([
+    const [loreRes, npcList, players, mapData] = await Promise.all([
       nriFetchLore(authToken, inviteCode),
       nriFetchNpcs(authToken, inviteCode),
       nriFetchRoster(authToken, inviteCode),
       nriFetchMapZones(authToken, inviteCode),
     ]);
-    if (!lore) {
-      setErr('Не удалось загрузить лор.');
+    if (!loreRes.ok) {
+      setErr(loreRes.error);
       return;
     }
+    const lore = loreRes.data;
     setErr(null);
     setEntries(lore.entries ?? []);
     setFactions(lore.factions);
@@ -135,6 +136,25 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
     () => selectedFaction,
     [selectedFaction?.id, selectedFaction?.updatedAt]
   );
+
+  const zoneOrder = useMemo(
+    () => new Map(mapZones.map((z) => [z.zoneKey, z.sortOrder])),
+    [mapZones]
+  );
+  const zoneByKey = useMemo(() => new Map(mapZones.map((z) => [z.zoneKey, z])), [mapZones]);
+
+  const districtPlaces = useMemo(
+    () =>
+      [...places]
+        .filter((p) => p.zoneKey)
+        .sort(
+          (a, b) =>
+            (zoneOrder.get(a.zoneKey!) ?? 999) - (zoneOrder.get(b.zoneKey!) ?? 999) ||
+            a.title.localeCompare(b.title, 'ru')
+        ),
+    [places, zoneOrder]
+  );
+  const otherPlaces = useMemo(() => places.filter((p) => !p.zoneKey), [places]);
 
   return (
     <div className="nri-lore">
@@ -254,38 +274,64 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
       {tab === 'places' && (
         <div className="nri-lore__places">
           <p className="mono-text opacity-70">
-            Карточки мест из сценария, районов карты (через фракции) и их описания для стола.
-            Правки названия и текста синхронизируются с картой и сценарием.
+            Для каждого района карты — карточка места. Название синхронизируется с картой в обе стороны;
+            описание можно править свободно. Дополнительные места — без привязки к району.
           </p>
           <button type="button" className="nri-lobby__copy" disabled={busy} onClick={addPlace}>
             <Plus size={14} /> Место
           </button>
-          <ul className="nri-lore__list">
-            {places.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  className={`nri-scenario__tree-item ${selectedPlaceId === p.id ? 'active' : ''}`}
-                  onClick={() => setSelectedPlaceId(p.id)}
-                >
-                  {p.title}
-                  {p.zoneKey && <span className="opacity-60"> · {p.zoneKey}</span>}
-                </button>
-              </li>
-            ))}
-            {places.length === 0 && (
-              <li className="mono-text opacity-50">
-                Пока нет — привяжите районы к фракции или отметьте место в узле сценария «→ в лор».
-              </li>
+          <div className="nri-scenario__layout">
+            <ul className="nri-lore__list">
+              {districtPlaces.length > 0 && (
+                <li className="mono-text opacity-50 nri-lore__list-heading">Районы карты</li>
+              )}
+              {districtPlaces.map((p) => {
+                const zone = p.zoneKey ? zoneByKey.get(p.zoneKey) : undefined;
+                return (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className={`nri-scenario__tree-item ${selectedPlaceId === p.id ? 'active' : ''}`}
+                      onClick={() => setSelectedPlaceId(p.id)}
+                    >
+                      {p.title}
+                      {zone?.megaDistrict && (
+                        <span className="opacity-60"> · {zone.megaDistrict}</span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+              {otherPlaces.length > 0 && (
+                <li className="mono-text opacity-50 nri-lore__list-heading">Прочие места</li>
+              )}
+              {otherPlaces.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className={`nri-scenario__tree-item ${selectedPlaceId === p.id ? 'active' : ''}`}
+                    onClick={() => setSelectedPlaceId(p.id)}
+                  >
+                    {p.title}
+                  </button>
+                </li>
+              ))}
+              {places.length === 0 && (
+                <li className="mono-text opacity-50">
+                  Загрузка карточек районов… Если пусто — откройте вкладку снова или карту (мастер).
+                </li>
+              )}
+            </ul>
+            {selectedPlace && (
+              <PlaceEditor
+                key={selectedPlace.id}
+                place={selectedPlace}
+                mapZone={selectedPlace.zoneKey ? zoneByKey.get(selectedPlace.zoneKey) : undefined}
+                busy={busy}
+                onSave={(title, body) => savePlace(title, body)}
+              />
             )}
-          </ul>
-          {selectedPlace && (
-            <PlaceEditor
-              key={selectedPlace.id}
-              place={selectedPlace}
-              onSave={(title, body) => savePlace(title, body)}
-            />
-          )}
+          </div>
         </div>
       )}
 
@@ -508,8 +554,10 @@ const FactionEditor: React.FC<{
 
 const PlaceEditor: React.FC<{
   place: NriLorePlace;
+  mapZone?: NriMapZone;
+  busy: boolean;
   onSave: (title: string, body: string) => void;
-}> = ({ place, onSave }) => {
+}> = ({ place, mapZone, busy, onSave }) => {
   const [title, setTitle] = useState(place.title);
   const [body, setBody] = useState(place.body);
   useEffect(() => {
@@ -520,20 +568,34 @@ const PlaceEditor: React.FC<{
     <div className="nri-lore__place-edit">
       {place.zoneKey && (
         <p className="mono-text opacity-70 nri-lore__hint">
-          Район карты: <strong>{place.zoneKey}</strong>
+          Район карты: <strong>{mapZone?.name ?? place.zoneKey}</strong>
+          {mapZone?.megaDistrict ? ` · ${mapZone.megaDistrict}` : ''}
+          {mapZone?.corpName ? ` · ${mapZone.corpName}` : ''}
           {place.sourceFactionId ? ' · привязан к фракции' : ''}
           {place.sourceScenarioNodeId ? ' · из сценария' : ''}
+          <br />
+          Сохранение названия обновит подпись района на карте.
         </p>
       )}
       <label className="nri-modal__field">
         <span>Название</span>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
       </label>
       <label className="nri-modal__field">
         <span>Описание места</span>
-        <textarea value={body} rows={6} onChange={(e) => setBody(e.target.value)} />
+        <textarea
+          value={body}
+          rows={6}
+          onChange={(e) => setBody(e.target.value)}
+          disabled={busy}
+        />
       </label>
-      <button type="button" className="nri-modal__submit" onClick={() => onSave(title, body)}>
+      <button
+        type="button"
+        className="nri-modal__submit"
+        disabled={busy}
+        onClick={() => onSave(title, body)}
+      >
         <Save size={14} /> Сохранить карточку
       </button>
     </div>

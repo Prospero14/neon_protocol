@@ -6,6 +6,7 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
+import { ensureNriLoreEntryTable } from './services/nriLoreSchema.js';
 import { createApp } from './createApp.js';
 import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
 dotenv.config();
@@ -116,7 +117,13 @@ async function ensureNriSchemaSync() {
     }
     catch {
         console.warn('[NEON_BOOT] NriLoreEntry missing — applying schema…');
-        runDbPushSync();
+        try {
+            await ensureNriLoreEntryTable(prisma);
+        }
+        catch (e) {
+            console.warn('[NEON_BOOT] NriLoreEntry ensure failed, trying db push…', e);
+            runDbPushSync();
+        }
     }
     try {
         await prisma.nriFactionRelationState.findFirst({ select: { sessionId: true } });

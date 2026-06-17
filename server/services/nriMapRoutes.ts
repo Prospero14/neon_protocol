@@ -3,6 +3,10 @@
 import type { Express } from 'express';
 import { isNriMember } from './nriMemberDb.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
+import {
+  ensureSessionLorePlacesFromMap,
+  syncLorePlacesFromZonePatch,
+} from './nriLoreTravel.js';
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -106,6 +110,9 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
         return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
       }
       const zones = await listMapZones(prisma);
+      if (session.hostUserId === me.id) {
+        await ensureSessionLorePlacesFromMap(prisma, session.id);
+      }
       res.json({ zones, view: { w: 240, h: 165 } });
     } catch (error) {
       console.error('nri/map zones get:', error);
@@ -135,6 +142,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       await ensureMapZonesSeeded(prisma);
       const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color });
       if (!zone) return sendApiError(res, 404, 'NRI_ZONE_NOT_FOUND', 'Район не найден.');
+      await syncLorePlacesFromZonePatch(prisma, session.id, zone);
       res.json({ zone });
     } catch (error) {
       console.error('nri/map zone patch:', error);

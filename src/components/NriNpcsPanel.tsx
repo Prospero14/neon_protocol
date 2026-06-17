@@ -73,8 +73,8 @@ export const NriNpcsPanel: React.FC<Props> = ({
 
   const refreshFactions = useCallback(async () => {
     if (!authToken) return;
-    const lore = await nriFetchLore(authToken, inviteCode);
-    if (lore) setFactions(lore.factions);
+    const loreRes = await nriFetchLore(authToken, inviteCode);
+    if (loreRes.ok) setFactions(loreRes.data.factions);
   }, [authToken, inviteCode]);
 
   const refresh = useCallback(async () => {

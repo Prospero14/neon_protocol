@@ -1,7 +1,8 @@
 /** Лор, прогресс сценария, перемещение игроков, уведомления мастеру. */
 import { getServerVehicleDef } from './nriVehiclesServer.js';
 import { formatFactionTitle, normalizeFactionKind, parseZoneKeys, } from './nriFactionKinds.js';
-import { patchMapZone } from './nriMapZones.js';
+import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
+import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
 import { parseFactionRelationMatrix } from '../../shared/nri-domain/factionRelations.js';
 function parseIdList(raw) {
     if (!Array.isArray(raw))
@@ -110,6 +111,82 @@ function serializeLorePlace(p) {
         createdAt: p.createdAt.getTime(),
         updatedAt: p.updatedAt.getTime(),
     };
+}
+function placeBodyFromZone(zone) {
+    const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
+    const corp = zone.corpName ? ` · ${zone.corpName}` : '';
+    return `${mega}Район Night City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
+}
+export async function ensureSessionLorePlacesFromMap(prisma, sessionId) {
+    await ensureMapZonesSeeded(prisma);
+    const zones = await prisma.nriMapZone.findMany({
+        where: { NOT: { zoneKey: { startsWith: '__' } } },
+        orderBy: { sortOrder: 'asc' },
+    });
+    if (zones.length === 0)
+        return;
+    const existing = await prisma.nriLorePlace.findMany({
+        where: { sessionId, zoneKey: { not: null } },
+    });
+    const byZone = new Map(existing.filter((p) => p.zoneKey).map((p) => [p.zoneKey, p]));
+    for (const zone of zones) {
+        const hit = byZone.get(zone.zoneKey);
+        const body = placeBodyFromZone(zone);
+        if (hit) {
+            if (!hit.body.trim()) {
+                await prisma.nriLorePlace.update({
+                    where: { id: hit.id },
+                    data: { title: zone.name, body },
+                });
+            }
+            continue;
+        }
+        await prisma.nriLorePlace.create({
+            data: {
+                sessionId,
+                title: zone.name,
+                body,
+                zoneKey: zone.zoneKey,
+            },
+        });
+    }
+}
+/** Карта → лор: после правки района на карте обновить связанные карточки. */
+export async function syncLorePlacesFromZonePatch(prisma, sessionId, zone) {
+    const places = await prisma.nriLorePlace.findMany({
+        where: { sessionId, zoneKey: zone.zoneKey },
+    });
+    if (places.length === 0) {
+        await prisma.nriLorePlace.create({
+            data: {
+                sessionId,
+                title: zone.name,
+                body: placeBodyFromZone({
+                    name: zone.name,
+                    zoneType: zone.zoneType,
+                    corpName: zone.corpName,
+                    megaDistrict: zone.megaDistrict ?? null,
+                }),
+                zoneKey: zone.zoneKey,
+            },
+        });
+        return;
+    }
+    const bodyHint = placeBodyFromZone({
+        name: zone.name,
+        zoneType: zone.zoneType,
+        corpName: zone.corpName,
+        megaDistrict: zone.megaDistrict ?? null,
+    });
+    for (const place of places) {
+        await prisma.nriLorePlace.update({
+            where: { id: place.id },
+            data: {
+                title: zone.name,
+                body: place.body.trim() ? place.body : bodyHint,
+            },
+        });
+    }
 }
 async function syncFactionZonePlaces(prisma, sessionId, factionId, zoneKeys, factionName, kind) {
     for (const zoneKey of zoneKeys) {
@@ -231,26 +308,49 @@ export function mountNriLoreTravelRoutes(app, deps) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор доступен только мастеру.');
             }
-            const [world, factions, places, entriesRaw, relationState] = await Promise.all([
-                prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } }),
-                prisma.nriFaction.findMany({ where: { sessionId: session.id }, orderBy: { name: 'asc' } }),
-                prisma.nriLorePlace.findMany({ where: { sessionId: session.id }, orderBy: { title: 'asc' } }),
-                prisma.nriLoreEntry.findMany({ where: { sessionId: session.id }, orderBy: { sortOrder: 'asc' } }).catch(() => []),
-                prisma.nriFactionRelationState
-                    .findUnique({ where: { sessionId: session.id } })
-                    .catch(() => null),
-            ]);
+            await ensureNriLoreEntryTable(prisma);
+            await ensureSessionLorePlacesFromMap(prisma, session.id);
+            const world = await prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } });
+            let factions = [];
+            try {
+                factions = await prisma.nriFaction.findMany({
+                    where: { sessionId: session.id },
+                    orderBy: { name: 'asc' },
+                });
+            }
+            catch (factionErr) {
+                console.error('nri/lore factions:', factionErr);
+            }
+            const places = await prisma.nriLorePlace.findMany({
+                where: { sessionId: session.id },
+                orderBy: { title: 'asc' },
+            });
+            let entriesRaw = await listLoreEntries(prisma, session.id);
+            let relationState = null;
+            try {
+                relationState = await prisma.nriFactionRelationState.findUnique({
+                    where: { sessionId: session.id },
+                });
+            }
+            catch (relErr) {
+                console.warn('nri/lore faction-relations:', relErr);
+            }
             let entries = entriesRaw;
             if (entries.length === 0 && world?.body?.trim()) {
-                const migrated = await prisma.nriLoreEntry.create({
-                    data: {
-                        sessionId: session.id,
-                        title: 'Общий лор',
-                        body: world.body,
-                        sortOrder: 0,
-                    },
-                });
-                entries = [migrated];
+                try {
+                    const migrated = await prisma.nriLoreEntry.create({
+                        data: {
+                            sessionId: session.id,
+                            title: 'Общий лор',
+                            body: world.body,
+                            sortOrder: 0,
+                        },
+                    });
+                    entries = [migrated];
+                }
+                catch (migrateErr) {
+                    console.warn('nri/lore entry migrate:', migrateErr);
+                }
             }
             res.json({
                 world: { body: world?.body ?? '', updatedAt: world?.updatedAt.getTime() ?? Date.now() },
@@ -307,6 +407,7 @@ export function mountNriLoreTravelRoutes(app, deps) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор редактирует только мастер.');
             }
+            await ensureNriLoreEntryTable(prisma);
             const count = await prisma.nriLoreEntry.count({ where: { sessionId: session.id } });
             const entry = await prisma.nriLoreEntry.create({
                 data: {

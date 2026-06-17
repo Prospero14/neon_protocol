@@ -3874,6 +3874,7 @@
 .nri-scenario__checkpoint-ok { color: var(--neon-green, #6f6); margin: 6px 0; font-size: 0.78rem; }
 
 .nri-lore__list { list-style: none; padding: 0; margin: 0; }
+.nri-lore__list-heading { margin-top: 10px; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; pointer-events: none; list-style: none; }
 .nri-lore__world, .nri-lore__factions, .nri-lore__places { margin-top: 10px; }
 .nri-lore__place-edit { margin-top: 8px; }
 .nri-lore__faction-preview {

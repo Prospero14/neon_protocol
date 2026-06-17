@@ -109,11 +109,12 @@ export const NriDispositionDashboard: React.FC<Props> = ({ inviteCode, authToken
 
   const refreshLore = useCallback(async () => {
     if (!authToken) return;
-    const lore = await nriFetchLore(authToken, inviteCode);
-    if (!lore) {
-      setErr('Не удалось загрузить фракции и матрицу отношений.');
+    const loreRes = await nriFetchLore(authToken, inviteCode);
+    if (!loreRes.ok) {
+      setErr(loreRes.error || 'Не удалось загрузить фракции и матрицу отношений.');
       return;
     }
+    const lore = loreRes.data;
     setErr(null);
     setFactions(lore.factions);
     setMatrix(lore.factionRelations ?? { enabled: false, edges: {} });

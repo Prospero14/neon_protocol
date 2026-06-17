@@ -8,28 +8,26 @@ const parseJson = nriParseJson;
 const authHeaders = nriAuthHeaders;
 const parseApiError = parseNriApiError;
 
-export async function nriFetchLore(
-  token: string,
-  code: string
-): Promise<{
+export type NriLoreBundle = {
   world: { body: string };
   entries: import('../nriLore').NriLoreEntry[];
   factions: NriFaction[];
   places: NriLorePlace[];
   factionRelations: FactionRelationMatrix;
-} | null> {
+};
+
+export async function nriFetchLore(
+  token: string,
+  code: string
+): Promise<{ ok: true; data: NriLoreBundle } | { ok: false; error: string }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data as {
-    world: { body: string };
-    entries: import('../nriLore').NriLoreEntry[];
-    factions: NriFaction[];
-    places: NriLorePlace[];
-    factionRelations: FactionRelationMatrix;
-  };
+  const data = (await parseJson(res)) as Record<string, unknown>;
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось загрузить лор.') };
+  }
+  return { data: data as unknown as NriLoreBundle, ok: true };
 }
 
 export async function nriCreateLoreEntry(

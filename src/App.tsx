@@ -352,7 +352,9 @@ function App() {
             } 
           }} 
           onRewardTrait={(id: string) => { 
-            if (!gs.traits.some((t) => t.id === id)) gs.setTraits((prev) => [...prev, { id, name: id.toUpperCase(), type: 'GENERAL', category: 'SOCIAL', description: 'Получено у фикcера.' }]); 
+            if (Array.isArray(gs.traits) && !gs.traits.some((t) => t.id === id)) {
+              gs.setTraits((prev) => [...prev, { id, name: id.toUpperCase(), type: 'GENERAL', category: 'SOCIAL', description: 'Получено у фикcера.' }]);
+            }
           }} 
           onRestoreHp={(amount: number) => gs.setStress((prev) => Math.max(0, prev - amount))} 
           onAwardQuest={(questId: string) => { 

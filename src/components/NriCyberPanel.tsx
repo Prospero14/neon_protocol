@@ -127,7 +127,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
   const loadPreset = (p: CyberBlueprint) => {
     setSlot(p.slot);
     setName(p.name);
-    setPartIds([...p.partIds]);
+    setPartIds(Array.isArray(p.partIds) ? [...p.partIds] : []);
   };
 
   const saveProduct = async (inShop: boolean) => {

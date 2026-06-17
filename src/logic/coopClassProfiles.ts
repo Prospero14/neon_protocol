@@ -53,8 +53,10 @@ export function serializeCoopClassSave(params: {
     deckIds: params.activeDeck.map((c) => c.id),
     inventoryIds: params.inventoryUnique.map((c) => c.id),
     coopTierRank: params.coopTierRank,
-    coopYardCompletedMissionIds: [...params.coopYardCompletedMissionIds],
-    discoveredCardIds: [...params.discoveredCardIds].sort(),
+    coopYardCompletedMissionIds: Array.isArray(params.coopYardCompletedMissionIds)
+      ? [...params.coopYardCompletedMissionIds]
+      : [],
+    discoveredCardIds: Array.from(params.discoveredCardIds ?? []).sort(),
     devLanguageStack: params.devLanguageStack,
     coopSprintConsecutiveLosses: params.coopSprintConsecutiveLosses,
   };
@@ -92,11 +94,61 @@ export function applyCoopClassSave(save: CoopClassSave): {
     activeDeck,
     inventory,
     coopTierRank: save.coopTierRank,
-    coopYardCompletedMissionIds: [...save.coopYardCompletedMissionIds],
-    discoveredCardIds: new Set(save.discoveredCardIds),
+    coopYardCompletedMissionIds: Array.isArray(save.coopYardCompletedMissionIds)
+      ? [...save.coopYardCompletedMissionIds]
+      : [],
+    discoveredCardIds: new Set(Array.isArray(save.discoveredCardIds) ? save.discoveredCardIds : []),
     devLanguageStack: save.devLanguageStack,
     coopSprintConsecutiveLosses: save.coopSprintConsecutiveLosses,
   };
+}
+
+function normalizeCoopClassSave(raw: unknown): CoopClassSave | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Partial<CoopClassSave>;
+  if (!Array.isArray(o.deckIds) || o.deckIds.length === 0) return null;
+  return {
+    deckIds: o.deckIds.filter((x): x is string => typeof x === 'string'),
+    inventoryIds: Array.isArray(o.inventoryIds)
+      ? o.inventoryIds.filter((x): x is string => typeof x === 'string')
+      : [...new Set(o.deckIds.filter((x): x is string => typeof x === 'string'))],
+    coopTierRank:
+      o.coopTierRank === 'script-kiddie' ||
+      o.coopTierRank === 'junior' ||
+      o.coopTierRank === 'mid' ||
+      o.coopTierRank === 'senior'
+        ? o.coopTierRank
+        : 'junior',
+    coopYardCompletedMissionIds: Array.isArray(o.coopYardCompletedMissionIds)
+      ? o.coopYardCompletedMissionIds.filter((x): x is string => typeof x === 'string')
+      : [],
+    discoveredCardIds: Array.isArray(o.discoveredCardIds)
+      ? o.discoveredCardIds.filter((x): x is string => typeof x === 'string')
+      : [],
+    devLanguageStack:
+      o.devLanguageStack === 'java' ||
+      o.devLanguageStack === 'kotlin' ||
+      o.devLanguageStack === 'python' ||
+      o.devLanguageStack === 'go'
+        ? o.devLanguageStack
+        : null,
+    coopSprintConsecutiveLosses:
+      typeof o.coopSprintConsecutiveLosses === 'number' && o.coopSprintConsecutiveLosses >= 0
+        ? o.coopSprintConsecutiveLosses
+        : 0,
+  };
+}
+
+export function normalizeCoopClassProfiles(
+  raw: unknown,
+): Partial<Record<CoopRole, CoopClassSave>> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Partial<Record<CoopRole, CoopClassSave>> = {};
+  for (const role of COOP_ROLES) {
+    const save = normalizeCoopClassSave((raw as Record<string, unknown>)[role]);
+    if (save) out[role] = save;
+  }
+  return out;
 }
 
 export function migrateLegacyCoopToProfiles(gs: {

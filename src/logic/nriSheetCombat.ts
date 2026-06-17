@@ -118,7 +118,9 @@ export function enrichSheetCombat(sheet: NriSheetData, classId: NriClassId): Nri
   return {
     ...sheet,
     classFeatures,
-    skillProficiencies: sheet.skillProficiencies ?? [...CLASS_SKILL_DEFAULTS[classId]],
+    skillProficiencies: Array.isArray(sheet.skillProficiencies)
+      ? sheet.skillProficiencies
+      : [...CLASS_SKILL_DEFAULTS[classId]],
     attacks: sheet.attacks ?? buildClassAttacks(sheet, classId),
   };
 }
@@ -130,7 +132,7 @@ export function getSheetCombatView(
 ): SheetCombatView {
   const enriched = enrichSheetCombat(sheet, classId);
   const tpl = getC2185ClassTemplate(classId);
-  const proficiencies = new Set(enriched.skillProficiencies ?? []);
+  const proficiencies = new Set(Array.isArray(enriched.skillProficiencies) ? enriched.skillProficiencies : []);
   const saveProfs = new Set(tpl?.saveProficiencies ?? []);
 
   const saves = C2185_SAVING_THROWS.map((s) => {

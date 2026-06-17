@@ -33,6 +33,7 @@ function mockPrisma(): Pick<
       findMany: vi.fn(),
     } as unknown as PrismaClient['user'],
     gameState: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     } as unknown as PrismaClient['gameState'],
     coopStartupScore: {
@@ -148,6 +149,21 @@ describe('neon_v1 API (integration)', () => {
       },
     } as any);
 
+    vi.mocked(prisma.gameState.findUnique).mockResolvedValue({
+      id: 'gs',
+      userId: 'uid-sync',
+      bits: 100,
+      stress: 0,
+      maxStress: 100,
+      xp: 0,
+      level: 1,
+      activeDeck: [],
+      inventory: [],
+      artifacts: [],
+      completedQuests: [],
+      clientSnapshot: { playerName: 'Legacy', sessionMode: 'solo' },
+    } as any);
+
     vi.mocked(prisma.gameState.update).mockResolvedValue({
       id: 'gs',
       userId: 'uid-sync',
@@ -188,7 +204,13 @@ describe('neon_v1 API (integration)', () => {
       .expect(200);
 
     expect(sync.body.bits).toBe(250);
+    expect(prisma.gameState.findUnique).toHaveBeenCalled();
     expect(prisma.gameState.update).toHaveBeenCalled();
+    const updateArg = vi.mocked(prisma.gameState.update).mock.calls.at(-1)?.[0] as {
+      data?: { clientSnapshot?: Record<string, unknown> };
+    };
+    expect(updateArg?.data?.clientSnapshot?.playerName).toBe('Legacy');
+    expect(updateArg?.data?.clientSnapshot?.bits).toBe(250);
   });
 
   it('coop: heartbeat → виден другой игрок; invite → party из двух', async () => {

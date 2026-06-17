@@ -14,10 +14,8 @@ type UseNriSessionDeps = {
   userId: string | undefined;
   setSessionMode: (mode: SessionMode) => void;
   setCurrentView: (view: NriViewType | string) => void;
-  /** Полный merge solo-сохранения (enter/leave). */
+  /** Полный merge solo-сохранения (enter/leave/auto-join). */
   syncGame: (overrides?: Record<string, unknown>) => void | Promise<void>;
-  /** Частичный PATCH для автовхода по hash (до полной гидрации). */
-  syncGameState: (patch: Record<string, unknown>) => void | Promise<void>;
 };
 
 export function parseNriCodeFromGameState(gs: Record<string, unknown>): string | null {
@@ -30,7 +28,6 @@ export function useNriSession({
   setSessionMode,
   setCurrentView,
   syncGame,
-  syncGameState,
 }: UseNriSessionDeps) {
   const [nriInviteCode, setNriInviteCode] = useState<string | null>(null);
   const [pendingNriInvite, setPendingNriInvite] = useState<string | null>(() => {
@@ -126,13 +123,13 @@ export function useNriSession({
       setSessionMode('nri');
       setNriInviteCode(nriCode);
       setCurrentView('NRI_LOBBY');
-      void syncGameState({
+      void syncGame({
         sessionMode: 'nri',
         nriInviteCode: nriCode,
         currentView: 'NRI_LOBBY',
       });
     })();
-  }, [userId, setSessionMode, setCurrentView, syncGameState]);
+  }, [userId, setSessionMode, setCurrentView, syncGame]);
 
   const nriGuestInviteCode = readNriGuestInviteCode();
 

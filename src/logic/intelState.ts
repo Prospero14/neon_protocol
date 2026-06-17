@@ -24,7 +24,11 @@ export function loadIntelState(): IntelState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY_INTEL_STATE;
     const parsed = JSON.parse(raw);
-    return { collectedIds: parsed.collectedIds ?? [] };
+    return {
+      collectedIds: Array.isArray(parsed?.collectedIds)
+        ? parsed.collectedIds.filter((x: unknown): x is string => typeof x === 'string')
+        : [],
+    };
   } catch {
     return EMPTY_INTEL_STATE;
   }

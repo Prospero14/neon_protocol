@@ -8,6 +8,12 @@ interface User {
   gameState?: any;
 }
 
+function mergeGameStatePatch(prev: unknown, patch: GameSyncPayload): Record<string, unknown> {
+  const base =
+    prev && typeof prev === 'object' && !Array.isArray(prev) ? { ...(prev as Record<string, unknown>) } : {};
+  return { ...base, ...patch };
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -84,7 +90,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return;
       }
-      const updatedUser = { ...user!, gameState: state };
+      const updatedUser = {
+        ...user!,
+        gameState: mergeGameStatePatch(user?.gameState, state),
+      };
       setUser(updatedUser);
       localStorage.setItem('neon_user', JSON.stringify(updatedUser));
     } catch (error) {

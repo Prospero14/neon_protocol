@@ -120,40 +120,48 @@ export function mountAuthRoutes(app, deps) {
             }
             const body = parsed.data;
             const { stress, maxStress, bits, xp, level, activeDeck, inventory, artifacts, completedQuests } = body;
+            const existing = await prisma.gameState.findUnique({ where: { userId: decoded.userId } });
+            if (!existing) {
+                return sendApiError(res, 404, 'SYNC_NO_STATE', 'Сохранение не найдено.');
+            }
+            const prevSnapRaw = existing.clientSnapshot;
+            const prevSnap = prevSnapRaw && typeof prevSnapRaw === 'object' && !Array.isArray(prevSnapRaw)
+                ? prevSnapRaw
+                : {};
+            const mergedSnapshot = { ...prevSnap, ...body };
+            const rowPatch = { clientSnapshot: mergedSnapshot };
+            if (stress !== undefined)
+                rowPatch.stress = stress;
+            if (maxStress !== undefined)
+                rowPatch.maxStress = maxStress;
+            if (bits !== undefined)
+                rowPatch.bits = bits;
+            if (xp !== undefined)
+                rowPatch.xp = xp;
+            if (level !== undefined)
+                rowPatch.level = level;
+            if (activeDeck !== undefined)
+                rowPatch.activeDeck = activeDeck;
+            if (inventory !== undefined)
+                rowPatch.inventory = inventory;
+            if (artifacts !== undefined)
+                rowPatch.artifacts = artifacts;
+            if (completedQuests !== undefined)
+                rowPatch.completedQuests = completedQuests;
             let updatedState;
             try {
                 updatedState = await prisma.gameState.update({
                     where: { userId: decoded.userId },
-                    data: {
-                        stress,
-                        maxStress,
-                        bits,
-                        xp,
-                        level,
-                        activeDeck,
-                        inventory,
-                        artifacts,
-                        completedQuests,
-                        clientSnapshot: body,
-                    },
+                    data: rowPatch,
                 });
             }
             catch (e) {
                 if (!hasMissingColumn(e, 'clientSnapshot'))
                     throw e;
+                const { clientSnapshot: _drop, ...legacyPatch } = rowPatch;
                 updatedState = await prisma.gameState.update({
                     where: { userId: decoded.userId },
-                    data: {
-                        stress,
-                        maxStress,
-                        bits,
-                        xp,
-                        level,
-                        activeDeck,
-                        inventory,
-                        artifacts,
-                        completedQuests,
-                    },
+                    data: legacyPatch,
                 });
             }
             res.json(publicGameState(updatedState));

@@ -167,7 +167,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
       label: seed?.label ?? `${clsName} — ${built.meta.characterName}`,
       classId: cid,
       sheet,
-      inventory: seed ? [...seed.inventory] : [],
+      inventory: seed && Array.isArray(seed.inventory) ? [...seed.inventory] : [],
       meta: { ...built.meta, level: 1 },
       portraitUrl: '',
       publishedToPlayers: true,
@@ -325,7 +325,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
                           updatePending({
                             inventory: has
                               ? pendingPreset.inventory.filter((i) => i.id !== item.id)
-                              : [...pendingPreset.inventory, item],
+                              : [...(Array.isArray(pendingPreset.inventory) ? pendingPreset.inventory : []), item],
                           });
                         }}
                       />

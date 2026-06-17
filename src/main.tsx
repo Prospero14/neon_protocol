@@ -3,38 +3,25 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './logic/AuthContext.tsx'
+import { GlobalErrorHost } from './components/GlobalErrorHost.tsx'
+import { ClientErrorScreen } from './components/ClientErrorScreen.tsx'
+import { reportClientError } from './logic/globalErrorHandler.ts'
 
-class RootErrorBoundary extends Component<{ children: ReactNode }, { err: Error | null }> {
-  state: { err: Error | null } = { err: null };
+class RootErrorBoundary extends Component<{ children: ReactNode }, { report: { error: Error; source: string } | null }> {
+  state: { report: { error: Error; source: string } | null } = { report: null };
 
   static getDerivedStateFromError(err: Error) {
-    return { err };
+    return { report: { error: err, source: 'react.render' } };
   }
 
   componentDidCatch(err: Error, info: ErrorInfo) {
-    console.error('RootErrorBoundary', err, info.componentStack);
+    reportClientError(err, 'react.render');
+    if (import.meta.env.DEV) console.error('RootErrorBoundary stack', info.componentStack);
   }
 
   render() {
-    if (this.state.err) {
-      return (
-        <div
-          style={{
-            minHeight: '100vh',
-            padding: '2rem',
-            background: '#0d0208',
-            color: '#ff6b6b',
-            fontFamily: 'JetBrains Mono, monospace',
-            whiteSpace: 'pre-wrap',
-          }}
-        >
-          <h1 style={{ color: '#0ff', fontSize: '1rem', marginBottom: '1rem' }}>Neon Protocol — сбой клиента</h1>
-          <p>{this.state.err.message}</p>
-          <p style={{ marginTop: '1rem', color: '#8a9aaa', fontSize: '0.85rem' }}>
-            Часто помогает режим инкогнито или очистка данных сайта для этого домена (localStorage).
-          </p>
-        </div>
-      );
+    if (this.state.report) {
+      return <ClientErrorScreen report={this.state.report} />;
     }
     return this.props.children;
   }
@@ -42,10 +29,12 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { err: Error 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <RootErrorBoundary>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </RootErrorBoundary>
+    <GlobalErrorHost>
+      <RootErrorBoundary>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </RootErrorBoundary>
+    </GlobalErrorHost>
   </StrictMode>,
 )

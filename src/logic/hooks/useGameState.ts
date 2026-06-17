@@ -33,11 +33,22 @@ import {
   applyCoopClassSave,
   defaultCoopClassSave,
   migrateLegacyCoopToProfiles,
+  normalizeCoopClassProfiles,
   serializeCoopClassSave,
   hydrateDeckFromIds,
   hydrateInventoryFromIds,
   type CoopClassSave,
 } from '../coopClassProfiles';
+import {
+  asFiniteNumber,
+  asImplantList,
+  asNumberRecord,
+  asQuestStates,
+  asStringArray,
+  hydrateDeckEntries,
+  parseSolvedChainsStorage,
+} from '../saveHydrationGuards';
+import { reportClientError } from '../globalErrorHandler';
 import type { CoopSquadFill } from '../coopTeamFlow';
 import { isCoopSquadFill } from '../coopTeamFlow';
 
@@ -99,7 +110,7 @@ function serializeSoloRuntimeCache(params: {
   return {
     deckIds: params.activeDeck.map((c) => c.id),
     inventoryIds: params.inventoryUnique.map((c) => c.id),
-    discoveredCardIds: [...params.discoveredCardIds].sort(),
+    discoveredCardIds: Array.from(params.discoveredCardIds ?? []).sort(),
   };
 }
 
@@ -108,13 +119,18 @@ function snapshotCoopProfilesFromSave(
   userId: string | undefined,
 ): Partial<Record<CoopRole, CoopClassSave>> {
   try {
-    const fromGs = gs.coopClassProfiles as Partial<Record<CoopRole, CoopClassSave>> | undefined;
+    const fromGs = gs.coopClassProfiles;
     if (fromGs && typeof fromGs === 'object' && !Array.isArray(fromGs) && Object.keys(fromGs).length > 0) {
-      return fromGs;
+      const normalized = normalizeCoopClassProfiles(fromGs);
+      if (Object.keys(normalized).length > 0) return normalized;
     }
     if (userId) {
       const raw = localStorage.getItem(COOP_PROFILES_STORAGE_KEY(userId));
-      if (raw) return JSON.parse(raw) as Partial<Record<CoopRole, CoopClassSave>>;
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        const normalized = normalizeCoopClassProfiles(parsed);
+        if (Object.keys(normalized).length > 0) return normalized;
+      }
     }
   } catch {
     /* ignore */
@@ -604,7 +620,6 @@ export function useGameState() {
     setSessionMode,
     setCurrentView: (view) => setCurrentView(view as ViewType),
     syncGame: (overrides) => void syncGameRef.current(overrides),
-    syncGameState,
   });
 
   const syncGame = async (overrides: Record<string, unknown> = {}) => {
@@ -686,6 +701,7 @@ export function useGameState() {
       setCurrentView('SESSION_GATE');
       return;
     }
+    try {
     const gs = user.gameState;
     const soloRtcParsed = parseSoloRuntimeCache((gs as Record<string, unknown>).soloRuntimeCache);
     if (soloRtcParsed && soloRtcParsed.deckIds.length > 0) {
@@ -695,11 +711,24 @@ export function useGameState() {
     if (Object.keys(resumeProfiles).length > 0) {
       setCoopClassProfiles(resumeProfiles);
     }
-    if (gs.stress !== undefined) setStress(gs.stress);
-      if (gs.maxStress !== undefined) setMaxStress(gs.maxStress);
-      if (gs.bits !== undefined) setBits(gs.bits);
-      if (gs.solvedTaskCounts !== undefined) setSolvedTaskCounts(gs.solvedTaskCounts);
-      if (gs.ramPool !== undefined) setRamPool(gs.ramPool);
+    const stressN = asFiniteNumber(gs.stress);
+    if (stressN !== undefined) setStress(stressN);
+    const maxStressN = asFiniteNumber(gs.maxStress);
+    if (maxStressN !== undefined) setMaxStress(maxStressN);
+    const bitsN = asFiniteNumber(gs.bits);
+    if (bitsN !== undefined) setBits(bitsN);
+    if (gs.solvedTaskCounts !== undefined) {
+      setSolvedTaskCounts(
+        asNumberRecord(gs.solvedTaskCounts, {
+          'script-kiddie': 0,
+          junior: 0,
+          mid: 0,
+          senior: 0,
+        }),
+      );
+    }
+    const ramN = asFiniteNumber(gs.ramPool);
+    if (ramN !== undefined) setRamPool(ramN);
       if (gs.homeDistrictId !== undefined) {
         const validHome = MAP_NODES.find((n) => n.id === gs.homeDistrictId)?.id;
         if (validHome) {
@@ -708,8 +737,8 @@ export function useGameState() {
         }
       }
       
-      if (gs.completedQuests) {
-        setQuestStates(gs.completedQuests);
+      if (Array.isArray(gs.completedQuests)) {
+        setQuestStates(asQuestStates(gs.completedQuests));
       }
 
       if (gs.activeDistrictId && MAP_NODES.some((n) => n.id === gs.activeDistrictId)) {
@@ -743,12 +772,14 @@ export function useGameState() {
         }
       }
 
-      if (gs.activeDeck && !skipLegacyDeck) {
-        const fullDeck = gs.activeDeck.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
+      if (Array.isArray(gs.activeDeck) && !skipLegacyDeck) {
+        const entries = hydrateDeckEntries(gs.activeDeck);
+        const fullDeck = entries.map((c) => CARD_LIBRARY.find((l) => l.id === c.id)).filter(Boolean) as CombatCard[];
         if (fullDeck.length > 0) setActiveDeck(fullDeck);
       }
-      if (gs.inventory && !skipLegacyDeck) {
-        const fullInv = gs.inventory.map((c: any) => CARD_LIBRARY.find(l => l.id === c.id)).filter(Boolean) as CombatCard[];
+      if (Array.isArray(gs.inventory) && !skipLegacyDeck) {
+        const entries = hydrateDeckEntries(gs.inventory);
+        const fullInv = entries.map((c) => CARD_LIBRARY.find((l) => l.id === c.id)).filter(Boolean) as CombatCard[];
         if (fullInv.length > 0) {
           const migrated = [...fullInv];
           const has = new Set(migrated.map((c) => c.id));
@@ -813,7 +844,7 @@ export function useGameState() {
         bothEstablished,
       });
 
-      if (gs.traits) setTraits(gs.traits);
+      if (Array.isArray(gs.traits)) setTraits(gs.traits);
       nri.applyNriResumeFromSync(gs as Record<string, unknown>, savedView, resumeNri, nriCode);
       const crRaw = gs.coopRole as string | undefined;
       const cr =
@@ -841,8 +872,23 @@ export function useGameState() {
         }
       }
       if (gs.coopStartupLiquidated === true) setCoopStartupLiquidated(true);
-      if (gs.installedImplants) setInstalledImplants(gs.installedImplants);
-      if (gs.reputation) setReputation(gs.reputation);
+      if (gs.installedImplants !== undefined) setInstalledImplants(asImplantList(gs.installedImplants));
+      if (gs.reputation !== undefined) {
+        setReputation(
+          asNumberRecord(gs.reputation, {
+            GIGABANK: 0,
+            TELECON: 0,
+            KRYLOVO_CORP: 0,
+            REGULATORS: 0,
+            NULLPOINTERS: 0,
+            RUST_VALLEY: 0,
+            SILICON_HEDGE: 0,
+            BIOSYNDICATE: 0,
+            REDUNDANTS: 0,
+            NET_DRIVERS: 0,
+          }),
+        );
+      }
       if (gs.playerName && gs.playerName !== 'ID_НЕИЗВЕСТЕН') setPlayerName(gs.playerName);
       if (gs.isCityMapUnlocked !== undefined) setIsCityMapUnlocked(gs.isCityMapUnlocked);
       if (gs.isPetrovichHomeUnlocked !== undefined) setIsPetrovichHomeUnlocked(gs.isPetrovichHomeUnlocked);
@@ -851,9 +897,13 @@ export function useGameState() {
         const prof = getProfessionById(gs.professionId);
         if (prof) setProfession(prof);
       }
-      if (gs.deckCores !== undefined) setDeckCores(gs.deckCores);
-      if (gs.deckRamMb !== undefined) setDeckRamMb(gs.deckRamMb);
-      if (gs.discoveredCardIds && !skipLegacyDeck) setDiscoveredCardIds(new Set(gs.discoveredCardIds));
+      const deckCoresN = asFiniteNumber(gs.deckCores);
+      if (deckCoresN !== undefined) setDeckCores(deckCoresN);
+      const deckRamN = asFiniteNumber(gs.deckRamMb);
+      if (deckRamN !== undefined) setDeckRamMb(deckRamN);
+      if (Array.isArray(gs.discoveredCardIds) && !skipLegacyDeck) {
+        setDiscoveredCardIds(new Set(gs.discoveredCardIds.filter((x: unknown) => typeof x === 'string')));
+      }
       if (typeof gs.clockAnchorMs === 'number' && !Number.isNaN(gs.clockAnchorMs)) {
         setClockAnchorMs(gs.clockAnchorMs);
       } else {
@@ -862,9 +912,11 @@ export function useGameState() {
         const hoursIntoCampaign = (wd - 1) * 24 + (tick / 8) * 24;
         setClockAnchorMs(Date.now() - hoursIntoCampaign * MS_PER_GAME_HOUR);
       }
-      if (gs.trustedNpcContacts) setTrustedNpcContacts(gs.trustedNpcContacts);
-      if (gs.messengerFeed) setMessengerFeed(sanitizeMessengerFeed(gs.messengerFeed as MessengerMessage[]));
-      if (gs.barContactDistricts) setBarContactDistricts(gs.barContactDistricts);
+      if (gs.trustedNpcContacts !== undefined) setTrustedNpcContacts(asStringArray(gs.trustedNpcContacts));
+      if (Array.isArray(gs.messengerFeed)) {
+        setMessengerFeed(sanitizeMessengerFeed(gs.messengerFeed as MessengerMessage[]));
+      }
+      if (gs.barContactDistricts !== undefined) setBarContactDistricts(asStringArray(gs.barContactDistricts));
 
       // Self-heal: older/corrupted saves may keep fallback district.
       const healedHome = (gs.homeDistrictId && MAP_NODES.some((n) => n.id === gs.homeDistrictId))
@@ -924,7 +976,7 @@ export function useGameState() {
       const saved = localStorage.getItem(exploitKey);
       if (saved) {
         try {
-          setSolvedChains(JSON.parse(saved));
+          setSolvedChains(parseSolvedChainsStorage(JSON.parse(saved)));
         } catch {
           try {
             localStorage.removeItem(exploitKey);
@@ -933,6 +985,10 @@ export function useGameState() {
           }
         }
       }
+    } catch (err) {
+      reportClientError(err, 'gameState.hydrate');
+      setCurrentView('SESSION_GATE');
+    }
   }, [user?.id]);
 
   useEffect(() => {

@@ -1,5 +1,7 @@
 /** Установка киберимплантов на лист персонажа (Augmentations + Blood Tox). */
 
+import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos';
+
 import type { NriInventoryItem } from './nriInventory';
 import { bloodToxLimitFromCon, type CyberSlot } from './nriCyberware';
 import { parseNriSheet, type NriSheetData } from './nriNpcGenerator';
@@ -124,12 +126,13 @@ export function tryInstallCyberItem(
   };
 
   const newInventory = inventory.filter((i) => i.id !== itemId);
-  const newSheet: AugmentedSheet = {
+  const installedSheet: AugmentedSheet = {
     ...sheet,
     augmentations: [...installed, aug],
     bloodToxCurrent: nextBt,
     bloodToxLimit: limit,
   };
+  const newSheet = markPendingHoloTattooAfterInstall(installedSheet, item);
 
   return { ok: true, sheet: newSheet, inventory: newInventory };
 }

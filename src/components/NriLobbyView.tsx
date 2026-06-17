@@ -40,6 +40,7 @@ import { NriTransportPanel } from './NriTransportPanel';
 import { NriScenarioHub } from './NriScenarioHub';
 import { NriPlayerNotesPanel } from './NriPlayerNotesPanel';
 import { NriMasterToolsHub } from './NriMasterToolsHub';
+import { NriTattooPickModal } from './NriTattooPickModal';
 
 import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
@@ -461,6 +462,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             nriInviteCode={inviteCode}
             nriProfile={profile ?? null}
             tableNpcs={tableNpcs}
+            tableRoster={roster}
             onNriProfileUpdate={(p) => setProfile(p)}
             roomSpamPaused={!!session.spamPausedActive}
             spamPausedUntil={session.spamPausedUntil ?? walletInfo?.spamPausedUntil}
@@ -563,6 +565,14 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
       {showRules && <NriRulesPanel onClose={() => setShowRules(false)} />}
       {showSheet && profile && (
         <NriCharacterSheet profile={profile} onClose={() => setShowSheet(false)} />
+      )}
+      {profile && authToken && !session?.isHost && (
+        <NriTattooPickModal
+          inviteCode={inviteCode}
+          authToken={authToken}
+          profile={profile}
+          onProfileUpdate={setProfile}
+        />
       )}
     </div>
   );

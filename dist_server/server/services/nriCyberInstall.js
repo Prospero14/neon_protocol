@@ -1,4 +1,5 @@
 /** Серверная установка киберимплантов (зеркало src/logic/nriCyberInstall.ts). */
+import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos.js';
 const FUNCTIONAL_SLOTS = ['arm', 'leg', 'head', 'torso', 'internal', 'neural', 'external', 'sensor'];
 function abilityMod(score) {
     if (score <= 7)
@@ -80,12 +81,13 @@ export function tryInstallCyberItem(sheetRaw, inventoryRaw, itemId) {
         installedAt: Date.now(),
     };
     inventory.splice(idx, 1);
-    const newSheet = {
+    const installedSheet = {
         ...sheet,
         augmentations: [...installed, aug],
         bloodToxCurrent: nextBt,
         bloodToxLimit: limit,
     };
+    const newSheet = markPendingHoloTattooAfterInstall(installedSheet, item);
     return { ok: true, sheet: newSheet, inventory };
 }
 //# sourceMappingURL=nriCyberInstall.js.map

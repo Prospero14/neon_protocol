@@ -226,8 +226,25 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   };
 
   const updatePending = (patch: Partial<PendingPreset>) => {
-    if (!pendingPreset) return;
     setPendingPreset((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const switchPendingClass = (cid: NriClassId) => {
+    setPendingPreset((prev) => {
+      if (!prev) return prev;
+      const next = buildPendingPreset(
+        cid,
+        prev.meta.originId ?? 'neo_tokyo',
+        prev.meta.activityId ?? 'street',
+        defaultSkillsForClass(cid),
+      );
+      return {
+        ...next,
+        label: prev.label,
+        portraitUrl: prev.portraitUrl,
+        publishedToPlayers: prev.publishedToPlayers,
+      };
+    });
   };
 
   const preview = presets.find((p) => p.id === previewId);
@@ -266,16 +283,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
                 key={c.id}
                 type="button"
                 className={`nri-class-card ${pendingPreset.classId === c.id ? 'active' : ''}`}
-                onClick={() =>
-                  setPendingPreset(
-                    buildPendingPreset(
-                      c.id,
-                      pendingPreset.meta.originId ?? 'neo_tokyo',
-                      pendingPreset.meta.activityId ?? 'street',
-                      defaultSkillsForClass(c.id)
-                    )
-                  )
-                }
+                onClick={() => switchPendingClass(c.id)}
               >
                 <strong>{c.name}</strong>
               </button>
@@ -293,14 +301,19 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             meta={pendingPreset.meta}
             sheet={pendingPreset.sheet}
             onChange={(m) =>
-              updatePending({ meta: m, sheet: applyMetaToSheet(pendingPreset.sheet, m) })
+              setPendingPreset((prev) =>
+                prev ? { ...prev, meta: m, sheet: applyMetaToSheet(prev.sheet, m) } : prev,
+              )
             }
           />
           <NriSkillPickField
+            key={pendingPreset.classId}
             classId={pendingPreset.classId}
             picked={pendingPreset.sheet.skillProficiencies ?? defaultSkillsForClass(pendingPreset.classId)}
             onChange={(skills) =>
-              updatePending({ sheet: { ...pendingPreset.sheet, skillProficiencies: skills } })
+              setPendingPreset((prev) =>
+                prev ? { ...prev, sheet: { ...prev.sheet, skillProficiencies: skills } } : prev,
+              )
             }
           />
           <label className="nri-modal__field">

@@ -53,6 +53,15 @@ export type NriSheetData = {
   activityId?: string;
   /** Активные состояния (дебафы/бафы). */
   activeConditions?: import('./nriConditions').SheetCondition[];
+  /** Татуировки (чернила или голо-имплант). */
+  tattoos?: import('../../shared/nri-domain/tattoos').SheetTattoo[];
+  /** Фракция персонажа (id из лора стола). */
+  factionId?: string;
+  /** Базовое отношение НПС к игрокам (−100…+100). */
+  disposition?: number;
+  /** Ожидает выбора голо-тату после установки импланта. */
+  pendingHoloTattoo?: boolean;
+  holoTattooChosen?: boolean;
 };
 
 export function abilityModifier(score: number): number {

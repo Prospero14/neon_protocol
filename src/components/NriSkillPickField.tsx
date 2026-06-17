@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import type { NriClassId } from '../logic/nriClasses';
+import React, { useMemo } from 'react';
+import { getNriClass, type NriClassId } from '../logic/nriClasses';
 import { classSkillPool, filterSkillsToClassPool } from '../logic/nriSkillPick';
 
 type Props = {
@@ -11,34 +11,30 @@ type Props = {
 
 export const NriSkillPickField: React.FC<Props> = ({ classId, picked, onChange, disabled }) => {
   const { pickCount, options } = classSkillPool(classId);
-
-  useEffect(() => {
-    if (options.length === 0) return;
-    const filtered = filterSkillsToClassPool(classId, picked);
-    if (filtered.join('|') !== picked.join('|')) onChange(filtered);
-  }, [classId, options.length, picked, onChange]);
+  const validPicked = useMemo(() => filterSkillsToClassPool(classId, picked), [classId, picked]);
+  const className = getNriClass(classId)?.name ?? classId;
 
   if (options.length === 0) return null;
 
   const toggle = (name: string) => {
     if (disabled) return;
-    if (picked.includes(name)) {
-      onChange(picked.filter((s) => s !== name));
+    if (validPicked.includes(name)) {
+      onChange(validPicked.filter((s) => s !== name));
       return;
     }
-    if (picked.length >= pickCount) return;
-    onChange([...picked, name]);
+    if (validPicked.length >= pickCount) return;
+    onChange([...validPicked, name]);
   };
 
   return (
     <div className="nri-skill-pick">
       <p className="mono-text nri-skill-pick__hint">
-        Выберите {pickCount} навыка из пула класса ({options.length}).
+        Класс: {className}. Выберите {pickCount} навыка из пула ({options.length}).
       </p>
       <ul className="nri-skill-pick__list">
         {options.map((name) => {
-          const on = picked.includes(name);
-          const full = !on && picked.length >= pickCount;
+          const on = validPicked.includes(name);
+          const full = !on && validPicked.length >= pickCount;
           return (
             <li key={name}>
               <label className={`nri-skill-pick__opt ${on ? 'active' : ''} ${full ? 'disabled' : ''}`}>

@@ -254,7 +254,11 @@ export function mountNriCyberRoutes(app: Express, ctx: NriRouteContext): void {
           sheet: nextSheet ?? undefined,
         },
       });
-      res.json({ ok: true, item, installed });
+      const needsHoloTattooPick =
+        nextSheet &&
+        typeof nextSheet === 'object' &&
+        (nextSheet as { pendingHoloTattoo?: boolean }).pendingHoloTattoo === true;
+      res.json({ ok: true, item, installed, needsHoloTattooPick: installed ? needsHoloTattooPick : false });
     } catch (error) {
       console.error('nri/cyber grant:', error);
       return sendApiError(res, 500, 'NRI_CYBER_GRANT_FAILED', 'Не удалось выдать имплант.');
@@ -376,7 +380,11 @@ export function mountNriCyberRoutes(app: Express, ctx: NriRouteContext): void {
         where: { id: player.id },
         data: { sheet, inventory: result.inventory as object[] },
       });
-      res.json({ ok: true, installed: true });
+      const needsHoloTattooPick =
+        sheet &&
+        typeof sheet === 'object' &&
+        (sheet as { pendingHoloTattoo?: boolean }).pendingHoloTattoo === true;
+      res.json({ ok: true, installed: true, needsHoloTattooPick });
     } catch (error) {
       console.error('nri/cyber install:', error);
       return sendApiError(res, 500, 'NRI_CYBER_INSTALL_ERR', 'Не удалось установить имплант.');

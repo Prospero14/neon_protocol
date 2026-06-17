@@ -1,6 +1,6 @@
 /** Lore, factions, transfers, host alerts */
 
-import type { NriFaction, NriHostAlert, NriLorePlace } from '../nriLore';
+import type { NriFaction, NriHostAlert, NriLorePlace, FactionRelationMatrix } from '../nriLore';
 import type { NriInventoryItem } from '../nriInventory';
 import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
 
@@ -11,13 +11,25 @@ const parseApiError = parseNriApiError;
 export async function nriFetchLore(
   token: string,
   code: string
-): Promise<{ world: { body: string }; entries: import('../nriLore').NriLoreEntry[]; factions: NriFaction[]; places: NriLorePlace[] } | null> {
+): Promise<{
+  world: { body: string };
+  entries: import('../nriLore').NriLoreEntry[];
+  factions: NriFaction[];
+  places: NriLorePlace[];
+  factionRelations: FactionRelationMatrix;
+} | null> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore`, {
     headers: authHeaders(token),
   });
   const data = await parseJson(res);
   if (!res.ok) return null;
-  return data as { world: { body: string }; entries: import('../nriLore').NriLoreEntry[]; factions: NriFaction[]; places: NriLorePlace[] };
+  return data as {
+    world: { body: string };
+    entries: import('../nriLore').NriLoreEntry[];
+    factions: NriFaction[];
+    places: NriLorePlace[];
+    factionRelations: FactionRelationMatrix;
+  };
 }
 
 export async function nriCreateLoreEntry(
@@ -54,6 +66,21 @@ export async function nriDeleteLoreEntry(token: string, code: string, entryId: s
     { method: 'DELETE', headers: authHeaders(token) }
   );
   return res.ok;
+}
+
+export async function nriPatchFactionRelations(
+  token: string,
+  code: string,
+  payload: { enabled?: boolean; edges?: Record<string, string | null> }
+): Promise<FactionRelationMatrix | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/faction-relations`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return (data.factionRelations ?? null) as FactionRelationMatrix | null;
 }
 
 export async function nriTransferItem(

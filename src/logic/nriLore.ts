@@ -1,5 +1,7 @@
 /** Лор стола: мир, фракции, карточки мест. */
 
+export type { FactionRelationMatrix, FactionStance } from '../../shared/nri-domain/factionRelations';
+
 export type NriFaction = {
   id: string;
   kind: string;

@@ -213,7 +213,10 @@ export function mountNriCyberRoutes(app, ctx) {
                     sheet: nextSheet ?? undefined,
                 },
             });
-            res.json({ ok: true, item, installed });
+            const needsHoloTattooPick = nextSheet &&
+                typeof nextSheet === 'object' &&
+                nextSheet.pendingHoloTattoo === true;
+            res.json({ ok: true, item, installed, needsHoloTattooPick: installed ? needsHoloTattooPick : false });
         }
         catch (error) {
             console.error('nri/cyber grant:', error);
@@ -336,7 +339,10 @@ export function mountNriCyberRoutes(app, ctx) {
                 where: { id: player.id },
                 data: { sheet, inventory: result.inventory },
             });
-            res.json({ ok: true, installed: true });
+            const needsHoloTattooPick = sheet &&
+                typeof sheet === 'object' &&
+                sheet.pendingHoloTattoo === true;
+            res.json({ ok: true, installed: true, needsHoloTattooPick });
         }
         catch (error) {
             console.error('nri/cyber install:', error);

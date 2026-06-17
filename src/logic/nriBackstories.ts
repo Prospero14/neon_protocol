@@ -2,7 +2,7 @@
 
 import type { NriClassId } from './nriClasses';
 import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
-import { NRI_ACTIVITIES, NRI_NPC_ARCHETYPES, NRI_ORIGINS } from './nriCharacterGen';
+import { NRI_NPC_ARCHETYPES, NRI_ORIGINS } from './nriCharacterGen';
 import { getC2185ClassTemplate } from './nriCarbon2185';
 
 function pick<T>(arr: readonly T[]): T {
@@ -182,32 +182,31 @@ const EXTRA_TEMPLATES: string[] = [
   '{name} ({class}) не говорит о прошлом в {origin}. {activityHook} {closer}',
   'Кличка в кругу — отдельная история, но {name} из {origin} {originHook} {activityHook}',
   'После сделки в {origin} {name} сменил имя, но не привычки. {activityHook} {closer}',
+  '{name}: {originHook}. По документам — {arch}, по факту — {activityHook}. {closer}',
+  'В досье значится: {name}, {origin}, класс {class}. Реальность проще: {activityHook} {closer}',
+  '{name} носит лицо {arch}, но корни тянутся в {origin}. {originHook} {closer}',
 ];
 
-function buildTemplatePool(): string[] {
-  const pool = [...EXTRA_TEMPLATES];
-  const origins = Array.isArray(NRI_ORIGINS) ? NRI_ORIGINS : [];
-  const activities = Array.isArray(NRI_ACTIVITIES) ? NRI_ACTIVITIES : [];
-  for (const o of origins) {
-    for (const a of activities) {
-      pool.push(
-        `{name} из ${o.label}: ${pick(ORIGIN_HOOKS[o.id])} ${pick(ACTIVITY_HOOKS[a.id])} {closer}`
-      );
-    }
-  }
-  return pool;
-}
-
-let templatePoolCache: string[] | null = null;
-
-/** Ленивая инициализация: nriCharacterGen импортирует этот модуль до объявления NRI_ORIGINS. */
-function getTemplatePool(): string[] {
-  if (!templatePoolCache) templatePoolCache = buildTemplatePool();
-  return templatePoolCache;
+function russianizeName(raw: string): string {
+  const map: Array<[RegExp, string]> = [
+    [/shch/gi, 'щ'], [/yo/gi, 'ё'], [/yu/gi, 'ю'], [/ya/gi, 'я'], [/zh/gi, 'ж'], [/ch/gi, 'ч'],
+    [/sh/gi, 'ш'], [/kh/gi, 'х'], [/ts/gi, 'ц'], [/th/gi, 'т'], [/ph/gi, 'ф'],
+    [/a/gi, 'а'], [/b/gi, 'б'], [/c/gi, 'к'], [/d/gi, 'д'], [/e/gi, 'е'], [/f/gi, 'ф'],
+    [/g/gi, 'г'], [/h/gi, 'х'], [/i/gi, 'и'], [/j/gi, 'дж'], [/k/gi, 'к'], [/l/gi, 'л'],
+    [/m/gi, 'м'], [/n/gi, 'н'], [/o/gi, 'о'], [/p/gi, 'п'], [/q/gi, 'к'], [/r/gi, 'р'],
+    [/s/gi, 'с'], [/t/gi, 'т'], [/u/gi, 'у'], [/v/gi, 'в'], [/w/gi, 'в'], [/x/gi, 'кс'],
+    [/y/gi, 'й'], [/z/gi, 'з'],
+  ];
+  let out = raw;
+  for (const [rx, to] of map) out = out.replace(rx, to);
+  return out
+    .split(/(\s+|[-'])/)
+    .map((part) => (/^\s+$|^[-']$/.test(part) ? part : part.charAt(0).toUpperCase() + part.slice(1)))
+    .join('');
 }
 
 export function getBackstoryPoolSize(): number {
-  return getTemplatePool().length;
+  return EXTRA_TEMPLATES.length;
 }
 
 export function generateRichBackstory(params: {
@@ -220,8 +219,9 @@ export function generateRichBackstory(params: {
 }): string {
   const arch = params.archetypeId ?? 'civilian';
   const tpl = getC2185ClassTemplate(params.classId);
-  const display = params.nickname ? `${params.name} «${params.nickname}»` : params.name;
-  const template = pick(getTemplatePool());
+  const localizedName = russianizeName(params.name.trim() || 'Без имени');
+  const display = params.nickname ? `${localizedName} «${params.nickname}»` : localizedName;
+  const template = pick(EXTRA_TEMPLATES);
   const closer = pick(ARCHETYPE_CLOSERS[arch]);
   return template
     .replace(/\{name\}/g, display)

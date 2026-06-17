@@ -22,6 +22,7 @@ import {
 } from '../logic/nriCyberEffects';
 import { encumbranceLabel, inventoryCarriedLb, maxCarryLbFromSheet } from '../logic/nriEncumbrance';
 import { sheetAutoFillSummary } from '../logic/nriSheetStatus';
+import { parseSheetTattoos } from '../../shared/nri-domain/tattoos';
 import type { NriPlayerProfile } from '../logic/nriApi';
 
 type Props = {
@@ -53,6 +54,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
   const activeConditions = conditionedSheet?.activeConditions ?? [];
   const augSheet = parseAugmentedSheet(completed);
   const augmentations = augSheet?.augmentations ?? [];
+  const tattoos = parseSheetTattoos(augSheet?.tattoos ?? sheet?.tattoos);
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const bloodToxLimit = getBloodToxLimit(augSheet);
   const combat = effectiveSheet
@@ -303,6 +305,24 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           </ul>
         )}
       </section>
+
+      {tattoos.length > 0 && (
+        <section className="nri-c2185-block">
+          <h4 className="nri-c2185-block__title">ТАТУИРОВКИ</h4>
+          <ul className="nri-sheet-inventory__list">
+            {tattoos.map((t) => (
+              <li key={t.id}>
+                <strong>{t.label}</strong>
+                <span className="mono-text opacity-70">
+                  {' '}
+                  · {t.placement} · {t.source === 'holo_implant' ? 'голо-имплант' : 'чернила'}
+                </span>
+                <p className="mono-text opacity-60">{t.description}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {activeConditions.length > 0 && (
         <section className="nri-c2185-block nri-c2185-block--conditions">

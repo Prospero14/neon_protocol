@@ -8,6 +8,8 @@ export type {
   NriLorePlace,
   NriPlayerPosition,
   NriScenarioProgress,
+  FactionRelationMatrix,
+  FactionStance,
 } from './nriLore';
 
 export * from './nriApi/session.js';

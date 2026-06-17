@@ -17,6 +17,7 @@ import {
   type NriOriginId,
 } from '../logic/nriCharacterGen';
 import { rollNpcName, parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
+import { rollNpcTattoos, type FactionRef } from '../../shared/nri-domain/tattoos';
 import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriSkillPickField } from './NriSkillPickField';
@@ -61,6 +62,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [factionName, setFactionName] = useState('');
+  const [disposition, setDisposition] = useState('0');
   const [factions, setFactions] = useState<NriFaction[]>([]);
   const [notes, setNotes] = useState('');
   const [sheet, setSheet] = useState<NriSheetData | null>(null);
@@ -105,6 +107,16 @@ export const NriNpcsPanel: React.FC<Props> = ({
     }
   };
 
+  const factionRefs: FactionRef[] = factions.map((f) => ({
+    id: f.id,
+    kind: f.kind,
+    name: f.name,
+    displayName: f.displayName,
+  }));
+
+  const resolveFactionId = (name: string) =>
+    factions.find((f) => f.name.trim().toLowerCase() === name.trim().toLowerCase())?.id;
+
   const generatePreview = () => {
     const skillErr = validateSkillPick(classId, pickedSkills);
     if (skillErr) {
@@ -120,7 +132,23 @@ export const NriNpcsPanel: React.FC<Props> = ({
       nickname: meta.nickname,
       skillProficiencies: pickedSkills,
     });
-    setSheet(built.sheet);
+    const factionId = resolveFactionId(factionName);
+    const tattoos = rollNpcTattoos(
+      {
+        originId,
+        activityId,
+        archetypeId,
+        factionId,
+        augmentations: built.sheet.augmentations,
+      },
+      factionRefs
+    );
+    setSheet({
+      ...built.sheet,
+      tattoos,
+      factionId,
+      disposition: Number.isFinite(Number(disposition)) ? Number(disposition) : 0,
+    });
     setMeta({ ...built.meta, npcArchetypeId: archetypeId });
     if (!name.trim()) setName(built.meta.characterName);
     setErr(null);
@@ -138,7 +166,26 @@ export const NriNpcsPanel: React.FC<Props> = ({
       return;
     }
     const base = sheet;
-    const finalSheet = applyMetaToSheet(base, { ...meta, characterName: npcName, npcArchetypeId: archetypeId });
+    const factionId = resolveFactionId(factionName) ?? base.factionId;
+    const finalSheet = applyMetaToSheet(base, {
+      ...meta,
+      characterName: npcName,
+      npcArchetypeId: archetypeId,
+    });
+    finalSheet.factionId = factionId;
+    finalSheet.disposition = Number.isFinite(Number(disposition)) ? Number(disposition) : finalSheet.disposition ?? 0;
+    if (!finalSheet.tattoos?.length) {
+      finalSheet.tattoos = rollNpcTattoos(
+        {
+          originId,
+          activityId,
+          archetypeId,
+          factionId,
+          augmentations: finalSheet.augmentations,
+        },
+        factionRefs
+      );
+    }
     setBusy(true);
     setErr(null);
     const created = await nriCreateNpc(authToken, inviteCode, {
@@ -275,6 +322,16 @@ export const NriNpcsPanel: React.FC<Props> = ({
               <option key={f.id} value={f.name} />
             ))}
           </datalist>
+        </label>
+        <label className="nri-modal__field">
+          <span>Базовое отношение к игрокам (−100…+100)</span>
+          <input
+            type="number"
+            min={-100}
+            max={100}
+            value={disposition}
+            onChange={(e) => setDisposition(e.target.value)}
+          />
         </label>
 
         <div className="nri-presets__actions">

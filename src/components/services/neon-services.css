@@ -4298,3 +4298,252 @@
 .nri-condition-list li {
   color: #ffcc88;
 }
+
+.nri-faction-relations__table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.nri-faction-relations__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.nri-faction-relations__table th,
+.nri-faction-relations__table td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.nri-faction-relations__toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 12px;
+}
+
+.nri-tattoo-pick__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 12px 0;
+}
+
+.nri-tattoo-pick__opt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.nri-tattoo-pick__opt.active {
+  border-color: rgba(0, 255, 200, 0.45);
+  background: rgba(0, 255, 200, 0.06);
+}
+
+.nri-tattoo-pick__opt input {
+  margin-right: 6px;
+}
+
+.neon-chat-disposition-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px 12px;
+}
+
+.neon-chat-channel-tabs__disposition.active {
+  color: #a5f3fc;
+  border-color: rgba(165, 243, 252, 0.45);
+}
+
+.nri-disposition-dash__head {
+  margin-bottom: 10px;
+}
+
+.nri-disposition-dash__pick {
+  max-width: 320px;
+  margin-bottom: 12px;
+}
+
+.nri-disposition-dash__summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.nri-disposition-dash__donut {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  grid-row: span 2;
+}
+
+.nri-disposition-dash__donut svg {
+  width: 100%;
+  height: 100%;
+}
+
+.nri-disposition-dash__donut-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.nri-disposition-dash__legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.78rem;
+}
+
+.nri-disposition-dash__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.nri-disposition-dash__legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.nri-disposition-dash__overview {
+  grid-column: 1 / -1;
+  overflow-x: auto;
+}
+
+.nri-disposition-chart {
+  width: 100%;
+  min-width: 280px;
+  height: auto;
+}
+
+.nri-disposition-chart__label,
+.nri-disposition-chart__score {
+  fill: rgba(255, 255, 255, 0.65);
+  font-size: 8px;
+}
+
+.nri-disposition-dash__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.nri-disposition-card {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.nri-disposition-card header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.nri-disposition-card__label {
+  margin: 4px 0 8px;
+  font-size: 0.78rem;
+}
+
+.nri-disposition-card__breakdown {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.nri-disposition-card__breakdown div {
+  display: flex;
+  gap: 4px;
+}
+
+.nri-disposition-card__breakdown dt {
+  opacity: 0.6;
+}
+
+.nri-disposition-card__breakdown dd {
+  margin: 0;
+}
+
+.nri-disposition-card__notes {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  font-size: 0.72rem;
+}
+
+.nri-disposition-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nri-disposition-bar__track {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.nri-disposition-bar__zero {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.nri-disposition-bar__fill {
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+.nri-disposition-bar__marker {
+  position: absolute;
+  top: -2px;
+  width: 3px;
+  height: 14px;
+  margin-left: -1px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.nri-disposition-bar__val {
+  min-width: 36px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.nri-disposition-dash__empty {
+  padding: 16px 8px;
+}

@@ -23,6 +23,15 @@ describe('nriSkillPick', () => {
     }
   });
 
+  it('class pools differ between fixer and hacker', () => {
+    const fixer = classSkillPool('fixer').options;
+    const hacker = classSkillPool('hacker').options;
+    expect(fixer).toContain('Stealth');
+    expect(hacker).toContain('Hacking');
+    expect(hacker).not.toContain('Stealth');
+    expect(fixer).not.toContain('Hacking');
+  });
+
   it('parses Russian skillsPick string', () => {
     const { pickCount, options } = parseClassSkillPool(
       '2 из Athletics, Stealth, Streetwise, Vehicles (Land)'

@@ -1,5 +1,6 @@
 /** Cyberware catalog + install */
 
+import type { NriPlayerProfile } from './players';
 import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
 
 const parseJson = nriParseJson;
@@ -19,7 +20,9 @@ export type NriCyberProduct = {
 };
 
 type CyberMutateResult = { ok: true; product: NriCyberProduct } | { ok: false; error: string };
-type CyberGrantResult = { ok: true; installed?: boolean } | { ok: false; error: string };
+type CyberGrantResult =
+  | { ok: true; installed?: boolean; needsHoloTattooPick?: boolean }
+  | { ok: false; error: string };
 
 export async function nriFetchCyberProducts(token: string, code: string): Promise<NriCyberProduct[] | null> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/cyber`, {
@@ -91,7 +94,7 @@ export async function nriGrantCyberProduct(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось выдать имплант') };
-  return { ok: true, installed: !!data.installed };
+  return { ok: true, installed: !!data.installed, needsHoloTattooPick: !!data.needsHoloTattooPick };
 }
 
 export async function nriGrantCyberProductToNpc(
@@ -111,7 +114,7 @@ export async function nriGrantCyberProductToNpc(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось выдать имплант НПС') };
-  return { ok: true, installed: !!data.installed };
+  return { ok: true, installed: !!data.installed, needsHoloTattooPick: !!data.needsHoloTattooPick };
 }
 
 export async function nriInstallCyberItem(
@@ -130,5 +133,44 @@ export async function nriInstallCyberItem(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось установить имплант') };
-  return { ok: true, installed: true };
+  return { ok: true, installed: true, needsHoloTattooPick: !!data.needsHoloTattooPick };
+}
+
+export type HoloTattooOption = {
+  id: string;
+  kind: string;
+  label: string;
+  blurb: string;
+  factionId?: string;
+};
+
+export async function nriFetchHoloTattooOptions(
+  token: string,
+  code: string
+): Promise<{ pending: boolean; options: HoloTattooOption[] } | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player/holo-tattoo/options`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return {
+    pending: !!data.pending,
+    options: Array.isArray(data.options) ? data.options : [],
+  };
+}
+
+export async function nriApplyHoloTattooPick(
+  token: string,
+  code: string,
+  optionId: string
+): Promise<{ ok: true; player: NriPlayerProfile } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player/holo-tattoo`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ optionId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось применить татуировку') };
+  if (!data.player) return { ok: false, error: 'Сервер не вернул профиль' };
+  return { ok: true, player: data.player as NriPlayerProfile };
 }

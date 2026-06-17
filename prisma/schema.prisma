@@ -53,6 +53,16 @@ model NriSession {
   scenarioProgress NriScenarioProgress?
   playerPositions NriPlayerPosition[]
   hostAlerts    NriHostAlert[]
+  factionRelations NriFactionRelationState?
+}
+
+/** Матрица отношений фракций — включается мастером в инструментах. */
+model NriFactionRelationState {
+  sessionId String     @id
+  session   NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  enabled   Boolean    @default(false)
+  edges     Json
+  updatedAt DateTime   @updatedAt
 }
 
 model NriSessionMember {

@@ -2,6 +2,7 @@
 import { getServerVehicleDef } from './nriVehiclesServer.js';
 import { formatFactionTitle, normalizeFactionKind, parseZoneKeys, } from './nriFactionKinds.js';
 import { patchMapZone } from './nriMapZones.js';
+import { parseFactionRelationMatrix } from '../../shared/nri-domain/factionRelations.js';
 function parseIdList(raw) {
     if (!Array.isArray(raw))
         return [];
@@ -230,11 +231,12 @@ export function mountNriLoreTravelRoutes(app, deps) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор доступен только мастеру.');
             }
-            const [world, factions, places, entriesRaw] = await Promise.all([
+            const [world, factions, places, entriesRaw, relationState] = await Promise.all([
                 prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } }),
                 prisma.nriFaction.findMany({ where: { sessionId: session.id }, orderBy: { name: 'asc' } }),
                 prisma.nriLorePlace.findMany({ where: { sessionId: session.id }, orderBy: { title: 'asc' } }),
                 prisma.nriLoreEntry.findMany({ where: { sessionId: session.id }, orderBy: { sortOrder: 'asc' } }),
+                prisma.nriFactionRelationState.findUnique({ where: { sessionId: session.id } }),
             ]);
             let entries = entriesRaw;
             if (entries.length === 0 && world?.body?.trim()) {
@@ -253,6 +255,9 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 entries: entries.map(serializeLoreEntry),
                 factions: factions.map(serializeFaction),
                 places: places.map(serializeLorePlace),
+                factionRelations: parseFactionRelationMatrix(relationState
+                    ? { enabled: relationState.enabled, edges: relationState.edges, updatedAt: relationState.updatedAt.getTime() }
+                    : null),
             });
         }
         catch (error) {
@@ -486,6 +491,83 @@ export function mountNriLoreTravelRoutes(app, deps) {
         catch (error) {
             console.error('nri/faction delete:', error);
             return sendApiError(res, 500, 'NRI_FACTION_DELETE_FAILED', 'Не удалось удалить фракцию.');
+        }
+    });
+    app.get('/neon_v1/services/nri/:code/lore/faction-relations', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Матрицу отношений видит только мастер.');
+            }
+            const state = await prisma.nriFactionRelationState.findUnique({ where: { sessionId: session.id } });
+            res.json({
+                factionRelations: parseFactionRelationMatrix(state
+                    ? { enabled: state.enabled, edges: state.edges, updatedAt: state.updatedAt.getTime() }
+                    : null),
+            });
+        }
+        catch (error) {
+            console.error('nri/faction-relations get:', error);
+            return sendApiError(res, 500, 'NRI_FACTION_REL_GET_FAILED', 'Не удалось загрузить отношения фракций.');
+        }
+    });
+    app.patch('/neon_v1/services/nri/:code/lore/faction-relations', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const { enabled, edges } = req.body;
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!me || !(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Отношения фракций настраивает только мастер.');
+            }
+            const prev = await prisma.nriFactionRelationState.findUnique({ where: { sessionId: session.id } });
+            const prevMatrix = parseFactionRelationMatrix(prev ? { enabled: prev.enabled, edges: prev.edges } : null);
+            const nextEdges = { ...prevMatrix.edges };
+            if (edges && typeof edges === 'object') {
+                for (const [k, v] of Object.entries(edges)) {
+                    if (v === 'allied' || v === 'neutral' || v === 'wary' || v === 'hostile') {
+                        nextEdges[k] = v;
+                    }
+                    else if (v === 'remove' || v === null) {
+                        delete nextEdges[k];
+                    }
+                }
+            }
+            const state = await prisma.nriFactionRelationState.upsert({
+                where: { sessionId: session.id },
+                create: {
+                    sessionId: session.id,
+                    enabled: enabled === true,
+                    edges: nextEdges,
+                },
+                update: {
+                    ...(typeof enabled === 'boolean' ? { enabled } : {}),
+                    edges: nextEdges,
+                },
+            });
+            res.json({
+                factionRelations: parseFactionRelationMatrix({
+                    enabled: state.enabled,
+                    edges: state.edges,
+                    updatedAt: state.updatedAt.getTime(),
+                }),
+            });
+        }
+        catch (error) {
+            console.error('nri/faction-relations patch:', error);
+            return sendApiError(res, 500, 'NRI_FACTION_REL_PATCH_FAILED', 'Не удалось сохранить отношения фракций.');
         }
     });
     app.patch('/neon_v1/services/nri/:code/lore/places/:placeId', async (req, res) => {

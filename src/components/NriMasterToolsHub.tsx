@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dices, MapPin, ScrollText, Skull, UserCircle, Users, AlertTriangle } from 'lucide-react';
+import { Dices, MapPin, Network, Skull, UserCircle, Users, AlertTriangle } from 'lucide-react';
 import type { NriRosterPlayer } from '../logic/nriApi';
 import { NriDicePanel } from './NriDicePanel';
 import { NriTacticalMapPanel } from './NriTacticalMapPanel';
@@ -7,6 +7,7 @@ import { NriMasterStatusPanel } from './NriMasterStatusPanel';
 import { NriPresetsPanel } from './NriPresetsPanel';
 import { NriNpcsPanel } from './NriNpcsPanel';
 import { NriCombatantsPanel } from './NriCombatantsPanel';
+import { NriFactionRelationsPanel } from './NriFactionRelationsPanel';
 import type { VaultRecipient } from './NriVaultTab';
 
 export type MasterToolsSection =
@@ -15,7 +16,8 @@ export type MasterToolsSection =
   | 'status'
   | 'gen_players'
   | 'gen_npcs'
-  | 'gen_combatants';
+  | 'gen_combatants'
+  | 'faction_relations';
 
 type Props = {
   inviteCode: string;
@@ -31,6 +33,7 @@ const SECTIONS: { id: MasterToolsSection; label: string; icon: React.ReactNode; 
   { id: 'tactical', label: 'Схема боя', icon: <MapPin size={13} />, group: 'стол' },
   { id: 'dice', label: 'Кубики', icon: <Dices size={13} />, group: 'стол' },
   { id: 'status', label: 'Статусы', icon: <AlertTriangle size={13} />, group: 'стол' },
+  { id: 'faction_relations', label: 'Фракции', icon: <Network size={13} />, group: 'стол' },
   { id: 'gen_players', label: 'Игроки', icon: <UserCircle size={13} />, group: 'ген' },
   { id: 'gen_npcs', label: 'НПС', icon: <Users size={13} />, group: 'ген' },
   { id: 'gen_combatants', label: 'Боевики', icon: <Skull size={13} />, group: 'ген' },
@@ -93,17 +96,11 @@ export const NriMasterToolsHub: React.FC<Props> = ({
             currentUserId={currentUserId}
           />
         )}
+        {section === 'faction_relations' && (
+          <NriFactionRelationsPanel inviteCode={inviteCode} authToken={authToken} />
+        )}
         {section === 'gen_players' && (
           <div className="nri-people-gen__block">
-            <header className="nri-chars__head">
-              <ScrollText size={16} />
-              <div>
-                <h3 className="mono-text">Персонажи для игроков</h3>
-                <p className="mono-text opacity-70">
-                  Черновики видны только мастеру. Опубликуйте — игрок выберет чарник при входе.
-                </p>
-              </div>
-            </header>
             <NriPresetsPanel inviteCode={inviteCode} mode="gen" />
           </div>
         )}

@@ -1,5 +1,7 @@
 /** Серверная установка киберимплантов (зеркало src/logic/nriCyberInstall.ts). */
 
+import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos.js';
+
 type InstalledAugmentation = {
   itemId: string;
   name: string;
@@ -70,6 +72,7 @@ export function tryInstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, it
       bloodTox?: number;
       powerDrawW?: number;
       powerWh?: number;
+      blueprint?: unknown;
     };
   };
   if (item.kind !== 'cyberware' || !item.cyber?.slot) {
@@ -115,12 +118,13 @@ export function tryInstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, it
   };
 
   inventory.splice(idx, 1);
-  const newSheet: AugmentedSheet = {
+  const installedSheet: AugmentedSheet = {
     ...sheet,
     augmentations: [...installed, aug],
     bloodToxCurrent: nextBt,
     bloodToxLimit: limit,
   };
+  const newSheet = markPendingHoloTattooAfterInstall(installedSheet, item);
 
   return { ok: true, sheet: newSheet, inventory };
 }

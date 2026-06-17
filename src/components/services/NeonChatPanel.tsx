@@ -17,7 +17,7 @@ import {
   type ChatRoomSummary,
   type ChatUser,
 } from '../../logic/chatApi';
-import type { NriNpc, NriPlayerProfile, NriVaultFile } from '../../logic/nriApi';
+import type { NriNpc, NriPlayerProfile, NriRosterPlayer, NriVaultFile } from '../../logic/nriApi';
 import { nriBroadcastItemTransfer } from '../../logic/nriApi';
 import { parseItemTransferPayload, nriItemStatsLine } from '../../logic/nriItemDisplay';
 import { SPAM_BOT_LABEL, SPAM_BOT_USERNAME, spamMessageVariant } from '../../logic/spamBotMeta';
@@ -25,8 +25,9 @@ import { NriFilePopup } from '../NriFilePopup';
 import { NriDmItemTransfer } from '../NriDmItemTransfer';
 import { NriHostAlertsStrip } from '../NriHostAlertsStrip';
 import { NriCharacterSheet } from '../NriCharacterSheet';
+import { NriDispositionDashboard } from '../NriDispositionDashboard';
 
-type TableChannel = 'table' | 'dm' | 'service' | 'tools';
+type TableChannel = 'table' | 'dm' | 'service' | 'tools' | 'disposition';
 
 type Props = {
   className?: string;
@@ -56,6 +57,7 @@ type Props = {
   onOpenWallet?: () => void;
   nriProfile?: NriPlayerProfile | null;
   tableNpcs?: NriNpc[];
+  tableRoster?: NriRosterPlayer[];
   onNriProfileUpdate?: (p: NriPlayerProfile) => void;
 };
 
@@ -231,6 +233,7 @@ export const NeonChatPanel: React.FC<Props> = ({
   onOpenWallet,
   nriProfile,
   tableNpcs = [],
+  tableRoster = [],
   onNriProfileUpdate,
 }) => {
   const { token, user } = useAuth();
@@ -825,6 +828,8 @@ export const NeonChatPanel: React.FC<Props> = ({
               ? 'Выбери собеседника'
               : tableChannel === 'service'
                 ? 'Служебные уведомления'
+                : tableChannel === 'disposition'
+                  ? 'Отношения НПС'
                 : tableChannel === 'tools'
                   ? 'Инструментарий мастера'
                   : tableChannel === 'dm' && activeDmLabel
@@ -891,11 +896,34 @@ export const NeonChatPanel: React.FC<Props> = ({
                   Служебные
                 </button>
               )}
+              {showHostServiceLog && authToken && (
+                <button
+                  type="button"
+                  className={`neon-chat-channel-tabs__disposition ${tableChannel === 'disposition' ? 'active' : ''}`}
+                  onClick={() => {
+                    setTableChannel('disposition');
+                    setActiveDmUserId(null);
+                    if (fixedRoomId) setActiveRoomId(fixedRoomId);
+                  }}
+                >
+                  Отношения
+                </button>
+              )}
             </nav>
             {tableChannel === 'tools' && hostToolsPanel}
             {tableChannel === 'service' && nriInviteCode && (
               <div className="neon-chat-service-log">
                 <NriHostAlertsStrip inviteCode={nriInviteCode} variant="chat" />
+              </div>
+            )}
+            {tableChannel === 'disposition' && nriInviteCode && authToken && (
+              <div className="neon-chat-disposition-log">
+                <NriDispositionDashboard
+                  inviteCode={nriInviteCode}
+                  authToken={authToken}
+                  roster={tableRoster}
+                  npcs={tableNpcs}
+                />
               </div>
             )}
             {tableChannel === 'dm' && !activeDmUserId && (

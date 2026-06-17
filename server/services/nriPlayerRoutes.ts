@@ -19,6 +19,11 @@ import {
   nriPlayerPatchSchema,
   nriPlayerSaveSchema,
 } from '../../shared/api-schemas/nri.js';
+import {
+  applyHoloTattooPick,
+  buildHoloTattooOptions,
+  type FactionRef,
+} from '../../shared/nri-domain/tattoos.js';
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -392,6 +397,84 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
     } catch (error) {
       console.error('nri/grant item:', error);
       return sendApiError(res, 500, 'NRI_GRANT_ERR', 'Не удалось выдать предмет.');
+    }
+  });
+
+  app.get('/neon_v1/services/nri/:code/player/holo-tattoo/options', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    try {
+      const session = await resolveSession(code);
+      if (!session || session.status !== 'open') {
+        return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+      }
+      const player = await prisma.nriPlayer.findUnique({
+        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+      });
+      if (!player) return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
+      const sheet =
+        player.sheet && typeof player.sheet === 'object' ? ({ ...(player.sheet as object) } as Record<string, unknown>) : {};
+      if (!sheet.pendingHoloTattoo) {
+        return res.json({ pending: false, options: [] });
+      }
+      const factions = await prisma.nriFaction.findMany({ where: { sessionId: session.id } });
+      const factionRefs: FactionRef[] = factions.map((f) => ({
+        id: f.id,
+        kind: f.kind,
+        name: f.name,
+      }));
+      const options = buildHoloTattooOptions(
+        { originId: typeof sheet.originId === 'string' ? sheet.originId : undefined },
+        factionRefs
+      );
+      res.json({ pending: true, options });
+    } catch (error) {
+      console.error('nri/holo-tattoo options:', error);
+      return sendApiError(res, 500, 'NRI_HOLO_TATTOO_OPTIONS', 'Не удалось загрузить варианты тату.');
+    }
+  });
+
+  app.post('/neon_v1/services/nri/:code/player/holo-tattoo', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const { optionId } = req.body as { optionId?: string };
+    if (typeof optionId !== 'string' || !optionId.trim()) {
+      return sendApiError(res, 400, 'NRI_HOLO_TATTOO_OPTION', 'Укажите optionId.');
+    }
+    try {
+      const session = await resolveSession(code);
+      if (!session || session.status !== 'open') {
+        return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+      }
+      const player = await prisma.nriPlayer.findUnique({
+        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+      });
+      if (!player) return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
+      const sheet =
+        player.sheet && typeof player.sheet === 'object' ? ({ ...(player.sheet as object) } as Record<string, unknown>) : {};
+      const factions = await prisma.nriFaction.findMany({ where: { sessionId: session.id } });
+      const factionRefs: FactionRef[] = factions.map((f) => ({
+        id: f.id,
+        kind: f.kind,
+        name: f.name,
+      }));
+      const options = buildHoloTattooOptions(
+        { originId: typeof sheet.originId === 'string' ? sheet.originId : undefined },
+        factionRefs
+      );
+      const result = applyHoloTattooPick(sheet, optionId.trim(), factionRefs, options);
+      if (!result.ok) return sendApiError(res, 400, 'NRI_HOLO_TATTOO_FAILED', result.reason);
+      if (rejectIfInvalidSheetConditions(res, result.sheet, sendApiError)) return;
+      const updated = await prisma.nriPlayer.update({
+        where: { id: player.id },
+        data: { sheet: result.sheet as object },
+      });
+      res.json({ ok: true, player: serializeNriPlayer(updated) });
+    } catch (error) {
+      console.error('nri/holo-tattoo post:', error);
+      return sendApiError(res, 500, 'NRI_HOLO_TATTOO_ERR', 'Не удалось применить татуировку.');
     }
   });
 }

@@ -19,6 +19,23 @@ if (!process.env.DATABASE_URL) {
 ensureDatabaseDirectory(defaultDbPath);
 console.log(`[NEON_BOOT] RESOLVED_DATABASE_URL: ${process.env.DATABASE_URL}`);
 console.log(`[NEON_BOOT] RESOLVED_FILE_PATH: ${defaultDbPath}`);
+/** Синхронизирует схему Prisma с SQLite (fallback при P3005 / отсутствующих таблицах). */
+function runDbPushSync() {
+    const prismaCli = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
+    if (!fs.existsSync(prismaCli))
+        return;
+    try {
+        execFileSync(process.execPath, [prismaCli, 'db', 'push', '--accept-data-loss'], {
+            cwd: process.cwd(),
+            env: { ...process.env },
+            stdio: 'inherit',
+        });
+        console.log('[NEON_BOOT] prisma db push: ok');
+    }
+    catch (e) {
+        console.error('[NEON_BOOT] prisma db push failed:', e);
+    }
+}
 /** Применяет миграции к SQLite на диске (/data на Amvera). Иначе старая БД без новых колонок ломает Prisma-запросы. */
 function runMigrateDeploySync() {
     const prismaCli = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
@@ -42,9 +59,11 @@ function runMigrateDeploySync() {
         const stderr = String(err.stderr ?? '');
         const prismaOutput = `${stdout}\n${stderr}\n${msg}`;
         // Existing production SQLite can be non-empty without migration history.
-        // In this case Prisma returns P3005; app can continue with runtime fallbacks.
+        // In this case Prisma returns P3005; sync schema via db push.
         if (prismaOutput.includes('P3005') || prismaOutput.includes('The database schema is not empty')) {
             console.warn('[NEON_BOOT] prisma migrate deploy skipped: P3005 (existing non-empty DB baseline)');
+            console.warn('[NEON_BOOT] applying schema via prisma db push…');
+            runDbPushSync();
             return;
         }
         console.error('[NEON_BOOT] prisma migrate deploy failed:', stderr || msg);
@@ -55,23 +74,7 @@ const adapter = new PrismaBetterSqlite3({
     url: `file:${defaultDbPath}`,
 });
 const prisma = new PrismaClient({ adapter });
-/** Если migrate deploy пропущен (P3005), новые таблицы НРИ могут отсутствовать — db push. */
-function runDbPushSync() {
-    const prismaCli = path.join(process.cwd(), 'node_modules', 'prisma', 'build', 'index.js');
-    if (!fs.existsSync(prismaCli))
-        return;
-    try {
-        execFileSync(process.execPath, [prismaCli, 'db', 'push', '--accept-data-loss'], {
-            cwd: process.cwd(),
-            env: { ...process.env },
-            stdio: 'inherit',
-        });
-        console.log('[NEON_BOOT] prisma db push: ok');
-    }
-    catch (e) {
-        console.error('[NEON_BOOT] prisma db push failed:', e);
-    }
-}
+/** Если после migrate/push всё ещё нет новых таблиц — точечный db push по probe. */
 async function ensureNriSchemaSync() {
     try {
         await prisma.nriPresetCharacter.findFirst({ select: { id: true } });

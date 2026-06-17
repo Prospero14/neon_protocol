@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { GameSyncPayload } from '../../shared/api-schemas/gameSync';
 import { readNeonAuthToken } from './authTokenStorage';
+import { sanitizeClientGameState } from './saveHydrationGuards';
 
 interface User {
   id: string;
@@ -29,7 +30,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(() => {
     try {
       const savedUser = localStorage.getItem('neon_user');
-      return savedUser ? (JSON.parse(savedUser) as User) : null;
+      if (!savedUser) return null;
+      const parsed = JSON.parse(savedUser) as User;
+      if (parsed.gameState) {
+        parsed.gameState = sanitizeClientGameState(parsed.gameState) ?? parsed.gameState;
+      }
+      return parsed;
     } catch {
       try {
         localStorage.removeItem('neon_user');
@@ -45,10 +51,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const login = (newToken: string, newUser: User) => {
+    const user: User = {
+      ...newUser,
+      gameState: newUser.gameState
+        ? sanitizeClientGameState(newUser.gameState) ?? newUser.gameState
+        : newUser.gameState,
+    };
     setToken(newToken);
-    setUser(newUser);
+    setUser(user);
     localStorage.setItem('neon_token', newToken);
-    localStorage.setItem('neon_user', JSON.stringify(newUser));
+    localStorage.setItem('neon_user', JSON.stringify(user));
   };
 
   const logout = () => {
@@ -92,7 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const updatedUser = {
         ...user!,
-        gameState: mergeGameStatePatch(user?.gameState, state),
+        gameState:
+          sanitizeClientGameState(mergeGameStatePatch(user?.gameState, state)) ??
+          mergeGameStatePatch(user?.gameState, state),
       };
       setUser(updatedUser);
       localStorage.setItem('neon_user', JSON.stringify(updatedUser));

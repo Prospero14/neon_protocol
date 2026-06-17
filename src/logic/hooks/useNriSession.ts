@@ -117,19 +117,11 @@ export function useNriSession({
     if (!nriCode) return;
     const authToken = readNeonAuthToken();
     if (!authToken) return;
-    void (async () => {
-      const data = await nriJoinSession(authToken, nriCode);
-      if (!data) return;
-      setSessionMode('nri');
-      setNriInviteCode(nriCode);
-      setCurrentView('NRI_LOBBY');
-      void syncGame({
-        sessionMode: 'nri',
-        nriInviteCode: nriCode,
-        currentView: 'NRI_LOBBY',
-      });
-    })();
-  }, [userId, setSessionMode, setCurrentView, syncGame]);
+    const timer = window.setTimeout(() => {
+      void enterNriLobby(nriCode);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [userId, enterNriLobby]);
 
   const nriGuestInviteCode = readNriGuestInviteCode();
 

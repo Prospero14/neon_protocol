@@ -6,6 +6,7 @@ import {
   asStringArray,
   hydrateDeckEntries,
   parseSolvedChainsStorage,
+  sanitizeClientGameState,
 } from './saveHydrationGuards';
 
 describe('saveHydrationGuards', () => {
@@ -36,5 +37,17 @@ describe('saveHydrationGuards', () => {
 
   it('asImplantList skips invalid implants', () => {
     expect(asImplantList([{ id: 'i1', battlesLeft: 3 }, { id: '' }])).toEqual([{ id: 'i1', battlesLeft: 3 }]);
+  });
+
+  it('sanitizeClientGameState repairs broken arrays', () => {
+    const out = sanitizeClientGameState({
+      sessionMode: 'coop',
+      coopYardCompletedMissionIds: 'bad',
+      traits: 'bad',
+      activeDeck: { id: 'x' },
+    });
+    expect(out?.coopYardCompletedMissionIds).toEqual([]);
+    expect(out?.traits).toEqual([]);
+    expect(out?.activeDeck).toEqual([]);
   });
 });

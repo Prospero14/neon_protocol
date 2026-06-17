@@ -34,9 +34,10 @@ export function bossTaskIdForTier(rank: SkillMode): string {
 
 /** Сколько обычных миссий тира уже закрыто (по id). */
 export function countCoopTierMissionsCleared(completedIds: string[], tierRank: SkillMode): number {
+  const ids = Array.isArray(completedIds) ? completedIds : [];
   const p = tierRankToMissionPrefix(tierRank);
   const re = new RegExp(`^coop_yard_${p}_\\d{3}$`);
-  return completedIds.filter((id) => re.test(id)).length;
+  return ids.filter((id) => re.test(id)).length;
 }
 
 export function coopMissionsRequiredForBoss(tierRank: SkillMode): number {

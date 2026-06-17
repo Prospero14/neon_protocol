@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../logic/AuthContext';
+import { readLandingNriInviteCode } from '../logic/nriFeatureFlags';
+import { nriFetchInfo } from '../logic/nriApi';
 
 export const AuthForm: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [nriInvite, setNriInvite] = useState<string | null>(() => readLandingNriInviteCode());
+    const [nriTitle, setNriTitle] = useState<string | null>(null);
     const { login } = useAuth();
+
+    useEffect(() => {
+        const code = readLandingNriInviteCode();
+        if (!code) return;
+        setNriInvite(code);
+        void nriFetchInfo(code).then((info) => {
+            if (info?.title) setNriTitle(info.title);
+        });
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -114,6 +127,23 @@ export const AuthForm: React.FC = () => {
                 }}>
                     {isLogin ? '[ ИНИЦИАЛИЗАЦИЯ_СЕССИИ ]' : '[ СОЗДАНИЕ_ЛИЧНОСТИ ]'}
                 </h2>
+
+                {nriInvite && (
+                    <div
+                        style={{
+                            marginTop: '1.25rem',
+                            padding: '0.85rem 1rem',
+                            border: '1px solid rgba(255,160,0,0.45)',
+                            background: 'rgba(255,128,0,0.08)',
+                            color: '#ffd9a0',
+                            fontSize: '0.82rem',
+                            lineHeight: 1.45,
+                        }}
+                    >
+                        Приглашение на стол <strong style={{ color: '#ffb347' }}>{nriInvite}</strong>
+                        {nriTitle ? ` — «${nriTitle}»` : ''}. Войдите — после входа откроется лобби НРИ.
+                    </div>
+                )}
                 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '2rem' }}>
                     <div className="form-group">

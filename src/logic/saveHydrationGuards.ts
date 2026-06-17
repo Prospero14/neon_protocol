@@ -1,6 +1,7 @@
 /** Безопасное чтение полей из gameState / localStorage (битые sync-снимки). */
 
 import type { QuestState } from './questEngine';
+import { normalizeCoopClassProfiles } from './coopClassProfiles';
 
 const QUEST_STATUSES = new Set(['available', 'active', 'ready_to_turn_in', 'completed', 'failed']);
 
@@ -77,4 +78,25 @@ export function hydrateDeckEntries(raw: unknown): Array<{ id: string }> {
     .filter((x) => x && typeof x === 'object' && !Array.isArray(x))
     .map((x) => ({ id: typeof (x as { id?: unknown }).id === 'string' ? (x as { id: string }).id : '' }))
     .filter((x) => x.id.length > 0);
+}
+
+/** Лёгкая нормализация gameState сразу после login / чтения localStorage. */
+export function sanitizeClientGameState(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const profiles = normalizeCoopClassProfiles(o.coopClassProfiles);
+  return {
+    ...o,
+    coopYardCompletedMissionIds: asStringArray(o.coopYardCompletedMissionIds),
+    traits: Array.isArray(o.traits) ? o.traits : [],
+    discoveredCardIds: asStringArray(o.discoveredCardIds),
+    completedQuests: asQuestStates(o.completedQuests),
+    installedImplants: asImplantList(o.installedImplants),
+    trustedNpcContacts: asStringArray(o.trustedNpcContacts),
+    barContactDistricts: asStringArray(o.barContactDistricts),
+    messengerFeed: Array.isArray(o.messengerFeed) ? o.messengerFeed : [],
+    activeDeck: hydrateDeckEntries(o.activeDeck),
+    inventory: hydrateDeckEntries(o.inventory),
+    coopClassProfiles: Object.keys(profiles).length > 0 ? profiles : o.coopClassProfiles,
+  };
 }

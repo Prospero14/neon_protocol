@@ -4,6 +4,7 @@ import type { NriClassId } from './nriClasses';
 import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
 import { NRI_NPC_ARCHETYPES, NRI_ORIGINS } from './nriCharacterGen';
 import { getC2185ClassTemplate } from './nriCarbon2185';
+import { careerSectorHint, type CareerSector } from './nriCareers';
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
@@ -159,7 +160,87 @@ const ACTIVITY_HOOKS: Record<NriActivityId, string[]> = {
   ],
 };
 
-/** Фрагменты по архетипу. */
+/** Фрагменты по классу. */
+const CLASS_HOOKS: Record<NriClassId, string[]> = {
+  detective: [
+    'привык собирать улики там, где камеры «случайно» глючат',
+    'умеет читать ложь по микродвижениям и паузам в разговоре',
+    'ведёт досье на пол-города — и на себя тоже',
+    'не верит совпадениям, только цепочкам фактов',
+    'знает, какие вопросы задают только следователи',
+  ],
+  merc: [
+    'считает дистанцию до укрытия быстрее, чем другие — шаги',
+    'не раз вытаскивал людей из перестрелок, о которых не пишут',
+    'помнит запах пороха сильнее, чем запах кофе',
+    'доверяет оружию, которое чистил сам',
+    'привык просыпаться от звука лифта',
+  ],
+  hacker: [
+    'видит в любом терминале дверь, а не экран',
+    'оставил цифровые шрамы в чужих сетях',
+    'спит с декой под подушкой — паранойя или привычка',
+    'знает, где ICE тоньше всего',
+    'не доверяет облакам и «бесплатным» прошивкам',
+  ],
+  doc: [
+    'видел слишком много тел, чтобы паниковать у крови',
+    'умеет шить без стерильной палаты и без света',
+    'знает, какие стимы убивают, а какие спасают',
+    'помнит лица пациентов, которых не смог удержать',
+    'носит в кармане инструмент, которого нет в каталоге',
+  ],
+  fixer: [
+    'сводит тех, кто не должен встречаться в одном кадре',
+    'берёт процент с каждой сделки — и с каждой ошибки',
+    'знает цену молчания в кредитах',
+    'никогда не называет всех заказчиков',
+    'умеет превратить проблему в контракт',
+  ],
+  daimyo: [
+    'привык, что комната затихает, когда он входит',
+    'несёт ответственность за людей, которых не выбирал',
+    'знает, как удержать клан ценой одного решения',
+    'не путает уважение со страхом — использует оба',
+    'помнит имена тех, кто предал первым',
+  ],
+};
+
+/** Фрагменты по сектору карьеры. */
+const SECTOR_HOOKS: Record<CareerSector, string[]> = {
+  corp: [
+    'привык к лифтам, бейджам и закрытым переговоркам',
+    'знает, как выглядит увольнение в одно письмо',
+    'подписывал документы, от которых ещё болит голова',
+    'имеет доступ туда, куда гражданских не пускают',
+  ],
+  private: [
+    'работает на контракт — и на совесть, когда платят',
+    'клиенты приходят по рекомендации, не по рекламе',
+    'не задаёт лишних вопросов, если депозит внесён',
+    'привык менять работодателя чаще, чем квартиру',
+  ],
+  state: [
+    'носил форму или бейдж города — и помнит устав',
+    'видел, как закон гнётся под заказ',
+    'знает, кому можно, а кому нельзя в NCPD',
+    'имеет досье, которое официально не существует',
+  ],
+  street: [
+    'зарабатывает там, где нет расписания и выходных',
+    'знает каждую камеру в радиусе трёх кварталов',
+    'не доверяет никому с чистыми ботинками',
+    'живёт на слухах быстрее, чем фид обновляет новости',
+  ],
+  underground: [
+    'должен тем, кто знает его настоящее имя',
+    'работает там, где нет квитанций и свидетелей',
+    'имеет связи, о которых не говорят вслух',
+    'однажды перешёл черту — и не нашёл обратной дороги',
+  ],
+};
+
+/** Фрагменты по архетипу (финал). */
 const ARCHETYPE_CLOSERS: Record<NriNpcArchetypeId, string[]> = {
   civilian: ['Сейчас ищет стабильности — или хотя бы тишины.', 'Хочет просто пережить следующую неделю.'],
   street_bum: ['Спит там, где не видят дроны.', 'Мечтает о горячей еде и чистой воде.'],
@@ -177,14 +258,18 @@ const ARCHETYPE_CLOSERS: Record<NriNpcArchetypeId, string[]> = {
 
 /** Дополнительные короткие биографии (уникальные шаблоны). */
 const EXTRA_TEMPLATES: string[] = [
-  '{name} — {arch} из {origin}. {originHook} Сейчас {activityHook} Класс {class}: {closer}',
-  'Родом из {origin}, {name} давно {activityHook} {originHook} Архетип: {arch}. {closer}',
-  '{name} ({class}) не говорит о прошлом в {origin}. {activityHook} {closer}',
-  'Кличка в кругу — отдельная история, но {name} из {origin} {originHook} {activityHook}',
-  'После сделки в {origin} {name} сменил имя, но не привычки. {activityHook} {closer}',
-  '{name}: {originHook}. По документам — {arch}, по факту — {activityHook}. {closer}',
-  'В досье значится: {name}, {origin}, класс {class}. Реальность проще: {activityHook} {closer}',
-  '{name} носит лицо {arch}, но корни тянутся в {origin}. {originHook} {closer}',
+  '{name} — {arch} из {origin}. {originHook} Работал как {career}: {classHook} Сейчас {activityHook} {closer}',
+  'Родом из {origin}, {name} давно {activityHook} {originHook} По специальности — {career}. {closer}',
+  '{name} ({class}) не говорит о годах в должности «{career}». {sectorHook} {activityHook} {closer}',
+  'Кличка в кругу — отдельная история, но {name} из {origin} {originHook} Карьера: {career}. {closer}',
+  'После сделки в {origin} {name} сменил имя, но не привычки {classHook} Был {career}. {closer}',
+  '{name}: {originHook}. По документам — {arch}, по факту — {career}. {activityHook} {closer}',
+  'В досье значится: {name}, {origin}, класс {class}. Реальность: {career}, {sectorHook} {closer}',
+  '{name} носит лицо {arch}, но корни тянутся в {origin}. {classHook} {activityHook} {closer}',
+  'Бывший {career} из {origin} — так {name} представляется редко. {originHook} {closer}',
+  '{name} ушёл из «{career}» не по своей воле. {sectorHook} Сейчас {activityHook} {closer}',
+  'В {origin} {name} научился выживать; как {career} — держать язык за зубами. {classHook} {closer}',
+  '{career} — не визитка, а шрам. {name} из {origin} {activityHook} {originHook} {closer}',
 ];
 
 function russianizeName(raw: string): string {
@@ -216,11 +301,14 @@ export function generateRichBackstory(params: {
   activityId: NriActivityId;
   archetypeId?: NriNpcArchetypeId;
   classId: NriClassId;
+  career?: string;
 }): string {
   const arch = params.archetypeId ?? 'civilian';
   const tpl = getC2185ClassTemplate(params.classId);
   const localizedName = russianizeName(params.name.trim() || 'Без имени');
   const display = params.nickname ? `${localizedName} «${params.nickname}»` : localizedName;
+  const career = params.career?.trim() || 'специалист без чёткой визитки';
+  const sector = careerSectorHint(career) ?? 'private';
   const template = pick(EXTRA_TEMPLATES);
   const closer = pick(ARCHETYPE_CLOSERS[arch]);
   return template
@@ -228,7 +316,10 @@ export function generateRichBackstory(params: {
     .replace(/\{origin\}/g, originLabel(params.originId))
     .replace(/\{arch\}/g, archetypeLabel(arch).toLowerCase())
     .replace(/\{class\}/g, tpl?.carbonName ?? params.classId)
+    .replace(/\{career\}/g, career)
     .replace(/\{originHook\}/g, pick(ORIGIN_HOOKS[params.originId]))
     .replace(/\{activityHook\}/g, pick(ACTIVITY_HOOKS[params.activityId]))
+    .replace(/\{classHook\}/g, pick(CLASS_HOOKS[params.classId]))
+    .replace(/\{sectorHook\}/g, pick(SECTOR_HOOKS[sector]))
     .replace(/\{closer\}/g, closer);
 }

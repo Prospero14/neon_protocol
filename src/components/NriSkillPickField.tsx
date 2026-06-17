@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { getNriClass, type NriClassId } from '../logic/nriClasses';
 import { classSkillPool, filterSkillsToClassPool } from '../logic/nriSkillPick';
+import { skillLabelRu } from '../logic/nriSkillLabels';
 
 type Props = {
   classId: NriClassId;
@@ -44,7 +45,7 @@ export const NriSkillPickField: React.FC<Props> = ({ classId, picked, onChange, 
                   disabled={disabled || full}
                   onChange={() => toggle(name)}
                 />
-                {name}
+                {skillLabelRu(name)}
               </label>
             </li>
           );

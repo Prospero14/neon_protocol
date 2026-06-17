@@ -1,6 +1,7 @@
-/** Имена и клички по происхождению / деятельности (Carbon 2185). */
+/** Имена и клички по происхождению / деятельности / классу (Carbon 2185). */
 
-import type { NriActivityId, NriOriginId } from './nriCharacterGen';
+import type { NriClassId } from './nriClasses';
+import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
 
@@ -72,8 +73,9 @@ const NICKNAME_BY_ACTIVITY: Record<NriActivityId, readonly string[]> = {
     'Лютая Смена', 'Кеды', 'Мелочь', 'Скам', 'Карман', 'Граффити', 'Ноль-Сдачи', 'Вендинг', 'Штраф', 'Параллель',
   ],
   corp: [
-    'Костюм', 'Протокол', 'Логотип', 'Бюджет', 'Слайд', 'Печать', 'Контракт', 'Акционер', 'KPI', 'Таблица',
-    'Согласовано', 'Срочный Колл', 'Премия', 'Ресурс', 'Апрув', 'Синк', 'План-Факт', 'Промежуточный', 'Скриптум', 'Овертайм',
+    'Костюм', 'Протокол', 'Логотип', 'Печать', 'Контракт', 'Акционер', 'Таблица',
+    'Согласовано', 'Срочный Колл', 'Скриптум', 'Овертайм', 'Досье', 'Штамп', 'Коридор',
+    'Этаж', 'Стекло', 'Лазурь', 'Бумажник', 'Лифт', 'Паркинг', 'Бейдж', 'Кабинет',
   ],
   military: [
     'Калибр', 'Осколок', 'Патрон', 'Штурм', 'Броня', 'Выстрел', 'Рубеж', 'Клин', 'Сапёр', 'Шомпол',
@@ -101,6 +103,48 @@ const NICKNAME_BY_ACTIVITY: Record<NriActivityId, readonly string[]> = {
   ],
 };
 
+const NICKNAME_BY_CLASS: Record<NriClassId, readonly string[]> = {
+  detective: [
+    'Шпиль', 'Лупа', 'Досье', 'Ночной', 'Следак', 'Дымка', 'Хвост', 'Сводка', 'Архив', 'След',
+    'Мокрый Плащ', 'Третий Этаж', 'Кадр', 'Сигнал', 'Тень на Лестнице', 'Пепельный', 'Субъект', 'Протокол-7',
+  ],
+  merc: [
+    'Калибр', 'Осколок', 'Патрон', 'Штурм', 'Броня', 'Выстрел', 'Рубеж', 'Клин', 'Сапёр', 'Шомпол',
+    'Рикошет', 'Гильза', 'Порох', 'Хриплый', 'Бастион', 'Сектор', 'Тревога', 'Сухпаёк',
+  ],
+  hacker: [
+    'Патч', 'Баг', 'Прошивка', 'Кэш', 'Порт', 'Дек', 'Сигнал', 'Бит', 'Лог', 'Скрипт',
+    'Пинг', 'Нулевой День', 'Драйвер', 'Ребут', 'Сокет', 'ТехДолг', 'Чёрный Экран', 'Бэкдор',
+  ],
+  doc: [
+    'Шов', 'Пульс', 'Сыворотка', 'Скальпель', 'Рентген', 'Шприц', 'Триаж', 'Пинцет', 'Санация', 'Наркоз',
+    'Гематома', 'Пластырь', 'Капельница', 'Реаниматор', 'Бинт', 'Белый Шум', 'Ремиссия', 'Шовный',
+  ],
+  fixer: [
+    'Сделка', 'Процент', 'Мост', 'Сводка', 'Контакт', 'Канал', 'Комиссия', 'Связной', 'Брокер', 'Счёт',
+    'Кошелёк', 'Переговоры', 'Схема', 'Посредник', 'Квитанция', 'Маршрут', 'Сейф', 'Код',
+  ],
+  daimyo: [
+    'Капитан', 'Клинок', 'Тотем', 'Штандарт', 'Кулак', 'Коготь', 'Клык', 'Смотрящий', 'Старший', 'Барьер',
+    'Щит', 'Удар', 'Рубеж', 'Клан', 'Знамя', 'Печать', 'Голос', 'Сталь',
+  ],
+};
+
+const NICKNAME_BY_ARCHETYPE: Partial<Record<NriNpcArchetypeId, readonly string[]>> = {
+  cop: ['Патруль', 'Участковый', 'Наряд', 'Сирена', 'Дежурный', 'Погоня', 'Рейд', 'Протокол'],
+  gang: ['Клык', 'Шрам', 'Метка', 'Крыша', 'Сбор', 'Район', 'Цепь', 'Кровь'],
+  netrunner: ['ICE', 'Пакет', 'Поток', 'Архив', 'Прокси', 'Туннель', 'Фрейм', 'Нуль'],
+  mercenary: ['Контракт', 'Депозит', 'Вылазка', 'Операция', 'Фронт', 'Отряд', 'Смена', 'Выстрел'],
+  ripperdoc: ['Резец', 'Шов', 'Имплант', 'Стериль', 'Клиника', 'Наркоз', 'Скальпель', 'Пластина'],
+  fixer: ['Сводка', 'Процент', 'Мост', 'Сделка', 'Канал', 'Контакт', 'Брокер', 'Счёт'],
+  corp_exec: ['Кабинет', 'Совет', 'Портфель', 'Акция', 'Этаж', 'Бейдж', 'Протокол', 'Повестка'],
+  street_bum: ['Угол', 'Картон', 'Пепел', 'Скамейка', 'Дождь', 'Теплотрасса', 'Миска', 'Тень'],
+  addict: ['Доза', 'Стим', 'Тремор', 'Синяк', 'Игла', 'Провал', 'Откат', 'Петля'],
+  merchant: ['Прилавок', 'Скидка', 'Весы', 'Чек', 'Товар', 'Склад', 'Касса', 'Обмен'],
+  robot: ['Юнит', 'Серийник', 'Прошивка', 'Корпус', 'Реле', 'Цикл', 'Модуль', 'Кадр'],
+  civilian: ['Сосед', 'Прохожий', 'Билет', 'Очередь', 'Маршрут', 'Квитанция', 'Пакет', 'Смена'],
+};
+
 const CULT_REFERENCE_BY_ACTIVITY: Partial<Record<NriActivityId, readonly string[]>> = {
   tech: ['Мотоко', 'Лейн', 'Гайвер', 'Кубрик', 'Киану'],
   street: ['Спайк', 'Вулф', 'Такеши', 'Рэмбо', 'Бельмондо'],
@@ -116,12 +160,29 @@ export function rollCharacterName(originId: NriOriginId = 'neo_tokyo'): string {
   return `${first} ${last}`;
 }
 
-/** Кличка / позывной по деятельности. */
-export function rollNickname(activityId: NriActivityId = 'street'): string {
-  const base = NICKNAME_BY_ACTIVITY[activityId] ?? NICKNAME_BY_ACTIVITY.street;
+export type RollNicknameParams = {
+  activityId?: NriActivityId;
+  classId?: NriClassId;
+  archetypeId?: NriNpcArchetypeId;
+};
+
+/** Кличка / позывной: приоритет классу и архетипу, без корпоративного жаргона. */
+export function rollNickname(activityOrParams: NriActivityId | RollNicknameParams = 'street'): string {
+  const params: RollNicknameParams =
+    typeof activityOrParams === 'string' ? { activityId: activityOrParams } : activityOrParams;
+  const activityId = params.activityId ?? 'street';
   const refs = CULT_REFERENCE_BY_ACTIVITY[activityId] ?? [];
-  if (refs.length > 0 && Math.random() < 0.2) return pick(refs);
-  return pick(base);
+  if (refs.length > 0 && Math.random() < 0.08) return pick(refs);
+
+  const roll = Math.random();
+  if (params.classId && roll < 0.45) {
+    return pick(NICKNAME_BY_CLASS[params.classId] ?? NICKNAME_BY_ACTIVITY[activityId]);
+  }
+  if (params.archetypeId && roll < 0.7) {
+    const arch = NICKNAME_BY_ARCHETYPE[params.archetypeId];
+    if (arch?.length) return pick(arch);
+  }
+  return pick(NICKNAME_BY_ACTIVITY[activityId] ?? NICKNAME_BY_ACTIVITY.street);
 }
 
 /** Имя + кличка в одной строке для листа. */

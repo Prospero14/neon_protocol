@@ -12,6 +12,7 @@ import { ensureCompleteSheet } from '../logic/nriCharacterGen';
 import { readWonlongs } from '../logic/nriWallet';
 import { parseAugmentedSheet, getBloodToxLimit } from '../logic/nriCyberInstall';
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
+import { abilityLabelRu, skillLabelRu } from '../logic/nriSkillLabels';
 import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
 import { applyConditionsToSheet } from '../logic/nriConditions';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
@@ -220,7 +221,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
                 <span className="nri-c2185-check">
                   {typeof sk.modifier === 'number' ? formatSignedMod(sk.modifier) : blank}
                 </span>
-                {sk.name} ({sk.ability})
+                {skillLabelRu(sk.name)} ({abilityLabelRu(sk.ability)})
                 {sk.proficient ? ' ★' : ''}
               </li>
             )

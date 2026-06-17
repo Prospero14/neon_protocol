@@ -2,6 +2,7 @@
 
 import type { NriClassId } from './nriClasses';
 import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
+import { careerSectorHint, type CareerSector } from './nriCareers';
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
@@ -15,6 +16,8 @@ const ORIGIN_OUTER: Record<NriOriginId, string[]> = {
     'Многослойный стритвир: оверсайз-худи и узкие штаны с рефлектором',
     'Корпоративный плащ без логотипа, но с дорогим кроем',
     'Плащевка от маглев-курьера, пропитанная кислотным дождём',
+    'Тренч с капюшоном — стиль частного сыщика Синдзюку',
+    'Жилет под курткой: мягкая броня, швы как у телохранителя',
   ],
   hong_kong: [
     'Вощёная куртка рыбака, пахнет солью и машинным маслом',
@@ -133,6 +136,49 @@ const ACTIVITY_LAYER: Record<NriActivityId, string[]> = {
   ],
 };
 
+const SECTOR_LAYER: Record<CareerSector, string[]> = {
+  corp: [
+    'Костюм без логотипа, но с идеальной посадкой',
+    'Пиджак с вшитым NFC и отключённым трекером',
+    'Бейдж на лацкане перевёрнут — не светить камерам',
+    'Туфли на удлинённом каблуке со скрытым клином',
+    'Галстук с микрофильтром от нейро-рекламы',
+    'Жилет под костюмом: мягкая броня уровня «совещание»',
+  ],
+  private: [
+    'Практичная куртка без опознавательных знаков',
+    'Карман под зашифрованный ключ и наличные',
+    'Ботинки, в которых можно и бежать, и входить в офис',
+    'Перчатки тонкие — для работы и для отпечатков',
+    'Шарф, закрывающий половину лица на встречах',
+    'Ремень с пустой кобурой — оружие не афишируют',
+  ],
+  state: [
+    'Китель или жилет с потёртым гербом города',
+    'Ремень тяжелее гражданского — привычка службы',
+    'Брюки со стрелками и карманом под рацию',
+    'Берет или кепка, выцветшая от дождя',
+    'Нашивка сорвана, но клей остался',
+    'Ботинки с металлическим носком, шнурки — трос',
+  ],
+  street: [
+    'Слои ткани — тепло и карманы важнее стиля',
+    'Кроссовки с тихой подошвой и грязью из переулка',
+    'Штаны с усиленными коленями и жетонами в кармане',
+    'Перчатки без пальцев — быстрый доступ к чипам',
+    'Шарф-бафф от камер и смога',
+    'Куртка с латками, каждая — своя история',
+  ],
+  underground: [
+    'Капюшон глубже, чем нужно для погоды',
+    'Перчатки без отпечатков, ношены дольше срока',
+    'Подкладка куртки сшита под пачки кредитов',
+    'Очки с зеркальными линзами — глаз не видно',
+    'Штаны с молнией на икре — быстрый доступ к ножу',
+    'Ворот поднят — меньше лиц в базе',
+  ],
+};
+
 const ARCHETYPE_ACCENT: Record<NriNpcArchetypeId, string[]> = {
   civilian: ['Ничего лишнего — выглядит как тысячи других в метро', 'Чистые ботинки, единственная роскошь'],
   street_bum: ['Слои грязной ткани, запах дыма и дешёвого спирта', 'Одеяло, свёрнутое в рюкзак'],
@@ -173,6 +219,8 @@ const TEMPLATES: string[] = [
   '{outer}; под ним — {layer}. {finish}',
   '{layer} Поверх — {outer}. {accent} {classFlair}',
   'Силуэт {activityTone}: {outer}, {layer}. {finish}',
+  '{careerTone}: {outer}. {sectorLayer} {accent}',
+  '{outer} — как у {careerTone}. {layer} {finish}',
 ];
 
 const ACTIVITY_TONE: Record<NriActivityId, string> = {
@@ -186,19 +234,31 @@ const ACTIVITY_TONE: Record<NriActivityId, string> = {
   nomad: 'кочевника',
 };
 
+const SECTOR_TONE: Record<CareerSector, string> = {
+  corp: 'корпоративного специалиста',
+  private: 'контрактника',
+  state: 'госслужащего',
+  street: 'районного выживальщика',
+  underground: 'теневого игрока',
+};
+
 export function generateRichClothing(params: {
   originId: NriOriginId;
   activityId: NriActivityId;
   archetypeId?: NriNpcArchetypeId;
   classId: NriClassId;
+  career?: string;
 }): string {
   const arch = params.archetypeId ?? 'civilian';
+  const sector = params.career ? careerSectorHint(params.career) : null;
   const tpl = pick(TEMPLATES);
   return tpl
     .replace(/\{outer\}/g, pick(ORIGIN_OUTER[params.originId]))
     .replace(/\{layer\}/g, pick(ACTIVITY_LAYER[params.activityId]))
+    .replace(/\{sectorLayer\}/g, pick(SECTOR_LAYER[sector ?? 'private']))
     .replace(/\{accent\}/g, pick(ARCHETYPE_ACCENT[arch]))
     .replace(/\{classFlair\}/g, pick(CLASS_FLAIR[params.classId]))
     .replace(/\{finish\}/g, pick(UNIVERSAL_FINISH))
-    .replace(/\{activityTone\}/g, ACTIVITY_TONE[params.activityId]);
+    .replace(/\{activityTone\}/g, ACTIVITY_TONE[params.activityId])
+    .replace(/\{careerTone\}/g, sector ? SECTOR_TONE[sector] : ACTIVITY_TONE[params.activityId]);
 }

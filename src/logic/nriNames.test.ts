@@ -21,6 +21,14 @@ describe('nriNames', () => {
   it('rollNickname returns non-empty for military', () => {
     expect(rollNickname('military').length).toBeGreaterThan(0);
   });
+
+  it('rollNickname prefers class-flavored callsigns', () => {
+    const samples = Array.from({ length: 24 }, () =>
+      rollNickname({ activityId: 'corp', classId: 'detective' })
+    );
+    expect(samples.some((s) => /Шпиль|Лупа|Досье|Следак/i.test(s))).toBe(true);
+    expect(samples.every((s) => !/^(KPI|Ресурс|Синк|Апрув)$/i.test(s))).toBe(true);
+  });
 });
 
 describe('nriBackstories', () => {
@@ -31,7 +39,7 @@ describe('nriBackstories', () => {
   });
 
   it('has large template pool', () => {
-    expect(getBackstoryPoolSize()).toBeGreaterThanOrEqual(8);
+    expect(getBackstoryPoolSize()).toBeGreaterThanOrEqual(12);
   });
 
   it('generates coherent backstory', () => {
@@ -42,8 +50,9 @@ describe('nriBackstories', () => {
       activityId: 'military',
       archetypeId: 'mercenary',
       classId: 'merc',
+      career: 'Ветеран корп-армии',
     });
     expect(text.length).toBeGreaterThan(40);
-    expect(text).toMatch(/Тест|Тень|Enforcer|наёмник|Москва/i);
+    expect(text).toMatch(/Тест|Тень|Enforcer|наёмник|Москва|Ветеран/i);
   });
 });

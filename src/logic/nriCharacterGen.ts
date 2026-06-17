@@ -25,6 +25,7 @@ import {
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';
 import { generateRichBackstory } from './nriBackstories';
+import { rollCareer } from './nriCareers';
 import { generateRichClothing } from './nriClothing';
 import { formatCharacterDisplayName, rollCharacterName, rollNickname } from './nriNames';
 import { rollViceD100 } from './nriVices100';
@@ -475,17 +476,6 @@ function archetypeLabel(id: NriNpcArchetypeId): string {
   return NRI_NPC_ARCHETYPES.find((a) => a.id === id)?.label ?? id;
 }
 
-const CAREER_BY_ACTIVITY: Record<NriActivityId, string[]> = {
-  street: ['Сборщик металлолома', 'Уличный музыкант', 'Вышибала', 'Курьер'],
-  corp: ['Менеджер среднего звена', 'Аналитик', 'Охрана объекта', 'HR-бот'],
-  military: ['Ветеран корп-армии', 'Частная охрана', 'Инструктор полигона'],
-  medical: ['Парамедик', 'Лаборант', 'Уличный док'],
-  criminal: ['Сборщик долгов', 'Взломщик', 'Контрабандист'],
-  tech: ['Техник сетей', 'Механик дронов', 'Сборщик кибердек'],
-  media: ['Блогер', 'Папарацци', 'Редактор фида'],
-  nomad: ['Водитель каравана', 'Скаут маршрута', 'Механик конвоя'],
-};
-
 function rollInfluence(activity: NriActivityId): { street: string; corp: string } {
   const d6 = () => Math.floor(Math.random() * 6) + 1;
   const base = { street: d6(), corp: d6() };
@@ -572,10 +562,16 @@ export function buildFullCharacter(params: {
   const base = buildSheetForClass(params.classId, abilities);
   const level = params.level ?? 1;
   const name = params.characterName?.trim() || rollCharacterName(params.originId);
-  const nickname = params.nickname?.trim() || rollNickname(params.activityId);
+  const nickname =
+    params.nickname?.trim() ||
+    rollNickname({ activityId: params.activityId, classId: params.classId, archetypeId: params.archetypeId });
   const displayName = formatCharacterDisplayName(name, nickname);
   const influence = rollInfluence(params.activityId);
-  const career = pick(CAREER_BY_ACTIVITY[params.activityId]);
+  const career = rollCareer({
+    classId: params.classId,
+    activityId: params.activityId,
+    archetypeId: params.archetypeId,
+  });
   const age = params.archetypeId ? rollAge(params.archetypeId) : rollAge('civilian');
   const yearsServed = rollYears(params.activityId);
   const backstory = generateRichBackstory({
@@ -585,12 +581,14 @@ export function buildFullCharacter(params: {
     activityId: params.activityId,
     archetypeId: params.archetypeId,
     classId: params.classId,
+    career,
   });
   const clothing = generateRichClothing({
     originId: params.originId,
     activityId: params.activityId,
     archetypeId: params.archetypeId,
     classId: params.classId,
+    career,
   });
   const bio = generateBio(params.originId, params.archetypeId, arch?.isRobot);
   const augmentations = generateAugmentations(params.archetypeId, params.classId);

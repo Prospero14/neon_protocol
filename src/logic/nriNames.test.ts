@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rollCharacterName, rollNickname, formatCharacterDisplayName } from './nriNames';
-import { generateRichBackstory, BACKSTORY_POOL_SIZE } from './nriBackstories';
+import { generateRichBackstory, getBackstoryPoolSize } from './nriBackstories';
 
 describe('nriNames', () => {
   it('generates Tokyo-flavored names', () => {
@@ -24,8 +24,14 @@ describe('nriNames', () => {
 });
 
 describe('nriBackstories', () => {
+  it('builds pool after nriCharacterGen module graph loads', async () => {
+    const mod = await import('./nriCharacterGen');
+    expect(mod.NRI_ORIGINS).toHaveLength(7);
+    expect(getBackstoryPoolSize()).toBeGreaterThanOrEqual(60);
+  });
+
   it('has large template pool', () => {
-    expect(BACKSTORY_POOL_SIZE).toBeGreaterThanOrEqual(60);
+    expect(getBackstoryPoolSize()).toBeGreaterThanOrEqual(60);
   });
 
   it('generates coherent backstory', () => {

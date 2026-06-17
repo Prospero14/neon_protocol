@@ -8,7 +8,7 @@ import {
   type NriOriginId,
 } from '../logic/nriCharacterGen';
 import { rollCharacterName, rollNickname } from '../logic/nriNames';
-import { BACKSTORY_POOL_SIZE } from '../logic/nriBackstories';
+import { getBackstoryPoolSize } from '../logic/nriBackstories';
 import { C2185_SKILLS } from '../logic/nriCarbon2185';
 import type { NriSheetData } from '../logic/nriNpcGenerator';
 
@@ -102,7 +102,7 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
         </select>
       </label>
       <p className="mono-text nri-meta-form__hint opacity-60">
-        В системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {BACKSTORY_POOL_SIZE}+.
+        В системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {getBackstoryPoolSize()}+.
       </p>
       <label className="nri-modal__field">
         <span>Карьера (текст)</span>

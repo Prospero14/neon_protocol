@@ -8,7 +8,7 @@ import { NriPresetsPanel } from './NriPresetsPanel';
 import { NriNpcsPanel } from './NriNpcsPanel';
 import { NriCombatantsPanel } from './NriCombatantsPanel';
 import { C2185_SKILLS } from '../logic/nriCarbon2185';
-import { BACKSTORY_POOL_SIZE } from '../logic/nriBackstories';
+import { getBackstoryPoolSize } from '../logic/nriBackstories';
 import type { VaultRecipient } from './NriVaultTab';
 
 export type MasterToolsSection =
@@ -102,7 +102,7 @@ export const NriMasterToolsHub: React.FC<Props> = ({
               <div>
                 <h3 className="mono-text">Персонажи для игроков</h3>
                 <p className="mono-text opacity-70">
-                  Всего в системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {BACKSTORY_POOL_SIZE}+.
+                  Всего в системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {getBackstoryPoolSize()}+.
                 </p>
               </div>
             </header>

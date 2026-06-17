@@ -186,8 +186,10 @@ const EXTRA_TEMPLATES: string[] = [
 
 function buildTemplatePool(): string[] {
   const pool = [...EXTRA_TEMPLATES];
-  for (const o of NRI_ORIGINS) {
-    for (const a of NRI_ACTIVITIES) {
+  const origins = Array.isArray(NRI_ORIGINS) ? NRI_ORIGINS : [];
+  const activities = Array.isArray(NRI_ACTIVITIES) ? NRI_ACTIVITIES : [];
+  for (const o of origins) {
+    for (const a of activities) {
       pool.push(
         `{name} из ${o.label}: ${pick(ORIGIN_HOOKS[o.id])} ${pick(ACTIVITY_HOOKS[a.id])} {closer}`
       );
@@ -196,7 +198,17 @@ function buildTemplatePool(): string[] {
   return pool;
 }
 
-const TEMPLATE_POOL = buildTemplatePool();
+let templatePoolCache: string[] | null = null;
+
+/** Ленивая инициализация: nriCharacterGen импортирует этот модуль до объявления NRI_ORIGINS. */
+function getTemplatePool(): string[] {
+  if (!templatePoolCache) templatePoolCache = buildTemplatePool();
+  return templatePoolCache;
+}
+
+export function getBackstoryPoolSize(): number {
+  return getTemplatePool().length;
+}
 
 export function generateRichBackstory(params: {
   name: string;
@@ -209,7 +221,7 @@ export function generateRichBackstory(params: {
   const arch = params.archetypeId ?? 'civilian';
   const tpl = getC2185ClassTemplate(params.classId);
   const display = params.nickname ? `${params.name} «${params.nickname}»` : params.name;
-  const template = pick(TEMPLATE_POOL);
+  const template = pick(getTemplatePool());
   const closer = pick(ARCHETYPE_CLOSERS[arch]);
   return template
     .replace(/\{name\}/g, display)
@@ -220,6 +232,3 @@ export function generateRichBackstory(params: {
     .replace(/\{activityHook\}/g, pick(ACTIVITY_HOOKS[params.activityId]))
     .replace(/\{closer\}/g, closer);
 }
-
-/** Количество уникальных комбинаций в пуле (для UI). */
-export const BACKSTORY_POOL_SIZE = TEMPLATE_POOL.length;

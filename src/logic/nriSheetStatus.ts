@@ -19,6 +19,7 @@ export function getSheetFieldStatuses(sheetRaw: unknown, classId: NriClassId): S
     { id: 'attacks', label: 'Атаки', done: (sheet?.attacks?.length ?? 0) > 0 },
     { id: 'bio', label: 'Происхождение / био', done: has(sheet?.origin) && has(sheet?.age) },
     { id: 'backstory', label: 'Бэкстори', done: has(sheet?.backstory) },
+    { id: 'clothing', label: 'Одежда', done: has(sheet?.clothing) },
     { id: 'vice', label: 'Vice', done: has(sheet?.vice) },
     { id: 'augmentations', label: 'Импланты', done: (sheet?.augmentations?.length ?? 0) > 0 },
     { id: 'equipment', label: 'Снаряжение', done: false },

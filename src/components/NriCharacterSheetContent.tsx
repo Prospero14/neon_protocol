@@ -248,6 +248,11 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       </section>
 
       <section className="nri-c2185-block">
+        <h4 className="nri-c2185-block__title">CLOTHING / ОДЕЖДА</h4>
+        <p className="mono-text nri-c2185-trait">{sheet?.clothing ?? blank}</p>
+      </section>
+
+      <section className="nri-c2185-block">
         <h4 className="nri-c2185-block__title">FEATURES AND TRAITS</h4>
         <ul className="nri-c2185-trait-list">
           {classFeatures.map((t) => (

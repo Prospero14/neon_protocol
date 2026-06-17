@@ -25,6 +25,7 @@ import {
 } from './nriNpcGenerator';
 import { enrichSheetCombat } from './nriSheetCombat';
 import { generateRichBackstory } from './nriBackstories';
+import { generateRichClothing } from './nriClothing';
 import { formatCharacterDisplayName, rollCharacterName, rollNickname } from './nriNames';
 import { rollViceD100 } from './nriVices100';
 import { defaultSkillsForClass } from './nriSkillPick';
@@ -142,6 +143,7 @@ export type CharacterMetaDraft = {
   streetInfluence?: string;
   corporateInfluence?: string;
   backstory?: string;
+  clothing?: string;
   npcArchetypeId?: NriNpcArchetypeId;
 };
 
@@ -546,7 +548,7 @@ export function generateBackstory(params: {
 
 export type FullCharacterBuild = {
   sheet: NriSheetData;
-  meta: Required<Pick<CharacterMetaDraft, 'characterName' | 'level' | 'age' | 'career' | 'yearsServed' | 'streetInfluence' | 'corporateInfluence' | 'backstory'>> & {
+  meta: Required<Pick<CharacterMetaDraft, 'characterName' | 'level' | 'age' | 'career' | 'yearsServed' | 'streetInfluence' | 'corporateInfluence' | 'backstory' | 'clothing'>> & {
     originId: NriOriginId;
     activityId: NriActivityId;
     npcArchetypeId?: NriNpcArchetypeId;
@@ -584,6 +586,12 @@ export function buildFullCharacter(params: {
     archetypeId: params.archetypeId,
     classId: params.classId,
   });
+  const clothing = generateRichClothing({
+    originId: params.originId,
+    activityId: params.activityId,
+    archetypeId: params.archetypeId,
+    classId: params.classId,
+  });
   const bio = generateBio(params.originId, params.archetypeId, arch?.isRobot);
   const augmentations = generateAugmentations(params.archetypeId, params.classId);
   const bloodToxCurrent = augmentations.reduce((s, a) => s + a.bloodTox, 0);
@@ -615,6 +623,7 @@ export function buildFullCharacter(params: {
       streetInfluence: influence.street,
       corporateInfluence: influence.corp,
       backstory,
+      clothing,
       vice,
       dr,
       xp: 0,
@@ -650,6 +659,7 @@ export function buildFullCharacter(params: {
       streetInfluence: influence.street,
       corporateInfluence: influence.corp,
       backstory,
+      clothing,
     },
   };
 }
@@ -699,6 +709,7 @@ export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft):
     streetInfluence: meta.streetInfluence ?? sheet.streetInfluence,
     corporateInfluence: meta.corporateInfluence ?? sheet.corporateInfluence,
     backstory: meta.backstory ?? sheet.backstory,
+    clothing: meta.clothing ?? sheet.clothing,
     proficiencyBonus: proficiencyForLevel(level),
   };
 }
@@ -716,6 +727,7 @@ export function sheetToMetaDraft(sheet: NriSheetData | null | undefined, fallbac
     streetInfluence: sheet?.streetInfluence,
     corporateInfluence: sheet?.corporateInfluence,
     backstory: sheet?.backstory,
+    clothing: sheet?.clothing,
   };
 }
 

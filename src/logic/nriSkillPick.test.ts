@@ -4,6 +4,7 @@ import { NRI_CLASSES } from './nriClasses';
 import {
   classSkillPool,
   defaultSkillsForClass,
+  filterSkillsToClassPool,
   parseClassSkillPool,
   validateSkillPick,
 } from './nriSkillPick';
@@ -37,6 +38,11 @@ describe('nriSkillPick', () => {
 
   it('rejects wrong count', () => {
     expect(validateSkillPick('merc', ['Athletics'])).toMatch(/ровно 2/);
+  });
+
+  it('filters skills outside class pool', () => {
+    expect(filterSkillsToClassPool('hacker', ['Bureaucracy', 'Hacking'])).toEqual(['Hacking']);
+    expect(filterSkillsToClassPool('detective', ['Athletics', 'Investigation'])).toEqual(['Investigation']);
   });
 
   it('rejects skill outside pool', () => {

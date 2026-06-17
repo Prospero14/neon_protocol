@@ -1,7 +1,6 @@
-import React from 'react';
-import { C2185_SKILLS } from '../logic/nriCarbon2185';
+import React, { useEffect } from 'react';
 import type { NriClassId } from '../logic/nriClasses';
-import { classSkillPool } from '../logic/nriSkillPick';
+import { classSkillPool, filterSkillsToClassPool } from '../logic/nriSkillPick';
 
 type Props = {
   classId: NriClassId;
@@ -12,6 +11,13 @@ type Props = {
 
 export const NriSkillPickField: React.FC<Props> = ({ classId, picked, onChange, disabled }) => {
   const { pickCount, options } = classSkillPool(classId);
+
+  useEffect(() => {
+    if (options.length === 0) return;
+    const filtered = filterSkillsToClassPool(classId, picked);
+    if (filtered.join('|') !== picked.join('|')) onChange(filtered);
+  }, [classId, options.length, picked, onChange]);
+
   if (options.length === 0) return null;
 
   const toggle = (name: string) => {
@@ -27,7 +33,7 @@ export const NriSkillPickField: React.FC<Props> = ({ classId, picked, onChange, 
   return (
     <div className="nri-skill-pick">
       <p className="mono-text nri-skill-pick__hint">
-        Всего в системе {C2185_SKILLS.length} навыков; класс выбирает {pickCount} из {options.length} своего пула.
+        Выберите {pickCount} навыка из пула класса ({options.length}).
       </p>
       <ul className="nri-skill-pick__list">
         {options.map((name) => {

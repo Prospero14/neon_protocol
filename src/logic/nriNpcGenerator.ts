@@ -24,6 +24,7 @@ export type NriSheetData = {
   streetInfluence?: string;
   corporateInfluence?: string;
   backstory?: string;
+  clothing?: string;
   npcArchetype?: string;
   xp?: number;
   wonlongs?: number;

@@ -269,6 +269,7 @@ export const NriCombatantsPanel: React.FC<Props> = ({ inviteCode }) => {
           <div className="nri-presets__wizard">
             <h4 className="mono-text">Проверьте лист перед сохранением</h4>
             <NriCharacterMetaForm
+              classId={classId}
               meta={{
                 ...meta,
                 originId,

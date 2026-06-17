@@ -46,3 +46,10 @@ export function defaultSkillsForClass(classId: NriClassId): string[] {
   const { pickCount, options } = classSkillPool(classId);
   return options.slice(0, pickCount);
 }
+
+/** Убирает навыки, не входящие в пул класса (после смены класса). */
+export function filterSkillsToClassPool(classId: NriClassId, picked: string[]): string[] {
+  const { options } = classSkillPool(classId);
+  const optSet = new Set(options);
+  return picked.filter((s) => optSet.has(s));
+}

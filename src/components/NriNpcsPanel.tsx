@@ -296,6 +296,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
           <div className="nri-presets__wizard">
             <h4 className="mono-text">Проверьте чарник перед сохранением</h4>
             <NriCharacterMetaForm
+              classId={classId}
               meta={{ ...meta, originId, activityId, npcArchetypeId: archetypeId }}
               sheet={sheet}
               onChange={(m) => {

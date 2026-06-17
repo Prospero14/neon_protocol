@@ -30,7 +30,7 @@ import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheetContent } from './NriCharacterSheetContent';
 import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriSkillPickField } from './NriSkillPickField';
-import { defaultSkillsForClass, validateSkillPick } from '../logic/nriSkillPick';
+import { defaultSkillsForClass, filterSkillsToClassPool, validateSkillPick } from '../logic/nriSkillPick';
 
 type Props = { inviteCode: string; mode?: 'full' | 'players' | 'gen' };
 
@@ -68,7 +68,6 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   const [editSheet, setEditSheet] = useState<NriSheetData | null>(null);
   const [editMeta, setEditMeta] = useState<CharacterMetaDraft>({});
   const [pendingPreset, setPendingPreset] = useState<PendingPreset | null>(null);
-  const [pickedSkills] = useState<string[]>(() => defaultSkillsForClass(DEFAULT_CLASS_ID));
   const [editSkills, setEditSkills] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
@@ -154,7 +153,9 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
       originId: origin ?? 'neo_tokyo',
       activityId: activity ?? 'street',
       archetypeId: archetypeForClass(cid),
-      skillProficiencies: skills,
+      skillProficiencies: filterSkillsToClassPool(cid, skills).length
+        ? filterSkillsToClassPool(cid, skills)
+        : defaultSkillsForClass(cid),
     });
     const seed = NRI_CLASS_SEEDS.find((s) => s.classId === cid);
     let sheet = built.sheet;
@@ -176,7 +177,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
 
   const startWizard = () => {
     setPendingPreset(
-      buildPendingPreset(DEFAULT_CLASS_ID, DEFAULT_META.originId ?? 'neo_tokyo', DEFAULT_META.activityId ?? 'street', pickedSkills)
+      buildPendingPreset(DEFAULT_CLASS_ID, DEFAULT_META.originId ?? 'neo_tokyo', DEFAULT_META.activityId ?? 'street', defaultSkillsForClass(DEFAULT_CLASS_ID))
     );
     setErr(null);
   };
@@ -188,14 +189,14 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
         pendingPreset.classId,
         pendingPreset.meta.originId ?? 'neo_tokyo',
         pendingPreset.meta.activityId ?? 'street',
-        pendingPreset.sheet.skillProficiencies ?? pickedSkills
+        pendingPreset.sheet.skillProficiencies ?? defaultSkillsForClass(pendingPreset.classId)
       )
     );
   };
 
   const savePending = async () => {
     if (!authToken || !pendingPreset) return;
-    const skills = pendingPreset.sheet.skillProficiencies ?? pickedSkills;
+    const skills = pendingPreset.sheet.skillProficiencies ?? defaultSkillsForClass(pendingPreset.classId);
     const skillErr = validateSkillPick(pendingPreset.classId, skills);
     if (skillErr) {
       setErr(skillErr);
@@ -271,7 +272,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
                       c.id,
                       pendingPreset.meta.originId ?? 'neo_tokyo',
                       pendingPreset.meta.activityId ?? 'street',
-                      pendingPreset.sheet.skillProficiencies ?? pickedSkills
+                      defaultSkillsForClass(c.id)
                     )
                   )
                 }
@@ -288,6 +289,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             />
           </label>
           <NriCharacterMetaForm
+            classId={pendingPreset.classId}
             meta={pendingPreset.meta}
             sheet={pendingPreset.sheet}
             onChange={(m) =>
@@ -421,6 +423,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             <input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
           </label>
           <NriCharacterMetaForm
+            classId={presets.find((x) => x.id === editId)?.classId as NriClassId}
             meta={editMeta}
             sheet={editSheet ?? undefined}
             onChange={(m) => {

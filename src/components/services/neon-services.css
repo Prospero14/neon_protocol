@@ -4278,6 +4278,10 @@
   gap: 8px;
 }
 
+.nri-meta-form__field-row--top {
+  align-items: flex-start;
+}
+
 .nri-meta-form__grow {
   flex: 1;
 }

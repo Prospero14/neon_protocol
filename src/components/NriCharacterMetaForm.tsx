@@ -3,13 +3,15 @@ import { Dices } from 'lucide-react';
 import {
   NRI_ACTIVITIES,
   NRI_ORIGINS,
+  archetypeForClass,
   type CharacterMetaDraft,
   type NriActivityId,
   type NriOriginId,
 } from '../logic/nriCharacterGen';
+import { generateRichBackstory } from '../logic/nriBackstories';
+import { generateRichClothing } from '../logic/nriClothing';
 import { rollCharacterName, rollNickname } from '../logic/nriNames';
-import { getBackstoryPoolSize } from '../logic/nriBackstories';
-import { C2185_SKILLS } from '../logic/nriCarbon2185';
+import type { NriClassId } from '../logic/nriClasses';
 import type { NriSheetData } from '../logic/nriNpcGenerator';
 
 type Props = {
@@ -17,15 +19,47 @@ type Props = {
   onChange: (next: CharacterMetaDraft) => void;
   sheet?: NriSheetData | null;
   showBackstory?: boolean;
+  classId?: NriClassId;
 };
 
-export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, showBackstory = true }) => {
+export const NriCharacterMetaForm: React.FC<Props> = ({
+  meta,
+  onChange,
+  sheet,
+  showBackstory = true,
+  classId,
+}) => {
   const set = <K extends keyof CharacterMetaDraft>(key: K, value: CharacterMetaDraft[K]) => {
     onChange({ ...meta, [key]: value });
   };
 
   const originId = meta.originId ?? 'neo_tokyo';
   const activityId = meta.activityId ?? 'street';
+
+  const rollBackstory = () => {
+    if (!classId) return;
+    const name = (meta.characterName ?? sheet?.characterName ?? '').trim() || 'Без имени';
+    const text = generateRichBackstory({
+      name,
+      nickname: meta.nickname ?? sheet?.nickname,
+      originId,
+      activityId,
+      archetypeId: meta.npcArchetypeId ?? archetypeForClass(classId),
+      classId,
+    });
+    set('backstory', text);
+  };
+
+  const rollClothing = () => {
+    if (!classId) return;
+    const text = generateRichClothing({
+      originId,
+      activityId,
+      archetypeId: meta.npcArchetypeId ?? archetypeForClass(classId),
+      classId,
+    });
+    set('clothing', text);
+  };
 
   return (
     <div className="nri-meta-form">
@@ -101,9 +135,6 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
           ))}
         </select>
       </label>
-      <p className="mono-text nri-meta-form__hint opacity-60">
-        В системе {C2185_SKILLS.length} навыков; класс выбирает 2 из своего пула. Биографий в генераторе: {getBackstoryPoolSize()}+.
-      </p>
       <label className="nri-modal__field">
         <span>Карьера (текст)</span>
         <input value={meta.career ?? sheet?.career ?? ''} onChange={(e) => set('career', e.target.value)} />
@@ -132,15 +163,46 @@ export const NriCharacterMetaForm: React.FC<Props> = ({ meta, onChange, sheet, s
         </label>
       </div>
       {showBackstory && (
-        <label className="nri-modal__field">
-          <span>Бэкстори</span>
-          <textarea
-            rows={4}
-            value={meta.backstory ?? sheet?.backstory ?? ''}
-            onChange={(e) => set('backstory', e.target.value)}
-          />
+        <label className="nri-meta-form__field-row nri-meta-form__field-row--top">
+          <span className="nri-modal__field nri-meta-form__grow">
+            <span>Бэкстори</span>
+            <textarea
+              rows={4}
+              value={meta.backstory ?? sheet?.backstory ?? ''}
+              onChange={(e) => set('backstory', e.target.value)}
+            />
+          </span>
+          <button
+            type="button"
+            className="nri-lobby__copy"
+            title="Сгенерировать бэкстори по происхождению, деятельности и классу"
+            disabled={!classId}
+            onClick={rollBackstory}
+          >
+            <Dices size={14} />
+          </button>
         </label>
       )}
+      <label className="nri-meta-form__field-row nri-meta-form__field-row--top">
+        <span className="nri-modal__field nri-meta-form__grow">
+          <span>Одежда</span>
+          <textarea
+            rows={3}
+            value={meta.clothing ?? sheet?.clothing ?? ''}
+            onChange={(e) => set('clothing', e.target.value)}
+            placeholder="Силуэт, слои, детали…"
+          />
+        </span>
+        <button
+          type="button"
+          className="nri-lobby__copy"
+          title="Сгенерировать описание одежды по происхождению, деятельности и архетипу"
+          disabled={!classId}
+          onClick={rollClothing}
+        >
+          <Dices size={14} />
+        </button>
+      </label>
     </div>
   );
 };

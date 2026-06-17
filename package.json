@@ -9,9 +9,9 @@
   "scripts": {
     "dev:client": "vite",
     "dev:server": "node --loader ts-node/esm server/index.ts",
-    "build": "npx vite build && npx tsc -p tsconfig.app.json --noEmit && npx tsc --project tsconfig.server.json",
-    "typecheck:client": "npx tsc -p tsconfig.app.json --noEmit",
-    "build:full": "npx prisma generate && npm run build",
+    "build": "node scripts/build.mjs",
+    "typecheck:client": "tsc -p tsconfig.app.json --noEmit",
+    "build:full": "node scripts/build.mjs --full",
     "start": "node dist_server/server/index.js",
     "lint": "eslint .",
     "check:npc-dialogues": "node scripts/check-npc-dialogue-coverage.mjs",

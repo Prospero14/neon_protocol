@@ -1,8 +1,6 @@
-import { readFileSync } from 'fs';
 import type { PrismaClient } from '@prisma/client';
-import { resolveSharedJsonPath } from '../sharedDataPath.js';
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
-import { ensureNriMapZoneIconColumn } from './nriFactionSchema.js';
+import { ensureNriMapSchema, loadZoneSeedFile, type ZoneSeed } from './nriSchemaBootstrap.js';
 
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 
@@ -51,27 +49,6 @@ export type MapZoneRow = {
   locked: boolean;
   pois: string[] | null;
 };
-
-type ZoneSeed = {
-  zoneKey: string;
-  sortOrder: number;
-  name: string;
-  zoneType: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  megaDistrict?: string;
-  corpName?: string;
-  locked?: boolean;
-  pois?: string[];
-};
-
-function loadZoneSeedFile(): ZoneSeed[] {
-  const p = resolveSharedJsonPath('nri-night-city-zones.json');
-  const raw = readFileSync(p, 'utf8');
-  return JSON.parse(raw) as ZoneSeed[];
-}
 
 function megaDistrictFor(zoneKey: string, stored: string | null | undefined): string | null {
   if (stored?.trim()) return stored.trim();
@@ -135,7 +112,7 @@ function seedRow(s: ZoneSeed) {
 }
 
 export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> {
-  await ensureNriMapZoneIconColumn(prisma);
+  await ensureNriMapSchema(prisma);
   const layoutRow = await prisma.nriMapZone.findUnique({ where: { zoneKey: '__layout__' } });
   const seeds = loadZoneSeedFile();
   const needsReseed = !layoutRow || layoutRow.name !== MAP_LAYOUT_VERSION;
@@ -180,7 +157,7 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
 }
 
 export async function listMapZones(prisma: PrismaClient) {
-  await ensureNriMapZoneIconColumn(prisma);
+  await ensureNriMapSchema(prisma);
   await ensureMapZonesSeeded(prisma);
   const rows = await prisma.nriMapZone.findMany({
     where: { zoneKey: { not: '__layout__' } },

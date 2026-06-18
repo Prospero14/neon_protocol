@@ -4,7 +4,7 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { ensureAllNriLoreDbColumns } from './nriFactionSchema.js';
+import { ensureAllNriLoreDbColumns } from './nriSchemaBootstrap.js';
 import { listMapZones } from './nriMapZones.js';
 
 describe('ensureAllNriLoreDbColumns', () => {

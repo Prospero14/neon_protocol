@@ -1,7 +1,5 @@
-import { readFileSync } from 'fs';
-import { resolveSharedJsonPath } from '../sharedDataPath.js';
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
-import { ensureNriMapZoneIconColumn } from './nriFactionSchema.js';
+import { ensureNriMapSchema, loadZoneSeedFile } from './nriSchemaBootstrap.js';
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 function megaKeyFromZoneKey(zoneKey) {
     if (zoneKey.startsWith('corp_'))
@@ -34,11 +32,6 @@ function normalizeZoneColor(raw) {
     if (!/^#[0-9a-fA-F]{6}$/.test(c))
         return undefined;
     return c.toLowerCase();
-}
-function loadZoneSeedFile() {
-    const p = resolveSharedJsonPath('nri-night-city-zones.json');
-    const raw = readFileSync(p, 'utf8');
-    return JSON.parse(raw);
 }
 function megaDistrictFor(zoneKey, stored) {
     if (stored?.trim())
@@ -84,7 +77,7 @@ function seedRow(s) {
     };
 }
 export async function ensureMapZonesSeeded(prisma) {
-    await ensureNriMapZoneIconColumn(prisma);
+    await ensureNriMapSchema(prisma);
     const layoutRow = await prisma.nriMapZone.findUnique({ where: { zoneKey: '__layout__' } });
     const seeds = loadZoneSeedFile();
     const needsReseed = !layoutRow || layoutRow.name !== MAP_LAYOUT_VERSION;
@@ -124,7 +117,7 @@ export async function ensureMapZonesSeeded(prisma) {
     }
 }
 export async function listMapZones(prisma) {
-    await ensureNriMapZoneIconColumn(prisma);
+    await ensureNriMapSchema(prisma);
     await ensureMapZonesSeeded(prisma);
     const rows = await prisma.nriMapZone.findMany({
         where: { zoneKey: { not: '__layout__' } },

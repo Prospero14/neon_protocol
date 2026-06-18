@@ -12,12 +12,7 @@ import {
 } from './nriFactionKinds.js';
 import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
 import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
-import {
-  ensureNriFactionSchema,
-  ensureNriLorePlaceExtras,
-  ensureNriMapZoneIconColumn,
-  ensureAllNriLoreDbColumns,
-} from './nriFactionSchema.js';
+import { ensureAllNriLoreDbColumns, apiErrorHint } from './nriSchemaBootstrap.js';
 import { parseFactionRelationMatrix } from '../../shared/nri-domain/factionRelations.js';
 import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards.js';
 import { isNriMember } from './nriMemberDb.js';
@@ -239,9 +234,8 @@ function placeSummaryFromZone(zone: { name: string; megaDistrict: string | null 
 }
 
 export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessionId: string) {
+  await ensureAllNriLoreDbColumns(prisma);
   await ensureMapZonesSeeded(prisma);
-  await ensureNriLorePlaceExtras(prisma);
-  await ensureNriMapZoneIconColumn(prisma);
   const zones = await prisma.nriMapZone.findMany({
     where: { NOT: { zoneKey: { startsWith: '__' } } },
     orderBy: { sortOrder: 'asc' },
@@ -295,8 +289,8 @@ export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessi
 
 /** Авто-фракции для корпоративных клеток карты. */
 export async function ensureSessionFactionsFromCorpZones(prisma: PrismaClient, sessionId: string) {
+  await ensureAllNriLoreDbColumns(prisma);
   await ensureMapZonesSeeded(prisma);
-  await ensureNriFactionSchema(prisma);
   const corpZones = await prisma.nriMapZone.findMany({
     where: { zoneType: 'corp', NOT: { zoneKey: { startsWith: '__' } } },
     orderBy: { sortOrder: 'asc' },
@@ -603,7 +597,8 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       });
     } catch (error) {
       console.error('nri/lore get:', error);
-      return sendApiError(res, 500, 'NRI_LORE_GET_FAILED', 'Не удалось загрузить лор.');
+      const hint = apiErrorHint(error);
+      return sendApiError(res, 500, 'NRI_LORE_GET_FAILED', hint || 'Не удалось загрузить лор.');
     }
   });
 
@@ -631,11 +626,25 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       } catch (syncErr) {
         console.error('nri/lore cards sync:', syncErr);
       }
-      const [places, factions, entriesRaw] = await Promise.all([
-        prisma.nriLorePlace.findMany({ where: { sessionId: session.id } }),
-        prisma.nriFaction.findMany({ where: { sessionId: session.id } }),
-        listLoreEntries(prisma, session.id),
-      ]);
+      let places: Awaited<ReturnType<typeof prisma.nriLorePlace.findMany>> = [];
+      let factions: Awaited<ReturnType<typeof prisma.nriFaction.findMany>> = [];
+      let entriesRaw: Awaited<ReturnType<typeof listLoreEntries>> = [];
+      try {
+        [places, factions, entriesRaw] = await Promise.all([
+          prisma.nriLorePlace.findMany({ where: { sessionId: session.id } }),
+          prisma.nriFaction.findMany({ where: { sessionId: session.id } }),
+          listLoreEntries(prisma, session.id),
+        ]);
+      } catch (loadErr) {
+        console.error('nri/lore cards load:', loadErr);
+        const hint = apiErrorHint(loadErr);
+        return sendApiError(
+          res,
+          500,
+          'NRI_LORE_CARDS_LOAD_FAILED',
+          hint || 'Не удалось прочитать карточки лора из БД.'
+        );
+      }
       const cards = buildLoreCardIndex({
         places: places.map(serializeLorePlace),
         factions: factions.map(serializeFaction),
@@ -644,7 +653,8 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       res.json({ cards });
     } catch (error) {
       console.error('nri/lore cards get:', error);
-      return sendApiError(res, 500, 'NRI_LORE_CARDS_FAILED', 'Не удалось загрузить карточки лора.');
+      const hint = apiErrorHint(error);
+      return sendApiError(res, 500, 'NRI_LORE_CARDS_FAILED', hint || 'Не удалось загрузить карточки лора.');
     }
   });
 
@@ -781,7 +791,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       if (!me || !(await requireHost(session, auth, me))) {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Фракции создаёт только мастер.');
       }
-      await ensureNriFactionSchema(prisma);
+      await ensureAllNriLoreDbColumns(prisma);
       const f = await prisma.nriFaction.create({
         data: {
           sessionId: session.id,

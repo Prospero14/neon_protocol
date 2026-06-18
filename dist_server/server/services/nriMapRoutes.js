@@ -2,7 +2,7 @@
 import { isNriMember } from './nriMemberDb.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
 import { ensureSessionLorePlacesFromMap, syncLorePlacesFromZonePatch, ensureSessionFactionsFromCorpZones, } from './nriLoreTravel.js';
-import { ensureAllNriLoreDbColumns } from './nriFactionSchema.js';
+import { ensureNriMapSchema, apiErrorHint } from './nriSchemaBootstrap.js';
 export function mountNriMapRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     function serializeMapMarker(m, ctx) {
@@ -69,7 +69,7 @@ export function mountNriMapRoutes(app, ctx) {
             if (!allowed) {
                 return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
             }
-            await ensureAllNriLoreDbColumns(prisma);
+            await ensureNriMapSchema(prisma);
             const zones = await listMapZones(prisma);
             if (session.hostUserId === me.id) {
                 try {
@@ -84,7 +84,8 @@ export function mountNriMapRoutes(app, ctx) {
         }
         catch (error) {
             console.error('nri/map zones get:', error);
-            return sendApiError(res, 500, 'NRI_MAP_ZONES_FAILED', 'Не удалось загрузить карту.');
+            const hint = apiErrorHint(error);
+            return sendApiError(res, 500, 'NRI_MAP_ZONES_FAILED', hint || 'Не удалось загрузить карту.');
         }
     });
     app.patch('/neon_v1/services/nri/:code/map/zones/:zoneKey', async (req, res) => {

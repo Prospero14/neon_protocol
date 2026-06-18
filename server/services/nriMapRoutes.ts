@@ -8,7 +8,7 @@ import {
   syncLorePlacesFromZonePatch,
   ensureSessionFactionsFromCorpZones,
 } from './nriLoreTravel.js';
-import { ensureAllNriLoreDbColumns } from './nriFactionSchema.js';
+import { ensureNriMapSchema, apiErrorHint } from './nriSchemaBootstrap.js';
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -111,7 +111,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       if (!allowed) {
         return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
       }
-      await ensureAllNriLoreDbColumns(prisma);
+      await ensureNriMapSchema(prisma);
       const zones = await listMapZones(prisma);
       if (session.hostUserId === me.id) {
         try {
@@ -124,7 +124,8 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       res.json({ zones, view: { w: 240, h: 165 } });
     } catch (error) {
       console.error('nri/map zones get:', error);
-      return sendApiError(res, 500, 'NRI_MAP_ZONES_FAILED', 'Не удалось загрузить карту.');
+      const hint = apiErrorHint(error);
+      return sendApiError(res, 500, 'NRI_MAP_ZONES_FAILED', hint || 'Не удалось загрузить карту.');
     }
   });
 

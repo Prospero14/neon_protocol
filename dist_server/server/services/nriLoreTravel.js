@@ -390,8 +390,13 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор доступен только мастеру.');
             }
             await ensureAllNriLoreDbColumns(prisma);
-            await ensureSessionLorePlacesFromMap(prisma, session.id);
-            await ensureSessionFactionsFromCorpZones(prisma, session.id);
+            try {
+                await ensureSessionLorePlacesFromMap(prisma, session.id);
+                await ensureSessionFactionsFromCorpZones(prisma, session.id);
+            }
+            catch (syncErr) {
+                console.error('nri/lore sync:', syncErr);
+            }
             const world = await prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } });
             let factions = [];
             try {
@@ -471,7 +476,12 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 return sendApiError(res, 403, 'NRI_LORE_CARDS_FORBIDDEN', 'Нет доступа к лору стола.');
             }
             await ensureAllNriLoreDbColumns(prisma);
-            await ensureSessionLorePlacesFromMap(prisma, session.id);
+            try {
+                await ensureSessionLorePlacesFromMap(prisma, session.id);
+            }
+            catch (syncErr) {
+                console.error('nri/lore cards sync:', syncErr);
+            }
             const [places, factions, entriesRaw] = await Promise.all([
                 prisma.nriLorePlace.findMany({ where: { sessionId: session.id } }),
                 prisma.nriFaction.findMany({ where: { sessionId: session.id } }),

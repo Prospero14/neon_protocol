@@ -73,7 +73,7 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
     } else {
       setErr(scenarioRes.error);
     }
-    if (zoneData) setZones(zoneData.zones);
+    if (zoneData.ok) setZones(zoneData.zones);
     if (npcList) setNpcs(npcList);
     if (vault) setFiles(vault);
     if (loreRes.ok) {

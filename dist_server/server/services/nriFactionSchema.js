@@ -1,42 +1,40 @@
-/** Runtime-гарантия колонок NriFaction (старые SQLite без migrate). */
-function isMissingFactionColumn(error) {
+/** Runtime-гарантия колонок NriFaction / карты / лора (старые SQLite без migrate). */
+import { ensureNriLoreEntryTable } from './nriLoreSchema.js';
+function isMissingSqliteColumn(error) {
     const msg = String(error?.message ?? error ?? '');
-    return /NriFaction|no such column|kind|zoneKeys/i.test(msg);
+    return /no such column|does not exist in the current database|Unknown column/i.test(msg);
+}
+async function addSqliteColumn(prisma, sql) {
+    try {
+        await prisma.$executeRawUnsafe(sql);
+    }
+    catch {
+        /* column already exists */
+    }
+}
+/** Идемпотентно добавляет все колонки, которые Prisma ожидает после последних миграций. */
+async function ensureNriLoreDbColumnsRaw(prisma) {
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "megaDistrict" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "color" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "iconId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriFaction" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'faction';`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriFaction" ADD COLUMN "zoneKeys" TEXT NOT NULL DEFAULT '[]';`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriFaction" ADD COLUMN "iconId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriFaction" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "entityTag" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "iconId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
 }
 export async function ensureNriFactionSchema(prisma) {
     try {
         await prisma.nriFaction.findFirst({
             select: { id: true, kind: true, zoneKeys: true, iconId: true, summary: true },
         });
-        return;
     }
     catch (error) {
-        if (!isMissingFactionColumn(error))
+        if (!isMissingSqliteColumn(error))
             throw error;
-    }
-    try {
-        await prisma.$executeRawUnsafe(`ALTER TABLE "NriFaction" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'faction';`);
-    }
-    catch {
-        /* already exists */
-    }
-    try {
-        await prisma.$executeRawUnsafe(`ALTER TABLE "NriFaction" ADD COLUMN "zoneKeys" TEXT NOT NULL DEFAULT '[]';`);
-    }
-    catch {
-        /* already exists */
-    }
-    try {
-        await prisma.$executeRawUnsafe(`ALTER TABLE "NriFaction" ADD COLUMN "iconId" TEXT;`);
-    }
-    catch {
-        /* already exists */
-    }
-    try {
-        await prisma.$executeRawUnsafe(`ALTER TABLE "NriFaction" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
-    }
-    catch {
-        /* already exists */
+        await ensureNriLoreDbColumnsRaw(prisma);
     }
 }
 export async function ensureNriMapZoneIconColumn(prisma) {
@@ -44,15 +42,9 @@ export async function ensureNriMapZoneIconColumn(prisma) {
         await prisma.nriMapZone.findFirst({ select: { zoneKey: true, iconId: true } });
     }
     catch (error) {
-        const msg = String(error?.message ?? error ?? '');
-        if (!/iconId|no such column/i.test(msg))
+        if (!isMissingSqliteColumn(error))
             throw error;
-        try {
-            await prisma.$executeRawUnsafe(`ALTER TABLE "NriMapZone" ADD COLUMN "iconId" TEXT;`);
-        }
-        catch {
-            /* already exists */
-        }
+        await ensureNriLoreDbColumnsRaw(prisma);
     }
 }
 export async function ensureNriLorePlaceExtras(prisma) {
@@ -62,35 +54,17 @@ export async function ensureNriLorePlaceExtras(prisma) {
         });
     }
     catch (error) {
-        const msg = String(error?.message ?? error ?? '');
-        if (!/entityTag|iconId|summary|no such column/i.test(msg))
+        if (!isMissingSqliteColumn(error))
             throw error;
-        try {
-            await prisma.$executeRawUnsafe(`ALTER TABLE "NriLorePlace" ADD COLUMN "entityTag" TEXT;`);
-        }
-        catch {
-            /* already exists */
-        }
-        try {
-            await prisma.$executeRawUnsafe(`ALTER TABLE "NriLorePlace" ADD COLUMN "iconId" TEXT;`);
-        }
-        catch {
-            /* already exists */
-        }
-        try {
-            await prisma.$executeRawUnsafe(`ALTER TABLE "NriLorePlace" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
-        }
-        catch {
-            /* already exists */
-        }
+        await ensureNriLoreDbColumnsRaw(prisma);
     }
 }
 /** Все runtime-колонки лора/карты — вызывать до Prisma-запросов на старых SQLite без migrate. */
 export async function ensureAllNriLoreDbColumns(prisma) {
+    await ensureNriLoreDbColumnsRaw(prisma);
+    await ensureNriLoreEntryTable(prisma);
     await ensureNriMapZoneIconColumn(prisma);
     await ensureNriFactionSchema(prisma);
     await ensureNriLorePlaceExtras(prisma);
-    const { ensureNriLoreEntryTable } = await import('./nriLoreSchema.js');
-    await ensureNriLoreEntryTable(prisma);
 }
 //# sourceMappingURL=nriFactionSchema.js.map

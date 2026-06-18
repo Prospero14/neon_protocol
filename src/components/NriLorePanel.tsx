@@ -73,7 +73,7 @@ export const NriLorePanel: React.FC<Props> = ({ inviteCode }) => {
       setFactions(lore.factions);
       setPlaces(lore.places);
     }
-    if (mapData?.zones) setMapZones(mapData.zones.filter((z) => !z.zoneKey.startsWith('__')));
+    if (mapData.ok) setMapZones(mapData.zones.filter((z) => !z.zoneKey.startsWith('__')));
     if (npcList) setNpcs(npcList);
     if (players) setRoster(players);
   }, [authToken, inviteCode]);

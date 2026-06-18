@@ -39,16 +39,23 @@ export type NriMapZone = {
 
 export type NriMapView = { w: number; h: number };
 
-export async function nriFetchMapZones(
-  token: string,
-  code: string
-): Promise<{ zones: NriMapZone[]; view: NriMapView } | null> {
+export type NriMapZonesResult =
+  | { ok: true; zones: NriMapZone[]; view: NriMapView }
+  | { ok: false; error: string };
+
+export async function nriFetchMapZones(token: string, code: string): Promise<NriMapZonesResult> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { zones: data.zones ?? [], view: data.view ?? { w: 240, h: 165 } };
+  const data = (await parseJson(res)) as Record<string, unknown>;
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось загрузить районы карты.') };
+  }
+  return {
+    ok: true,
+    zones: (data.zones ?? []) as NriMapZone[],
+    view: (data.view ?? { w: 240, h: 165 }) as NriMapView,
+  };
 }
 
 type MapZonePatchResult = { ok: true; zone: NriMapZone } | { ok: false; error: string };

@@ -151,8 +151,8 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const refreshZones = useCallback(async () => {
     if (!authToken) return;
     const data = await nriFetchMapZones(authToken, inviteCode);
-    if (!data) {
-      setErr('Не удалось загрузить районы карты. Обновите страницу после деплоя или перезапустите сервер.');
+    if (!data.ok) {
+      setErr(data.error);
       return;
     }
     if (data.zones.length === 0) {
@@ -418,7 +418,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     }
     if (payload.megaDistrict) {
       const data = await nriFetchMapZones(authToken, inviteCode);
-      if (data) {
+      if (data.ok) {
         setZones(data.zones);
         const hit = data.zones.find((z) => z.zoneKey === focusZone.zoneKey) ?? res.zone;
         setSelectedZoneKey(hit.zoneKey);

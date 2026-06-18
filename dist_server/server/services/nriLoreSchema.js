@@ -3,6 +3,10 @@ function isMissingLoreEntryTable(error) {
     const msg = String(error?.message ?? error ?? '');
     return /NriLoreEntry|no such table/i.test(msg);
 }
+function isMissingSqliteColumn(error) {
+    const msg = String(error?.message ?? error ?? '');
+    return /no such column|does not exist in the current database|Unknown column/i.test(msg);
+}
 export async function ensureNriLoreEntryTable(prisma) {
     try {
         await prisma.nriLoreEntry.findFirst({ select: { id: true, summary: true }, take: 1 });
@@ -10,8 +14,7 @@ export async function ensureNriLoreEntryTable(prisma) {
     }
     catch (error) {
         if (!isMissingLoreEntryTable(error)) {
-            const msg = String(error?.message ?? error ?? '');
-            if (/summary|no such column/i.test(msg)) {
+            if (isMissingSqliteColumn(error)) {
                 try {
                     await prisma.$executeRawUnsafe(`ALTER TABLE "NriLoreEntry" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
                 }

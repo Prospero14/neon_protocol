@@ -77,3 +77,12 @@ export async function ensureNriLorePlaceExtras(prisma: PrismaClient): Promise<vo
     }
   }
 }
+
+/** Все runtime-колонки лора/карты — вызывать до Prisma-запросов на старых SQLite без migrate. */
+export async function ensureAllNriLoreDbColumns(prisma: PrismaClient): Promise<void> {
+  await ensureNriMapZoneIconColumn(prisma);
+  await ensureNriFactionSchema(prisma);
+  await ensureNriLorePlaceExtras(prisma);
+  const { ensureNriLoreEntryTable } = await import('./nriLoreSchema.js');
+  await ensureNriLoreEntryTable(prisma);
+}

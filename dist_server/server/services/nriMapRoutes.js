@@ -2,6 +2,7 @@
 import { isNriMember } from './nriMemberDb.js';
 import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
 import { ensureSessionLorePlacesFromMap, syncLorePlacesFromZonePatch, ensureSessionFactionsFromCorpZones, } from './nriLoreTravel.js';
+import { ensureAllNriLoreDbColumns } from './nriFactionSchema.js';
 export function mountNriMapRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     function serializeMapMarker(m, ctx) {
@@ -68,10 +69,16 @@ export function mountNriMapRoutes(app, ctx) {
             if (!allowed) {
                 return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
             }
+            await ensureAllNriLoreDbColumns(prisma);
             const zones = await listMapZones(prisma);
             if (session.hostUserId === me.id) {
-                await ensureSessionLorePlacesFromMap(prisma, session.id);
-                await ensureSessionFactionsFromCorpZones(prisma, session.id);
+                try {
+                    await ensureSessionLorePlacesFromMap(prisma, session.id);
+                    await ensureSessionFactionsFromCorpZones(prisma, session.id);
+                }
+                catch (syncErr) {
+                    console.error('nri/map lore sync:', syncErr);
+                }
             }
             res.json({ zones, view: { w: 240, h: 165 } });
         }

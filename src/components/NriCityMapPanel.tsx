@@ -156,7 +156,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       return;
     }
     if (data.zones.length === 0) {
-      setErr('Карта пуста — на сервере не засеяны районы Night City.');
+      setErr('Карта пуста — на сервере не засеяны районы.');
     } else {
       setErr(null);
     }
@@ -512,7 +512,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       <header className="nri-city-map__head">
         <MapPin size={18} />
         <div>
-          <h2 className="nri-city-map__title">Найт-Сити · Carbon 2185</h2>
+          <h2 className="nri-city-map__title">Carbon 2185</h2>
           <p className="mono-text opacity-70">
             Клик по району — выбрать и приблизить · повторный клик — снять выделение.
             Колёсико — зум · ЛКМ — сдвиг.

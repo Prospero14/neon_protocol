@@ -3,7 +3,7 @@ import { getServerVehicleDef } from './nriVehiclesServer.js';
 import { formatFactionTitle, normalizeFactionKind, parseZoneKeys, } from './nriFactionKinds.js';
 import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
 import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
-import { ensureNriFactionSchema, ensureNriLorePlaceExtras, ensureNriMapZoneIconColumn, } from './nriFactionSchema.js';
+import { ensureNriFactionSchema, ensureNriLorePlaceExtras, ensureNriMapZoneIconColumn, ensureAllNriLoreDbColumns, } from './nriFactionSchema.js';
 import { parseFactionRelationMatrix } from '../../shared/nri-domain/factionRelations.js';
 import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards.js';
 import { isNriMember } from './nriMemberDb.js';
@@ -389,9 +389,7 @@ export function mountNriLoreTravelRoutes(app, deps) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Лор доступен только мастеру.');
             }
-            await ensureNriLoreEntryTable(prisma);
-            await ensureNriFactionSchema(prisma);
-            await ensureNriLorePlaceExtras(prisma);
+            await ensureAllNriLoreDbColumns(prisma);
             await ensureSessionLorePlacesFromMap(prisma, session.id);
             await ensureSessionFactionsFromCorpZones(prisma, session.id);
             const world = await prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } });
@@ -472,8 +470,7 @@ export function mountNriLoreTravelRoutes(app, deps) {
             if (!allowed) {
                 return sendApiError(res, 403, 'NRI_LORE_CARDS_FORBIDDEN', 'Нет доступа к лору стола.');
             }
-            await ensureNriLoreEntryTable(prisma);
-            await ensureNriFactionSchema(prisma);
+            await ensureAllNriLoreDbColumns(prisma);
             await ensureSessionLorePlacesFromMap(prisma, session.id);
             const [places, factions, entriesRaw] = await Promise.all([
                 prisma.nriLorePlace.findMany({ where: { sessionId: session.id } }),

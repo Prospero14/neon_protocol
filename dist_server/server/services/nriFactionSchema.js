@@ -85,4 +85,12 @@ export async function ensureNriLorePlaceExtras(prisma) {
         }
     }
 }
+/** Все runtime-колонки лора/карты — вызывать до Prisma-запросов на старых SQLite без migrate. */
+export async function ensureAllNriLoreDbColumns(prisma) {
+    await ensureNriMapZoneIconColumn(prisma);
+    await ensureNriFactionSchema(prisma);
+    await ensureNriLorePlaceExtras(prisma);
+    const { ensureNriLoreEntryTable } = await import('./nriLoreSchema.js');
+    await ensureNriLoreEntryTable(prisma);
+}
 //# sourceMappingURL=nriFactionSchema.js.map

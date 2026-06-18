@@ -8,6 +8,7 @@ import {
   syncLorePlacesFromZonePatch,
   ensureSessionFactionsFromCorpZones,
 } from './nriLoreTravel.js';
+import { ensureAllNriLoreDbColumns } from './nriFactionSchema.js';
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -110,10 +111,15 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       if (!allowed) {
         return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
       }
+      await ensureAllNriLoreDbColumns(prisma);
       const zones = await listMapZones(prisma);
       if (session.hostUserId === me.id) {
-        await ensureSessionLorePlacesFromMap(prisma, session.id);
-        await ensureSessionFactionsFromCorpZones(prisma, session.id);
+        try {
+          await ensureSessionLorePlacesFromMap(prisma, session.id);
+          await ensureSessionFactionsFromCorpZones(prisma, session.id);
+        } catch (syncErr) {
+          console.error('nri/map lore sync:', syncErr);
+        }
       }
       res.json({ zones, view: { w: 240, h: 165 } });
     } catch (error) {

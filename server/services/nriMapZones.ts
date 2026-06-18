@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import type { PrismaClient } from '@prisma/client';
 import { resolveSharedJsonPath } from '../sharedDataPath.js';
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
+import { ensureNriMapZoneIconColumn } from './nriFactionSchema.js';
 
 export const MAP_LAYOUT_VERSION = 'v4-canon-ru';
 
@@ -134,6 +135,7 @@ function seedRow(s: ZoneSeed) {
 }
 
 export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> {
+  await ensureNriMapZoneIconColumn(prisma);
   const layoutRow = await prisma.nriMapZone.findUnique({ where: { zoneKey: '__layout__' } });
   const seeds = loadZoneSeedFile();
   const needsReseed = !layoutRow || layoutRow.name !== MAP_LAYOUT_VERSION;
@@ -178,6 +180,7 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
 }
 
 export async function listMapZones(prisma: PrismaClient) {
+  await ensureNriMapZoneIconColumn(prisma);
   await ensureMapZonesSeeded(prisma);
   const rows = await prisma.nriMapZone.findMany({
     where: { zoneKey: { not: '__layout__' } },

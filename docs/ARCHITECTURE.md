@@ -125,10 +125,13 @@ neon_protocol/
 
 ### 4.3 NRI (настольный Carbon 2185)
 
+> **Операционный гайд:** типовые ошибки, деплой, save/sync, лор/карта — [`DEV_COOKBOOK.md` §7](../DEV_COOKBOOK.md#7-nri-настольный-стол-carbon-2185).
+
 - Сессия стола: `NriSession`, invite code, host/admin.
 - Игроки: `NriPlayer` (лист JSON + инвентарь).
 - Мастер: пресеты, НПС, боевики, карта, сценарий, vault, инструменты (схема, кубики, статусы, генерация).
-- API: `server/services/nriService.ts` ↔ `src/logic/nriApi.ts`.
+- API: `server/services/nriService.ts` (mount) ↔ `src/logic/nriApi/`.
+- Лор/карта: `nriLoreTravel.ts`, `nriMapRoutes.ts`, `shared/nri-domain/loreCards.ts`, `loreMarkup.ts`.
 - Правила: `nriCarbon2185.ts`, вкладки в `NriRulesPanel`.
 - Предметы: `shared/nri-item-catalog.json`, эффекты расходников — `shared/nri-consume-effects.json`.
 
@@ -314,4 +317,4 @@ flowchart TB
   Api --> Chat
 ```
 
-*Последнее обновление: 2026-06 — после вкладки МАСТЕР, статусов, consume-effects.*
+*Последнее обновление: 2026-06 — NRI лор/карта, lore/cards, schema bootstrap; см. DEV_COOKBOOK §7.*

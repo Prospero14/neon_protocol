@@ -100,6 +100,25 @@ async function ensureNriLoreDbColumnsRaw(prisma: PrismaClient): Promise<void> {
   await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "sourceFactionId" TEXT;`);
 }
 
+/** Починка NULL/пустых JSON-полей — иначе Prisma findMany падает на старых строках. */
+export async function repairNriFactionJsonColumns(prisma: PrismaClient): Promise<void> {
+  const fixes = [
+    `UPDATE "NriFaction" SET "memberPlayerIds" = '[]' WHERE "memberPlayerIds" IS NULL OR TRIM("memberPlayerIds") = '';`,
+    `UPDATE "NriFaction" SET "memberNpcIds" = '[]' WHERE "memberNpcIds" IS NULL OR TRIM("memberNpcIds") = '';`,
+    `UPDATE "NriFaction" SET "zoneKeys" = '[]' WHERE "zoneKeys" IS NULL OR TRIM("zoneKeys") = '';`,
+    `UPDATE "NriFaction" SET "kind" = 'faction' WHERE "kind" IS NULL OR TRIM("kind") = '';`,
+    `UPDATE "NriFaction" SET "summary" = '' WHERE "summary" IS NULL;`,
+    `UPDATE "NriFaction" SET "description" = '' WHERE "description" IS NULL;`,
+  ];
+  for (const sql of fixes) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+    } catch {
+      /* column may not exist yet */
+    }
+  }
+}
+
 /** Минимум для GET /map/zones — не трогает лор-таблицы. */
 export async function ensureNriMapSchema(prisma: PrismaClient): Promise<void> {
   await ensureNriMapZoneTable(prisma);
@@ -116,6 +135,7 @@ export async function ensureAllNriLoreDbColumns(prisma: PrismaClient): Promise<v
     { name: 'NriLorePlace table', run: () => ensureNriLorePlaceTable(prisma) },
     { name: 'NriLoreEntry table', run: () => ensureNriLoreEntryTable(prisma) },
     { name: 'lore columns', run: () => ensureNriLoreDbColumnsRaw(prisma) },
+    { name: 'faction json repair', run: () => repairNriFactionJsonColumns(prisma) },
   ];
   for (const step of steps) {
     try {

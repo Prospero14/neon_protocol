@@ -4,7 +4,7 @@ import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { ensureAllNriLoreDbColumns } from './nriSchemaBootstrap.js';
+import { ensureAllNriLoreDbColumns, repairNriFactionJsonColumns } from './nriSchemaBootstrap.js';
 import { listMapZones } from './nriMapZones.js';
 
 describe('ensureAllNriLoreDbColumns', () => {
@@ -70,5 +70,20 @@ describe('ensureAllNriLoreDbColumns', () => {
     await ensureAllNriLoreDbColumns(prisma);
     const zones = await listMapZones(prisma);
     expect(zones.length).toBeGreaterThan(0);
+  });
+
+  it('repairs empty JSON columns so findMany succeeds', async () => {
+    await ensureAllNriLoreDbColumns(prisma);
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "NriFaction" (
+        "id", "sessionId", "name", "description", "memberPlayerIds", "memberNpcIds", "updatedAt"
+      ) VALUES (
+        'f1', 'sess1', 'Test Corp', '', '', '', CURRENT_TIMESTAMP
+      );
+    `);
+    await repairNriFactionJsonColumns(prisma);
+    const rows = await prisma.nriFaction.findMany({ where: { sessionId: 'sess1' } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.memberPlayerIds).toEqual([]);
   });
 });

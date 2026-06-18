@@ -132,6 +132,46 @@ function placeSummaryFromZone(zone) {
     const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
     return `${mega}${zone.name}`;
 }
+async function loadLorePlacesResilient(prisma, sessionId) {
+    const run = () => prisma.nriLorePlace.findMany({
+        where: { sessionId },
+        orderBy: { title: 'asc' },
+    });
+    try {
+        return await run();
+    }
+    catch (error) {
+        console.error('lore places:', error);
+        await ensureAllNriLoreDbColumns(prisma);
+        try {
+            return await run();
+        }
+        catch (retryErr) {
+            console.error('lore places retry:', retryErr);
+            return [];
+        }
+    }
+}
+async function loadLoreFactionsResilient(prisma, sessionId) {
+    const run = () => prisma.nriFaction.findMany({
+        where: { sessionId },
+        orderBy: { name: 'asc' },
+    });
+    try {
+        return await run();
+    }
+    catch (error) {
+        console.error('lore factions:', error);
+        await ensureAllNriLoreDbColumns(prisma);
+        try {
+            return await run();
+        }
+        catch (retryErr) {
+            console.error('lore factions retry:', retryErr);
+            return [];
+        }
+    }
+}
 /** Читает источники карточек для чата — каждый список независимо, без синка карты. */
 async function loadLoreCardBundle(prisma, sessionId) {
     await ensureAllNriLoreDbColumns(prisma);
@@ -139,19 +179,13 @@ async function loadLoreCardBundle(prisma, sessionId) {
     let factions = [];
     let entries = [];
     try {
-        places = await prisma.nriLorePlace.findMany({
-            where: { sessionId },
-            orderBy: { title: 'asc' },
-        });
+        places = await loadLorePlacesResilient(prisma, sessionId);
     }
     catch (error) {
         console.error('lore/cards places:', error);
     }
     try {
-        factions = await prisma.nriFaction.findMany({
-            where: { sessionId },
-            orderBy: { name: 'asc' },
-        });
+        factions = await loadLoreFactionsResilient(prisma, sessionId);
     }
     catch (error) {
         console.error('lore/cards factions:', error);
@@ -429,22 +463,7 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 console.error('nri/lore sync:', syncErr);
             }
             const world = await prisma.nriLoreWorld.findUnique({ where: { sessionId: session.id } });
-            let factions = [];
-            try {
-                factions = await prisma.nriFaction.findMany({
-                    where: { sessionId: session.id },
-                    orderBy: { name: 'asc' },
-                });
-            }
-            catch (factionErr) {
-                console.error('nri/lore factions:', factionErr);
-                return sendApiError(res, 500, 'NRI_FACTION_SCHEMA', 'Таблица фракций устарела — перезапустите сервер или выполните migrate.');
-            }
-            const places = await prisma.nriLorePlace.findMany({
-                where: { sessionId: session.id },
-                orderBy: { title: 'asc' },
-            });
-            let entriesRaw = await listLoreEntries(prisma, session.id);
+            const { places, factions, entries: entriesRaw } = await loadLoreCardBundle(prisma, session.id);
             let relationState = null;
             try {
                 relationState = await prisma.nriFactionRelationState.findUnique({

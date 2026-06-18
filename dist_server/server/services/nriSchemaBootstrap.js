@@ -100,13 +100,23 @@ export async function ensureNriMapSchema(prisma) {
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "color" TEXT;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "iconId" TEXT;`);
 }
-/** Полный bootstrap лора + карты. */
+/** Полный bootstrap лора + карты (не бросает — логирует сбой шага). */
 export async function ensureAllNriLoreDbColumns(prisma) {
-    await ensureNriMapZoneTable(prisma);
-    await ensureNriFactionTable(prisma);
-    await ensureNriLorePlaceTable(prisma);
-    await ensureNriLoreEntryTable(prisma);
-    await ensureNriLoreDbColumnsRaw(prisma);
+    const steps = [
+        { name: 'NriMapZone table', run: () => ensureNriMapZoneTable(prisma) },
+        { name: 'NriFaction table', run: () => ensureNriFactionTable(prisma) },
+        { name: 'NriLorePlace table', run: () => ensureNriLorePlaceTable(prisma) },
+        { name: 'NriLoreEntry table', run: () => ensureNriLoreEntryTable(prisma) },
+        { name: 'lore columns', run: () => ensureNriLoreDbColumnsRaw(prisma) },
+    ];
+    for (const step of steps) {
+        try {
+            await step.run();
+        }
+        catch (error) {
+            console.warn(`[nriSchemaBootstrap] ${step.name}:`, error);
+        }
+    }
 }
 /** Читает seed районов — несколько путей для Amvera / dist_server / dev. */
 export function loadZoneSeedFile() {

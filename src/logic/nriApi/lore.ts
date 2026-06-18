@@ -66,16 +66,22 @@ export async function nriDeleteLoreEntry(token: string, code: string, entryId: s
   return res.ok;
 }
 
-export async function nriFetchLoreCards(
-  token: string,
-  code: string
-): Promise<import('../../../shared/nri-domain/loreCards').LoreCardRef[]> {
+export type LoreCardsResult =
+  | { ok: true; cards: import('../../../shared/nri-domain/loreCards').LoreCardRef[] }
+  | { ok: false; error: string };
+
+export async function nriFetchLoreCards(token: string, code: string): Promise<LoreCardsResult> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/cards`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return [];
-  return (data.cards ?? []) as import('../../../shared/nri-domain/loreCards').LoreCardRef[];
+  const data = (await parseJson(res)) as Record<string, unknown>;
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Не удалось загрузить карточки лора.') };
+  }
+  return {
+    ok: true,
+    cards: (data.cards ?? []) as import('../../../shared/nri-domain/loreCards').LoreCardRef[],
+  };
 }
 
 export async function nriPatchFactionRelations(

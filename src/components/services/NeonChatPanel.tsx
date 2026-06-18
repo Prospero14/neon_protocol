@@ -278,8 +278,13 @@ export const NeonChatPanel: React.FC<Props> = ({
 
   const refreshLoreCards = useCallback(async () => {
     if (!authToken || !nriInviteCode) return;
-    const cards = await nriFetchLoreCards(authToken, nriInviteCode);
-    setLoreCards(cards);
+    const res = await nriFetchLoreCards(authToken, nriInviteCode);
+    if (!res.ok) {
+      setLoreCards([]);
+      setLoreLinkErr(res.error);
+      return;
+    }
+    setLoreCards(res.cards);
   }, [authToken, nriInviteCode]);
 
   useEffect(() => {

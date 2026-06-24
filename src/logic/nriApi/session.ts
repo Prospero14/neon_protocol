@@ -19,6 +19,7 @@ export type NriSessionInfo = {
   isHost?: boolean;
   isAdmin?: boolean;
   spamBotEnabled?: boolean;
+  liveDialogEnabled?: boolean;
   spamPausedUntil?: number | null;
   spamPausedActive?: boolean;
 };
@@ -91,6 +92,17 @@ export async function nriCloseSession(token: string, code: string): Promise<bool
 
 export async function nriSetSpamBot(token: string, code: string, enabled: boolean): Promise<boolean> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/spam-bot`, {
+    method: 'POST',
+    headers: nriAuthHeaders(token),
+    body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) return false;
+  const data = await nriParseJson(res);
+  return data.ok === true;
+}
+
+export async function nriSetLiveDialog(token: string, code: string, enabled: boolean): Promise<boolean> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/live-dialog`, {
     method: 'POST',
     headers: nriAuthHeaders(token),
     body: JSON.stringify({ enabled }),

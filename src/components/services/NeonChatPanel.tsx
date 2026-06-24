@@ -35,6 +35,7 @@ import { NriFilePopup } from '../NriFilePopup';
 import { NriDmItemTransfer } from '../NriDmItemTransfer';
 import { NriHostAlertsStrip } from '../NriHostAlertsStrip';
 import { NriCharacterSheet } from '../NriCharacterSheet';
+import { NriLiveDialogPopup } from '../NriLiveDialogPopup';
 import { NriDispositionDashboard } from '../NriDispositionDashboard';
 
 type TableChannel = 'table' | 'dm' | 'service' | 'tools' | 'disposition';
@@ -69,6 +70,9 @@ type Props = {
   tableNpcs?: NriNpc[];
   tableRoster?: NriRosterPlayer[];
   onNriProfileUpdate?: (p: NriPlayerProfile) => void;
+  /** Живой диалог: реплики НПС всплывают перед лентой чата. */
+  liveDialogEnabled?: boolean;
+  onLiveDialogToggle?: (enabled: boolean) => void;
 };
 
 function ItemTransferMessage({
@@ -245,6 +249,8 @@ export const NeonChatPanel: React.FC<Props> = ({
   tableNpcs = [],
   tableRoster = [],
   onNriProfileUpdate,
+  liveDialogEnabled = false,
+  onLiveDialogToggle,
 }) => {
   const { token, user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoomSummary[]>([]);
@@ -271,6 +277,43 @@ export const NeonChatPanel: React.FC<Props> = ({
   const [loreCards, setLoreCards] = useState<LoreCardRef[]>([]);
   const [loreCardPopup, setLoreCardPopup] = useState<LoreCardRef | null>(null);
   const [loreLinkErr, setLoreLinkErr] = useState<string | null>(null);
+  const liveDialogSinceRef = useRef(0);
+  const [revealedNpcIds, setRevealedNpcIds] = useState<Set<string>>(() => new Set());
+  const [liveDialogMsg, setLiveDialogMsg] = useState<ChatMessage | null>(null);
+
+  useEffect(() => {
+    if (liveDialogEnabled) {
+      liveDialogSinceRef.current = Date.now();
+    } else {
+      setLiveDialogMsg(null);
+    }
+  }, [liveDialogEnabled]);
+
+  const visibleMessages = useMemo(() => {
+    if (!liveDialogEnabled || tableChannel !== 'table') return messages;
+    const since = liveDialogSinceRef.current;
+    return messages.filter((m) => {
+      if (!m.isNpc) return true;
+      if (m.ts < since) return true;
+      return revealedNpcIds.has(m.id);
+    });
+  }, [messages, liveDialogEnabled, tableChannel, revealedNpcIds]);
+
+  useEffect(() => {
+    if (!liveDialogEnabled || liveDialogMsg || tableChannel !== 'table') return;
+    const since = liveDialogSinceRef.current;
+    const next = messages.find(
+      (m) => m.isNpc && m.ts >= since && !revealedNpcIds.has(m.id)
+    );
+    if (next) setLiveDialogMsg(next);
+  }, [messages, liveDialogEnabled, liveDialogMsg, revealedNpcIds, tableChannel]);
+
+  const dismissLiveDialog = useCallback(() => {
+    if (!liveDialogMsg) return;
+    const id = liveDialogMsg.id;
+    setRevealedNpcIds((prev) => new Set([...prev, id]));
+    setLiveDialogMsg(null);
+  }, [liveDialogMsg]);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
@@ -850,6 +893,16 @@ export const NeonChatPanel: React.FC<Props> = ({
           </select>
         </label>
       )}
+      {isTableHost && onLiveDialogToggle && tableChannel === 'table' && (
+        <label className="mono-text neon-chat-live-dialog-check">
+          <input
+            type="checkbox"
+            checked={liveDialogEnabled}
+            onChange={(e) => onLiveDialogToggle(e.target.checked)}
+          />
+          Живой диалог
+        </label>
+      )}
       {canSendFiles && (
         <button
           type="button"
@@ -1057,7 +1110,7 @@ export const NeonChatPanel: React.FC<Props> = ({
             {!showHostToolsTab && participantsPanel}
             {!showHostToolsTab && sharedFilesBar}
             <div className="neon-chat-feed" ref={feedRef}>
-              {messages.map(renderChatMessage)}
+              {visibleMessages.map(renderChatMessage)}
               {messages.length === 0 && (
                 <p className="mono-text opacity-50 neon-chat-empty">
                   {spamActive
@@ -1089,7 +1142,7 @@ export const NeonChatPanel: React.FC<Props> = ({
             {!isTableHost && participantsPanel}
             {!isTableHost && sharedFilesBar}
             <div className="neon-chat-feed" ref={feedRef}>
-              {messages.map(renderChatMessage)}
+              {visibleMessages.map(renderChatMessage)}
               {messages.length === 0 && (
                 <p className="mono-text opacity-50 neon-chat-empty">
                   {spamActive
@@ -1136,6 +1189,7 @@ export const NeonChatPanel: React.FC<Props> = ({
           }}
         />
       )}
+      <NriLiveDialogPopup message={liveDialogMsg} onClose={dismissLiveDialog} />
       <LoreCardPopup card={loreCardPopup} onClose={() => setLoreCardPopup(null)} />
     </div>
   );

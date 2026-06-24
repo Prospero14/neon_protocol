@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Map as MapIcon, Megaphone, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, LogOut, Map as MapIcon, Megaphone, MessageSquare, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -13,6 +13,7 @@ import {
   nriFetchNpcs,
   nriSavePlayer,
   nriSetSpamBot,
+  nriSetLiveDialog,
   nriFetchWallet,
   nriPayAntispam,
   vaultDeleteFile,
@@ -237,6 +238,19 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     if (ok) await refresh();
   };
 
+  const toggleLiveDialog = async () => {
+    if (!authToken || !session?.isHost) return;
+    const next = !session.liveDialogEnabled;
+    const ok = await nriSetLiveDialog(authToken, inviteCode, next);
+    if (ok) await refresh();
+  };
+
+  const setLiveDialog = async (enabled: boolean) => {
+    if (!authToken || !session?.isHost || !!session.liveDialogEnabled === enabled) return;
+    const ok = await nriSetLiveDialog(authToken, inviteCode, enabled);
+    if (ok) await refresh();
+  };
+
   useEffect(() => {
     if (tab === 'vault' && (session?.isHost || session?.isAdmin)) {
       loadVault();
@@ -294,6 +308,17 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const hostTools = session?.isHost ? (
     <div className="nri-host-tools">
       <span className="mono-text nri-host-tools__label">Инструменты мастера</span>
+      <button
+        type="button"
+        className={`nri-host-tools__btn ${session.liveDialogEnabled ? 'active' : ''}`}
+        onClick={toggleLiveDialog}
+      >
+        <MessageSquare size={14} />
+        {session.liveDialogEnabled ? '■ Живой диалог' : '▶ Живой диалог'}
+      </button>
+      <span className="mono-text nri-host-tools__hint">
+        Реплики от лица НПС всплывают у всех в чате перед появлением в ленте.
+      </span>
       <button
         type="button"
         className={`nri-host-tools__btn ${session.spamBotEnabled ? 'active' : ''}`}
@@ -471,6 +496,8 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onPayAntispam={!session.isHost && session.spamBotEnabled ? payAntispamFromChat : undefined}
             antispamBusy={antispamBusy}
             onOpenWallet={() => setTab('wallet')}
+            liveDialogEnabled={!!session.liveDialogEnabled}
+            onLiveDialogToggle={session.isHost ? setLiveDialog : undefined}
           />
         )}
         {tab === 'ice' && (

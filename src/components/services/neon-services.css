@@ -1901,6 +1901,116 @@
   border: 1px solid rgba(200, 140, 255, 0.4);
 }
 
+.neon-chat-live-dialog-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: rgba(200, 255, 240, 0.85);
+  white-space: nowrap;
+}
+
+.neon-chat-live-dialog-check input {
+  accent-color: #0ff;
+}
+
+.nri-live-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.nri-live-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.nri-live-dialog__frame {
+  position: relative;
+  display: flex;
+  gap: 0;
+  max-width: min(720px, 96vw);
+  width: 100%;
+  filter: drop-shadow(0 0 24px rgba(0, 255, 200, 0.25));
+}
+
+.nri-live-dialog__portrait-wrap {
+  flex-shrink: 0;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(0, 40, 50, 0.95), rgba(0, 20, 30, 0.98));
+  border: 2px solid rgba(0, 255, 200, 0.55);
+  border-right: none;
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.nri-live-dialog__portrait {
+  width: 140px;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+  border: 1px solid rgba(0, 255, 200, 0.35);
+}
+
+.nri-live-dialog__portrait--ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 80, 90, 0.5);
+  font-size: 2.5rem;
+  color: #fc9;
+}
+
+.nri-live-dialog__bubble {
+  flex: 1;
+  padding: 20px 24px 16px;
+  background: linear-gradient(160deg, rgba(8, 24, 32, 0.96), rgba(4, 12, 18, 0.98));
+  border: 2px solid rgba(0, 255, 200, 0.55);
+  border-left: none;
+  clip-path: polygon(4% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.nri-live-dialog__name {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffb347;
+  margin-bottom: 4px;
+}
+
+.nri-live-dialog__type {
+  display: block;
+  font-size: 0.65rem;
+  opacity: 0.65;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nri-live-dialog__text {
+  margin: 0 0 16px;
+  line-height: 1.55;
+  color: rgba(240, 248, 255, 0.92);
+  font-size: 0.95rem;
+}
+
+.nri-live-dialog__next {
+  background: rgba(0, 255, 200, 0.12);
+  border: 1px solid rgba(0, 255, 200, 0.45);
+  color: #aef;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.nri-live-dialog__next:hover {
+  background: rgba(0, 255, 200, 0.22);
+}
+
 .neon-chat-msg--npc {
   border-left: 3px solid #fc9;
 }

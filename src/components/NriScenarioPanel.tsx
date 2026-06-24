@@ -19,7 +19,7 @@ import {
   type NriVaultFile,
 } from '../logic/nriApi';
 import { LORE_MARKUP_HINT } from '../../shared/nri-domain/loreMarkup';
-import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards';
+import { buildLoreCardIndex, type LoreCardRef } from '../../shared/nri-domain/loreCards';
 import { LoreMarkupInteractive } from './LoreMarkupInteractive';
 import { LoreCardPopup } from './LoreCardPopup';
 import { NRI_ITEM_CATALOG, searchCatalog } from '../logic/nriItemCatalog';
@@ -45,6 +45,7 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
   const [zones, setZones] = useState<NriMapZone[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
   const [body, setBody] = useState('');
   const [links, setLinks] = useState<NriScenarioLinks>(emptyScenarioLinks());
   const [npcs, setNpcs] = useState<NriNpc[]>([]);
@@ -53,8 +54,8 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
   const [err, setErr] = useState<string | null>(null);
   const [previewCatalogId, setPreviewCatalogId] = useState<string | null>(null);
   const [itemSearch, setItemSearch] = useState('');
-  const [loreCards, setLoreCards] = useState<import('../../shared/nri-domain/loreCards').LoreCardRef[]>([]);
-  const [lorePopup, setLorePopup] = useState<import('../../shared/nri-domain/loreCards').LoreCardRef | null>(null);
+  const [loreCards, setLoreCards] = useState<LoreCardRef[]>([]);
+  const [lorePopup, setLorePopup] = useState<LoreCardRef | null>(null);
   const [loreLinkErr, setLoreLinkErr] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -103,16 +104,34 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
   useEffect(() => {
     if (!selected) {
       setTitle('');
+      setSummary('');
       setBody('');
       setLinks(emptyScenarioLinks());
       return;
     }
     setTitle(selected.title);
+    setSummary(selected.summary ?? '');
     setBody(selected.body);
     setLinks(parseScenarioLinks(selected.links));
   }, [selected]);
 
   const filteredItems = useMemo(() => searchCatalog(itemSearch, 'all').slice(0, 40), [itemSearch]);
+
+  const loreCardsForPreview = useMemo(() => {
+    const scenarioCards = buildLoreCardIndex({
+      scenarios: nodes.map((n) => ({
+        id: n.id,
+        title: n.title,
+        summary: n.summary ?? '',
+        body: n.body,
+      })),
+    });
+    const byTitle = new Map<string, LoreCardRef>();
+    for (const c of [...loreCards, ...scenarioCards]) {
+      byTitle.set(c.title.toLowerCase(), c);
+    }
+    return [...byTitle.values()];
+  }, [loreCards, nodes]);
 
   const tree = useMemo(() => {
     const byParent = new Map<string | null, NriScenarioNode[]>();
@@ -193,6 +212,7 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
     setErr(null);
     const res = await nriPatchScenarioNode(authToken, inviteCode, selectedId, {
       title: title.trim() || 'Без названия',
+      summary,
       body,
       links,
     });
@@ -275,24 +295,38 @@ export const NriScenarioPanel: React.FC<Props> = ({ inviteCode }) => {
                 <input value={title} onChange={(e) => setTitle(e.target.value)} />
               </label>
               <label className="nri-modal__field">
-                <span>Описание</span>
-                <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={8} />
+                <span>Краткая сводка (для [[ссылки]] в чате)</span>
+                <textarea
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  rows={4}
+                  placeholder="Текст, который увидят игроки во всплывающей подсказке…"
+                />
               </label>
-              {body.trim() && (
+              {summary.trim() && (
                 <div className="nri-modal__field">
                   <span>Превью подсветки</span>
                   <p className="mono-text nri-scenario__markup-preview">
                     <LoreMarkupInteractive
-                      text={body}
-                      cards={loreCards}
+                      text={summary}
+                      cards={loreCardsForPreview}
                       onOpenCard={setLorePopup}
-                      onBrokenLink={(title) =>
-                        setLoreLinkErr(`Карточка «${title}» не найдена — создайте её в лоре.`)
+                      onBrokenLink={(t) =>
+                        setLoreLinkErr(`Карточка «${t}» не найдена — создайте её в лоре или сохраните квест.`)
                       }
                     />
                   </p>
                 </div>
               )}
+              <label className="nri-modal__field">
+                <span>Полный текст (только мастер)</span>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={10}
+                  placeholder="Заметки, полный лор квеста, детали для себя…"
+                />
+              </label>
 
               <section className="nri-scenario__place">
                 <h4 className="mono-text">Место · лор</h4>

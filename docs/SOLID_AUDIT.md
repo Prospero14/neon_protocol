@@ -2,6 +2,9 @@
 
 Чеклист для ревью. Контекст: `docs/ARCHITECTURE.md`.
 
+Чеклист для ревью. Контекст: `docs/ARCHITECTURE.md`.  
+Типы NRI API: [NRI_DATA_TYPES.md](./NRI_DATA_TYPES.md).
+
 ---
 
 ## Критичные нарушения SRP

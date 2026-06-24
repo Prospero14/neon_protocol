@@ -5,7 +5,7 @@ export type LoreCardRef = {
   title: string;
   /** Краткая сводка для игроков в чате. */
   summary: string;
-  kind: 'place' | 'faction' | 'entry';
+  kind: 'place' | 'faction' | 'entry' | 'scenario';
   iconId?: string | null;
   subtitle?: string;
 };
@@ -44,6 +44,7 @@ export function buildLoreCardIndex(bundle: {
     iconId?: string | null;
   }>;
   entries?: Array<{ id: string; title: string; summary?: string; body: string }>;
+  scenarios?: Array<{ id: string; title: string; summary?: string; body: string }>;
 }): LoreCardRef[] {
   const out: LoreCardRef[] = [];
   for (const p of bundle.places ?? []) {
@@ -71,6 +72,14 @@ export function buildLoreCardIndex(bundle: {
       title: e.title,
       summary: fallbackSummary(e.summary, e.body),
       kind: 'entry',
+    });
+  }
+  for (const s of bundle.scenarios ?? []) {
+    out.push({
+      id: s.id,
+      title: s.title,
+      summary: fallbackSummary(s.summary, s.body),
+      kind: 'scenario',
     });
   }
   return out;

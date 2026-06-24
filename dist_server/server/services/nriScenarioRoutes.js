@@ -1,5 +1,20 @@
 /** Сценарий стола — nodes, progress */
 import { propagatePlaceUpdate } from './nriLoreTravel.js';
+import { normalizeScenarioNodeInput, normalizeScenarioLinks, } from '../../shared/nri-domain/scenarioSchema.js';
+import { ensureAllNriLoreDbColumns } from './nriSchemaBootstrap.js';
+function serializeScenarioNode(n) {
+    return {
+        id: n.id,
+        parentId: n.parentId,
+        title: n.title,
+        summary: n.summary ?? '',
+        body: n.body,
+        sortOrder: n.sortOrder,
+        links: n.links ?? {},
+        createdAt: n.createdAt.getTime(),
+        updatedAt: n.updatedAt.getTime(),
+    };
+}
 export function mountNriScenarioRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     app.get('/neon_v1/services/nri/:code/scenario', async (req, res) => {
@@ -8,6 +23,7 @@ export function mountNriScenarioRoutes(app, ctx) {
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
         try {
+            await ensureAllNriLoreDbColumns(prisma);
             const session = await resolveSession(code);
             if (!session)
                 return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -57,11 +73,12 @@ export function mountNriScenarioRoutes(app, ctx) {
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { parentId, title, body, links, sortOrder } = req.body;
-        if (typeof title !== 'string' || !title.trim()) {
-            return sendApiError(res, 400, 'NRI_SCENARIO_TITLE', 'Укажите название узла.');
-        }
+        const parsed = normalizeScenarioNodeInput(req.body);
+        if (!parsed.ok)
+            return sendApiError(res, 400, parsed.code, parsed.message);
+        const { parentId, title, summary, body, links, sortOrder } = parsed.data;
         try {
+            await ensureAllNriLoreDbColumns(prisma);
             const session = await resolveSession(code);
             if (!session)
                 return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -69,7 +86,7 @@ export function mountNriScenarioRoutes(app, ctx) {
             if (!me || !(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Сценарий редактирует только мастер.');
             }
-            const pid = typeof parentId === 'string' && parentId.trim() ? parentId.trim() : null;
+            const pid = parentId ?? null;
             if (pid) {
                 const parent = await prisma.nriScenarioNode.findFirst({
                     where: { id: pid, sessionId: session.id },
@@ -89,10 +106,11 @@ export function mountNriScenarioRoutes(app, ctx) {
                 data: {
                     sessionId: session.id,
                     parentId: pid,
-                    title: title.trim().slice(0, 120),
-                    body: typeof body === 'string' ? body.slice(0, 20000) : '',
-                    sortOrder: typeof sortOrder === 'number' && Number.isFinite(sortOrder) ? Math.floor(sortOrder) : 0,
-                    links: links && typeof links === 'object' ? links : {},
+                    title: title,
+                    summary: summary ?? '',
+                    body: body ?? '',
+                    sortOrder: sortOrder ?? 0,
+                    links: (links ?? normalizeScenarioLinks({})),
                 },
             });
             res.status(201).json({ node: serializeScenarioNode(node) });
@@ -108,8 +126,12 @@ export function mountNriScenarioRoutes(app, ctx) {
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
         const nodeId = req.params.nodeId;
-        const { title, body, links, sortOrder, parentId } = req.body;
+        const parsed = normalizeScenarioNodeInput(req.body, true);
+        if (!parsed.ok)
+            return sendApiError(res, 400, parsed.code, parsed.message);
+        const { title, summary, body, links, sortOrder, parentId } = parsed.data;
         try {
+            await ensureAllNriLoreDbColumns(prisma);
             const session = await resolveSession(code);
             if (!session)
                 return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
@@ -145,10 +167,10 @@ export function mountNriScenarioRoutes(app, ctx) {
                     nextParentId = parent.id;
                 }
             }
-            let mergedLinks = links !== undefined && typeof links === 'object' ? { ...links } : null;
+            let mergedLinks = links !== undefined ? { ...links } : null;
             if (mergedLinks?.syncToLore === true) {
                 const placeTitle = (typeof mergedLinks.placeTitle === 'string' && mergedLinks.placeTitle.trim()) ||
-                    (typeof title === 'string' && title.trim()) ||
+                    title ||
                     existing.title;
                 const lorePlaceId = typeof mergedLinks.lorePlaceId === 'string' ? mergedLinks.lorePlaceId : null;
                 if (lorePlaceId) {
@@ -181,12 +203,11 @@ export function mountNriScenarioRoutes(app, ctx) {
             const updated = await prisma.nriScenarioNode.update({
                 where: { id: nodeId },
                 data: {
-                    ...(typeof title === 'string' && title.trim() ? { title: title.trim().slice(0, 120) } : {}),
-                    ...(typeof body === 'string' ? { body: body.slice(0, 20000) } : {}),
-                    ...(mergedLinks ? { links: mergedLinks } : links !== undefined && typeof links === 'object' ? { links: links } : {}),
-                    ...(typeof sortOrder === 'number' && Number.isFinite(sortOrder)
-                        ? { sortOrder: Math.floor(sortOrder) }
-                        : {}),
+                    ...(title !== undefined ? { title } : {}),
+                    ...(summary !== undefined ? { summary } : {}),
+                    ...(body !== undefined ? { body } : {}),
+                    ...(mergedLinks ? { links: mergedLinks } : links !== undefined ? { links: links } : {}),
+                    ...(sortOrder !== undefined ? { sortOrder } : {}),
                     ...(nextParentId !== undefined ? { parentId: nextParentId } : {}),
                 },
             });
@@ -224,17 +245,5 @@ export function mountNriScenarioRoutes(app, ctx) {
             return sendApiError(res, 500, 'NRI_SCENARIO_DELETE_FAILED', 'Не удалось удалить узел.');
         }
     });
-    function serializeScenarioNode(n) {
-        return {
-            id: n.id,
-            parentId: n.parentId,
-            title: n.title,
-            body: n.body,
-            sortOrder: n.sortOrder,
-            links: n.links ?? {},
-            createdAt: n.createdAt.getTime(),
-            updatedAt: n.updatedAt.getTime(),
-        };
-    }
 }
 //# sourceMappingURL=nriScenarioRoutes.js.map

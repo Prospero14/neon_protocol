@@ -527,10 +527,27 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 return sendApiError(res, 403, 'NRI_LORE_CARDS_FORBIDDEN', 'Нет доступа к лору стола.');
             }
             const { places, factions, entries } = await loadLoreCardBundle(prisma, session.id);
+            let scenarios = [];
+            try {
+                const nodes = await prisma.nriScenarioNode.findMany({
+                    where: { sessionId: session.id },
+                    select: { id: true, title: true, summary: true, body: true },
+                });
+                scenarios = nodes.map((n) => ({
+                    id: n.id,
+                    title: n.title,
+                    summary: n.summary ?? '',
+                    body: n.body,
+                }));
+            }
+            catch (scenarioErr) {
+                console.warn('nri/lore/cards scenarios:', scenarioErr);
+            }
             const cards = buildLoreCardIndex({
                 places: places.map(serializeLorePlace),
                 factions: factions.map(serializeFaction),
                 entries: entries.map(serializeLoreEntry),
+                scenarios,
             });
             res.json({ cards });
         }

@@ -3,6 +3,7 @@ import { isAdminUsername } from './auth.js';
 import { isNriMember, listNriMembers, purgeNriSessionData, touchNriMember } from './nriMemberDb.js';
 import { startNriSpamBot, stopNriSpamBot } from './nriSpamBot.js';
 import { isSpamPaused } from './nriWallet.js';
+import { ensureAllNriLoreDbColumns } from './nriSchemaBootstrap.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
 import { nriCreateSessionSchema, nriJoinSchema } from '../../shared/api-schemas/nri.js';
 const INVITE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -206,10 +207,44 @@ export function mountNriSessionLobbyRoutes(app, ctx) {
         const pausedUntil = session.spamPausedUntil?.getTime() ?? null;
         return {
             spamBotEnabled: session.spamBotEnabled,
+            liveDialogEnabled: session.liveDialogEnabled ?? false,
             spamPausedUntil: pausedUntil,
             spamPausedActive: isSpamPaused(session.spamPausedUntil),
         };
     }
+    app.post('/neon_v1/services/nri/:code/live-dialog', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const { enabled } = req.body;
+        if (typeof enabled !== 'boolean') {
+            return sendApiError(res, 400, 'NRI_LIVE_DIALOG_ENABLED_REQUIRED', 'Укажите enabled: true|false.');
+        }
+        try {
+            await ensureAllNriLoreDbColumns(prisma);
+            const session = await prisma.nriSession.findUnique({ where: { inviteCode: code } });
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            if (session.status !== 'open') {
+                return sendApiError(res, 400, 'NRI_TABLE_CLOSED', 'Стол уже закрыт.');
+            }
+            const me = await resolveUser(auth);
+            const platformAdmin = me ? isAdminUsername(me.username) : false;
+            if (session.hostUserId !== auth.userId && !platformAdmin) {
+                return sendApiError(res, 403, 'NRI_NOT_HOST', 'Живой диалог включает только мастер стола.');
+            }
+            const updated = await prisma.nriSession.update({
+                where: { id: session.id },
+                data: { liveDialogEnabled: enabled },
+            });
+            res.json({ ok: true, liveDialogEnabled: updated.liveDialogEnabled });
+        }
+        catch (error) {
+            console.error('nri/live-dialog:', error);
+            return sendApiError(res, 500, 'NRI_LIVE_DIALOG_FAILED', 'Не удалось переключить живой диалог.');
+        }
+    });
     app.post('/neon_v1/services/nri/:code/spam-bot', async (req, res) => {
         const auth = jwtAuth(req);
         if (!auth)

@@ -33,6 +33,7 @@ model NriSession {
   chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   status     String   @default("open")
   spamBotEnabled Boolean @default(false)
+  liveDialogEnabled Boolean @default(false)
   spamPausedUntil DateTime?
   createdAt  DateTime @default(now())
   players    NriPlayer[]
@@ -155,6 +156,7 @@ model NriScenarioNode {
   parent     NriScenarioNode?  @relation("ScenarioTree", fields: [parentId], references: [id], onDelete: Cascade)
   children   NriScenarioNode[] @relation("ScenarioTree")
   title      String
+  summary    String     @default("")
   body       String     @default("")
   sortOrder  Int        @default(0)
   links      Json

@@ -92,6 +92,8 @@ async function ensureNriLoreDbColumnsRaw(prisma) {
     await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "iconId" TEXT;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriLorePlace" ADD COLUMN "sourceFactionId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriScenarioNode" ADD COLUMN "summary" TEXT NOT NULL DEFAULT '';`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriSession" ADD COLUMN "liveDialogEnabled" BOOLEAN NOT NULL DEFAULT 0;`);
 }
 /** Починка NULL/пустых JSON-полей — иначе Prisma findMany падает на старых строках. */
 export async function repairNriFactionJsonColumns(prisma) {

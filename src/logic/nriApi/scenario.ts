@@ -39,6 +39,7 @@ export async function nriCreateScenarioNode(
   payload: {
     parentId?: string | null;
     title: string;
+    summary?: string;
     body?: string;
     links?: NriScenarioLinks;
     sortOrder?: number;
@@ -60,6 +61,7 @@ export async function nriPatchScenarioNode(
   nodeId: string,
   payload: Partial<{
     title: string;
+    summary: string;
     body: string;
     links: NriScenarioLinks;
     sortOrder: number;

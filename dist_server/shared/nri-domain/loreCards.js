@@ -46,6 +46,14 @@ export function buildLoreCardIndex(bundle) {
             kind: 'entry',
         });
     }
+    for (const s of bundle.scenarios ?? []) {
+        out.push({
+            id: s.id,
+            title: s.title,
+            summary: fallbackSummary(s.summary, s.body),
+            kind: 'scenario',
+        });
+    }
     return out;
 }
 export function findLoreCardByTitle(cards, rawTitle) {

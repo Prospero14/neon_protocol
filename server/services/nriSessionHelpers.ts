@@ -3,6 +3,8 @@
 import type { PrismaClient } from '@prisma/client';
 import type { JwtAuth } from './auth.js';
 import { isAdminUsername } from './auth.js';
+import { dossierFromSheet } from '../../shared/nri-domain/achievements.js';
+import { serializeAchievementState } from './nriAchievementService.js';
 
 export function mergePlayerSheetFromPreset(
   presetSheet: unknown,
@@ -50,6 +52,7 @@ export function serializeNriPlayer(p: {
   portraitUrl?: string | null;
   presetId?: string | null;
   privateNotes?: string;
+  achievementState?: unknown;
 }) {
   return {
     displayName: p.displayName,
@@ -59,6 +62,8 @@ export function serializeNriPlayer(p: {
     portraitUrl: p.portraitUrl ?? null,
     presetId: p.presetId ?? null,
     privateNotes: p.privateNotes ?? '',
+    achievements: serializeAchievementState(p.achievementState),
+    dossier: dossierFromSheet(p.sheet),
   };
 }
 

@@ -1,8 +1,10 @@
 /** Кошелёk, ICE, wonlongs */
 import { antispamPrice, isSpamPaused, readWonlongs, writeWonlongs } from './nriWallet.js';
-import { applyIceRunResult, buildIcePlayStatus, maybeAutoClearIceBan } from './nriIceBan.js';
+import { applyIceRunResult, buildIcePlayStatus, maybeAutoClearIceBan, readIceBan } from './nriIceBan.js';
+import { processPlayerAchievements } from './nriAchievementService.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
 import { nriIceResultSchema, nriIceScoreSchema, nriWonlongsGrantSchema, nriWonlongsTransferSchema, } from '../../shared/api-schemas/nri.js';
+import { buildAllIceLeaderboards, buildIceLeaderboardForGame, DEFAULT_ICE_GAME_ID, isNriIceGameId, } from '../../shared/nri-domain/iceLeaderboard.js';
 export function mountNriIceWalletRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     async function tableWonlongsSum(sessionId) {
@@ -119,12 +121,14 @@ export function mountNriIceWalletRoutes(app, ctx) {
                     data: { spamPausedUntil: pausedUntil },
                 }),
             ]);
+            const newAchievements = await processPlayerAchievements(prisma, player.id, [{ type: 'antispam_paid' }]);
             res.json({
                 ok: true,
                 wonlongs: readWonlongs(updatedPlayer.sheet),
                 antispamPrice: price,
                 spamPausedUntil: updatedSession.spamPausedUntil?.getTime() ?? null,
                 spamPausedActive: true,
+                newAchievements,
             });
         }
         catch (error) {
@@ -183,12 +187,15 @@ export function mountNriIceWalletRoutes(app, ctx) {
                 return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
             }
             const { sheet: nextSheet } = applyIceRunResult(player.sheet, won);
+            const banBefore = readIceBan(player.sheet);
             const { sheet, status } = await iceStatusForPlayer(session.id, nextSheet, player.inventory);
             await prisma.nriPlayer.update({
                 where: { id: player.id },
                 data: { sheet: sheet },
             });
-            res.json({ ok: true, status });
+            const banAfter = readIceBan(sheet);
+            const newAchievements = await processPlayerAchievements(prisma, player.id, !banBefore.hardwareBanned && banAfter.hardwareBanned ? [{ type: 'ice_hardware_ban' }] : []);
+            res.json({ ok: true, status, newAchievements });
         }
         catch (error) {
             console.error('nri/ice result:', error);
@@ -200,6 +207,8 @@ export function mountNriIceWalletRoutes(app, ctx) {
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
+        const gameIdRaw = typeof req.query.gameId === 'string' ? req.query.gameId.trim() : DEFAULT_ICE_GAME_ID;
+        const gameId = isNriIceGameId(gameIdRaw) ? gameIdRaw : DEFAULT_ICE_GAME_ID;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -207,29 +216,35 @@ export function mountNriIceWalletRoutes(app, ctx) {
             const rows = await prisma.nriIceScore.findMany({
                 where: { sessionId: session.id, won: true },
                 orderBy: [{ score: 'desc' }, { createdAt: 'asc' }],
-                take: 50,
+                take: 500,
             });
-            const bestByUser = new Map();
-            for (const row of rows) {
-                const prev = bestByUser.get(row.userId);
-                if (!prev || row.score > prev.score)
-                    bestByUser.set(row.userId, row);
-            }
-            const leaderboard = [...bestByUser.values()].sort((a, b) => b.score - a.score);
-            res.json({
-                entries: leaderboard.map((r) => ({
-                    userId: r.userId,
-                    displayName: r.displayName,
-                    score: r.score,
-                    exfilPct: r.exfilPct,
-                    tracePct: r.tracePct,
-                    at: r.createdAt.getTime(),
-                })),
-            });
+            const entries = buildIceLeaderboardForGame(rows, gameId);
+            res.json({ gameId, entries });
         }
         catch (error) {
             console.error('nri/ice leaderboard:', error);
             return sendApiError(res, 500, 'NRI_ICE_LB_FAILED', 'Не удалось загрузить рейтинг.');
+        }
+    });
+    app.get('/neon_v1/services/nri/:code/ice/leaderboards', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const rows = await prisma.nriIceScore.findMany({
+                where: { sessionId: session.id, won: true },
+                orderBy: [{ score: 'desc' }, { createdAt: 'asc' }],
+                take: 2000,
+            });
+            res.json({ boards: buildAllIceLeaderboards(rows) });
+        }
+        catch (error) {
+            console.error('nri/ice leaderboards:', error);
+            return sendApiError(res, 500, 'NRI_ICE_LB_FAILED', 'Не удалось загрузить рейтинги.');
         }
     });
     app.post('/neon_v1/services/nri/:code/ice/score', async (req, res) => {
@@ -240,7 +255,11 @@ export function mountNriIceWalletRoutes(app, ctx) {
         const scoreParsed = parseRequestBody(nriIceScoreSchema, req.body);
         if (!scoreParsed.ok)
             return sendApiError(res, 400, 'NRI_ICE_SCORE_INVALID', scoreParsed.message);
-        const { score, exfilPct, tracePct, won } = scoreParsed.data;
+        const { score, exfilPct, tracePct, won, gameId: gameIdRaw, difficulty: difficultyRaw } = scoreParsed.data;
+        const gameId = typeof gameIdRaw === 'string' && isNriIceGameId(gameIdRaw.trim())
+            ? gameIdRaw.trim()
+            : DEFAULT_ICE_GAME_ID;
+        const difficulty = difficultyRaw === 'easy' || difficultyRaw === 'hard' ? difficultyRaw : 'medium';
         try {
             const session = await resolveSession(code);
             if (!session || session.status !== 'open') {
@@ -258,22 +277,36 @@ export function mountNriIceWalletRoutes(app, ctx) {
                     sessionId: session.id,
                     userId: auth.userId,
                     displayName: player.displayName,
+                    gameId,
+                    difficulty,
                     score: pts,
                     exfilPct: typeof exfilPct === 'number' ? Math.round(exfilPct) : 0,
                     tracePct: typeof tracePct === 'number' ? Math.round(tracePct) : 0,
                     won: won === true,
                 },
             });
+            const newAchievements = won === true
+                ? await processPlayerAchievements(prisma, player.id, [
+                    {
+                        type: 'ice_won',
+                        won: true,
+                        tracePct: typeof tracePct === 'number' ? Math.round(tracePct) : undefined,
+                    },
+                ], { checkCybersportsman: true })
+                : [];
             res.status(201).json({
                 ok: true,
                 entry: {
                     userId: row.userId,
                     displayName: row.displayName,
+                    gameId: row.gameId,
+                    difficulty: row.difficulty,
                     score: row.score,
                     exfilPct: row.exfilPct,
                     tracePct: row.tracePct,
                     at: row.createdAt.getTime(),
                 },
+                newAchievements,
             });
         }
         catch (error) {
@@ -328,11 +361,20 @@ export function mountNriIceWalletRoutes(app, ctx) {
                         data: { sheet: writeWonlongs(recipient.sheet, recBal + amt) },
                     }),
                 ]);
+                const newAchievements = await processPlayerAchievements(prisma, sender.id, [
+                    {
+                        type: 'transfer_sent',
+                        toPlayer: true,
+                        amount: amt,
+                        hasMemo: !!(memo && String(memo).trim()),
+                    },
+                ]);
                 res.json({
                     ok: true,
                     wonlongs: senderBal - amt,
                     memo: memo ?? null,
                     transfer: { to: 'player', userId: toPlayer, amount: amt },
+                    newAchievements,
                 });
                 return;
             }
@@ -407,6 +449,12 @@ export function mountNriIceWalletRoutes(app, ctx) {
                 where: { id: player.id },
                 data: { sheet: writeWonlongs(playerSheet, bal + amt) },
             });
+            await processPlayerAchievements(prisma, player.id, [
+                { type: 'wonlongs_balance', amount: readWonlongs(updated.sheet) },
+                ...(typeof fromNpcId === 'string' && fromNpcId.trim()
+                    ? [{ type: 'wonlongs_grant_from_npc' }]
+                    : []),
+            ]);
             res.json({
                 ok: true,
                 playerUserId: player.userId,

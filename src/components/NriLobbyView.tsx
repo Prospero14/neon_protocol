@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, LogOut, Map as MapIcon, Megaphone, MessageSquare, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
+import { BookOpen, Copy, FileArchive, FolderOpen, LogOut, Map as MapIcon, Megaphone, MessageSquare, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
@@ -14,6 +14,7 @@ import {
   nriSavePlayer,
   nriSetSpamBot,
   nriSetLiveDialog,
+  nriEndLiveDialog,
   nriFetchWallet,
   nriPayAntispam,
   vaultDeleteFile,
@@ -40,13 +41,16 @@ import { NriCityMapPanel } from './NriCityMapPanel';
 import { NriTransportPanel } from './NriTransportPanel';
 import { NriScenarioHub } from './NriScenarioHub';
 import { NriPlayerNotesPanel } from './NriPlayerNotesPanel';
+import { NriPersonalDossierPanel } from './NriPersonalDossierPanel';
+import { NriAchievementToast } from './NriAchievementToast';
 import { NriMasterToolsHub } from './NriMasterToolsHub';
 import { NriTattooPickModal } from './NriTattooPickModal';
 
+import type { NriAchievementUnlock } from '../logic/nriApi';
 import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
 
-type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes' | 'tools';
+type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes' | 'dossier' | 'tools';
 
 type Props = {
   inviteCode: string;
@@ -78,10 +82,22 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const [roster, setRoster] = useState<NriRosterPlayer[]>([]);
   const [walletInfo, setWalletInfo] = useState<NriWalletInfo | null>(null);
   const [antispamBusy, setAntispamBusy] = useState(false);
+  const [achToast, setAchToast] = useState<NriAchievementUnlock[]>([]);
   const [peopleSection, setPeopleSection] = useState<PeopleSection>('chars');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const authToken = readNeonAuthToken() ?? token;
+
+  const handleNewAchievements = useCallback(
+    async (unlocks: NriAchievementUnlock[] | undefined) => {
+      if (!unlocks?.length) return;
+      setAchToast(unlocks);
+      if (!authToken) return;
+      const p = await nriFetchPlayer(authToken, inviteCode);
+      if (p) setProfile(p);
+    },
+    [authToken, inviteCode],
+  );
 
   const loadVault = useCallback(async () => {
     if (!authToken) return;
@@ -189,6 +205,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           sheet: { ...(parseNriSheet(profile.sheet) ?? {}), wonlongs: res.wonlongs },
         });
       }
+      if (res.newAchievements?.length) handleNewAchievements(res.newAchievements);
       await refresh();
       await loadWalletHint();
     }
@@ -248,6 +265,12 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const setLiveDialog = async (enabled: boolean) => {
     if (!authToken || !session?.isHost || !!session.liveDialogEnabled === enabled) return;
     const ok = await nriSetLiveDialog(authToken, inviteCode, enabled);
+    if (ok) await refresh();
+  };
+
+  const endLiveDialog = async () => {
+    if (!authToken || !session?.isHost || !session.liveDialogEnabled) return;
+    const ok = await nriEndLiveDialog(authToken, inviteCode);
     if (ok) await refresh();
   };
 
@@ -316,8 +339,13 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         <MessageSquare size={14} />
         {session.liveDialogEnabled ? '■ Живой диалог' : '▶ Живой диалог'}
       </button>
+      {session.liveDialogEnabled && (
+        <button type="button" className="nri-host-tools__btn" onClick={endLiveDialog}>
+          ✕ Завершить диалог
+        </button>
+      )}
       <span className="mono-text nri-host-tools__hint">
-        Реплики от лица НПС всплывают у всех в чате перед появлением в ленте.
+        Реплики от лица НПС всплывают у игроков; «Завершить» — только после этого «Далее» закрывает попап.
       </span>
       <button
         type="button"
@@ -456,6 +484,11 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           </button>
         )}
         {profile && !session?.isHost && (
+          <button type="button" className={tab === 'dossier' ? 'active' : ''} onClick={() => setTab('dossier')}>
+            <FolderOpen size={14} /> ЛИЧНОЕ ДЕЛО
+          </button>
+        )}
+        {profile && !session?.isHost && (
           <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
             <StickyNote size={14} /> ЗАМЕТКИ
           </button>
@@ -497,14 +530,25 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             antispamBusy={antispamBusy}
             onOpenWallet={() => setTab('wallet')}
             liveDialogEnabled={!!session.liveDialogEnabled}
+            liveDialogEndedAt={session.liveDialogEndedAt ?? null}
             onLiveDialogToggle={session.isHost ? setLiveDialog : undefined}
+            onEndLiveDialog={session.isHost ? endLiveDialog : undefined}
           />
         )}
         {tab === 'ice' && (
-          <NriIceRunPanel inviteCode={inviteCode} onOpenInventory={() => setTab('inventory')} />
+          <NriIceRunPanel
+            inviteCode={inviteCode}
+            onOpenInventory={() => setTab('inventory')}
+            onNewAchievements={handleNewAchievements}
+          />
         )}
         {tab === 'map' && session && user && (
-          <NriCityMapPanel inviteCode={inviteCode} isHost={!!session.isHost} currentUserId={user.id} />
+          <NriCityMapPanel
+            inviteCode={inviteCode}
+            isHost={!!session.isHost}
+            currentUserId={user.id}
+            onNewAchievements={handleNewAchievements}
+          />
         )}
         {tab === 'wallet' && session && (
           <NriWalletPanel
@@ -519,6 +563,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             isHost={!!session.isHost}
             onProfileUpdate={(p) => setProfile(p)}
             onSessionRefresh={refresh}
+            onNewAchievements={handleNewAchievements}
           />
         )}
         {tab === 'inventory' && (profile || session?.isHost) && (
@@ -534,6 +579,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             isHost={!!session?.isHost}
             roster={roster}
             onProfileUpdate={(p) => setProfile(p)}
+            onNewAchievements={handleNewAchievements}
           />
         )}
         {tab === 'vault' && (session?.isHost || session?.isAdmin) && session.chatRoomId && (
@@ -579,6 +625,14 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onVaultCreated={loadVault}
           />
         )}
+        {tab === 'dossier' && profile && !session?.isHost && profile.dossier && profile.achievements && (
+          <NriPersonalDossierPanel
+            profileName={profile.displayName}
+            classId={profile.classId}
+            dossier={profile.dossier}
+            achievements={profile.achievements}
+          />
+        )}
         {tab === 'notes' && profile && !session?.isHost && (
           <NriPlayerNotesPanel
             inviteCode={inviteCode}
@@ -601,6 +655,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           onProfileUpdate={setProfile}
         />
       )}
+      <NriAchievementToast unlocks={achToast} onDismiss={() => setAchToast([])} />
     </div>
   );
 };

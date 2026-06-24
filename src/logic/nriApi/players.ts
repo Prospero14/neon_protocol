@@ -1,7 +1,34 @@
 /** NRI player / roster / items API. */
 
 import type { NriInventoryItem } from '../nriInventory';
+import type { NriAchievementDef } from '../../../shared/nri-domain/achievements';
 import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+
+export type NriPlayerDossier = {
+  characterName: string;
+  backstory: string;
+  career: string;
+  clothing: string;
+  age: string;
+};
+
+export type NriPlayerAchievements = {
+  unlocked: NriAchievementDef[];
+  progress: {
+    drugsUsed: string[];
+    zonesVisited: string[];
+    medConsumablesUsed: string[];
+    mercWeaponZones: string[];
+  };
+};
+
+export type NriAchievementUnlock = {
+  id: string;
+  title: string;
+  blurb: string;
+  icon: string;
+  at: number;
+};
 
 export type NriPlayerProfile = {
   displayName: string;
@@ -11,6 +38,8 @@ export type NriPlayerProfile = {
   portraitUrl?: string | null;
   presetId?: string | null;
   privateNotes?: string;
+  dossier?: NriPlayerDossier;
+  achievements?: NriPlayerAchievements;
 };
 
 export type NriRosterPlayer = NriPlayerProfile & {
@@ -27,7 +56,7 @@ export type NriInventoryUpdateResult =
   | { ok: false; error: string };
 
 export type NriUseItemResult =
-  | { ok: true; inventory: NriInventoryItem[]; sheet: unknown; applied: string[] }
+  | { ok: true; inventory: NriInventoryItem[]; sheet: unknown; applied: string[]; newAchievements?: NriAchievementUnlock[] }
   | { ok: false; error: string };
 
 export async function nriFetchPlayer(token: string, code: string): Promise<NriPlayerProfile | null | undefined> {
@@ -109,6 +138,7 @@ export async function nriUseItem(token: string, code: string, itemId: string): P
     inventory: data.inventory ?? [],
     sheet: data.sheet,
     applied: Array.isArray(data.applied) ? data.applied : [],
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
   };
 }
 

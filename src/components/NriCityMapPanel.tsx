@@ -34,6 +34,7 @@ type Props = {
   inviteCode: string;
   isHost: boolean;
   currentUserId: string;
+  onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
 type ViewBox = { x: number; y: number; w: number; h: number };
@@ -90,7 +91,7 @@ function zoneMega(z: NriMapZone): string | null {
   return z.megaDistrict ?? megaFromZoneKey(z.zoneKey);
 }
 
-export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUserId }) => {
+export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUserId, onNewAchievements }) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -496,6 +497,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       return;
     }
     setMoveMsg(res.message);
+    if (res.newAchievements?.length) onNewAchievements?.(res.newAchievements);
     await refreshPositions();
   };
 

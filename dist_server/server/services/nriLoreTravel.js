@@ -9,6 +9,7 @@ import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards.js';
 import { isNriMember } from './nriMemberDb.js';
 import { defaultZoneIconId, defaultEntityIconId } from '../../shared/nri-domain/zoneIcons.js';
 import { normalizeEntityTag } from '../../shared/nri-domain/entityTags.js';
+import { inventoryHasEquippedWeapon, processPlayerAchievements } from './nriAchievementService.js';
 function parseIdList(raw) {
     if (!Array.isArray(raw))
         return [];
@@ -1165,7 +1166,17 @@ export function mountNriLoreTravelRoutes(app, deps) {
                 },
             });
             await sendServiceDmToHost(prisma, session.hostUserId, auth.userId, msg, session.id);
-            res.json({ ok: true, minutes, message: msg, zoneKey: targetZone.zoneKey, vehicleOverload });
+            const mapEvents = [
+                {
+                    type: 'zone_visited',
+                    zoneKey: targetZone.zoneKey,
+                    weaponEquipped: inventoryHasEquippedWeapon(player.inventory),
+                },
+            ];
+            if (vehicleOverload)
+                mapEvents.push({ type: 'vehicle_overload_travel' });
+            const newAchievements = await processPlayerAchievements(prisma, player.id, mapEvents);
+            res.json({ ok: true, minutes, message: msg, zoneKey: targetZone.zoneKey, vehicleOverload, newAchievements });
         }
         catch (error) {
             console.error('nri/map move:', error);

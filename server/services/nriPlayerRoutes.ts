@@ -20,10 +20,18 @@ import {
   nriPlayerSaveSchema,
 } from '../../shared/api-schemas/nri.js';
 import {
+  achievementEventsFromItemUse,
+  achievementEventsFromSheetChange,
+  achievementEventsFromEquip,
+  inventoryHasEquippedWeapon,
+  processPlayerAchievements,
+} from './nriAchievementService.js';
+import {
   applyHoloTattooPick,
   buildHoloTattooOptions,
   type FactionRef,
 } from '../../shared/nri-domain/tattoos.js';
+import { NRI_ACHIEVEMENTS } from '../../shared/nri-domain/achievements.js';
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -89,7 +97,10 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
       const player = await prisma.nriPlayer.findUnique({
         where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
       });
-      res.json({ player: player ? serializeNriPlayer(player) : null });
+      res.json({
+        player: player ? serializeNriPlayer(player) : null,
+        achievementCatalog: NRI_ACHIEVEMENTS,
+      });
     } catch (error) {
       console.error('nri/player get:', error);
       return sendApiError(res, 500, 'NRI_PLAYER_GET_FAILED', 'Не удалось загрузить профиль.');
@@ -278,7 +289,9 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
           ...(sheet !== undefined ? { sheet: nextSheet as object } : {}),
         },
       });
-      res.json({ player: serializeNriPlayer(updated) });
+      const achEvents = achievementEventsFromSheetChange(player.sheet, nextSheet);
+      const newAchievements = await processPlayerAchievements(prisma, player.id, achEvents);
+      res.json({ player: serializeNriPlayer(updated), newAchievements });
     } catch (error) {
       console.error('nri/player patch:', error);
       return sendApiError(res, 500, 'NRI_PLAYER_PATCH_FAILED', 'Не удалось обновить персонажа.');
@@ -303,11 +316,16 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
       const inv = Array.isArray(player.inventory) ? ([...(player.inventory as InvItem[])] ) : [];
       const next = toggleEquipServer(inv, itemId);
       if (!next) return sendApiError(res, 400, 'NRI_EQUIP_FAILED', 'Предмет нельзя экипировать.');
+      const equippedItem = next.find((i) => i.id === itemId);
       await prisma.nriPlayer.update({
         where: { id: player.id },
         data: { inventory: next as object[] },
       });
-      res.json({ ok: true, inventory: next });
+      const achEvents = equippedItem ? achievementEventsFromEquip(next, itemId) : [];
+      const newAchievements = achEvents.length
+        ? await processPlayerAchievements(prisma, player.id, achEvents)
+        : [];
+      res.json({ ok: true, inventory: next, newAchievements });
     } catch (error) {
       console.error('nri/toggle-equip:', error);
       return sendApiError(res, 500, 'NRI_EQUIP_ERR', 'Не удалось сменить экипировку.');
@@ -330,15 +348,25 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
       });
       if (!player) return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
       const inv = Array.isArray(player.inventory) ? ([...(player.inventory as InvItem[])] ) : [];
+      const invBefore = [...inv];
       const result = tryUseItemServer(player.sheet, inv, itemId);
       if (!result.ok) {
         return sendApiError(res, 400, 'NRI_USE_FAILED', result.reason);
       }
+      const usedCatalogId = invBefore.find((i) => i.id === itemId)?.catalogId;
       await prisma.nriPlayer.update({
         where: { id: player.id },
         data: { sheet: result.sheet as object, inventory: result.inventory as object[] },
       });
-      res.json({ ok: true, inventory: result.inventory, sheet: result.sheet, applied: result.applied });
+      const achEvents = achievementEventsFromItemUse(usedCatalogId, player.sheet, result.sheet);
+      const newAchievements = await processPlayerAchievements(prisma, player.id, achEvents);
+      res.json({
+        ok: true,
+        inventory: result.inventory,
+        sheet: result.sheet,
+        applied: result.applied,
+        newAchievements,
+      });
     } catch (error) {
       console.error('nri/use-item:', error);
       return sendApiError(res, 500, 'NRI_USE_ERR', 'Не удалось использовать предмет.');
@@ -471,7 +499,10 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
         where: { id: player.id },
         data: { sheet: result.sheet as object },
       });
-      res.json({ ok: true, player: serializeNriPlayer(updated) });
+      const newAchievements = await processPlayerAchievements(prisma, player.id, [
+        { type: 'holo_tattoo_picked' },
+      ]);
+      res.json({ ok: true, player: serializeNriPlayer(updated), newAchievements });
     } catch (error) {
       console.error('nri/holo-tattoo post:', error);
       return sendApiError(res, 500, 'NRI_HOLO_TATTOO_ERR', 'Не удалось применить татуировку.');

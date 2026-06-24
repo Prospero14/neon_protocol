@@ -23,6 +23,7 @@ type Props = {
   isHost: boolean;
   onProfileUpdate: (p: NriPlayerProfile) => void;
   onSessionRefresh: () => void;
+  onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
 function fmtPause(until: number | null | undefined): string {
@@ -38,6 +39,7 @@ export const NriWalletPanel: React.FC<Props> = ({
   isHost,
   onProfileUpdate,
   onSessionRefresh,
+  onNewAchievements,
 }) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
@@ -85,6 +87,7 @@ export const NriWalletPanel: React.FC<Props> = ({
       ...profile,
       sheet: { ...(parseNriSheet(profile.sheet) ?? {}), wonlongs: res.wonlongs },
     });
+    if (res.newAchievements?.length) onNewAchievements?.(res.newAchievements);
     onSessionRefresh();
     await load();
   };
@@ -117,6 +120,7 @@ export const NriWalletPanel: React.FC<Props> = ({
       ...profile,
       sheet: { ...(parseNriSheet(profile.sheet) ?? {}), wonlongs: res.wonlongs },
     });
+    if (res.newAchievements?.length) onNewAchievements?.(res.newAchievements);
     setMemo('');
     await load();
   };

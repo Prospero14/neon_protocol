@@ -35,6 +35,8 @@ export const nriIceResultSchema = z.object({
 });
 
 export const nriIceScoreSchema = z.object({
+  gameId: z.string().trim().min(1).max(64).optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
   score: z.number().finite().optional(),
   exfilPct: z.number().finite().optional(),
   tracePct: z.number().finite().optional(),

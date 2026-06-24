@@ -2011,6 +2011,100 @@
   background: rgba(0, 255, 200, 0.22);
 }
 
+.nri-live-dialog__frame-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: min(720px, 96vw);
+  justify-content: center;
+}
+
+.nri-live-dialog--mini {
+  position: fixed;
+  right: 16px;
+  bottom: 88px;
+  z-index: 9000;
+  inset: auto;
+  padding: 0;
+  pointer-events: none;
+}
+
+.nri-live-dialog__frame--mini {
+  max-width: 320px;
+  width: 320px;
+  filter: drop-shadow(0 0 12px rgba(0, 255, 200, 0.18));
+  opacity: 0.92;
+}
+
+.nri-live-dialog__portrait-wrap--mini {
+  padding: 6px;
+}
+
+.nri-live-dialog__frame--mini .nri-live-dialog__portrait {
+  width: 56px;
+  height: 72px;
+}
+
+.nri-live-dialog__bubble--mini {
+  padding: 10px 12px 8px;
+}
+
+.nri-live-dialog__mini-label {
+  display: block;
+  font-size: 0.55rem;
+  opacity: 0.55;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.nri-live-dialog__frame--mini .nri-live-dialog__name {
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+
+.nri-live-dialog__frame--mini .nri-live-dialog__type {
+  margin-bottom: 6px;
+  font-size: 0.55rem;
+}
+
+.nri-live-dialog__frame--mini .nri-live-dialog__text {
+  font-size: 0.72rem;
+  margin-bottom: 0;
+  max-height: 4.5em;
+  overflow: hidden;
+}
+
+.nri-live-dialog__text--static {
+  color: rgba(180, 200, 210, 0.75);
+  animation: nri-live-dialog-static 0.35s steps(3) infinite;
+}
+
+@keyframes nri-live-dialog-static {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.neon-chat-live-dialog-end {
+  background: rgba(255, 120, 80, 0.12);
+  border: 1px solid rgba(255, 120, 80, 0.45);
+  color: #faa;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.neon-chat-live-dialog-end:hover {
+  background: rgba(255, 120, 80, 0.22);
+}
+
 .neon-chat-msg--npc {
   border-left: 3px solid #fc9;
 }
@@ -3908,8 +4002,134 @@
 .nri-join-sheet-preview { max-height: 50vh; overflow: auto; margin: 12px 0; border: 1px solid rgba(0, 255, 255, 0.2); padding: 8px; }
 
 .nri-ice-lb { margin-top: 16px; padding: 12px; border: 1px solid rgba(255, 0, 128, 0.25); }
+.nri-ice-lb--inline { margin-top: 10px; }
 .nri-ice-lb__list { margin: 8px 0 0; padding-left: 1.2rem; }
 .nri-ice-lb__rank { opacity: 0.6; margin-right: 6px; }
+
+.nri-ice-run-panel {
+  padding: 12px 16px 24px;
+  max-width: 720px;
+}
+
+.nri-ice-run-panel--play {
+  padding: 0;
+  max-width: none;
+}
+
+.nri-ice-hub__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #f6a;
+}
+
+.nri-ice-hub__head h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.nri-ice-hub__head p {
+  margin: 0;
+  font-size: 0.72rem;
+}
+
+.nri-ice-hub__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nri-ice-game-card {
+  border: 1px solid rgba(255, 0, 128, 0.22);
+  background: rgba(8, 4, 16, 0.65);
+}
+
+.nri-ice-game-card--open {
+  border-color: rgba(255, 0, 128, 0.45);
+  box-shadow: 0 0 12px rgba(255, 0, 128, 0.08);
+}
+
+.nri-ice-game-card__head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nri-ice-game-card__title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.nri-ice-game-card__count {
+  font-size: 0.65rem;
+}
+
+.nri-ice-game-card__body {
+  padding: 0 12px 12px 36px;
+}
+
+.nri-ice-game-card__blurb {
+  margin: 0 0 10px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.nri-ice-game-card__play {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.nri-ice-game-card__play label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+}
+
+.nri-ice-game-card__play select {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 0, 128, 0.35);
+  color: inherit;
+  padding: 4px 8px;
+  font-size: 0.68rem;
+}
+
+.nri-ice-game-card__start {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 0, 128, 0.15);
+  border: 1px solid rgba(255, 0, 128, 0.5);
+  color: #fae;
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.nri-ice-game-card__start:hover {
+  background: rgba(255, 0, 128, 0.28);
+}
+
+.nri-ice-lb h3 {
+  margin: 0;
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
 
 .nri-transport__form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .nri-transport__list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
@@ -4677,4 +4897,151 @@
 
 .nri-disposition-dash__empty {
   padding: 16px 8px;
+}
+
+/* Личное дело — описание + ачивки */
+.nri-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 12px 4px 24px;
+  max-width: 720px;
+}
+
+.nri-dossier__section-title {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.nri-dossier__sheet {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.nri-dossier__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.nri-dossier__fields dt {
+  font-size: 0.72rem;
+  opacity: 0.55;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nri-dossier__fields dd {
+  margin: 2px 0 0;
+}
+
+.nri-dossier__field--wide {
+  grid-column: 1 / -1;
+}
+
+.nri-dossier__backstory {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.nri-dossier__readonly {
+  margin: 12px 0 0;
+  font-size: 0.78rem;
+}
+
+.nri-dossier__ach-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nri-dossier__ach {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.nri-dossier__ach--unlocked {
+  border-color: rgba(0, 255, 170, 0.25);
+  background: rgba(0, 255, 170, 0.06);
+}
+
+.nri-dossier__ach--locked {
+  opacity: 0.55;
+}
+
+.nri-dossier__ach-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.nri-dossier__ach-title {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.nri-dossier__ach-blurb {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+}
+
+.nri-dossier__ach-progress {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+}
+
+/* Тост новой ачивки */
+.nri-ach-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.nri-ach-toast__item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 170, 0.35);
+  background: rgba(8, 20, 18, 0.95);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  animation: nri-ach-toast-in 0.35s ease;
+}
+
+.nri-ach-toast__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+@keyframes nri-ach-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

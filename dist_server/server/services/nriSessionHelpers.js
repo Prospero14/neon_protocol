@@ -1,5 +1,7 @@
 /** Общие хелперы NRI-сессии (serialize, resolve, host check). */
 import { isAdminUsername } from './auth.js';
+import { dossierFromSheet } from '../../shared/nri-domain/achievements.js';
+import { serializeAchievementState } from './nriAchievementService.js';
 export function mergePlayerSheetFromPreset(presetSheet, displayName, clientSheet) {
     if (!presetSheet || typeof presetSheet !== 'object')
         return undefined;
@@ -39,6 +41,8 @@ export function serializeNriPlayer(p) {
         portraitUrl: p.portraitUrl ?? null,
         presetId: p.presetId ?? null,
         privateNotes: p.privateNotes ?? '',
+        achievements: serializeAchievementState(p.achievementState),
+        dossier: dossierFromSheet(p.sheet),
     };
 }
 export function serializeNriPreset(p) {

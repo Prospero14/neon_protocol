@@ -34,6 +34,7 @@ model NriSession {
   status     String   @default("open")
   spamBotEnabled Boolean @default(false)
   liveDialogEnabled Boolean @default(false)
+  liveDialogEndedAt DateTime?
   spamPausedUntil DateTime?
   createdAt  DateTime @default(now())
   players    NriPlayer[]
@@ -93,6 +94,7 @@ model NriPlayer {
   portraitUrl String?
   presetId    String?
   privateNotes String @default("")
+  achievementState Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -131,20 +133,22 @@ model NriSessionVehicle {
   @@index([sessionId])
 }
 
-/** Результаты ICE Run за столом — рейтинг аркады. */
+/** Результаты ICE за столом — рейтинг аркады по мини-играм. */
 model NriIceScore {
   id          String     @id @default(uuid())
   sessionId   String
   session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   userId      String
   displayName String
+  gameId      String     @default("gibson_ice")
+  difficulty  String     @default("medium")
   score       Int
   exfilPct    Int        @default(0)
   tracePct    Int        @default(0)
   won         Boolean    @default(false)
   createdAt   DateTime   @default(now())
 
-  @@index([sessionId, score])
+  @@index([sessionId, gameId, score])
 }
 
 /** Узел сценария стола — основной сюжет и ответвления-квесты. */

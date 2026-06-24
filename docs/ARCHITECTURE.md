@@ -110,7 +110,23 @@ neon_protocol/
 
 ## 4. Как связаны подсистемы
 
+### Сводка режимов
+
+| | **Solo** | **Coop** | **NRI** |
+|---|----------|----------|---------|
+| Документ юзкейсов | [SOLO_USE_CASES.md](./SOLO_USE_CASES.md) | [COOP_USE_CASES.md](./COOP_USE_CASES.md) | [NRI_USE_CASES.md](./NRI_USE_CASES.md) |
+| `sessionMode` | `solo` | `coop` | `nri` |
+| Аудитория | 1 игрок, кампания | Пати до 4, роли dev/qa/admin/pm | Мастер + игроки за столом |
+| Сохранение | `POST /game/sync` → Prisma `GameState` | sync + `coopClassProfiles`, `coopMatchId` | `NriPlayer`, лор/сценарий в SQLite |
+| Сеть в бою | Локально | Live `match/*` или synthetic bots | Боевики на листе (мастер) |
+| Лобби | `SESSION_GATE` → `HUB` | `CoopLobbyView` + heartbeat | `NriLobbyView` по invite |
+| Квесты | `QUEST_LIBRARY`, диалоги NPC | Миссии полигона `coop_yard` | Дерево сценария мастера |
+| Чат | Мессенджер районов | Чат лобби `/coop/chat` | Стол `#чат`, НПС, живой диалог |
+| API-префикс | `/neon_v1/auth/*`, `/game/sync` | `/neon_v1/coop/*` | `/neon_v1/services/nri/:code/*` |
+
 ### 4.1 Solo / карточная игра
+
+> **Юзкейсы:** [SOLO_USE_CASES.md](./SOLO_USE_CASES.md)
 
 - Состояние: `useGameState` + `AuthContext` → `POST /neon_v1/game/sync`.
 - Мир: модули `src/logic/world/<district>/` (NPC, объекты, диалоги).
@@ -119,13 +135,16 @@ neon_protocol/
 
 ### 4.2 Coop
 
+> **Юзкейсы:** [COOP_USE_CASES.md](./COOP_USE_CASES.md) · GDD: `design/COOP_MODE_GDD.md`
+
 - Лобби и матч: **in-memory `Map`** в `createApp.ts` (не переживает рестарт, не масштабируется горизонтально).
 - Рейтинги стартапов: Prisma `CoopStartupScore`.
 - Клиент: `coopLobbyApi.ts`, `coopStartupRankingsApi.ts`.
 
 ### 4.3 NRI (настольный Carbon 2185)
 
-> **Операционный гайд:** типовые ошибки, деплой, save/sync, лор/карта — [`DEV_COOKBOOK.md` §7](../DEV_COOKBOOK.md#7-nri-настольный-стол-carbon-2185).
+> **Операционный гайд:** типовые ошибки, деплой, save/sync, лор/карта — [`DEV_COOKBOOK.md` §7](../DEV_COOKBOOK.md#7-nri-настольный-стол-carbon-2185).  
+> **Юзкейсы:** [NRI_USE_CASES.md](./NRI_USE_CASES.md) · **Типы данных:** [NRI_DATA_TYPES.md](./NRI_DATA_TYPES.md)
 
 - Сессия стола: `NriSession`, invite code, host/admin.
 - Игроки: `NriPlayer` (лист JSON + инвентарь).

@@ -23,9 +23,23 @@ type Props = {
   difficulty: IceDifficulty;
   onComplete: (won: boolean) => void;
   onBack?: () => void;
+  /** Аркада стола: Gibson — ban + рейтинг через onRunComplete. */
+  nriInviteCode?: string;
+  tableArcadeMode?: boolean;
+  onOpenInventory?: () => void;
+  onRunComplete?: (result: { score: number; exfilPct: number; tracePct: number; won: boolean }) => void;
 };
 
-export const IcebreakerRouter: React.FC<Props> = ({ gameId, difficulty, onComplete, onBack }) => {
+export const IcebreakerRouter: React.FC<Props> = ({
+  gameId,
+  difficulty,
+  onComplete,
+  onBack,
+  nriInviteCode,
+  tableArcadeMode,
+  onOpenInventory,
+  onRunComplete,
+}) => {
   const game = getIceGame(gameId);
   const params = resolveIceParams(gameId, difficulty);
 
@@ -45,10 +59,30 @@ export const IcebreakerRouter: React.FC<Props> = ({ gameId, difficulty, onComple
   if (game.engine === 'gibson') {
     return (
       <GibsonIceHack
-        icebreakerMode
+        icebreakerMode={!tableArcadeMode}
+        tableLeaderboardMode={tableArcadeMode}
         difficulty={difficulty}
+        nriInviteCode={nriInviteCode}
+        onOpenInventory={onOpenInventory}
+        onRunComplete={
+          onRunComplete
+            ? (r) =>
+                onRunComplete({
+                  score: r.bits,
+                  exfilPct: r.exfilPct,
+                  tracePct: r.tracePct,
+                  won: r.won,
+                })
+            : undefined
+        }
         onBack={onBack}
-        onFinish={(bits) => onComplete(bits > 0)}
+        onFinish={() => {
+          if (tableArcadeMode) {
+            onBack?.();
+            return;
+          }
+          onComplete(false);
+        }}
       />
     );
   }

@@ -11,6 +11,7 @@ import {
   startRoomSpamBot,
   stopRoomSpamBot,
 } from './spamBotRunner.js';
+import { resolveNpcPortraitUrl } from '../../shared/nri-domain/npcPortrait.js';
 
 const PUBLIC_SLUG = 'general';
 const MAX_MESSAGE_LEN = 500;
@@ -374,11 +375,32 @@ export function mountChatService(app: Express, deps: ChatServiceDeps) {
           typeof sheet?.npcArchetype === 'string' && sheet.npcArchetype.trim()
             ? sheet.npcArchetype.trim()
             : undefined;
+        const portraitUrl = resolveNpcPortraitUrl(npc);
+        if (room.kind === 'nri' && room.slug) {
+          const liveSession = await prisma.nriSession.findUnique({ where: { inviteCode: room.slug } });
+          if (liveSession?.liveDialogEnabled) {
+            await prisma.nriSession.update({
+              where: { id: liveSession.id },
+              data: { liveDialogEndedAt: null },
+            });
+          }
+        } else if (room.kind === 'dm') {
+          const code = typeof nriCode === 'string' ? nriCode.trim().toUpperCase() : '';
+          if (code) {
+            const liveSession = await prisma.nriSession.findUnique({ where: { inviteCode: code } });
+            if (liveSession?.liveDialogEnabled) {
+              await prisma.nriSession.update({
+                where: { id: liveSession.id },
+                data: { liveDialogEndedAt: null },
+              });
+            }
+          }
+        }
         payloadStr = JSON.stringify({
           type: 'npc',
           npcId: npc.id,
           displayName: npc.name,
-          imageUrl: npc.imageUrl ?? null,
+          imageUrl: portraitUrl ?? null,
           npcArchetype,
         });
       }

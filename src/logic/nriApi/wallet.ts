@@ -22,7 +22,13 @@ export type NriWalletInfo = {
 };
 
 export type NriWalletOpResult =
-  | { ok: true; wonlongs: number; spamPausedUntil?: number | null; spamPausedActive?: boolean }
+  | {
+      ok: true;
+      wonlongs: number;
+      spamPausedUntil?: number | null;
+      spamPausedActive?: boolean;
+      newAchievements?: import('./players.js').NriAchievementUnlock[];
+    }
   | { ok: false; error: string };
 
 export async function nriFetchWallet(token: string, code: string): Promise<NriWalletInfo | null> {
@@ -48,6 +54,7 @@ export async function nriPayAntispam(token: string, code: string): Promise<NriWa
     wonlongs: data.wonlongs ?? 0,
     spamPausedUntil: data.spamPausedUntil ?? null,
     spamPausedActive: !!data.spamPausedActive,
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
   };
 }
 
@@ -70,7 +77,11 @@ export async function nriTransferWonlongs(
   if (!res.ok) {
     return { ok: false, error: parseApiError(data, 'Не удалось перевести') };
   }
-  return { ok: true, wonlongs: data.wonlongs ?? 0 };
+  return {
+    ok: true,
+    wonlongs: data.wonlongs ?? 0,
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
+  };
 }
 
 export async function nriGrantWonlongs(
@@ -112,7 +123,10 @@ export async function nriReportIceResult(
   token: string,
   code: string,
   won: boolean
-): Promise<{ ok: true; status: NriIcePlayStatus } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; status: NriIcePlayStatus; newAchievements?: import('./players.js').NriAchievementUnlock[] }
+  | { ok: false; error: string }
+> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/result`, {
     method: 'POST',
     headers: authHeaders(token),
@@ -122,7 +136,11 @@ export async function nriReportIceResult(
   if (!res.ok) {
     return { ok: false, error: parseApiError(data, 'Не удалось сохранить результат ICE') };
   }
-  return { ok: true, status: data.status as NriIcePlayStatus };
+  return {
+    ok: true,
+    status: data.status as NriIcePlayStatus,
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
+  };
 }
 
 export type NriIceLeaderboardEntry = {
@@ -131,14 +149,17 @@ export type NriIceLeaderboardEntry = {
   score: number;
   exfilPct: number;
   tracePct: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
   at: number;
 };
 
 export async function nriFetchIceLeaderboard(
   token: string,
-  code: string
+  code: string,
+  gameId?: string
 ): Promise<NriIceLeaderboardEntry[]> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/leaderboard`, {
+  const q = gameId ? `?gameId=${encodeURIComponent(gameId)}` : '';
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/leaderboard${q}`, {
     headers: authHeaders(token),
   });
   const data = await parseJson(res);
@@ -146,15 +167,39 @@ export async function nriFetchIceLeaderboard(
   return data.entries ?? [];
 }
 
+export async function nriFetchIceLeaderboards(
+  token: string,
+  code: string
+): Promise<Record<string, NriIceLeaderboardEntry[]>> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/leaderboards`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return {};
+  return data.boards ?? {};
+}
+
 export async function nriSubmitIceScore(
   token: string,
   code: string,
-  payload: { score: number; exfilPct: number; tracePct: number; won: boolean }
-): Promise<boolean> {
+  payload: {
+    gameId?: string;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    score: number;
+    exfilPct: number;
+    tracePct: number;
+    won: boolean;
+  }
+): Promise<{ ok: true; newAchievements?: import('./players.js').NriAchievementUnlock[] } | { ok: false }> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/score`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify(payload),
   });
-  return res.ok;
+  if (!res.ok) return { ok: false };
+  const data = await parseJson(res);
+  return {
+    ok: true,
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
+  };
 }

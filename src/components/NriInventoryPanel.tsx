@@ -33,6 +33,7 @@ type Props = {
   isHost: boolean;
   roster?: NriRosterPlayer[];
   onProfileUpdate: (p: NriPlayerProfile) => void;
+  onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
 function itemModsLine(item: NriInventoryItem): string {
@@ -53,6 +54,7 @@ export const NriInventoryPanel: React.FC<Props> = ({
   isHost,
   roster = [],
   onProfileUpdate,
+  onNewAchievements,
 }) => {
   const { token, user } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
@@ -106,6 +108,7 @@ export const NriInventoryPanel: React.FC<Props> = ({
       return;
     }
     onProfileUpdate({ ...profile, inventory: res.inventory, sheet: res.sheet });
+    if (res.newAchievements?.length) onNewAchievements?.(res.newAchievements);
   };
 
   const canUseItem = (item: NriInventoryItem) => {

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { authCredentialsSchema } from './auth.js';
 import { gameSyncPayloadSchema } from './gameSync.js';
 import {
+  nriIceResultSchema,
+  nriIceScoreSchema,
   nriItemGrantSchema,
   nriPlayerSaveSchema,
   nriWonlongsTransferSchema,
@@ -55,5 +57,36 @@ describe('nri schemas', () => {
 
   it('nriItemGrantSchema requires catalogId', () => {
     expect(parseRequestBody(nriItemGrantSchema, {}).ok).toBe(false);
+  });
+
+  it('nriIceScoreSchema rejects NaN and non-finite numbers', () => {
+    expect(parseRequestBody(nriIceScoreSchema, { score: NaN, won: true }).ok).toBe(false);
+    expect(parseRequestBody(nriIceScoreSchema, { tracePct: Infinity }).ok).toBe(false);
+    expect(parseRequestBody(nriIceScoreSchema, { exfilPct: '50' }).ok).toBe(false);
+  });
+
+  it('nriIceScoreSchema rejects invalid difficulty enum', () => {
+    expect(parseRequestBody(nriIceScoreSchema, { difficulty: 'insane', won: true }).ok).toBe(false);
+  });
+
+  it('nriIceResultSchema requires boolean won', () => {
+    expect(parseRequestBody(nriIceResultSchema, {}).ok).toBe(false);
+    expect(parseRequestBody(nriIceResultSchema, { won: 'yes' }).ok).toBe(false);
+    expect(parseRequestBody(nriIceResultSchema, { won: true }).ok).toBe(true);
+  });
+
+  it('nriWonlongsTransferSchema rejects both targets at once', () => {
+    expect(
+      parseRequestBody(nriWonlongsTransferSchema, {
+        amount: 10,
+        toPlayerUserId: 'u1',
+        toNpcId: 'npc1',
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('nriWonlongsTransferSchema rejects non-positive amount', () => {
+    expect(parseRequestBody(nriWonlongsTransferSchema, { amount: 0, toPlayerUserId: 'u1' }).ok).toBe(false);
+    expect(parseRequestBody(nriWonlongsTransferSchema, { amount: -5, toPlayerUserId: 'u1' }).ok).toBe(false);
   });
 });

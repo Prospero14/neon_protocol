@@ -58,6 +58,7 @@ Vite при сборке может поместить `index.html` в подп�
 ## 7. NRI (настольный стол Carbon 2185)
 
 > Подробная карта репозитория — `docs/ARCHITECTURE.md` §4.3 и §10.  
+> Юзкейсы: [NRI_USE_CASES.md](./docs/NRI_USE_CASES.md) · [SOLO_USE_CASES.md](./docs/SOLO_USE_CASES.md) · [COOP_USE_CASES.md](./docs/COOP_USE_CASES.md)  
 > Правила save/sync — `.cursor/rules/save-hydration-safety.mdc`.
 
 ### 7.1 Что это и куда развиваем

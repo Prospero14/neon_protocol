@@ -1,7 +1,7 @@
 # NRI — типы данных сервиса
 
 > Справочник полей API и Prisma для стола Carbon 2185.  
-> Рядом: [SOLID_AUDIT.md](./SOLID_AUDIT.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) §4.3
+> Рядом: [SOLID_AUDIT.md](./SOLID_AUDIT.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) §4.3 · [NRI_USE_CASES.md](./NRI_USE_CASES.md) · [SOLO_USE_CASES.md](./SOLO_USE_CASES.md) · [COOP_USE_CASES.md](./COOP_USE_CASES.md)
 
 Префикс HTTP: `/neon_v1/services/nri/:code/...` (`:code` = invite, напр. `NRI-JB5X`).
 

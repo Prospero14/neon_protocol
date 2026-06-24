@@ -224,12 +224,14 @@ export function mountNriSessionLobbyRoutes(app: Express, ctx: NriRouteContext): 
   function sessionExtras(session: {
     spamBotEnabled: boolean;
     liveDialogEnabled?: boolean;
+    liveDialogEndedAt?: Date | null;
     spamPausedUntil?: Date | null;
   }) {
     const pausedUntil = session.spamPausedUntil?.getTime() ?? null;
     return {
       spamBotEnabled: session.spamBotEnabled,
       liveDialogEnabled: session.liveDialogEnabled ?? false,
+      liveDialogEndedAt: session.liveDialogEndedAt?.getTime() ?? null,
       spamPausedUntil: pausedUntil,
       spamPausedActive: isSpamPaused(session.spamPausedUntil),
     };
@@ -257,12 +259,52 @@ export function mountNriSessionLobbyRoutes(app: Express, ctx: NriRouteContext): 
       }
       const updated = await prisma.nriSession.update({
         where: { id: session.id },
-        data: { liveDialogEnabled: enabled },
+        data: {
+          liveDialogEnabled: enabled,
+          liveDialogEndedAt: null,
+        },
       });
-      res.json({ ok: true, liveDialogEnabled: updated.liveDialogEnabled });
+      res.json({
+        ok: true,
+        liveDialogEnabled: updated.liveDialogEnabled,
+        liveDialogEndedAt: updated.liveDialogEndedAt?.getTime() ?? null,
+      });
     } catch (error) {
       console.error('nri/live-dialog:', error);
       return sendApiError(res, 500, 'NRI_LIVE_DIALOG_FAILED', 'Не удалось переключить живой диалог.');
+    }
+  });
+
+  app.post('/neon_v1/services/nri/:code/live-dialog/end', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    try {
+      await ensureAllNriLoreDbColumns(prisma);
+      const session = await prisma.nriSession.findUnique({ where: { inviteCode: code } });
+      if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+      if (session.status !== 'open') {
+        return sendApiError(res, 400, 'NRI_TABLE_CLOSED', 'Стол уже закрыт.');
+      }
+      const me = await resolveUser(auth);
+      const platformAdmin = me ? isAdminUsername(me.username) : false;
+      if (session.hostUserId !== auth.userId && !platformAdmin) {
+        return sendApiError(res, 403, 'NRI_NOT_HOST', 'Завершить живой диалог может только мастер.');
+      }
+      if (!session.liveDialogEnabled) {
+        return sendApiError(res, 400, 'NRI_LIVE_DIALOG_OFF', 'Живой диалог не активен.');
+      }
+      const updated = await prisma.nriSession.update({
+        where: { id: session.id },
+        data: { liveDialogEndedAt: new Date() },
+      });
+      res.json({
+        ok: true,
+        liveDialogEndedAt: updated.liveDialogEndedAt?.getTime() ?? null,
+      });
+    } catch (error) {
+      console.error('nri/live-dialog/end:', error);
+      return sendApiError(res, 500, 'NRI_LIVE_DIALOG_END_FAILED', 'Не удалось завершить живой диалог.');
     }
   });
 

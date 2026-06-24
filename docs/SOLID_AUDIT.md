@@ -3,7 +3,7 @@
 Чеклист для ревью. Контекст: `docs/ARCHITECTURE.md`.
 
 Чеклист для ревью. Контекст: `docs/ARCHITECTURE.md`.  
-Типы NRI API: [NRI_DATA_TYPES.md](./NRI_DATA_TYPES.md).
+Юзкейсы: [SOLO_USE_CASES.md](./SOLO_USE_CASES.md) · [COOP_USE_CASES.md](./COOP_USE_CASES.md) · [NRI_USE_CASES.md](./NRI_USE_CASES.md) · типы NRI: [NRI_DATA_TYPES.md](./NRI_DATA_TYPES.md)
 
 ---
 

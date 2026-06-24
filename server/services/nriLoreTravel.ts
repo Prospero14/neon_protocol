@@ -18,6 +18,8 @@ import { buildLoreCardIndex } from '../../shared/nri-domain/loreCards.js';
 import { isNriMember } from './nriMemberDb.js';
 import { defaultZoneIconId, defaultEntityIconId } from '../../shared/nri-domain/zoneIcons.js';
 import { normalizeEntityTag } from '../../shared/nri-domain/entityTags.js';
+import { inventoryHasEquippedWeapon, processPlayerAchievements } from './nriAchievementService.js';
+import type { AchievementEvent } from '../../shared/nri-domain/achievements.js';
 
 type ZoneCenter = { zoneKey: string; x: number; y: number; w: number; h: number };
 
@@ -1328,7 +1330,17 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
 
       await sendServiceDmToHost(prisma, session.hostUserId, auth.userId, msg, session.id);
 
-      res.json({ ok: true, minutes, message: msg, zoneKey: targetZone.zoneKey, vehicleOverload });
+      const mapEvents: AchievementEvent[] = [
+        {
+          type: 'zone_visited',
+          zoneKey: targetZone.zoneKey,
+          weaponEquipped: inventoryHasEquippedWeapon(player.inventory),
+        },
+      ];
+      if (vehicleOverload) mapEvents.push({ type: 'vehicle_overload_travel' });
+      const newAchievements = await processPlayerAchievements(prisma, player.id, mapEvents);
+
+      res.json({ ok: true, minutes, message: msg, zoneKey: targetZone.zoneKey, vehicleOverload, newAchievements });
     } catch (error) {
       console.error('nri/map move:', error);
       return sendApiError(res, 500, 'NRI_MOVE_FAILED', 'Не удалось переместить персонажа.');

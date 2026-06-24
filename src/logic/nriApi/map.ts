@@ -128,7 +128,10 @@ export async function nriMoveToZone(
   token: string,
   code: string,
   payload: { zoneKey: string; vehicleId?: string | null; overload?: boolean }
-): Promise<{ ok: true; minutes: number; message: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; minutes: number; message: string; newAchievements?: import('./players.js').NriAchievementUnlock[] }
+  | { ok: false; error: string }
+> {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/move`, {
     method: 'POST',
     headers: authHeaders(token),
@@ -136,5 +139,10 @@ export async function nriMoveToZone(
   });
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось переместиться') };
-  return { ok: true, minutes: data.minutes ?? 0, message: data.message ?? '' };
+  return {
+    ok: true,
+    minutes: data.minutes ?? 0,
+    message: data.message ?? '',
+    newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
+  };
 }

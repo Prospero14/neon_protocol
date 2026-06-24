@@ -20,6 +20,7 @@ export type NriSessionInfo = {
   isAdmin?: boolean;
   spamBotEnabled?: boolean;
   liveDialogEnabled?: boolean;
+  liveDialogEndedAt?: number | null;
   spamPausedUntil?: number | null;
   spamPausedActive?: boolean;
 };
@@ -106,6 +107,16 @@ export async function nriSetLiveDialog(token: string, code: string, enabled: boo
     method: 'POST',
     headers: nriAuthHeaders(token),
     body: JSON.stringify({ enabled }),
+  });
+  if (!res.ok) return false;
+  const data = await nriParseJson(res);
+  return data.ok === true;
+}
+
+export async function nriEndLiveDialog(token: string, code: string): Promise<boolean> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/live-dialog/end`, {
+    method: 'POST',
+    headers: nriAuthHeaders(token),
   });
   if (!res.ok) return false;
   const data = await nriParseJson(res);

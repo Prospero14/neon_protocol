@@ -24,6 +24,10 @@ const MAX_CHAT_UI = 400;
 function trimChatMessages(list: ChatMessage[]): ChatMessage[] {
   return list.length > MAX_CHAT_UI ? list.slice(-MAX_CHAT_UI) : list;
 }
+
+function npcLiveDialogQueue(messages: ChatMessage[], since: number): ChatMessage[] {
+  return messages.filter((m) => m.isNpc && m.ts >= since).sort((a, b) => a.ts - b.ts);
+}
 import { nriBroadcastItemTransfer } from '../../logic/nriApi';
 import { nriFetchLoreCards } from '../../logic/nriApi';
 import type { LoreCardRef } from '../../../shared/nri-domain/loreCards';
@@ -37,6 +41,7 @@ import { NriHostAlertsStrip } from '../NriHostAlertsStrip';
 import { NriCharacterSheet } from '../NriCharacterSheet';
 import { NriLiveDialogPopup } from '../NriLiveDialogPopup';
 import { NriDispositionDashboard } from '../NriDispositionDashboard';
+import { resolveNpcPortraitUrl } from '../../../shared/nri-domain/npcPortrait';
 
 type TableChannel = 'table' | 'dm' | 'service' | 'tools' | 'disposition';
 
@@ -72,7 +77,9 @@ type Props = {
   onNriProfileUpdate?: (p: NriPlayerProfile) => void;
   /** Живой диалог: реплики НПС всплывают перед лентой чата. */
   liveDialogEnabled?: boolean;
+  liveDialogEndedAt?: number | null;
   onLiveDialogToggle?: (enabled: boolean) => void;
+  onEndLiveDialog?: () => void;
 };
 
 function ItemTransferMessage({
@@ -193,16 +200,23 @@ function BotMessage({ m }: { m: ChatMessage }) {
 function NpcMessage({
   m,
   archetypeFallback,
+  tableNpcs,
 }: {
   m: ChatMessage;
   archetypeFallback?: string;
+  tableNpcs?: NriNpc[];
 }) {
   const typeLabel = m.npcArchetype ?? archetypeFallback;
+  const npcRecord = m.npcId ? tableNpcs?.find((n) => n.id === m.npcId) : undefined;
+  const portrait =
+    m.npcImageUrl?.trim() ||
+    resolveNpcPortraitUrl(npcRecord) ||
+    undefined;
   return (
     <div className="neon-chat-msg neon-chat-msg--npc">
       <div className="neon-chat-bot-row">
-        {m.npcImageUrl ? (
-          <img src={m.npcImageUrl} alt="" className="neon-chat-npc-avatar" />
+        {portrait ? (
+          <img src={portrait} alt="" className="neon-chat-npc-avatar" />
         ) : (
           <span className="neon-chat-npc-avatar neon-chat-npc-avatar--ph">
             {typeLabel ? typeLabel.slice(0, 1).toUpperCase() : 'N'}
@@ -250,7 +264,9 @@ export const NeonChatPanel: React.FC<Props> = ({
   tableRoster = [],
   onNriProfileUpdate,
   liveDialogEnabled = false,
+  liveDialogEndedAt = null,
   onLiveDialogToggle,
+  onEndLiveDialog,
 }) => {
   const { token, user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoomSummary[]>([]);
@@ -280,40 +296,84 @@ export const NeonChatPanel: React.FC<Props> = ({
   const liveDialogSinceRef = useRef(0);
   const [revealedNpcIds, setRevealedNpcIds] = useState<Set<string>>(() => new Set());
   const [liveDialogMsg, setLiveDialogMsg] = useState<ChatMessage | null>(null);
+  const [liveDialogInterference, setLiveDialogInterference] = useState(false);
 
   useEffect(() => {
     if (liveDialogEnabled) {
       liveDialogSinceRef.current = Date.now();
-    } else {
+      setRevealedNpcIds(new Set());
       setLiveDialogMsg(null);
+      setLiveDialogInterference(false);
     }
   }, [liveDialogEnabled]);
 
+  useEffect(() => {
+    if (liveDialogEnabled) return;
+    setLiveDialogMsg(null);
+    setLiveDialogInterference(false);
+    setRevealedNpcIds((prev) => {
+      const s = new Set(prev);
+      for (const m of messages) {
+        if (m.isNpc) s.add(m.id);
+      }
+      return s;
+    });
+  }, [liveDialogEnabled, messages]);
+
   const visibleMessages = useMemo(() => {
-    if (!liveDialogEnabled || tableChannel !== 'table') return messages;
+    if (!liveDialogEnabled || tableChannel !== 'table' || isTableHost) return messages;
     const since = liveDialogSinceRef.current;
     return messages.filter((m) => {
       if (!m.isNpc) return true;
       if (m.ts < since) return true;
       return revealedNpcIds.has(m.id);
     });
-  }, [messages, liveDialogEnabled, tableChannel, revealedNpcIds]);
+  }, [messages, liveDialogEnabled, tableChannel, revealedNpcIds, isTableHost]);
 
   useEffect(() => {
-    if (!liveDialogEnabled || liveDialogMsg || tableChannel !== 'table') return;
+    if (!liveDialogEnabled || isTableHost || liveDialogMsg || tableChannel !== 'table') return;
     const since = liveDialogSinceRef.current;
-    const next = messages.find(
-      (m) => m.isNpc && m.ts >= since && !revealedNpcIds.has(m.id)
-    );
-    if (next) setLiveDialogMsg(next);
-  }, [messages, liveDialogEnabled, liveDialogMsg, revealedNpcIds, tableChannel]);
+    const next = npcLiveDialogQueue(messages, since).find((m) => !revealedNpcIds.has(m.id));
+    if (next) {
+      setLiveDialogMsg(next);
+      setLiveDialogInterference(false);
+    }
+  }, [messages, liveDialogEnabled, liveDialogMsg, revealedNpcIds, tableChannel, isTableHost]);
 
-  const dismissLiveDialog = useCallback(() => {
-    if (!liveDialogMsg) return;
-    const id = liveDialogMsg.id;
-    setRevealedNpcIds((prev) => new Set([...prev, id]));
-    setLiveDialogMsg(null);
-  }, [liveDialogMsg]);
+  const handleLiveDialogNext = useCallback(() => {
+    if (!liveDialogMsg || isTableHost) return;
+    const since = liveDialogSinceRef.current;
+    const queue = npcLiveDialogQueue(messages, since);
+    const idx = queue.findIndex((m) => m.id === liveDialogMsg.id);
+    const nextMsg = idx >= 0 && idx + 1 < queue.length ? queue[idx + 1]! : null;
+
+    if (nextMsg) {
+      setRevealedNpcIds((prev) => new Set([...prev, liveDialogMsg.id]));
+      setLiveDialogMsg(nextMsg);
+      setLiveDialogInterference(false);
+      return;
+    }
+
+    if (liveDialogEndedAt != null) {
+      const toReveal = idx >= 0 ? queue.slice(idx) : queue.filter((m) => !revealedNpcIds.has(m.id));
+      setRevealedNpcIds((prev) => {
+        const s = new Set(prev);
+        for (const m of toReveal) s.add(m.id);
+        return s;
+      });
+      setLiveDialogMsg(null);
+      setLiveDialogInterference(false);
+      return;
+    }
+
+    setLiveDialogInterference(true);
+  }, [liveDialogMsg, isTableHost, messages, liveDialogEndedAt, revealedNpcIds]);
+
+  const hostPreviewMsg = useMemo(() => {
+    if (!liveDialogEnabled || !isTableHost || tableChannel !== 'table') return null;
+    const queue = npcLiveDialogQueue(messages, liveDialogSinceRef.current);
+    return queue.length ? queue[queue.length - 1]! : null;
+  }, [messages, liveDialogEnabled, isTableHost, tableChannel]);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
@@ -666,7 +726,7 @@ export const NeonChatPanel: React.FC<Props> = ({
       return <BotMessage key={m.id} m={m} />;
     }
     if (m.isNpc) {
-      return <NpcMessage key={m.id} m={m} archetypeFallback={npcArchetypeFor(m)} />;
+      return <NpcMessage key={m.id} m={m} archetypeFallback={npcArchetypeFor(m)} tableNpcs={tableNpcs} />;
     }
     if (m.isFile && m.fileId) {
       return (
@@ -902,6 +962,16 @@ export const NeonChatPanel: React.FC<Props> = ({
           />
           Живой диалог
         </label>
+      )}
+      {isTableHost && liveDialogEnabled && onEndLiveDialog && tableChannel === 'table' && (
+        <button
+          type="button"
+          className="neon-chat-live-dialog-end mono-text"
+          onClick={onEndLiveDialog}
+          title="Игроки смогут закрыть попап после последней реплики"
+        >
+          ✕ Завершить диалог
+        </button>
       )}
       {canSendFiles && (
         <button
@@ -1189,7 +1259,22 @@ export const NeonChatPanel: React.FC<Props> = ({
           }}
         />
       )}
-      <NriLiveDialogPopup message={liveDialogMsg} onClose={dismissLiveDialog} />
+      {!isTableHost && (
+        <NriLiveDialogPopup
+          message={liveDialogMsg}
+          interference={liveDialogInterference}
+          onNext={handleLiveDialogNext}
+          tableNpcs={tableNpcs}
+        />
+      )}
+      {isTableHost && hostPreviewMsg && (
+        <NriLiveDialogPopup
+          message={hostPreviewMsg}
+          variant="mini"
+          onNext={() => {}}
+          tableNpcs={tableNpcs}
+        />
+      )}
       <LoreCardPopup card={loreCardPopup} onClose={() => setLoreCardPopup(null)} />
     </div>
   );

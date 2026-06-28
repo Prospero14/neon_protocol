@@ -200,7 +200,7 @@ flowchart TB
   H((Мастер))
   P((Игрок))
 
-  subgraph map["Карта Night City"]
+  subgraph map["Карта Neon City"]
     UC_ZONES[Смотреть районы]
     UC_MOVE[Переместить фишку]
     UC_MARK[Маркеры мастера]

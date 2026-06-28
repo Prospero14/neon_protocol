@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { GameSyncPayload } from '../../shared/api-schemas/gameSync';
-import { readNeonAuthToken } from './authTokenStorage';
+import { clearNeonAuthStorage, readNeonAuthToken } from './authTokenStorage';
+import { clearNriInviteSessionStorage } from './nriFeatureFlags';
 import { sanitizeClientGameState } from './saveHydrationGuards';
 import { normalizeCoopClassProfiles } from './coopClassProfiles';
 
@@ -81,16 +82,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    localStorage.removeItem('neon_token');
-    localStorage.removeItem('neon_user');
+    clearNeonAuthStorage();
+    clearNriInviteSessionStorage();
     setToken(null);
     setUser(null);
-    window.location.href = '/'; // Force redirect to root and reload
+    window.location.replace('/');
   };
 
   const syncGameState = async (state: GameSyncPayload) => {
     const authToken = readNeonAuthToken() ?? token;
     if (!authToken) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12_000);
     try {
       const response = await fetch('/neon_v1/game/sync', {
         method: 'POST',
@@ -98,7 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify(state)
+        body: JSON.stringify(state),
+        signal: ctrl.signal,
       });
       if (!response.ok) {
         let errBody: { error?: unknown; code?: unknown } = {};
@@ -128,7 +132,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(updatedUser);
       localStorage.setItem('neon_user', JSON.stringify(updatedUser));
     } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        console.warn('game/sync timeout');
+        return;
+      }
       console.error('Failed to sync game state:', error);
+    } finally {
+      clearTimeout(timer);
     }
   };
 

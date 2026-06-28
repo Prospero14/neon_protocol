@@ -3,6 +3,29 @@ import { isAdminUsername } from './auth.js';
 import { tryInstallCyberItem } from './nriCyberInstall.js';
 import { maybeAutoClearIceBan } from './nriIceBan.js';
 import { parseNriJsonField } from './nriSessionHelpers.js';
+function cyberGrantItem(product) {
+    const build = (product.build && typeof product.build === 'object' ? product.build : {});
+    return {
+        id: `cyber_${product.id}_${Date.now()}`,
+        name: product.name,
+        kind: 'cyberware',
+        blurb: `${product.slot} · BT ${build.bloodTox ?? '?'} · ₩${product.priceWonlongs}`,
+        qty: 1,
+        c2185Mods: build.c2185Mods ?? {},
+        cyber: {
+            slot: product.slot,
+            blueprint: product.blueprint,
+            bloodTox: build.bloodTox,
+            powerDrawW: build.powerDrawW,
+            powerWh: build.powerWh,
+            cpuMhz: build.cpuMhz,
+            ramGb: build.ramGb,
+            features: build.features,
+            effects: build.effects,
+        },
+        priceWonlongs: product.priceWonlongs,
+    };
+}
 export function mountNriCyberRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     function serializeCyberProduct(row) {
@@ -172,26 +195,7 @@ export function mountNriCyberRoutes(app, ctx) {
             });
             if (!player)
                 return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Игрок не найден на столе.');
-            const build = (product.build && typeof product.build === 'object' ? product.build : {});
-            const item = {
-                id: `cyber_${product.id}_${Date.now()}`,
-                name: product.name,
-                kind: 'cyberware',
-                blurb: `${product.slot} · BT ${build.bloodTox ?? '?'} · ₩${product.priceWonlongs}`,
-                qty: 1,
-                c2185Mods: build.c2185Mods ?? {},
-                cyber: {
-                    slot: product.slot,
-                    blueprint: product.blueprint,
-                    bloodTox: build.bloodTox,
-                    powerDrawW: build.powerDrawW,
-                    powerWh: build.powerWh,
-                    cpuMhz: build.cpuMhz,
-                    ramGb: build.ramGb,
-                    features: build.features,
-                },
-                priceWonlongs: product.priceWonlongs,
-            };
+            const item = cyberGrantItem(product);
             const inv = Array.isArray(player.inventory) ? [...player.inventory] : [];
             inv.push(item);
             let nextSheet = player.sheet;
@@ -252,26 +256,7 @@ export function mountNriCyberRoutes(app, ctx) {
             });
             if (!npc)
                 return sendApiError(res, 404, 'NRI_NPC_NOT_FOUND', 'НПС не найден.');
-            const build = (product.build && typeof product.build === 'object' ? product.build : {});
-            const item = {
-                id: `cyber_${product.id}_${Date.now()}`,
-                name: product.name,
-                kind: 'cyberware',
-                blurb: `${product.slot} · BT ${build.bloodTox ?? '?'} · ₩${product.priceWonlongs}`,
-                qty: 1,
-                c2185Mods: build.c2185Mods ?? {},
-                cyber: {
-                    slot: product.slot,
-                    blueprint: product.blueprint,
-                    bloodTox: build.bloodTox,
-                    powerDrawW: build.powerDrawW,
-                    powerWh: build.powerWh,
-                    cpuMhz: build.cpuMhz,
-                    ramGb: build.ramGb,
-                    features: build.features,
-                },
-                priceWonlongs: product.priceWonlongs,
-            };
+            const item = cyberGrantItem(product);
             const inv = Array.isArray(npc.inventory) ? [...npc.inventory] : [];
             inv.push(item);
             let nextSheet = npc.sheet;

@@ -36,3 +36,14 @@ export function readNriGuestInviteCode(): string | null {
     return null;
   }
 }
+
+/** После logout — иначе hash / sessionStorage снова тащат в NRI-стол. */
+export function clearNriInviteSessionStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem('neon_nri_landing_invite');
+    sessionStorage.removeItem(NRI_GUEST_CODE_SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+}

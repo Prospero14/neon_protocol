@@ -1,19 +1,21 @@
-/** Типы и подписи районов карты Night City. */
-export type { MapZoneType, MapZoneSeed } from './nriNightCityMapGen';
+/** Типы и подписи районов карты Neon City. */
+export type { MapZoneType, MapZoneSeed } from './nriNeonCityMapGen';
 export {
-  MAP_VIEW as NIGHT_CITY_VIEW,
-  generateNightCityZones,
+  MAP_VIEW as NEON_CITY_VIEW,
+  generateNeonCityZones,
+  getMegaClusters,
   getMegaWatermarks,
   megaFromZoneKey,
   megaKeyFromZoneKey,
-} from './nriNightCityMapGen';
+} from './nriNeonCityMapGen';
+export type { MegaCluster } from './nriNeonCityMapGen';
 
-export type NightCityDistrictType = import('./nriNightCityMapGen').MapZoneType;
+export type NeonCityDistrictType = import('./nriNeonCityMapGen').MapZoneType;
 
-export type NightCityDistrict = {
+export type NeonCityDistrict = {
   id: string;
   name: string;
-  type: NightCityDistrictType;
+  type: NeonCityDistrictType;
   x: number;
   y: number;
   w: number;
@@ -49,17 +51,17 @@ export function zoneDisplayColor(zone: { zoneType: string; color?: string | null
 
 export function zoneRectPaint(
   color: string | null | undefined,
-  _zoneType: string
-): { fill: string; stroke: string } | undefined {
-  if (!color?.trim()) return undefined;
-  const hex = color.trim();
+  zoneType: string
+): { fill: string; stroke: string } {
+  const hex = color?.trim() || ZONE_TYPE_DEFAULT_COLORS[zoneType] || '#5a9ee6';
+  const fillAlpha = ['highway', 'overpass'].includes(zoneType) ? 0.72 : 0.28;
   return {
-    fill: hexToRgba(hex, 0.55),
+    fill: hexToRgba(hex, fillAlpha),
     stroke: hexToRgba(hex, 0.85),
   };
 }
 
-export const DISTRICT_TYPE_LABELS: Record<NightCityDistrictType, string> = {
+export const DISTRICT_TYPE_LABELS: Record<NeonCityDistrictType, string> = {
   corp: 'Корп-квартал',
   mid: 'Средний класс',
   slum: 'Трущобы',
@@ -69,3 +71,4 @@ export const DISTRICT_TYPE_LABELS: Record<NightCityDistrictType, string> = {
   tunnel: 'Корп-тоннель',
   overpass: 'Развязка',
 };
+

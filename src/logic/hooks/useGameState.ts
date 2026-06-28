@@ -610,7 +610,11 @@ export function useGameState() {
     hydrationReady,
     setSessionMode,
     setCurrentView: (view) => setCurrentView(view as ViewType),
-    syncGame: (overrides) => void syncGameRef.current(overrides),
+    syncGame: (overrides) => {
+      void Promise.resolve(syncGameRef.current(overrides)).catch((err) =>
+        console.error('syncGame:', err)
+      );
+    },
   });
 
   const syncGame = async (overrides: Record<string, unknown> = {}) => {
@@ -987,7 +991,9 @@ export function useGameState() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
+    if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE' && currentView !== 'NRI_LOBBY') {
+      void syncGame().catch((err) => console.error('syncGame on view:', err));
+    }
   }, [currentView]);
 
   useEffect(() => {
@@ -997,7 +1003,9 @@ export function useGameState() {
   // AUTO-SYNC ON CRITICAL CHANGES
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE') syncGame();
+      if (currentView !== 'CREATION' && currentView !== 'SESSION_GATE' && currentView !== 'NRI_LOBBY') {
+        syncGame();
+      }
     }, 1500); // 1.5s debounce to prevent spamming
     return () => clearTimeout(timer);
   }, [
@@ -1807,7 +1815,7 @@ export function useGameState() {
   const objectiveNodeId = trackedQuest?.objectiveNodeId || null;
 
   return {
-    user, isLoading, logout,
+    user, isLoading, logout, hydrationReady,
     skillMode, setSkillMode, userIp,
     currentView, setCurrentView,
     creationResume,

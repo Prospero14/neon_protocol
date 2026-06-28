@@ -1,6 +1,6 @@
 # Solo — схема юзкейсов
 
-> Одиночная кампания Night City: карта районов, NPC, квесты, карточный бой, мессенджер.  
+> Одиночная кампания Neon City: карта районов, NPC, квесты, карточный бой, мессенджер.  
 > Связанные документы: [ARCHITECTURE.md](./ARCHITECTURE.md) §4.1 · [COOP_USE_CASES.md](./COOP_USE_CASES.md) · [NRI_USE_CASES.md](./NRI_USE_CASES.md)
 
 `sessionMode: 'solo'` · сохранение через `POST /neon_v1/game/sync` → Prisma `GameState` + `clientSnapshot`.

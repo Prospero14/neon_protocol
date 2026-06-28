@@ -1,5 +1,5 @@
 /**
- * Night City v4 — раскладка в духе CP2077 / Cyberpunk RED / Carbon 2185.
+ * Neon City v4 — раскладка в духе CP2077 / Cyberpunk RED / Carbon 2185.
  * Шесть мегарайонов, именованные субрайоны, плотная мозаика без перекрытий.
  */
 
@@ -22,6 +22,11 @@ export type MapZoneSeed = {
   y: number;
   w: number;
   h: number;
+  parentZoneKey?: string;
+  placeType?: string;
+  districtStyle?: string;
+  gridRow?: number;
+  gridCol?: number;
   megaDistrict?: string;
   corpName?: string;
   locked?: boolean;
@@ -437,6 +442,36 @@ export function getMegaWatermarks() {
   return MEGA_WATERMARKS;
 }
 
+export type MegaCluster = {
+  clusterKey: string;
+  megaKey: string;
+  megaLabel: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+/** Канонические кластеры мегарайонов (не сливать через магистрали). */
+export function getMegaClusters(): MegaCluster[] {
+  return MEGAS.map((m) => ({
+    clusterKey: `${m.megaKey}_${m.x}_${m.y}`,
+    megaKey: m.megaKey,
+    megaLabel: m.megaLabel,
+    x: m.x,
+    y: m.y,
+    w: m.w,
+    h: m.h,
+  }));
+}
+
+function distributeInt(total: number, count: number): number[] {
+  if (count <= 0) return [];
+  const base = Math.floor(total / count);
+  const rem = total - base * count;
+  return Array.from({ length: count }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
 function buildMegaZones(): MapZoneSeed[] {
   const zones: MapZoneSeed[] = [];
   for (const mega of MEGAS) {
@@ -469,11 +504,12 @@ function subdivideCorpoPlaza(zones: MapZoneSeed[]): MapZoneSeed[] {
     }
     const cols = 5;
     const rows = 2;
-    const gap = 1;
-    const cellW = Math.floor((z.w - gap * (cols + 1)) / cols);
-    const cellH = Math.floor((z.h - gap * (rows + 1)) / rows);
+    const colWidths = distributeInt(z.w, cols);
+    const rowHeights = distributeInt(z.h, rows);
     let i = 0;
+    let y = z.y;
     for (let row = 0; row < rows; row++) {
+      let x = z.x;
       for (let col = 0; col < cols; col++) {
         const corp = CORPS[i % CORPS.length]!;
         out.push({
@@ -483,13 +519,15 @@ function subdivideCorpoPlaza(zones: MapZoneSeed[]): MapZoneSeed[] {
           zoneType: 'corp',
           megaDistrict: 'ЦЕНТР ГОРОДА',
           corpName: corp,
-          x: z.x + gap + col * (cellW + gap),
-          y: z.y + gap + row * (cellH + gap),
-          w: cellW,
-          h: cellH,
+          x,
+          y,
+          w: colWidths[col]!,
+          h: rowHeights[row]!,
         });
+        x += colWidths[col]!;
         i++;
       }
+      y += rowHeights[row]!;
     }
   }
   return out;
@@ -506,7 +544,7 @@ const LAYER_ORDER: Record<MapZoneType, number> = {
   tunnel: 7,
 };
 
-export function generateNightCityZones(): MapZoneSeed[] {
+export function generateNeonCityZones(): MapZoneSeed[] {
   let zones: MapZoneSeed[] = [...HIGHWAYS, ...buildMegaZones()];
   zones = subdivideCorpoPlaza(zones);
 
@@ -563,3 +601,4 @@ export function megaFromZoneKey(zoneKey: string): string | null {
   const mk = megaKeyFromZoneKey(zoneKey);
   return mk ? (DEFAULT_MEGA_LABELS[mk] ?? null) : null;
 }
+

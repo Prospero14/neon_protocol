@@ -13,6 +13,7 @@ export const NRI_ICE_GAME_IDS = [
   'mesh_jack',
   'dead_drop',
   'proxy_dodge',
+  'signal_lock',
 ] as const;
 
 export type NriIceGameId = (typeof NRI_ICE_GAME_IDS)[number];

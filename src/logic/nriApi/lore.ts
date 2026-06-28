@@ -2,7 +2,7 @@
 
 import type { NriFaction, NriHostAlert, NriLorePlace, FactionRelationMatrix } from '../nriLore';
 import type { NriInventoryItem } from '../nriInventory';
-import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+import { nriAuthHeaders, nriParseJson, nriSafeFetch, NRI_NETWORK_ERROR, parseNriApiError } from './http.js';
 
 const parseJson = nriParseJson;
 const authHeaders = nriAuthHeaders;
@@ -71,10 +71,11 @@ export type LoreCardsResult =
   | { ok: false; error: string };
 
 export async function nriFetchLoreCards(token: string, code: string): Promise<LoreCardsResult> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/cards`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/lore/cards`, {
     headers: authHeaders(token),
   });
-  const data = (await parseJson(res)) as Record<string, unknown>;
+  if (!out) return { ok: false, error: NRI_NETWORK_ERROR };
+  const { res, data } = out;
   if (!res.ok) {
     return { ok: false, error: parseApiError(data, 'Не удалось загрузить карточки лора.') };
   }

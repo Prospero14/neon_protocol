@@ -75,6 +75,30 @@ describe('nri schemas', () => {
     expect(parseRequestBody(nriIceResultSchema, { won: true }).ok).toBe(true);
   });
 
+  it('nriIceScoreSchema accepts minimal win payload', () => {
+    expect(parseRequestBody(nriIceScoreSchema, { won: true }).ok).toBe(true);
+    expect(parseRequestBody(nriIceScoreSchema, { won: false, score: 100 }).ok).toBe(true);
+  });
+
+  it('nriIceScoreSchema null/undefined body → пустой объект (все поля optional)', () => {
+    expect(parseRequestBody(nriIceScoreSchema, null).ok).toBe(true);
+    expect(parseRequestBody(nriIceScoreSchema, undefined).ok).toBe(true);
+  });
+
+  it('nriIceScoreSchema rejects array body', () => {
+    expect(parseRequestBody(nriIceScoreSchema, []).ok).toBe(false);
+  });
+
+  it('nriIceScoreSchema rejects empty gameId string when provided', () => {
+    expect(parseRequestBody(nriIceScoreSchema, { gameId: '   ', won: true }).ok).toBe(false);
+  });
+
+  it('nriIceResultSchema rejects null and extra won types', () => {
+    expect(parseRequestBody(nriIceResultSchema, null).ok).toBe(false);
+    expect(parseRequestBody(nriIceResultSchema, { won: 1 }).ok).toBe(false);
+    expect(parseRequestBody(nriIceResultSchema, { won: false }).ok).toBe(true);
+  });
+
   it('nriWonlongsTransferSchema rejects both targets at once', () => {
     expect(
       parseRequestBody(nriWonlongsTransferSchema, {

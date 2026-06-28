@@ -18,7 +18,7 @@ export const AuthForm: React.FC = () => {
         setNriInvite(code);
         void nriFetchInfo(code).then((info) => {
             if (info?.title) setNriTitle(info.title);
-        });
+        }).catch(() => { /* offline */ });
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {

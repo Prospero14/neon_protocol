@@ -44,19 +44,26 @@ export function useNriSession({
       if (!normalized.startsWith('NRI-')) return false;
       const authToken = readNeonAuthToken();
       if (!authToken) return false;
-      const data = await nriJoinSession(authToken, normalized);
-      if (!data) return false;
-      setSessionMode('nri');
-      setNriInviteCode(normalized);
-      setPendingNriInvite(null);
-      setCurrentView('NRI_LOBBY');
-      window.location.hash = `nri/join/${normalized}`;
-      void syncGame({
-        sessionMode: 'nri',
-        nriInviteCode: normalized,
-        currentView: 'NRI_LOBBY',
-      });
-      return true;
+      try {
+        const data = await nriJoinSession(authToken, normalized);
+        if (!data) return false;
+        setSessionMode('nri');
+        setNriInviteCode(normalized);
+        setPendingNriInvite(null);
+        setCurrentView('NRI_LOBBY');
+        window.location.hash = `nri/join/${normalized}`;
+        void Promise.resolve(
+          syncGame({
+            sessionMode: 'nri',
+            nriInviteCode: normalized,
+            currentView: 'NRI_LOBBY',
+          })
+        ).catch((err) => console.error('nri sync after join:', err));
+        return true;
+      } catch (err) {
+        console.error('nri enter lobby:', err);
+        return false;
+      }
     },
     [setSessionMode, setCurrentView, syncGame],
   );
@@ -115,15 +122,16 @@ export function useNriSession({
 
   useEffect(() => {
     if (!userId || !hydrationReady) return;
-    const nriCode = parseNriInviteFromHash(window.location.hash);
-    if (!nriCode) return;
+    const fromHash = parseNriInviteFromHash(window.location.hash);
+    const code = fromHash ?? pendingNriInvite;
+    if (!code?.startsWith('NRI-')) return;
     const authToken = readNeonAuthToken();
     if (!authToken) return;
     const timer = window.setTimeout(() => {
-      void enterNriLobby(nriCode);
+      void enterNriLobby(code);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [userId, hydrationReady, enterNriLobby]);
+  }, [userId, hydrationReady, pendingNriInvite, enterNriLobby]);
 
   const nriGuestInviteCode = readNriGuestInviteCode();
 

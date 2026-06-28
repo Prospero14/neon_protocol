@@ -2,7 +2,7 @@
 
 import type { NriClassId } from './nriClasses';
 import { C2185_SAVING_THROWS, C2185_SKILLS, getC2185ClassTemplate } from './nriCarbon2185';
-import { CYBER_PARTS } from './nriCyberware';
+import { CYBER_PARTS, type CyberPartDef } from './nriCyberware';
 import type { InstalledAugmentation } from './nriCyberInstall';
 import { abilityModifier, type NriSheetData } from './nriNpcGenerator';
 
@@ -87,22 +87,47 @@ function parseCyberWeaponFeature(features: string[] | undefined): { dice: string
   return null;
 }
 
+function weaponPartsFromAugmentation(aug: InstalledAugmentation): CyberPartDef[] {
+  const blueprint = aug.cyber?.blueprint as { partIds?: string[] } | undefined;
+  const partIds = blueprint?.partIds;
+  if (Array.isArray(partIds)) {
+    return partIds
+      .map((id) => CYBER_PARTS.find((p) => p.id === id))
+      .filter((p): p is CyberPartDef => !!p && p.kind === 'weapon');
+  }
+  return [];
+}
+
 function attacksFromAugmentations(sheet: NriSheetData, augmentations: InstalledAugmentation[]): C2185SheetAttack[] {
   const out: C2185SheetAttack[] = [];
   for (const aug of augmentations) {
-    const part = CYBER_PARTS.find((p) => p.id === aug.itemId);
-    if (!part || part.kind !== 'weapon') continue;
-    const parsed = parseCyberWeaponFeature(part.features);
-    if (!parsed) continue;
-    const ability: AbilityKey = parsed.melee ? 'STR' : 'DEX';
-    const abMod = abilityModifier(sheet.abilities[ability]);
-    out.push({
-      name: aug.name,
-      atkBonus: sheet.proficiencyBonus + abMod,
-      damage: parsed.melee
-        ? `${parsed.dice}${formatSignedMod(abMod)} ${parsed.type}`
-        : `${parsed.dice} ${parsed.type}`,
-    });
+    const weapons = weaponPartsFromAugmentation(aug);
+    for (const part of weapons) {
+      const parsed = parseCyberWeaponFeature(part.features);
+      if (!parsed) continue;
+      const ability: AbilityKey = parsed.melee ? 'STR' : 'DEX';
+      const abMod = abilityModifier(sheet.abilities[ability]);
+      out.push({
+        name: aug.name,
+        atkBonus: sheet.proficiencyBonus + abMod,
+        damage: parsed.melee
+          ? `${parsed.dice}${formatSignedMod(abMod)} ${parsed.type}`
+          : `${parsed.dice} ${parsed.type}`,
+      });
+    }
+    if (weapons.length === 0 && aug.cyber?.features) {
+      const parsed = parseCyberWeaponFeature(aug.cyber.features);
+      if (!parsed) continue;
+      const ability: AbilityKey = parsed.melee ? 'STR' : 'DEX';
+      const abMod = abilityModifier(sheet.abilities[ability]);
+      out.push({
+        name: aug.name,
+        atkBonus: sheet.proficiencyBonus + abMod,
+        damage: parsed.melee
+          ? `${parsed.dice}${formatSignedMod(abMod)} ${parsed.type}`
+          : `${parsed.dice} ${parsed.type}`,
+      });
+    }
   }
   return out;
 }

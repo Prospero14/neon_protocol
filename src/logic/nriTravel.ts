@@ -1,4 +1,4 @@
-/** Перемещение по карте Night City — время в пути. */
+/** Перемещение по карте Neon City — время в пути. */
 
 export type ZoneCenter = { zoneKey: string; x: number; y: number; w: number; h: number };
 

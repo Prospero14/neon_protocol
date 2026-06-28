@@ -8,6 +8,7 @@ import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { ensureNriLoreEntryTable } from './services/nriLoreSchema.js';
 import { ensureAllNriLoreDbColumns } from './services/nriSchemaBootstrap.js';
+import { ensureMapZonesSeeded } from './services/nriMapZones.js';
 import { createApp } from './createApp.js';
 import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
 

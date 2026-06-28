@@ -296,10 +296,14 @@ export function mountNriSessionLobbyRoutes(app: Express, ctx: NriRouteContext): 
       }
       const updated = await prisma.nriSession.update({
         where: { id: session.id },
-        data: { liveDialogEndedAt: new Date() },
+        data: {
+          liveDialogEnabled: false,
+          liveDialogEndedAt: new Date(),
+        },
       });
       res.json({
         ok: true,
+        liveDialogEnabled: updated.liveDialogEnabled,
         liveDialogEndedAt: updated.liveDialogEndedAt?.getTime() ?? null,
       });
     } catch (error) {

@@ -42,6 +42,13 @@ export function installGlobalErrorHandlers(): void {
   });
 
   window.addEventListener('unhandledrejection', (ev) => {
-    reportClientError(ev.reason, 'unhandledrejection');
+    const raw = ev.reason;
+    const msg = raw instanceof Error ? raw.message : String(raw ?? '');
+    if (msg === 'Failed to fetch' || /networkerror|load failed/i.test(msg)) {
+      console.warn('[network] unhandled fetch rejection (suppressed fatal UI):', raw);
+      ev.preventDefault();
+      return;
+    }
+    reportClientError(raw, 'unhandledrejection');
   });
 }

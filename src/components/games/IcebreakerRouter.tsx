@@ -2,7 +2,9 @@ import React from 'react';
 import GibsonIceHack from './GibsonIceHack';
 import {
   AuthBypassGame,
+  BreachMatrixGame,
   DeadDropGame,
+  DaemonUploadGame,
   HashCrackGame,
   MeshJackGame,
   LogWipeGame,
@@ -10,7 +12,7 @@ import {
   PortSequenceGame,
   ProxyDodgeGame,
   ScanPickGame,
-  TapRushGame,
+  SignalLockGame,
 } from './IceMiniGames';
 import {
   getIceGame,
@@ -89,16 +91,23 @@ export const IcebreakerRouter: React.FC<Props> = ({
 
   return (
     <div className="icebreaker-wrap">
+      <div className="icebreaker-wrap__frame" aria-hidden>
+        <div className="icebreaker-wrap__scanlines" />
+      </div>
       <header className="icebreaker-wrap__head">
-        <h3>{game.title}</h3>
+        <div className="icebreaker-wrap__title-row">
+          <h3>{game.title}</h3>
+          <span className="mono-text icebreaker-wrap__badge">ICE_MODULE</span>
+        </div>
         <p className="mono-text opacity-70">{game.blurb}</p>
         <span className="mono-text icebreaker-wrap__diff">
-          {game.difficulties[difficulty].label}
+          DIFF :: {game.difficulties[difficulty].label.toUpperCase()}
         </span>
       </header>
       {game.engine === 'sequence' && <PortSequenceGame {...p} />}
       {game.engine === 'scan' && <ScanPickGame {...p} />}
-      {game.engine === 'tap' && <TapRushGame {...p} />}
+      {game.engine === 'breach' && <BreachMatrixGame {...p} />}
+      {game.engine === 'daemon' && <DaemonUploadGame {...p} />}
       {game.engine === 'mesh' && <MeshJackGame {...p} />}
       {game.engine === 'memory' && <DeadDropGame {...p} />}
       {game.engine === 'dodge' && <ProxyDodgeGame {...p} />}
@@ -106,6 +115,7 @@ export const IcebreakerRouter: React.FC<Props> = ({
       {game.engine === 'wordle' && <AuthBypassGame {...p} />}
       {game.engine === 'sniff' && <PacketSniffGame {...p} />}
       {game.engine === 'hash' && <HashCrackGame {...p} />}
+      {game.engine === 'signallock' && <SignalLockGame {...p} />}
       {onBack && (
         <button type="button" className="icebreaker-wrap__back" onClick={onBack}>
           ← Отмена

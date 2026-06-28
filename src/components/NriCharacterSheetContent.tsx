@@ -10,7 +10,7 @@ import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory'
 import { abilityModifier, parseNriSheet } from '../logic/nriNpcGenerator';
 import { ensureCompleteSheet } from '../logic/nriCharacterGen';
 import { readWonlongs } from '../logic/nriWallet';
-import { parseAugmentedSheet, getBloodToxLimit } from '../logic/nriCyberInstall';
+import { parseAugmentedSheet, getBloodToxLimit, applyAugmentationsToSheet } from '../logic/nriCyberInstall';
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
 import { abilityLabelRu, skillLabelRu } from '../logic/nriSkillLabels';
 import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
@@ -51,10 +51,14 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
   );
   const sheet = parseNriSheet(completed);
   const conditionedSheet = sheet ? applyConditionsToSheet(sheet) : null;
-  const effectiveSheet = conditionedSheet ? applyEquippedToSheet(conditionedSheet, inventory) : null;
-  const activeConditions = conditionedSheet?.activeConditions ?? [];
   const augSheet = parseAugmentedSheet(completed);
   const augmentations = augSheet?.augmentations ?? [];
+  const sheetWithAug =
+    conditionedSheet && augmentations.length > 0
+      ? applyAugmentationsToSheet(conditionedSheet, augmentations)
+      : conditionedSheet;
+  const effectiveSheet = sheetWithAug ? applyEquippedToSheet(sheetWithAug, inventory) : null;
+  const activeConditions = conditionedSheet?.activeConditions ?? [];
   const tattoos = parseSheetTattoos(augSheet?.tattoos ?? sheet?.tattoos);
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const bloodToxLimit = getBloodToxLimit(augSheet);

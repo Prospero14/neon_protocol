@@ -60,6 +60,22 @@ export type InstallCyberResult =
   | { ok: true; sheet: AugmentedSheet; inventory: NriInventoryItem[] }
   | { ok: false; reason: string };
 
+export function applyAugmentationsToSheet(
+  sheet: NriSheetData,
+  augmentations: InstalledAugmentation[]
+): NriSheetData {
+  if (augmentations.length === 0) return sheet;
+  const abilities = { ...sheet.abilities };
+  for (const aug of augmentations) {
+    if (!aug.c2185Mods) continue;
+    for (const key of Object.keys(aug.c2185Mods) as (keyof typeof abilities)[]) {
+      const delta = aug.c2185Mods[key];
+      if (typeof delta === 'number') abilities[key] = (abilities[key] ?? 10) + delta;
+    }
+  }
+  return { ...sheet, abilities };
+}
+
 export function tryInstallCyberItem(
   sheetRaw: unknown,
   inventoryRaw: unknown,

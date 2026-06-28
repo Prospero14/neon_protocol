@@ -57,8 +57,18 @@ const MapView: React.FC<MapViewProps> = ({
   const [cityFilter, setCityFilter] = useState<'all' | 'hub' | 'trade' | 'combat' | 'bar'>('all');
   const [nodeConnectModalOpen, setNodeConnectModalOpen] = useState(false);
 
-  // Zoom State (Pan disabled by USER_REQUEST)
+  // Zoom + pan (touch / pointer)
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [panning, setPanning] = useState(false);
+  const panRef = useRef({
+    active: false,
+    moved: false,
+    sx: 0,
+    sy: 0,
+    px: 0,
+    py: 0,
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const poiListRef = useRef<HTMLDivElement>(null);
@@ -72,6 +82,54 @@ const MapView: React.FC<MapViewProps> = ({
 
   const resetView = () => {
     setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const panLimit = () => 18 * zoom;
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    panRef.current = {
+      active: true,
+      moved: false,
+      sx: e.clientX,
+      sy: e.clientY,
+      px: pan.x,
+      py: pan.y,
+    };
+    setPanning(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!panRef.current.active || !containerRef.current) return;
+    const dx = e.clientX - panRef.current.sx;
+    const dy = e.clientY - panRef.current.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 4) panRef.current.moved = true;
+    const rect = containerRef.current.getBoundingClientRect();
+    const unitsPerPx = 100 / rect.width / zoom;
+    const lim = panLimit();
+    setPan({
+      x: Math.max(-lim, Math.min(lim, panRef.current.px - dx * unitsPerPx)),
+      y: Math.max(-lim, Math.min(lim, panRef.current.py - dy * unitsPerPx)),
+    });
+  };
+
+  const endPan = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!panRef.current.active) return;
+    panRef.current.active = false;
+    setPanning(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    window.setTimeout(() => {
+      panRef.current.moved = false;
+    }, 0);
+  };
+
+  const pickNode = (fn: () => void) => {
+    if (panRef.current.moved) return;
+    fn();
   };
 
   const activeDistrictBase = MAP_NODES.find(n => n.id === activeDistrictId) || MAP_NODES[0];
@@ -244,7 +302,7 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className={`map-view-v4 no-pan ${gameClock ? `map-phase-${gameClock.phase}` : ''}`}>
+    <div className={`map-view-v4 ${panning ? 'map-view-v4--panning' : ''} ${gameClock ? `map-phase-${gameClock.phase}` : ''}`}>
       <header className="map-hdr-v5 map-hdr-v5--radar">
         <div className="hdr-main-area">
           <div className="hdr-micro-label side-fixed">
@@ -274,9 +332,13 @@ const MapView: React.FC<MapViewProps> = ({
       </header>
 
       <main className="map-body map-body--radar-v2">
-        <div 
+        <div
           className="map-canvas-wrap"
           onWheel={handleWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endPan}
+          onPointerCancel={endPan}
           ref={containerRef}
         >
           {gameClock && <div className={`map-atmo map-atmo--${gameClock.phase}`} aria-hidden />}
@@ -320,10 +382,12 @@ const MapView: React.FC<MapViewProps> = ({
 
             <line x1="50" y1="50" x2="50" y2="0" stroke="var(--neon-cyan)" strokeWidth="0.1" opacity="0.3" className="radar-sweep" />
 
-            <g style={{ 
-              transform: `translate(50px, 50px) scale(${zoom}) translate(-50px, -50px)`,
-              transition: 'transform 0.4s cubic-bezier(0.1, 0.9, 0.2, 1)'
-            }}>
+            <g
+              style={{
+                transform: `translate(${50 + pan.x}px, ${50 + pan.y}px) scale(${zoom}) translate(-50px, -50px)`,
+                transition: panning ? 'none' : 'transform 0.4s cubic-bezier(0.1, 0.9, 0.2, 1)',
+              }}
+            >
               {viewMode === 'CITY' ? (
                 MAP_NODES.map(node => {
                   const color = NODE_COLORS[node.type] || '#aaa';
@@ -332,7 +396,12 @@ const MapView: React.FC<MapViewProps> = ({
                   const isObjective = objectiveNodeId === node.id;
                   
                   return (
-                    <g key={node.id} onClick={() => setSelectedNode(node)} onDoubleClick={() => onNodeSelect(node.id, 'district', getTravelCost(node))} style={{ cursor: 'pointer' }}>
+                    <g
+                      key={node.id}
+                      onClick={() => pickNode(() => setSelectedNode(node))}
+                      onDoubleClick={() => pickNode(() => onNodeSelect(node.id, 'district', getTravelCost(node)))}
+                      style={{ cursor: 'pointer' }}
+                    >
                        <rect x={node.x - 1.5} y={node.y - 1.5} width="3" height="3" fill="none" stroke={color} strokeWidth="0.1" opacity="0.2" />
                        <circle cx={node.x} cy={node.y} r={isSelected ? 1.8 : 1.2} fill={isSelected ? '#fff' : color} />
                        {isCurrent && (
@@ -458,7 +527,7 @@ const MapView: React.FC<MapViewProps> = ({
                           key={sn.id}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePickSubNode(sn.id);
+                            pickNode(() => handlePickSubNode(sn.id));
                           }}
                           style={{ cursor: 'pointer' }}
                         >

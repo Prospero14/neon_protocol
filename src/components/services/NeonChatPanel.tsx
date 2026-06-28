@@ -308,6 +308,19 @@ export const NeonChatPanel: React.FC<Props> = ({
   }, [liveDialogEnabled]);
 
   useEffect(() => {
+    if (liveDialogEndedAt == null) return;
+    const since = liveDialogSinceRef.current;
+    const queue = npcLiveDialogQueue(messages, since);
+    setRevealedNpcIds((prev) => {
+      const s = new Set(prev);
+      for (const m of queue) s.add(m.id);
+      return s;
+    });
+    setLiveDialogMsg(null);
+    setLiveDialogInterference(false);
+  }, [liveDialogEndedAt, messages]);
+
+  useEffect(() => {
     if (liveDialogEnabled) return;
     setLiveDialogMsg(null);
     setLiveDialogInterference(false);
@@ -331,14 +344,16 @@ export const NeonChatPanel: React.FC<Props> = ({
   }, [messages, liveDialogEnabled, tableChannel, revealedNpcIds, isTableHost]);
 
   useEffect(() => {
-    if (!liveDialogEnabled || isTableHost || liveDialogMsg || tableChannel !== 'table') return;
+    if (!liveDialogEnabled || liveDialogEndedAt != null || isTableHost || liveDialogMsg || tableChannel !== 'table') {
+      return;
+    }
     const since = liveDialogSinceRef.current;
     const next = npcLiveDialogQueue(messages, since).find((m) => !revealedNpcIds.has(m.id));
     if (next) {
       setLiveDialogMsg(next);
       setLiveDialogInterference(false);
     }
-  }, [messages, liveDialogEnabled, liveDialogMsg, revealedNpcIds, tableChannel, isTableHost]);
+  }, [messages, liveDialogEnabled, liveDialogEndedAt, liveDialogMsg, revealedNpcIds, tableChannel, isTableHost]);
 
   const handleLiveDialogNext = useCallback(() => {
     if (!liveDialogMsg || isTableHost) return;
@@ -370,10 +385,12 @@ export const NeonChatPanel: React.FC<Props> = ({
   }, [liveDialogMsg, isTableHost, messages, liveDialogEndedAt, revealedNpcIds]);
 
   const hostPreviewMsg = useMemo(() => {
-    if (!liveDialogEnabled || !isTableHost || tableChannel !== 'table') return null;
+    if (!liveDialogEnabled || liveDialogEndedAt != null || !isTableHost || tableChannel !== 'table') {
+      return null;
+    }
     const queue = npcLiveDialogQueue(messages, liveDialogSinceRef.current);
     return queue.length ? queue[queue.length - 1]! : null;
-  }, [messages, liveDialogEnabled, isTableHost, tableChannel]);
+  }, [messages, liveDialogEnabled, liveDialogEndedAt, isTableHost, tableChannel]);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
@@ -381,13 +398,18 @@ export const NeonChatPanel: React.FC<Props> = ({
 
   const refreshLoreCards = useCallback(async () => {
     if (!authToken || !nriInviteCode) return;
-    const res = await nriFetchLoreCards(authToken, nriInviteCode);
-    if (!res.ok) {
-      setLoreCards([]);
-      setLoreLinkErr(res.error);
-      return;
+    try {
+      const res = await nriFetchLoreCards(authToken, nriInviteCode);
+      if (!res.ok) {
+        setLoreCards([]);
+        setLoreLinkErr(res.error);
+        return;
+      }
+      setLoreLinkErr(null);
+      setLoreCards(res.cards);
+    } catch (err) {
+      console.error('lore cards refresh:', err);
     }
-    setLoreCards(res.cards);
   }, [authToken, nriInviteCode]);
 
   useEffect(() => {

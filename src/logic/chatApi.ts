@@ -50,35 +50,46 @@ function authHeaders(token: string): HeadersInit {
   };
 }
 
+async function chatSafeFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit
+): Promise<{ res: Response; data: Record<string, unknown> } | null> {
+  try {
+    const res = await fetch(input, init);
+    const data = (await parseJson(res)) as Record<string, unknown>;
+    return { res, data };
+  } catch (err) {
+    console.error('[chat] fetch failed:', input, err);
+    return null;
+  }
+}
+
 export async function chatFetchRooms(token: string): Promise<{
   rooms: ChatRoomSummary[];
   me: { userId: string; username: string; isAdmin: boolean };
 } | null> {
-  const res = await fetch('/neon_v1/services/chat/rooms', { headers: authHeaders(token) });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { rooms: data.rooms ?? [], me: data.me };
+  const out = await chatSafeFetch('/neon_v1/services/chat/rooms', { headers: authHeaders(token) });
+  if (!out || !out.res.ok) return null;
+  return { rooms: (out.data.rooms as ChatRoomSummary[]) ?? [], me: out.data.me as { userId: string; username: string; isAdmin: boolean } };
 }
 
 export async function chatFetchUsers(token: string): Promise<ChatUser[]> {
-  const res = await fetch('/neon_v1/services/chat/users', { headers: authHeaders(token) });
-  const data = await parseJson(res);
-  if (!res.ok) return [];
-  return data.users ?? [];
+  const out = await chatSafeFetch('/neon_v1/services/chat/users', { headers: authHeaders(token) });
+  if (!out || !out.res.ok) return [];
+  return (out.data.users as ChatUser[]) ?? [];
 }
 
 export async function chatOpenDm(
   token: string,
   targetUserId: string
 ): Promise<{ id: string; kind: string; title: string } | null> {
-  const res = await fetch('/neon_v1/services/chat/dm', {
+  const out = await chatSafeFetch('/neon_v1/services/chat/dm', {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ targetUserId }),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.room ?? null;
+  if (!out || !out.res.ok) return null;
+  return (out.data.room as { id: string; kind: string; title: string }) ?? null;
 }
 
 export async function chatFetchMessages(
@@ -91,12 +102,11 @@ export async function chatFetchMessages(
   if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) qp.set('day', day);
   else if (since > 0) qp.set('since', String(since));
   const suffix = qp.toString() ? `?${qp.toString()}` : '';
-  const res = await fetch(`/neon_v1/services/chat/rooms/${roomId}/messages${suffix}`, {
+  const out = await chatSafeFetch(`/neon_v1/services/chat/rooms/${roomId}/messages${suffix}`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return [];
-  return data.messages ?? [];
+  if (!out || !out.res.ok) return [];
+  return (out.data.messages as ChatMessage[]) ?? [];
 }
 
 export async function chatSendMessage(
@@ -105,7 +115,7 @@ export async function chatSendMessage(
   text: string,
   opts?: { asNpcId?: string; dmTargetUserId?: string; nriCode?: string }
 ): Promise<ChatMessage | null> {
-  const res = await fetch(`/neon_v1/services/chat/rooms/${roomId}/messages`, {
+  const out = await chatSafeFetch(`/neon_v1/services/chat/rooms/${roomId}/messages`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({
@@ -115,20 +125,18 @@ export async function chatSendMessage(
       nriCode: opts?.nriCode,
     }),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.message ?? null;
+  if (!out || !out.res.ok) return null;
+  return (out.data.message as ChatMessage) ?? null;
 }
 
 export async function chatSendFile(token: string, roomId: string, fileId: string): Promise<ChatMessage | null> {
-  const res = await fetch(`/neon_v1/services/chat/rooms/${roomId}/file`, {
+  const out = await chatSafeFetch(`/neon_v1/services/chat/rooms/${roomId}/file`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ fileId }),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.message ?? null;
+  if (!out || !out.res.ok) return null;
+  return (out.data.message as ChatMessage) ?? null;
 }
 
 /** Отправить файл в личку пользователю (открывает DM при необходимости). */
@@ -147,10 +155,13 @@ export async function chatGetSpamBot(token: string): Promise<{
   roomId: string;
   bot?: { username: string; label: string };
 } | null> {
-  const res = await fetch('/neon_v1/services/chat/spam-bot', { headers: authHeaders(token) });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { enabled: !!data.enabled, roomId: data.roomId, bot: data.bot };
+  const out = await chatSafeFetch('/neon_v1/services/chat/spam-bot', { headers: authHeaders(token) });
+  if (!out || !out.res.ok) return null;
+  return {
+    enabled: !!out.data.enabled,
+    roomId: String(out.data.roomId ?? ''),
+    bot: out.data.bot as { username: string; label: string } | undefined,
+  };
 }
 
 export type ChatParticipant = {
@@ -165,19 +176,21 @@ export async function chatFetchParticipants(
   token: string,
   roomId: string
 ): Promise<{ participants: ChatParticipant[]; spamBotEnabled: boolean } | null> {
-  const res = await fetch(`/neon_v1/services/chat/rooms/${roomId}/participants`, {
+  const out = await chatSafeFetch(`/neon_v1/services/chat/rooms/${roomId}/participants`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return { participants: data.participants ?? [], spamBotEnabled: !!data.spamBotEnabled };
+  if (!out || !out.res.ok) return null;
+  return {
+    participants: (out.data.participants as ChatParticipant[]) ?? [],
+    spamBotEnabled: !!out.data.spamBotEnabled,
+  };
 }
 
 export async function chatSetSpamBot(token: string, enabled: boolean): Promise<boolean> {
-  const res = await fetch('/neon_v1/services/chat/spam-bot', {
+  const out = await chatSafeFetch('/neon_v1/services/chat/spam-bot', {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ enabled }),
   });
-  return res.ok;
+  return !!out?.res.ok;
 }

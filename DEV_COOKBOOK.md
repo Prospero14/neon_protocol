@@ -71,7 +71,7 @@ Vite при сборке может поместить `index.html` в подп�
 | API-клиент | `src/logic/nriApi/` (barrel `nriApi.ts`) | Один модуль на зону: `lore.ts`, `map.ts`, `session.ts`, … |
 | HTTP | `server/services/nriService.ts` → mount-only | Роутеры: `nriMapRoutes`, `nriLoreTravel`, `nriPlayerRoutes`, … |
 | Домен без I/O | `shared/nri-domain/` | `loreCards`, `loreMarkup`, `entityTags`, `zoneIcons`, conditions, consume |
-| Контент JSON | `shared/*.json` | Каталог предметов, зоны карты `nri-night-city-zones.json` |
+| Контент JSON | `shared/*.json` | Каталог предметов, зоны карты `nri-neon-city-zones.json` |
 | БД | Prisma `NriSession`, `NriPlayer`, `NriLorePlace`, `NriFaction`, … | SQLite, на Amvera — **`/data/dev.db`** |
 
 **Префикс API:** `/neon_v1/services/nri/:code/...` (`:code` = invite, напр. `NRI-JB5X`).
@@ -114,7 +114,7 @@ Vite при сборке может поместить `index.html` в подп�
 | Ошибка Prisma `The column X does not exist in the current database` | Старая БД, migrate не применился | Boot делает `db push`; в коде — brute-force `ALTER TABLE` в `ensureAllNriLoreDbColumns`. **Не полагаться** на regex только `no such column` — Prisma 7 пишет иначе. |
 | Лор/карта падали вместе | `/map/zones` вызывал полный lore-sync до отдачи районов | Исправлено: карта — `ensureNriMapSchema` только; лор-синк — в `try/catch`, не блокирует ответ. |
 | `500` только на `/lore/cards` | Эндпоинт тянул seed карты (`loadZoneSeedFile`) | Исправлено: cards только читает `NriLorePlace` / `NriFaction` / `NriLoreEntry`. |
-| `Zone seed not found` | Нет `dist_server/shared/nri-night-city-zones.json` | Проверить `npm run build` (шаг `shared json → dist_server`). Пути поиска — в `loadZoneSeedFile()`. |
+| `Zone seed not found` | Нет `dist_server/shared/nri-neon-city-zones.json` | Проверить `npm run build` (шаг `shared json → dist_server`). Пути поиска — в `loadZoneSeedFile()`. |
 
 **Канонические файлы схемы:** `prisma/schema.prisma`, `server/services/nriSchemaBootstrap.ts`, `server/services/nriLoreSchema.ts`, `server/index.ts` (`ensureNriSchemaSync`).
 
@@ -175,6 +175,63 @@ src/components/NriLorePanel.tsx         # редактор лора (масте�
 src/components/NriCityMapPanel.tsx      # карта
 src/logic/nriApi/lore.ts                # клиент лора
 src/logic/saveHydrationGuards.ts      # save/sync
+```
+
+---
+
+### 7.7 ICE-аркада: коды ошибок и тесты
+
+> Каталог игр: `src/logic/nriGameCatalog.ts` · роуты: `server/services/nriIceWalletRoutes.ts` · клиент: `src/logic/nriApi/wallet.ts`
+
+#### Коды API (`NRI_ICE_*` и соседи)
+
+Формат как в §7.4C: `{ code, message, error }` → UI `[CODE] сообщение`.
+
+| Код | HTTP | Когда |
+|-----|------|-------|
+| `NRI_NO_TOKEN` | 401 | Нет JWT |
+| `NRI_NOT_FOUND` | 404 | Стол не найден / закрыт |
+| `NRI_PLAYER_NOT_FOUND` | 404 | Нет персонажа на столе |
+| `NRI_ICE_WON` | 400 | `POST .../ice/result` — нет `won: boolean` (Zod) |
+| `NRI_ICE_RESULT_FAILED` | 500 | Не сохранился результат Gibson/ban |
+| `NRI_ICE_SCORE_INVALID` | 400 | `POST .../ice/score` — NaN, `difficulty: insane`, битое тело |
+| `NRI_ICE_SCORE_FAILED` | 500 | Ошибка записи в `nriIceScore` |
+| `NRI_ICE_STATUS_FAILED` | 500 | `GET .../ice/status` |
+| `NRI_ICE_LB_FAILED` | 500 | Leaderboard(s) |
+| `NRI_INSUFFICIENT_FUNDS` | 400 | Антиспам / переводы (wallet) |
+
+**Клиент при сбое сети:** `nriFetchIceStatus` → `null`; leaderboards → `[]` / `{}` — без throw (см. `wallet.ice.test.ts`).
+
+**Save/hardware ban:** не HTTP-код — `readIceBan` / `buildIcePlayStatus` в `server/services/nriIceBan.ts`; corrupt `sheet.iceBan` санитизируется.
+
+**Известный edge (зафиксирован тестом):** `iceRewardBits(NaN, …)` — `NaN < 100` ложно, даёт завышенный score; guard при необходимости в `gibsonIceRun.ts`.
+
+#### Где лежат тесты
+
+| Файл | Что проверяет |
+|------|----------------|
+| `src/logic/iceMiniGameLogic.test.ts` | shuffle, Wordle, hash, зоны, `resolveIceParams` |
+| `src/logic/gibsonIceRun.test.ts` | seed, 1 vulnerable, `iceRewardBits` |
+| `server/services/nriIceBan.test.ts` | corrupt sheet, streak→ban, clearance |
+| `shared/nri-domain/nriGameCatalog.test.ts` | unique id/engine, sync с `NRI_ICE_GAME_IDS`, guide |
+| `shared/nri-domain/iceLeaderboard.test.ts` | пустые rows, мусор, tie-break |
+| `shared/api-schemas/schemas.test.ts` | `nriIceScoreSchema`, `nriIceResultSchema` |
+| `src/logic/nriApi/wallet.ice.test.ts` | fetch 401/500, битый JSON body |
+| `server/api.integration.test.ts` | ICE routes: 401, 404, 400, score POST, leaderboards |
+
+Запуск только ICE-стека:
+
+```bash
+npm test -- --run src/logic/iceMiniGameLogic.test.ts src/logic/gibsonIceRun.test.ts server/services/nriIceBan.test.ts shared/nri-domain/nriGameCatalog.test.ts shared/nri-domain/iceLeaderboard.test.ts shared/api-schemas/schemas.test.ts src/logic/nriApi/wallet.ice.test.ts server/api.integration.test.ts
+```
+
+#### Чеклист ICE-фичи
+
+```text
+[ ] Новая игра → id в NRI_GAME_CATALOG + NRI_ICE_GAME_IDS + уникальный engine
+[ ] POST .../ice/score с gameId — isNriIceGameId или fallback gibson_ice
+[ ] npm test (файлы выше) && npm run build
+[ ] Ачивка «Киберспортсмен» — #1 во всех 13 играх с хотя бы одним результатом
 ```
 
 ---

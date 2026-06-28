@@ -24,6 +24,7 @@ function mockPrisma(): Pick<
   | 'nriPresetCharacter'
   | 'nriNpc'
   | 'nriCyberProduct'
+  | 'nriIceScore'
   | '$transaction'
 > {
   return {
@@ -99,6 +100,10 @@ function mockPrisma(): Pick<
       delete: vi.fn(),
       deleteMany: vi.fn(),
     } as unknown as PrismaClient['nriCyberProduct'],
+    nriIceScore: {
+      findMany: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+    } as unknown as PrismaClient['nriIceScore'],
     $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   };
 }
@@ -523,5 +528,153 @@ describe('neon_v1 API (integration)', () => {
 
     expect(res.body.code).toBe('INVALID_CONDITION_ID');
     expect(prisma.nriPlayer.update).not.toHaveBeenCalled();
+  });
+
+  describe('ICE routes', () => {
+    const sessionOpen = {
+      id: 'sess-ice',
+      inviteCode: 'NRI-ICE',
+      hostUserId: 'host-ice',
+      title: 'ICE table',
+      chatRoomId: 'room-ice',
+      status: 'open',
+      spamBotEnabled: false,
+      spamPausedUntil: null,
+      host: { username: 'host' },
+    };
+
+    it('GET ice/status без токена → 401', async () => {
+      await request(app()).get('/neon_v1/services/nri/NRI-ICE/ice/status').expect(401);
+    });
+
+    it('GET ice/status без персонажа → 404', async () => {
+      const tok = jwt.sign({ userId: 'uid-no-pl' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(sessionOpen as any);
+      vi.mocked(prisma.nriPlayer.findUnique).mockResolvedValue(null);
+
+      const res = await request(app())
+        .get('/neon_v1/services/nri/NRI-ICE/ice/status')
+        .set('Authorization', `Bearer ${tok}`)
+        .expect(404);
+
+      expect(res.body.code).toBe('NRI_PLAYER_NOT_FOUND');
+    });
+
+    it('GET ice/status с битым sheet → 200 и canPlay', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(sessionOpen as any);
+      vi.mocked(prisma.nriPlayer.findUnique).mockResolvedValue({
+        id: 'pl-ice',
+        sessionId: 'sess-ice',
+        userId: 'uid-ice',
+        sheet: { iceBan: 'corrupt' },
+        inventory: null,
+      } as any);
+      vi.mocked(prisma.nriPlayer.findMany).mockResolvedValue([
+        { sheet: {}, inventory: [] },
+      ] as any);
+
+      const res = await request(app())
+        .get('/neon_v1/services/nri/NRI-ICE/ice/status')
+        .set('Authorization', `Bearer ${tok}`)
+        .expect(200);
+
+      expect(res.body.canPlay).toBe(true);
+      expect(res.body.consecutiveFails).toBe(0);
+    });
+
+    it('POST ice/result без won → 400', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      const res = await request(app())
+        .post('/neon_v1/services/nri/NRI-ICE/ice/result')
+        .set('Authorization', `Bearer ${tok}`)
+        .send({})
+        .expect(400);
+      expect(res.body.code).toBe('NRI_ICE_WON');
+    });
+
+    it('POST ice/score с невалидным difficulty → 400', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      const res = await request(app())
+        .post('/neon_v1/services/nri/NRI-ICE/ice/score')
+        .set('Authorization', `Bearer ${tok}`)
+        .send({ won: true, difficulty: 'nightmare' })
+        .expect(400);
+      expect(res.body.code).toBe('NRI_ICE_SCORE_INVALID');
+    });
+
+    it('POST ice/score won:false записывает результат', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(sessionOpen as any);
+      vi.mocked(prisma.nriPlayer.findUnique).mockResolvedValue({
+        id: 'pl-ice',
+        sessionId: 'sess-ice',
+        userId: 'uid-ice',
+        displayName: 'Runner',
+        sheet: {},
+        inventory: [],
+      } as any);
+      vi.mocked(prisma.nriIceScore.create).mockResolvedValue({
+        userId: 'uid-ice',
+        displayName: 'Runner',
+        gameId: 'port_sweep',
+        difficulty: 'easy',
+        score: 0,
+        exfilPct: 0,
+        tracePct: 100,
+        createdAt: new Date(),
+      } as any);
+
+      const res = await request(app())
+        .post('/neon_v1/services/nri/NRI-ICE/ice/score')
+        .set('Authorization', `Bearer ${tok}`)
+        .send({ gameId: 'port_sweep', difficulty: 'easy', score: 0, exfilPct: 0, tracePct: 100, won: false })
+        .expect(201);
+
+      expect(res.body.ok).toBe(true);
+      expect(res.body.entry.gameId).toBe('port_sweep');
+    });
+
+    it('GET ice/leaderboards пустой стол → все ключи каталога', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(sessionOpen as any);
+      vi.mocked(prisma.nriIceScore.findMany).mockResolvedValue([]);
+
+      const res = await request(app())
+        .get('/neon_v1/services/nri/NRI-ICE/ice/leaderboards')
+        .set('Authorization', `Bearer ${tok}`)
+        .expect(200);
+
+      expect(Object.keys(res.body.boards).length).toBe(13);
+      expect(res.body.boards.port_sweep).toEqual([]);
+    });
+
+    it('GET ice/leaderboard с мусорным gameId → fallback gibson_ice', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue(sessionOpen as any);
+      vi.mocked(prisma.nriIceScore.findMany).mockResolvedValue([]);
+
+      const res = await request(app())
+        .get('/neon_v1/services/nri/NRI-ICE/ice/leaderboard?gameId=not_a_real_game')
+        .set('Authorization', `Bearer ${tok}`)
+        .expect(200);
+
+      expect(res.body.gameId).toBe('gibson_ice');
+    });
+
+    it('GET ice/status стол закрыт → 404', async () => {
+      const tok = jwt.sign({ userId: 'uid-ice' }, JWT_SECRET);
+      vi.mocked(prisma.nriSession.findUnique).mockResolvedValue({
+        ...sessionOpen,
+        status: 'closed',
+      } as any);
+
+      const res = await request(app())
+        .get('/neon_v1/services/nri/NRI-ICE/ice/status')
+        .set('Authorization', `Bearer ${tok}`)
+        .expect(404);
+
+      expect(res.body.code).toBe('NRI_NOT_FOUND');
+    });
   });
 });

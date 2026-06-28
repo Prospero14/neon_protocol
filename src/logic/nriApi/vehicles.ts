@@ -1,6 +1,6 @@
 /** Table vehicles */
 
-import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+import { nriAuthHeaders, nriParseJson, nriSafeFetch, parseNriApiError } from './http.js';
 
 const parseJson = nriParseJson;
 const authHeaders = nriAuthHeaders;
@@ -19,12 +19,11 @@ export type NriTableVehicle = {
 };
 
 export async function nriFetchVehicles(token: string, code: string): Promise<NriTableVehicle[]> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vehicles`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return [];
-  return data.vehicles ?? [];
+  if (!out || !out.res.ok) return [];
+  return (out.data.vehicles as NriTableVehicle[]) ?? [];
 }
 
 export async function nriCreateVehicle(

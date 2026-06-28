@@ -10,6 +10,7 @@ import {
   normalizeFactionKind,
   parseZoneKeys,
 } from './nriFactionKinds.js';
+import { rootMapZoneKey } from '../../shared/nri-domain/mapZones.js';
 import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
 import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
 import { ensureAllNriLoreDbColumns, apiErrorHint } from './nriSchemaBootstrap.js';
@@ -227,7 +228,7 @@ function placeBodyFromZone(zone: {
 }): string {
   const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
   const corp = zone.corpName ? ` · ${zone.corpName}` : '';
-  return `${mega}Район Night City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
+  return `${mega}Район Neon City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
 }
 
 function placeSummaryFromZone(zone: { name: string; megaDistrict: string | null }): string {
@@ -306,7 +307,7 @@ export async function ensureSessionLorePlacesFromMap(prisma: PrismaClient, sessi
   await ensureAllNriLoreDbColumns(prisma);
   await ensureMapZonesSeeded(prisma);
   const zones = await prisma.nriMapZone.findMany({
-    where: { NOT: { zoneKey: { startsWith: '__' } } },
+    where: { parentZoneKey: null, NOT: { zoneKey: { startsWith: '__' } } },
     orderBy: { sortOrder: 'asc' },
   });
   if (zones.length === 0) return;
@@ -461,7 +462,7 @@ async function syncFactionZonePlaces(
       where: { sessionId, zoneKey },
     });
 
-    const bodyHint = `Район Night City · ${formatFactionTitle(kind, factionName)}.`;
+    const bodyHint = `Район Neon City · ${formatFactionTitle(kind, factionName)}.`;
     if (existing) {
       await prisma.nriLorePlace.update({
         where: { id: existing.id },
@@ -1333,7 +1334,7 @@ export function mountNriLoreTravelRoutes(app: Express, deps: Deps) {
       const mapEvents: AchievementEvent[] = [
         {
           type: 'zone_visited',
-          zoneKey: targetZone.zoneKey,
+          zoneKey: rootMapZoneKey(targetZone.zoneKey),
           weaponEquipped: inventoryHasEquippedWeapon(player.inventory),
         },
       ];

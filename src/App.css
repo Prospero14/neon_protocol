@@ -1381,8 +1381,10 @@ body, html, #root {
     radial-gradient(rgba(255, 184, 0, 0.1) 1px, transparent 1px);
   background-size: 20px 20px;
   overflow: hidden;
+  touch-action: none;
 }
-.map-canvas-wrap:active { cursor: grabbing; }
+.map-canvas-wrap:active,
+.map-view-v4--panning .map-canvas-wrap { cursor: grabbing; }
 
 .map-svg {
   width: 100%;
@@ -3376,6 +3378,51 @@ body, html, #root {
   background: #ff2d6d;
   color: #fff;
   box-shadow: 0 0 10px rgba(255, 45, 109, 0.6);
+}
+
+.app-account-logout {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  right: max(8px, env(safe-area-inset-right, 0px));
+  z-index: 12000;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-height: 36px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: #ffb8cc;
+  background: rgba(12, 8, 16, 0.92);
+  border: 1px solid rgba(255, 45, 109, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  touch-action: manipulation;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.app-account-logout:hover {
+  color: #fff;
+  background: rgba(255, 45, 109, 0.22);
+  border-color: #ff2d6d;
+}
+
+.app-account-logout__user {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .app-account-logout__label {
+    display: none;
+  }
+  .app-account-logout__user {
+    max-width: 72px;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════ */

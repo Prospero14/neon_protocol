@@ -99,7 +99,7 @@ const UNIVERSAL_ACHIEVEMENTS: NriAchievementDef[] = [
   {
     id: 'cartographer',
     title: 'Картограф',
-    blurb: 'Побывал минимум в 5 разных районах Night City.',
+    blurb: 'Побывал минимум в 5 разных районах Neon City.',
     icon: '🗺️',
   },
   {

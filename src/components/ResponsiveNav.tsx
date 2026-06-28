@@ -51,8 +51,8 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
         <span className="nav-hp">STRESS: {Math.round((hp/maxStress)*100)}%</span>
         <span className="nav-lvl">STATUS: {level >= 5 ? 'PROFESSIONAL' : 'SCRIPT-KIDDO'}</span>
         {onLogout && (
-          <button className="nav-logout-btn" onClick={onLogout} title="ВЫХОД">
-            ✖
+          <button className="nav-logout-btn" onClick={onLogout} title="Выйти из аккаунта">
+            ВЫХОД
           </button>
         )}
       </div>

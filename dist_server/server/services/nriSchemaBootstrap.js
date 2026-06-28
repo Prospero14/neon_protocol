@@ -1,5 +1,5 @@
 /** CREATE TABLE IF NOT EXISTS + колонки для старых SQLite на Amvera без migrate. */
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { ensureNriLoreEntryTable } from './nriLoreSchema.js';
@@ -124,6 +124,16 @@ export async function ensureNriMapSchema(prisma) {
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "megaDistrict" TEXT;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "color" TEXT;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "iconId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "parentZoneKey" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "placeType" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "districtStyle" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "gridRow" INTEGER;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "gridCol" INTEGER;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "populationBand" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "densityLabel" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "trafficLevel" INTEGER;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "nightlifeLevel" INTEGER;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "linksTo" TEXT;`);
 }
 /** Полный bootstrap лора + карты (не бросает — логирует сбой шага). */
 export async function ensureAllNriLoreDbColumns(prisma) {
@@ -144,10 +154,50 @@ export async function ensureAllNriLoreDbColumns(prisma) {
         }
     }
 }
-/** Читает seed районов — несколько путей для Amvera / dist_server / dev. */
+/** Читает seed районов — каталог по мегарайонам или monolith fallback. */
+function readZoneSeedJson(filePath) {
+    return JSON.parse(readFileSync(filePath, 'utf8'));
+}
+function loadZoneSeedDir(dirPath) {
+    if (!existsSync(dirPath))
+        return null;
+    try {
+        if (!statSync(dirPath).isDirectory())
+            return null;
+    }
+    catch {
+        return null;
+    }
+    const files = readdirSync(dirPath)
+        .filter((f) => f.endsWith('.json'))
+        .sort();
+    if (files.length === 0)
+        return null;
+    const merged = [];
+    for (const f of files) {
+        merged.push(...readZoneSeedJson(join(dirPath, f)));
+    }
+    merged.sort((a, b) => a.sortOrder - b.sortOrder);
+    return merged;
+}
 export function loadZoneSeedFile() {
     const here = dirname(fileURLToPath(import.meta.url));
+    const dirPaths = [
+        join(here, '../../shared/nri-neon-city-zones'),
+        join(here, '../../../shared/nri-neon-city-zones'),
+        join(process.cwd(), 'dist_server/shared/nri-neon-city-zones'),
+        join(process.cwd(), 'shared/nri-neon-city-zones'),
+    ];
+    for (const dir of dirPaths) {
+        const fromDir = loadZoneSeedDir(dir);
+        if (fromDir?.length)
+            return fromDir;
+    }
     const paths = [
+        join(here, '../../shared/nri-neon-city-zones.json'),
+        join(here, '../../../shared/nri-neon-city-zones.json'),
+        join(process.cwd(), 'dist_server/shared/nri-neon-city-zones.json'),
+        join(process.cwd(), 'shared/nri-neon-city-zones.json'),
         join(here, '../../shared/nri-night-city-zones.json'),
         join(here, '../../../shared/nri-night-city-zones.json'),
         join(process.cwd(), 'dist_server/shared/nri-night-city-zones.json'),
@@ -157,13 +207,13 @@ export function loadZoneSeedFile() {
         if (!existsSync(p))
             continue;
         try {
-            return JSON.parse(readFileSync(p, 'utf8'));
+            return readZoneSeedJson(p);
         }
         catch (e) {
             console.warn('[nriMapZones] bad zone seed file:', p, e);
         }
     }
-    throw new Error(`Zone seed not found (tried: ${paths.join(' | ')})`);
+    throw new Error(`Zone seed not found (tried dirs: ${dirPaths.join(' | ')})`);
 }
 export function apiErrorHint(error) {
     const msg = String(error?.message ?? error ?? '').trim();

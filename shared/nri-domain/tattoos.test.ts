@@ -61,7 +61,7 @@ describe('nri tattoos', () => {
 
   it('rolls npc tattoos with faction bias', () => {
     const tattoos = rollNpcTattoos(
-      { archetypeId: 'gang', originId: 'night_city', factionId: 'f-gang' },
+      { archetypeId: 'gang', originId: 'neon_city', factionId: 'f-gang' },
       factions,
       1
     );

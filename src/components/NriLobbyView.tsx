@@ -8,7 +8,7 @@ import {
   nriCreateVaultFile,
   nriFetchPlayer,
   nriFetchRoster,
-  nriFetchState,
+  nriLoadTableLobby,
   nriFetchVault,
   nriFetchNpcs,
   nriSavePlayer,
@@ -63,6 +63,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const [session, setSession] = useState<NriSessionInfo | null>(null);
   const [members, setMembers] = useState<NriMember[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [sessionBooting, setSessionBooting] = useState(true);
   const [tab, setTab] = useState<Tab>('chat');
   const [copied, setCopied] = useState(false);
   const [profile, setProfile] = useState<NriPlayerProfile | null | undefined>(undefined);
@@ -85,6 +86,8 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const [achToast, setAchToast] = useState<NriAchievementUnlock[]>([]);
   const [peopleSection, setPeopleSection] = useState<PeopleSection>('chars');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const refreshRef = useRef<() => Promise<void>>(async () => {});
 
   const authToken = readNeonAuthToken() ?? token;
 
@@ -145,32 +148,61 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     if (list) setTableNpcs(list);
   }, [authToken, inviteCode, session?.isHost, session?.isAdmin]);
 
+  const loadHostExtras = useCallback(
+    async (sess: NriSessionInfo) => {
+      if (!authToken || !(sess.isHost || sess.isAdmin)) return;
+      const [files, npcs] = await Promise.all([
+        nriFetchVault(authToken, inviteCode),
+        nriFetchNpcs(authToken, inviteCode),
+      ]);
+      setVaultFiles(files);
+      if (npcs) setTableNpcs(npcs);
+    },
+    [authToken, inviteCode]
+  );
+
   const refresh = useCallback(async () => {
-    if (!authToken) return;
-    const data = await nriFetchState(authToken, inviteCode);
-    if (!data) {
-      setErr('Стол недоступен или закрыт.');
+    if (!authToken) {
+      setSessionBooting(false);
+      setErr('Нет токена авторизации — выйдите и войдите снова.');
       return;
     }
-    setErr(null);
-    setSession(data.session);
-    setMembers(data.members);
-    if (data.session.status === 'closed') {
-      setErr('Мастер закрыл стол.');
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    try {
+      const data = await nriLoadTableLobby(authToken, inviteCode);
+      if (!data.ok) {
+        if (!session) setErr(data.error);
+        return;
+      }
+      setErr(null);
+      setSession(data.session);
+      setMembers(data.members);
+      if (data.session.status === 'closed') {
+        setErr('Мастер закрыл стол.');
+      }
+      void loadHostExtras(data.session);
+    } catch (err) {
+      console.error('nri lobby refresh:', err);
+      setErr('Сервер недоступен. Запустите: npm run build && npm start (порт 8080).');
+    } finally {
+      refreshInFlightRef.current = false;
+      setSessionBooting(false);
     }
-    if (data.session.isHost || data.session.isAdmin) {
-      await loadVault();
-      await loadTableNpcs();
-    }
-  }, [authToken, inviteCode, loadVault, loadTableNpcs]);
+  }, [authToken, inviteCode, loadHostExtras]);
+
+  refreshRef.current = refresh;
 
   useEffect(() => {
-    refresh();
-    pollRef.current = setInterval(refresh, 4000);
+    void refreshRef.current();
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(() => {
+      void refreshRef.current();
+    }, 8000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [refresh]);
+  }, [authToken, inviteCode]);
 
   useEffect(() => {
     if (!authToken) return;
@@ -271,7 +303,12 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const endLiveDialog = async () => {
     if (!authToken || !session?.isHost || !session.liveDialogEnabled) return;
     const ok = await nriEndLiveDialog(authToken, inviteCode);
-    if (ok) await refresh();
+    if (ok) {
+      setSession((s) =>
+        s ? { ...s, liveDialogEnabled: false, liveDialogEndedAt: Date.now() } : s
+      );
+      await refresh();
+    }
   };
 
   useEffect(() => {
@@ -392,8 +429,8 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
               <User size={14} /> Лист персонажа
             </button>
           )}
-          <button type="button" className="nri-lobby__leave" onClick={onLeave}>
-            <LogOut size={16} /> Выйти
+          <button type="button" className="nri-lobby__leave" onClick={onLeave} title="Вернуться к выбору режима, аккаунт остаётся">
+            <LogOut size={16} /> Покинуть стол
           </button>
         </div>
       </header>
@@ -409,6 +446,30 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           </button>
         )}
       </div>
+
+      {!session && (
+        <div className="nri-lobby__boot">
+          {sessionBooting ? (
+            <p className="mono-text opacity-80">Подключение к столу…</p>
+          ) : err ? (
+            <>
+              <p className="nri-lobby__err mono-text">{err}</p>
+              <button
+                type="button"
+                className="nri-lobby__copy"
+                onClick={() => {
+                  setSessionBooting(true);
+                  void refresh();
+                }}
+              >
+                Повторить подключение
+              </button>
+            </>
+          ) : (
+            <p className="mono-text opacity-80">Стол не ответил. Проверьте, что сервер запущен на порту 8080.</p>
+          )}
+        </div>
+      )}
 
       <div className="nri-lobby__members">
         <Users size={14} />
@@ -496,6 +557,29 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
       </nav>
 
       <div className="nri-lobby__body">
+        {tab === 'chat' && !session?.chatRoomId && (
+          <div className="nri-lobby__boot nri-lobby__boot--inline">
+            {sessionBooting ? (
+              <p className="mono-text opacity-80">Подключение к столу… чат откроется после join.</p>
+            ) : (
+              <>
+                <p className="nri-lobby__err mono-text">
+                  {err ?? 'Чат недоступен — стол не подключился.'}
+                </p>
+                <button
+                  type="button"
+                  className="nri-lobby__copy"
+                  onClick={() => {
+                    setSessionBooting(true);
+                    void refresh();
+                  }}
+                >
+                  Повторить подключение
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {tab === 'chat' && session?.chatRoomId && (
           <NeonChatPanel
             fixedRoomId={session.chatRoomId}
@@ -642,7 +726,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
       </div>
 
-      {err && <p className="nri-lobby__err mono-text">{err}</p>}
+      {session && err && <p className="nri-lobby__err mono-text">{err}</p>}
       {showRules && <NriRulesPanel onClose={() => setShowRules(false)} />}
       {showSheet && profile && (
         <NriCharacterSheet profile={profile} onClose={() => setShowSheet(false)} />

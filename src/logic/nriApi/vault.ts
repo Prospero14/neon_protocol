@@ -1,6 +1,6 @@
 /** Vault — session + global files */
 
-import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+import { nriAuthHeaders, nriParseJson, nriSafeFetch, parseNriApiError } from './http.js';
 
 const parseJson = nriParseJson;
 const authHeaders = nriAuthHeaders;
@@ -51,12 +51,11 @@ export async function vaultDeleteFile(token: string, fileId: string): Promise<bo
 }
 
 export async function nriFetchVault(token: string, code: string): Promise<NriVaultFile[]> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vault`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/vault`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return [];
-  return data.files ?? [];
+  if (!out || !out.res.ok) return [];
+  return (out.data.files as NriVaultFile[]) ?? [];
 }
 
 export async function nriCreateVaultFile(

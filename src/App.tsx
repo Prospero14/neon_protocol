@@ -26,6 +26,7 @@ import IntelView from './components/IntelView';
 import { HubView } from './components/views/HubView';
 import { CoopLobbyView } from './components/CoopLobbyView';
 import { AuthForm } from './components/AuthForm';
+import { AppAccountLogout } from './components/AppAccountLogout';
 import { NeonServicesHub } from './components/services/NeonServicesHub';
 import { NriLobbyView } from './components/NriLobbyView';
 import './components/services/neon-services.css';
@@ -588,11 +589,14 @@ function App() {
 
   const hideNav = ['SESSION_GATE', 'CREATION', 'COOP_LOBBY', 'NRI_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
 
-  if (gs.isLoading) return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
+  if (gs.isLoading || (gs.user && !gs.hydrationReady)) {
+    return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
+  }
   if (!gs.user) return <AuthForm />;
 
   return (
     <div className="app-root main-crt">
+      {hideNav && <AppAccountLogout username={gs.user.username} onLogout={gs.logout} />}
       {!hideNav && (
         <ResponsiveNav 
           currentView={gs.currentView} 

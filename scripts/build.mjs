@@ -20,13 +20,25 @@ function log(msg) {
 function copySharedJson() {
   const src = path.join(root, 'shared');
   const dest = path.join(root, 'dist_server', 'shared');
-  mkdirSync(dest, { recursive: true });
   let n = 0;
-  for (const f of readdirSync(src)) {
-    if (!f.endsWith('.json')) continue;
-    cpSync(path.join(src, f), path.join(dest, f));
-    n += 1;
+
+  function copyEntry(srcPath, destPath) {
+    for (const ent of readdirSync(srcPath, { withFileTypes: true })) {
+      const s = path.join(srcPath, ent.name);
+      const d = path.join(destPath, ent.name);
+      if (ent.isDirectory()) {
+        mkdirSync(d, { recursive: true });
+        copyEntry(s, d);
+        continue;
+      }
+      if (!ent.name.endsWith('.json')) continue;
+      mkdirSync(destPath, { recursive: true });
+      cpSync(s, d);
+      n += 1;
+    }
   }
+
+  copyEntry(src, dest);
   log(`shared json → dist_server (${n} files)`);
 }
 

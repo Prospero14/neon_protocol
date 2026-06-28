@@ -2,7 +2,7 @@
 
 import type { NriInventoryItem } from '../nriInventory';
 import type { NriAchievementDef } from '../../../shared/nri-domain/achievements';
-import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+import { nriAuthHeaders, nriParseJson, nriSafeFetch, parseNriApiError } from './http.js';
 
 export type NriPlayerDossier = {
   characterName: string;
@@ -60,21 +60,20 @@ export type NriUseItemResult =
   | { ok: false; error: string };
 
 export async function nriFetchPlayer(token: string, code: string): Promise<NriPlayerProfile | null | undefined> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player`, {
     headers: nriAuthHeaders(token),
   });
-  const data = await nriParseJson(res);
-  if (!res.ok) return undefined;
-  return data.player ?? null;
+  if (!out) return undefined;
+  if (!out.res.ok) return undefined;
+  return (out.data.player as NriPlayerProfile) ?? null;
 }
 
 export async function nriFetchRoster(token: string, code: string): Promise<NriRosterPlayer[] | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/players`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/players`, {
     headers: nriAuthHeaders(token),
   });
-  const data = await nriParseJson(res);
-  if (!res.ok) return null;
-  return data.players ?? [];
+  if (!out || !out.res.ok) return null;
+  return (out.data.players as NriRosterPlayer[]) ?? [];
 }
 
 export async function nriSavePlayer(

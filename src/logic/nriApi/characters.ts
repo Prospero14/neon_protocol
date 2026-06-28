@@ -1,7 +1,7 @@
 /** Presets, NPCs, combatants */
 
 import type { NriInventoryItem } from '../nriInventory';
-import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
+import { nriAuthHeaders, nriParseJson, nriSafeFetch, parseNriApiError } from './http.js';
 import type { NriInventoryUpdateResult } from './players.js';
 
 const parseJson = nriParseJson;
@@ -143,12 +143,11 @@ export async function nriPatchPreset(
 }
 
 export async function nriFetchNpcs(token: string, code: string): Promise<NriNpc[] | null> {
-  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/npcs`, {
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/npcs`, {
     headers: authHeaders(token),
   });
-  const data = await parseJson(res);
-  if (!res.ok) return null;
-  return data.npcs ?? [];
+  if (!out || !out.res.ok) return null;
+  return (out.data.npcs as NriNpc[]) ?? [];
 }
 
 export async function nriCreateNpc(

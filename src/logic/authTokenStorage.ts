@@ -11,3 +11,13 @@ export function readNeonAuthToken(): string | null {
     return null;
   }
 }
+
+/** Сброс JWT и сохранённого пользователя (без reload). */
+export function clearNeonAuthStorage(): void {
+  try {
+    localStorage.removeItem('neon_token');
+    localStorage.removeItem('neon_user');
+  } catch {
+    /* ignore */
+  }
+}

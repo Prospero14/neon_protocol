@@ -1,0 +1,52 @@
+[
+  {
+    "zoneKey": "hw_ns_n",
+    "sortOrder": 0,
+    "name": "Гранд-авеню · север",
+    "zoneType": "highway",
+    "x": 108,
+    "y": 0,
+    "w": 10,
+    "h": 75
+  },
+  {
+    "zoneKey": "hw_ew_w",
+    "sortOrder": 1,
+    "name": "Кольцевая петля · запад",
+    "zoneType": "highway",
+    "x": 0,
+    "y": 75,
+    "w": 108,
+    "h": 10
+  },
+  {
+    "zoneKey": "hw_ew_e",
+    "sortOrder": 2,
+    "name": "Кольцевая петля · восток",
+    "zoneType": "highway",
+    "x": 118,
+    "y": 75,
+    "w": 122,
+    "h": 10
+  },
+  {
+    "zoneKey": "hw_ns_s",
+    "sortOrder": 3,
+    "name": "Гранд-авеню · юг",
+    "zoneType": "highway",
+    "x": 108,
+    "y": 85,
+    "w": 10,
+    "h": 80
+  },
+  {
+    "zoneKey": "hw_core",
+    "sortOrder": 4,
+    "name": "Кольцевая развязка",
+    "zoneType": "overpass",
+    "x": 108,
+    "y": 75,
+    "w": 10,
+    "h": 10
+  }
+]

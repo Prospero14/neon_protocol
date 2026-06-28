@@ -159,6 +159,20 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
               {open && (
                 <div className="nri-ice-game-card__body">
                   <p className="mono-text opacity-70 nri-ice-game-card__blurb">{game.blurb}</p>
+                  <dl className="nri-ice-game-card__guide mono-text">
+                    <div>
+                      <dt>Как играть</dt>
+                      <dd>{game.guide.how}</dd>
+                    </div>
+                    <div>
+                      <dt>Победа</dt>
+                      <dd>{game.guide.win}</dd>
+                    </div>
+                    <div>
+                      <dt>Провал</dt>
+                      <dd>{game.guide.fail}</dd>
+                    </div>
+                  </dl>
 
                   <div className="nri-ice-game-card__play">
                     <label className="mono-text">

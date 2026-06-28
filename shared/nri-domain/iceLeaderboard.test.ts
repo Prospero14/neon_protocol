@@ -198,3 +198,45 @@ describe('arcadeIceWinScore', () => {
     }
   });
 });
+
+describe('buildIceLeaderboardForGame — corrupt rows', () => {
+  it('handles missing displayName without throw', () => {
+    const lb = buildIceLeaderboardForGame(
+      [
+        {
+          userId: 'u1',
+          displayName: '',
+          gameId: 'trace_rush',
+          difficulty: '',
+          score: 10,
+          exfilPct: 0,
+          tracePct: 0,
+          createdAt: new Date(1),
+        },
+      ],
+      'trace_rush',
+    );
+    expect(lb).toHaveLength(1);
+    expect(lb[0]?.displayName).toBe('');
+  });
+
+  it('unknown gameId filter → empty', () => {
+    expect(
+      buildIceLeaderboardForGame(
+        [
+          {
+            userId: 'u1',
+            displayName: 'A',
+            gameId: 'gibson_ice',
+            difficulty: 'easy',
+            score: 10,
+            exfilPct: 0,
+            tracePct: 0,
+            createdAt: new Date(1),
+          },
+        ],
+        'totally_fake',
+      ),
+    ).toEqual([]);
+  });
+});

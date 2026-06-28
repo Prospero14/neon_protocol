@@ -1,6 +1,7 @@
 /** Лор, прогресс сценария, перемещение игроков, уведомления мастеру. */
 import { getServerVehicleDef } from './nriVehiclesServer.js';
 import { formatFactionTitle, normalizeFactionKind, parseZoneKeys, } from './nriFactionKinds.js';
+import { rootMapZoneKey } from '../../shared/nri-domain/mapZones.js';
 import { patchMapZone, ensureMapZonesSeeded } from './nriMapZones.js';
 import { ensureNriLoreEntryTable, listLoreEntries } from './nriLoreSchema.js';
 import { ensureAllNriLoreDbColumns, apiErrorHint } from './nriSchemaBootstrap.js';
@@ -127,7 +128,7 @@ function serializeLorePlace(p) {
 function placeBodyFromZone(zone) {
     const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
     const corp = zone.corpName ? ` · ${zone.corpName}` : '';
-    return `${mega}Район Night City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
+    return `${mega}Район Neon City · ${zone.zoneType}${corp}. Описание: ${zone.name}.`;
 }
 function placeSummaryFromZone(zone) {
     const mega = zone.megaDistrict ? `${zone.megaDistrict} · ` : '';
@@ -203,7 +204,7 @@ export async function ensureSessionLorePlacesFromMap(prisma, sessionId) {
     await ensureAllNriLoreDbColumns(prisma);
     await ensureMapZonesSeeded(prisma);
     const zones = await prisma.nriMapZone.findMany({
-        where: { NOT: { zoneKey: { startsWith: '__' } } },
+        where: { parentZoneKey: null, NOT: { zoneKey: { startsWith: '__' } } },
         orderBy: { sortOrder: 'asc' },
     });
     if (zones.length === 0)
@@ -335,7 +336,7 @@ async function syncFactionZonePlaces(prisma, sessionId, factionId, zoneKeys, fac
         const existing = await prisma.nriLorePlace.findFirst({
             where: { sessionId, zoneKey },
         });
-        const bodyHint = `Район Night City · ${formatFactionTitle(kind, factionName)}.`;
+        const bodyHint = `Район Neon City · ${formatFactionTitle(kind, factionName)}.`;
         if (existing) {
             await prisma.nriLorePlace.update({
                 where: { id: existing.id },
@@ -1169,7 +1170,7 @@ export function mountNriLoreTravelRoutes(app, deps) {
             const mapEvents = [
                 {
                     type: 'zone_visited',
-                    zoneKey: targetZone.zoneKey,
+                    zoneKey: rootMapZoneKey(targetZone.zoneKey),
                     weaponEquipped: inventoryHasEquippedWeapon(player.inventory),
                 },
             ];

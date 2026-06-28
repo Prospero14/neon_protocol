@@ -2,13 +2,37 @@
 
 import type { Express } from 'express';
 import { isNriMember } from './nriMemberDb.js';
-import { listMapZones, ensureMapZonesSeeded, patchMapZone } from './nriMapZones.js';
+import { listMapZones, ensureMapZonesSeeded, patchMapZone, createMapSubZone, deleteMapSubZone } from './nriMapZones.js';
 import {
   ensureSessionLorePlacesFromMap,
   syncLorePlacesFromZonePatch,
   ensureSessionFactionsFromCorpZones,
 } from './nriLoreTravel.js';
 import { ensureNriMapSchema, apiErrorHint } from './nriSchemaBootstrap.js';
+
+const mapLoreSyncAt = new Map<string, number>();
+const MAP_LORE_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
+let mapLoreSyncRunning = false;
+
+function scheduleMapLoreSync(prisma: import('@prisma/client').PrismaClient, sessionId: string): void {
+  const last = mapLoreSyncAt.get(sessionId) ?? 0;
+  if (Date.now() - last < MAP_LORE_SYNC_COOLDOWN_MS || mapLoreSyncRunning) return;
+  mapLoreSyncAt.set(sessionId, Date.now());
+  setImmediate(() => {
+    void (async () => {
+      if (mapLoreSyncRunning) return;
+      mapLoreSyncRunning = true;
+      try {
+        await ensureSessionLorePlacesFromMap(prisma, sessionId);
+        await ensureSessionFactionsFromCorpZones(prisma, sessionId);
+      } catch (syncErr) {
+        console.error('nri/map lore sync:', syncErr);
+      } finally {
+        mapLoreSyncRunning = false;
+      }
+    })();
+  });
+}
 
 export type NriRouteContext = {
   prisma: import('@prisma/client').PrismaClient;
@@ -112,16 +136,12 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
         return sendApiError(res, 403, 'NRI_MAP_FORBIDDEN', 'Нет доступа к карте стола.');
       }
       await ensureNriMapSchema(prisma);
-      const zones = await listMapZones(prisma);
-      if (session.hostUserId === me.id) {
-        try {
-          await ensureSessionLorePlacesFromMap(prisma, session.id);
-          await ensureSessionFactionsFromCorpZones(prisma, session.id);
-        } catch (syncErr) {
-          console.error('nri/map lore sync:', syncErr);
-        }
-      }
+      const parentKey = String(req.query.parent ?? '').trim();
+      const zones = await listMapZones(prisma, parentKey ? { parentZoneKey: parentKey } : undefined);
       res.json({ zones, view: { w: 240, h: 165 } });
+      if (session.hostUserId === me.id && !parentKey) {
+        scheduleMapLoreSync(prisma, session.id);
+      }
     } catch (error) {
       console.error('nri/map zones get:', error);
       const hint = apiErrorHint(error);
@@ -134,13 +154,19 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
     const zoneKey = req.params.zoneKey;
-    const { name, corpName, pois, megaDistrict, color, iconId } = req.body as {
+    const { name, corpName, pois, megaDistrict, color, iconId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel } = req.body as {
       name?: string;
       corpName?: string | null;
       megaDistrict?: string;
       pois?: string[];
       color?: string | null;
       iconId?: string | null;
+      placeType?: string;
+      districtStyle?: string | null;
+      populationBand?: string | null;
+      densityLabel?: string | null;
+      trafficLevel?: number | null;
+      nightlifeLevel?: number | null;
     };
     try {
       const session = await resolveSession(code);
@@ -149,14 +175,109 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       if (!(await requireHost(session, auth, me))) {
         return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Редактирует только мастер.');
       }
-      await ensureMapZonesSeeded(prisma);
-      const zone = await patchMapZone(prisma, zoneKey, { name, corpName, pois, megaDistrict, color, iconId });
+      await ensureNriMapSchema(prisma);
+      const zone = await patchMapZone(prisma, zoneKey, {
+        name,
+        corpName,
+        pois,
+        megaDistrict,
+        color,
+        iconId,
+        placeType,
+        districtStyle,
+        populationBand,
+        densityLabel,
+        trafficLevel,
+        nightlifeLevel,
+      });
       if (!zone) return sendApiError(res, 404, 'NRI_ZONE_NOT_FOUND', 'Район не найден.');
-      await syncLorePlacesFromZonePatch(prisma, session.id, zone);
       res.json({ zone });
+      setImmediate(() => {
+        void syncLorePlacesFromZonePatch(prisma, session.id, zone).catch((syncErr) => {
+          console.error('nri/map zone lore sync:', syncErr);
+        });
+      });
     } catch (error) {
       console.error('nri/map zone patch:', error);
       return sendApiError(res, 500, 'NRI_ZONE_PATCH_FAILED', 'Не удалось обновить район.');
+    }
+  });
+
+  app.post('/neon_v1/services/nri/:code/map/zones', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const { parentZoneKey, name, zoneType, slug } = req.body as {
+      parentZoneKey?: string;
+      name?: string;
+      zoneType?: string;
+      slug?: string;
+    };
+    try {
+      const session = await resolveSession(code);
+      if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+      const me = await resolveUser(auth);
+      if (!(await requireHost(session, auth, me))) {
+        return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Создаёт только мастер.');
+      }
+      if (typeof parentZoneKey !== 'string' || !parentZoneKey.trim()) {
+        return sendApiError(res, 400, 'NRI_ZONE_PARENT', 'Укажите parentZoneKey.');
+      }
+      if (typeof name !== 'string' || !name.trim()) {
+        return sendApiError(res, 400, 'NRI_ZONE_NAME', 'Укажите название сабзоны.');
+      }
+      await ensureMapZonesSeeded(prisma);
+      const result = await createMapSubZone(prisma, {
+        parentZoneKey: parentZoneKey.trim(),
+        name: name.trim(),
+        zoneType,
+        slug,
+      });
+      if ('error' in result) {
+        const msg =
+          result.error === 'PARENT_NOT_FOUND'
+            ? 'Родительский район не найден.'
+            : result.error === 'PARENT_NOT_DRILLABLE'
+              ? 'В эту зону нельзя добавлять сабзоны.'
+              : result.error === 'ZONE_EXISTS'
+                ? 'Сабзона с таким ключом уже есть.'
+                : 'Не удалось создать сабзону.';
+        return sendApiError(res, 400, String(result.error), msg);
+      }
+      res.status(201).json({ zone: result.zone });
+    } catch (error) {
+      console.error('nri/map zone post:', error);
+      return sendApiError(res, 500, 'NRI_ZONE_CREATE_FAILED', 'Не удалось создать сабзону.');
+    }
+  });
+
+  app.delete('/neon_v1/services/nri/:code/map/zones/:zoneKey', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const zoneKey = String(req.params.zoneKey ?? '').trim();
+    if (!zoneKey) {
+      return sendApiError(res, 400, 'NRI_ZONE_KEY', 'Укажите zoneKey.');
+    }
+    try {
+      const session = await resolveSession(code);
+      if (!session) return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+      const me = await resolveUser(auth);
+      if (!(await requireHost(session, auth, me))) {
+        return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Удаляет только мастер.');
+      }
+      const result = await deleteMapSubZone(prisma, zoneKey);
+      if ('error' in result) {
+        const msg =
+          result.error === 'NOT_SUBZONE'
+            ? 'Можно удалять только сабзоны.'
+            : 'Не удалось удалить.';
+        return sendApiError(res, 404, String(result.error), msg);
+      }
+      res.json({ ok: true, reset: result.reset, zone: result.zone ?? undefined });
+    } catch (error) {
+      console.error('nri/map zone delete:', error);
+      return sendApiError(res, 500, 'NRI_ZONE_DELETE_FAILED', 'Не удалось удалить сабзону.');
     }
   });
 

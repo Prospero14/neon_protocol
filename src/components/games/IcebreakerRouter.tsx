@@ -50,15 +50,6 @@ export const IcebreakerRouter: React.FC<Props> = ({
   const game = getIceGame(gameId);
   const params = resolveIceParams(gameId, difficulty);
 
-  if (!game || !params) {
-    return (
-      <div className="ice-mini">
-        <p className="mono-text">Неизвестная игра: {gameId}</p>
-        <button type="button" onClick={() => onComplete(false)}>Назад</button>
-      </div>
-    );
-  }
-
   // Иначе async submit / таймеры после win/fail шлют повторный onComplete и ломают провал.
   const settledRef = useRef(false);
   const fail = useCallback(() => {
@@ -71,6 +62,16 @@ export const IcebreakerRouter: React.FC<Props> = ({
     settledRef.current = true;
     onComplete(true);
   }, [onComplete]);
+
+  if (!game || !params) {
+    return (
+      <div className="ice-mini">
+        <p className="mono-text">Неизвестная игра: {gameId}</p>
+        <button type="button" onClick={() => onComplete(false)}>Назад</button>
+      </div>
+    );
+  }
+
   const p = { params, onWin: win, onFail: fail };
 
   if (game.engine === 'gibson') {

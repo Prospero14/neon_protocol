@@ -55,3 +55,12 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
 4. Опционально при сборке: `VITE_API_BASE=https://your-host.example npm run mobile:apk`
 
 Бэкенд в APK не встроен — нужен живой Node-сервер с `/neon_v1`.
+
+## 🎲 ICEBREAKERS seed (NRI)
+
+Заполненный стол ролёвки лежит в `shared/seeds/icebreakers-nri.json` и при старте сервера **импортируется в текущую БД**, если invite `NRI-2U5R` ещё нет (Amvera `/data/dev.db` при этом не затирается целиком).
+
+- Хост: `test` / `test1234`
+- Игроки: `jojo` / `jojo1234`, `ratata` / `ratata1234`, `aoao` / `aoao1234`
+- Выключить: `NEON_IMPORT_ICEBREAKERS=0`
+- Перезалить стол: `NEON_IMPORT_ICEBREAKERS=force` (один редеплой), потом убрать флаг

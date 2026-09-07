@@ -11,6 +11,7 @@ import { ensureAllNriLoreDbColumns } from './services/nriSchemaBootstrap.js';
 import { ensureMapZonesSeeded } from './services/nriMapZones.js';
 import { createApp } from './createApp.js';
 import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
+import { importIcebreakersSeed } from './seeds/importIcebreakers.js';
 
 dotenv.config();
 
@@ -154,6 +155,11 @@ async function initDB() {
     console.log('[NEON_CORE] Database connected successfully.');
     await ensureNriSchemaSync();
     await seedAdmin();
+    try {
+      await importIcebreakersSeed(prisma);
+    } catch (seedErr) {
+      console.error('[NEON_SEED] ICEBREAKERS import failed:', seedErr);
+    }
     isDbReady = true;
     console.log('[NEON_CORE] INIT_COMPLETE: SYSTEM_READY');
   } catch (e) {

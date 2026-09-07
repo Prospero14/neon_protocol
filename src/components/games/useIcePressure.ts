@@ -16,27 +16,32 @@ export type IceAlertLevel = 0 | 1 | 2 | 3;
 
 /**
  * TRACE pressure: fair-hard curve.
- * CP2077-style: pause during plan/flash so skill (not RNG timer) decides.
- * Hard ≈ ~45–55s of active play before lockdown if no mistakes.
+ * Defeat always settles once (TRACE 100% or maxMistakes) — never call onFail from inside setState.
+ * Hard ≈ ~28–38s active play before lockdown if no mistakes.
  */
 export function useIcePressure(params: IceGameParams, onFail: () => void) {
-  const [trace, setTrace] = useState(() => (params.traceSpeed > 1.2 ? 8 : 4));
+  const [trace, setTrace] = useState(() => (params.traceSpeed > 1.2 ? 10 : 5));
   const [alertLevel, setAlertLevel] = useState<IceAlertLevel>(0);
   const [countermeasure, setCountermeasure] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
   const [mistakes, setMistakes] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [locked, setLocked] = useState(false);
   const bustedRef = useRef(false);
   const pausedRef = useRef(false);
+  const onFailRef = useRef(onFail);
+  onFailRef.current = onFail;
 
   const failOnce = useCallback(() => {
     if (bustedRef.current) return;
     bustedRef.current = true;
+    setLocked(true);
+    setPaused(true);
     setAlertLevel(3);
     setCountermeasure('ICE LOCKDOWN · NETRUNNER BUSTED');
     setFlash(true);
-    window.setTimeout(onFail, 520);
-  }, [onFail]);
+    window.setTimeout(() => onFailRef.current(), 480);
+  }, []);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -44,19 +49,21 @@ export function useIcePressure(params: IceGameParams, onFail: () => void) {
 
   useEffect(() => {
     const iv = window.setInterval(() => {
-      if (pausedRef.current) return;
+      if (pausedRef.current || bustedRef.current) return;
       setTrace((t) => {
-        // Soft ramp: pressure rises late so early mistakes are recoverable.
-        const ramp = t >= 80 ? 1.25 : t >= 55 ? 1.08 : 0.78;
-        const next = Math.min(100, t + params.traceSpeed * ramp * 0.32);
-        if (next >= 100) failOnce();
+        const ramp = t >= 78 ? 1.4 : t >= 52 ? 1.12 : 0.92;
+        const next = Math.min(100, t + params.traceSpeed * ramp * 0.58);
+        if (next >= 100) {
+          queueMicrotask(() => failOnce());
+        }
         return next;
       });
-    }, 280);
+    }, 260);
     return () => window.clearInterval(iv);
   }, [params.traceSpeed, failOnce]);
 
   useEffect(() => {
+    if (bustedRef.current) return;
     const lvl: IceAlertLevel =
       trace >= 88 ? 3 : trace >= 68 ? 2 : trace >= 42 ? 1 : 0;
     setAlertLevel(lvl);
@@ -64,12 +71,15 @@ export function useIcePressure(params: IceGameParams, onFail: () => void) {
 
   const spikeTrace = useCallback(
     (amount: number, msg?: string) => {
+      if (bustedRef.current) return;
       setFlash(true);
       window.setTimeout(() => setFlash(false), 380);
       setCountermeasure(msg ?? COUNTERMEASURES[Math.floor(Math.random() * COUNTERMEASURES.length)]);
       setTrace((t) => {
         const next = Math.min(100, t + amount);
-        if (next >= 100) failOnce();
+        if (next >= 100) {
+          queueMicrotask(() => failOnce());
+        }
         return next;
       });
     },
@@ -78,22 +88,23 @@ export function useIcePressure(params: IceGameParams, onFail: () => void) {
 
   const recordMistake = useCallback(
     (msg?: string) => {
+      if (bustedRef.current) return;
       setMistakes((m) => {
         const next = m + 1;
         if (params.maxMistakes > 0 && next > params.maxMistakes) {
-          failOnce();
+          queueMicrotask(() => failOnce());
         }
         return next;
       });
-      // Hard stil hurts, but 2–3 mistakes are recoverable before TRACE lock.
-      const base = params.traceSpeed > 1.3 ? 14 : params.traceSpeed < 0.85 ? 7 : 10;
-      const surge = trace >= 60 ? base * 1.15 : base;
+      const base = params.traceSpeed > 1.3 ? 16 : params.traceSpeed < 0.85 ? 9 : 12;
+      const surge = trace >= 55 ? base * 1.2 : base;
       spikeTrace(Math.round(surge), msg);
     },
     [spikeTrace, params.traceSpeed, params.maxMistakes, trace, failOnce]
   );
 
   const rewardTrace = useCallback((amount: number) => {
+    if (bustedRef.current) return;
     setTrace((t) => Math.max(0, t - amount));
     setCountermeasure(null);
   }, []);
@@ -105,6 +116,7 @@ export function useIcePressure(params: IceGameParams, onFail: () => void) {
     flash,
     mistakes,
     paused,
+    locked,
     setPaused,
     recordMistake,
     rewardTrace,

@@ -83,6 +83,47 @@ export function inPctZone(value: number, zoneStart: number, zoneWidth: number): 
 }
 
 /** Симуляция исхода Port Sweep: true = win path if all picks match seq. */
+/** Режимы Port Sweep: эхо / реверс / шум (ложный блик). */
+export type PortSweepMode = 'echo' | 'reverse' | 'noise';
+
+export function pickPortSweepMode(round: number, seed: number): PortSweepMode {
+  const s = (seed * 1103515245 + 12345 + round * 97) & 0x7fffffff;
+  if (round === 0) return 'echo';
+  const roll = s % 10;
+  if (roll < 4) return 'echo';
+  if (roll < 7) return 'reverse';
+  return 'noise';
+}
+
+/** Индексы портов для раунда + опциональный decoy (индекс pool, не в seq). */
+export function generatePortSweepRound(
+  len: number,
+  poolSize: number,
+  seed: number,
+  mode: PortSweepMode
+): { indices: number[]; decoyIndex: number | null } {
+  const indices = seqNoRepeat(len, poolSize, seed);
+  if (mode !== 'noise' || poolSize < 2) {
+    return { indices, decoyIndex: null };
+  }
+  let s = (seed * 1664525 + 1013904223) >>> 0;
+  let decoy = s % poolSize;
+  let guard = 0;
+  while (indices.includes(decoy) && guard++ < 16) {
+    s = (s * 1103515245 + 12345) >>> 0;
+    decoy = s % poolSize;
+  }
+  if (indices.includes(decoy)) {
+    decoy = (indices[0]! + 1) % poolSize;
+  }
+  return { indices, decoyIndex: decoy };
+}
+
+/** Цель ввода: для reverse — зеркало показанной последовательности. */
+export function portSweepExpected(seq: number[], mode: PortSweepMode): number[] {
+  return mode === 'reverse' ? [...seq].reverse() : seq;
+}
+
 export function portSequenceComplete(seq: number[], picks: number[]): boolean {
   if (picks.length !== seq.length) return false;
   return picks.every((p, i) => p === seq[i]);

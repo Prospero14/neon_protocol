@@ -5,9 +5,12 @@ import {
   generateBreachMatrix,
   generateBreachRun,
   generateHexSecret,
+  generatePortSweepRound,
   hashCrackChoices,
   inPctZone,
+  pickPortSweepMode,
   portSequenceComplete,
+  portSweepExpected,
   scoreGuess,
   seededShuffle,
   seqNoRepeat,
@@ -219,5 +222,24 @@ describe('NRI_GAME_CATALOG — guide и blurb не пустые', () => {
       expect(g.guide.fail.length, g.id).toBeGreaterThan(10);
       expect(g.blurb.length, g.id).toBeGreaterThan(5);
     }
+  });
+});
+
+describe('Port Sweep round helpers', () => {
+  it('reverse mode зеркалит ожидаемый ввод', () => {
+    expect(portSweepExpected([22, 80, 443], 'reverse')).toEqual([443, 80, 22]);
+    expect(portSweepExpected([22, 80, 443], 'echo')).toEqual([22, 80, 443]);
+  });
+
+  it('noise mode даёт decoy вне seq', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const { indices, decoyIndex } = generatePortSweepRound(4, 6, seed, 'noise');
+      expect(decoyIndex).not.toBeNull();
+      expect(indices.includes(decoyIndex!)).toBe(false);
+    }
+  });
+
+  it('первый раунд обычно echo', () => {
+    expect(pickPortSweepMode(0, 99)).toBe('echo');
   });
 });

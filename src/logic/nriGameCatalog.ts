@@ -149,14 +149,14 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Запомни портовый маршрут — ICE следит за аномалиями.',
     'sequence',
     {
-      how: 'Порты мигают по очереди — запомни маршрут. Повтори кликами. Несколько раундов, окно показа сжимается. Ошибка — всплеск TRACE, не мгновенный провал.',
+      how: 'Порты мигают по очереди — запомни маршрут. Раунды чередуют ECHO (повтор), REVERSE (ввод с конца) и NOISE (ложный блик — игнорируй). Набор портов меняется каждый раунд. Ошибка — всплеск TRACE.',
       win: 'Пройти все раунды с допустимым числом аномалий до заполнения TRACE.',
-      fail: 'TRACE 100% — ICE локализовал netrunner и поднял тревогу.',
+      fail: 'TRACE 100% или лимит аномалий — ICE локализовал netrunner.',
     },
     {
-      easy: { sequenceLen: 3, scanRounds: 2, flashMs: 720, maxMistakes: 5, traceSpeed: 0.35 },
-      medium: { sequenceLen: 4, scanRounds: 3, flashMs: 500, maxMistakes: 4, traceSpeed: 0.8 },
-      hard: { sequenceLen: 6, scanRounds: 4, flashMs: 380, maxMistakes: 3, traceSpeed: 1.25 },
+      easy: { sequenceLen: 3, scanRounds: 2, flashMs: 680, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { sequenceLen: 4, scanRounds: 3, flashMs: 480, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { sequenceLen: 5, scanRounds: 4, flashMs: 360, maxMistakes: 3, traceSpeed: 1.35 },
     },
   ),
   game(
@@ -165,14 +165,14 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Поймай открытый слот до закрытия — ICE адаптируется.',
     'scan',
     {
-      how: 'Слоты firewall циклически открываются и закрываются. Только один слот уязвим в каждый момент — кликни в окно OPEN. Промах или опоздание — countermeasure и рост TRACE.',
+      how: 'Слоты firewall циклически открываются и закрываются. Только OPEN уязвим — кликни вовремя. Иногда мигает BAIT (honeypot) — не кликай. Промах или опоздание — countermeasure и рост TRACE.',
       win: 'Успешно пройти все волны sweep до исчерпания TRACE.',
       fail: 'TRACE max или слишком много промахов под давлением ICE.',
     },
     {
-      easy: { scanRounds: 4, flashMs: 1500, maxMistakes: 5, traceSpeed: 0.45 },
-      medium: { scanRounds: 5, flashMs: 1050, maxMistakes: 4, traceSpeed: 0.9 },
-      hard: { scanRounds: 7, flashMs: 750, maxMistakes: 3, traceSpeed: 1.35 },
+      easy: { scanRounds: 4, flashMs: 1150, maxMistakes: 4, traceSpeed: 0.7 },
+      medium: { scanRounds: 5, flashMs: 820, maxMistakes: 3, traceSpeed: 1.1 },
+      hard: { scanRounds: 6, flashMs: 560, maxMistakes: 3, traceSpeed: 1.55 },
     },
   ),
   game(
@@ -186,9 +186,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'Неверный код, исчерпан буфер или TRACE 100%.',
     },
     {
-      easy: { tapTarget: 4, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.45 },
-      medium: { tapTarget: 5, sequenceLen: 5, maxMistakes: 3, traceSpeed: 0.85 },
-      hard: { tapTarget: 6, sequenceLen: 6, maxMistakes: 3, traceSpeed: 1.35 },
+      easy: { tapTarget: 4, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { tapTarget: 5, sequenceLen: 5, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { tapTarget: 6, sequenceLen: 6, maxMistakes: 3, traceSpeed: 1.45 },
     },
   ),
   game(
@@ -202,9 +202,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'TRACE max или критическая серия ошибок.',
     },
     {
-      easy: { tapTarget: 3, sequenceLen: 3, peekMs: 2400, maxMistakes: 5, traceSpeed: 0.5 },
-      medium: { tapTarget: 3, sequenceLen: 4, peekMs: 1800, maxMistakes: 4, traceSpeed: 0.9 },
-      hard: { tapTarget: 4, sequenceLen: 4, peekMs: 1300, maxMistakes: 3, traceSpeed: 1.4 },
+      easy: { tapTarget: 3, sequenceLen: 3, peekMs: 2400, maxMistakes: 4, traceSpeed: 0.6 },
+      medium: { tapTarget: 3, sequenceLen: 4, peekMs: 1800, maxMistakes: 3, traceSpeed: 1.0 },
+      hard: { tapTarget: 4, sequenceLen: 4, peekMs: 1300, maxMistakes: 3, traceSpeed: 1.5 },
     },
   ),
   game(
@@ -218,9 +218,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'TRACE max — brute-force прерван ICE.',
     },
     {
-      easy: { hashLen: 4, maxMistakes: 5, traceSpeed: 0.4 },
-      medium: { hashLen: 6, maxMistakes: 4, traceSpeed: 0.85 },
-      hard: { hashLen: 8, maxMistakes: 3, traceSpeed: 1.3 },
+      easy: { hashLen: 4, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { hashLen: 6, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { hashLen: 8, maxMistakes: 3, traceSpeed: 1.4 },
     },
   ),
   game(
@@ -234,9 +234,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'TRACE max или критические ошибки перехвата.',
     },
     {
-      easy: { sniffRounds: 3, maxMistakes: 5, traceSpeed: 0.45 },
-      medium: { sniffRounds: 4, maxMistakes: 4, traceSpeed: 0.85 },
-      hard: { sniffRounds: 6, maxMistakes: 3, traceSpeed: 1.3 },
+      easy: { sniffRounds: 3, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { sniffRounds: 4, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { sniffRounds: 6, maxMistakes: 3, traceSpeed: 1.4 },
     },
   ),
   game(
@@ -282,9 +282,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'Ошибка в пути сбрасывает прогресс и копит TRACE; лимит ошибок или TRACE 100% — провал.',
     },
     {
-      easy: { meshNodes: 4, sequenceLen: 3, flashMs: 700, maxMistakes: 3 },
-      medium: { meshNodes: 5, sequenceLen: 5, flashMs: 480, maxMistakes: 3 },
-      hard: { meshNodes: 6, sequenceLen: 6, flashMs: 360, maxMistakes: 2 },
+      easy: { meshNodes: 4, sequenceLen: 3, flashMs: 700, maxMistakes: 3, traceSpeed: 0.55 },
+      medium: { meshNodes: 5, sequenceLen: 5, flashMs: 480, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { meshNodes: 6, sequenceLen: 6, flashMs: 360, maxMistakes: 2, traceSpeed: 1.4 },
     },
   ),
   game(
@@ -314,9 +314,9 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       fail: 'SCAN наехал на тебя слишком много раз — прокси выдал IP ICE.',
     },
     {
-      easy: { dodgeWaves: 6, traceSpeed: 0.55, maxMistakes: 4 },
-      medium: { dodgeWaves: 10, traceSpeed: 0.9, maxMistakes: 3 },
-      hard: { dodgeWaves: 14, traceSpeed: 1.25, maxMistakes: 2 },
+      easy: { dodgeWaves: 6, traceSpeed: 0.65, maxMistakes: 3 },
+      medium: { dodgeWaves: 10, traceSpeed: 1.0, maxMistakes: 3 },
+      hard: { dodgeWaves: 14, traceSpeed: 1.35, maxMistakes: 2 },
     },
   ),
   game(
@@ -327,12 +327,12 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     {
       how: 'Розовый луч бегает по полосе. Зелёная зона — окно захвата. Жми SYNC, когда луч внутри зоны. После успеха зона смещается, канал меняется.',
       win: 'Сделать 3–5 успешных SYNC подряд.',
-      fail: 'PROMах по SYNC или TRACE до 100% — carrier засёк netrunner.',
+      fail: 'Промах по SYNC или TRACE до 100% — carrier засёк netrunner.',
     },
     {
-      easy: { sniffRounds: 3, signalZonePct: 26, traceSpeed: 0.55, maxMistakes: 3, flashMs: 1500 },
-      medium: { sniffRounds: 4, signalZonePct: 18, traceSpeed: 0.85, maxMistakes: 3, flashMs: 1200 },
-      hard: { sniffRounds: 5, signalZonePct: 14, traceSpeed: 1.15, maxMistakes: 2, flashMs: 950 },
+      easy: { sniffRounds: 3, signalZonePct: 26, traceSpeed: 0.65, maxMistakes: 3, flashMs: 1400 },
+      medium: { sniffRounds: 4, signalZonePct: 18, traceSpeed: 0.95, maxMistakes: 3, flashMs: 1100 },
+      hard: { sniffRounds: 5, signalZonePct: 14, traceSpeed: 1.25, maxMistakes: 2, flashMs: 900 },
     },
   ),
 ];

@@ -7,11 +7,15 @@ import {
   generateBreachRun,
   generateDaemonSequences,
   generateHexSecret,
+  generatePortSweepRound,
   hashCrackChoices,
+  pickPortSweepMode,
+  portSweepExpected,
   scoreGuess,
   seededShuffle,
   seqNoRepeat,
   type LetterMark,
+  type PortSweepMode,
 } from '../../logic/iceMiniGameLogic';
 import {
   IceMiniFlashDisplay,
@@ -30,68 +34,118 @@ type Props = {
   onFail: () => void;
 };
 
-/** Запомни и повтори последовательность портов — несколько раундов под ICE. */
+/** Запомни и повтори портовый маршрут — раунды с echo / reverse / noise. */
 export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
-  // Pool must match visible buttons — previously seq could pick ports 7–8 with no UI.
-  const ports = [443, 8080, 22, 8443, 21, 3306];
+  const PORT_CATALOG = useMemo(
+    () =>
+      [
+        { port: 22, svc: 'ssh' },
+        { port: 80, svc: 'http' },
+        { port: 443, svc: 'tls' },
+        { port: 445, svc: 'smb' },
+        { port: 3306, svc: 'sql' },
+        { port: 3389, svc: 'rdp' },
+        { port: 5432, svc: 'pg' },
+        { port: 6379, svc: 'redis' },
+        { port: 8080, svc: 'proxy' },
+        { port: 8443, svc: 'https' },
+        { port: 27017, svc: 'mongo' },
+        { port: 9200, svc: 'es' },
+      ] as const,
+    []
+  );
   const totalRounds = params.scanRounds;
   const [round, setRound] = useState(0);
-  const seqLen = params.sequenceLen + Math.min(round, 2);
-  const portIdx = useMemo(
-    () => seqNoRepeat(seqLen, ports.length, Date.now() + round * 997),
-    [seqLen, round]
+  const [seed] = useState(() => Date.now());
+  const roundSeed = seed + round * 9973;
+  const mode: PortSweepMode = useMemo(
+    () => pickPortSweepMode(round, roundSeed),
+    [round, roundSeed]
   );
-  const seq = useMemo(() => portIdx.map((i) => ports[i]), [portIdx]);
-  const flashMs = Math.max(280, params.flashMs - round * 35);
+  const activePorts = useMemo(() => {
+    const shuffled = seededShuffle([...PORT_CATALOG], roundSeed + 3);
+    return shuffled.slice(0, 6);
+  }, [PORT_CATALOG, roundSeed]);
+  const seqLen = params.sequenceLen + Math.min(round, 2);
+  const { indices, decoyIndex } = useMemo(
+    () => generatePortSweepRound(seqLen, activePorts.length, roundSeed + 11, mode),
+    [seqLen, activePorts.length, roundSeed, mode]
+  );
+  const seq = useMemo(() => indices.map((i) => activePorts[i]!.port), [indices, activePorts]);
+  const expected = useMemo(() => portSweepExpected(seq, mode), [seq, mode]);
+  const decoyPort = decoyIndex != null ? activePorts[decoyIndex]!.port : null;
+  const flashMs = Math.max(260, params.flashMs - round * 40);
   const [phase, setPhase] = useState<'flash' | 'input' | 'done'>('flash');
   const [flashIdx, setFlashIdx] = useState(-1);
+  const [flashIsDecoy, setFlashIsDecoy] = useState(false);
   const [input, setInput] = useState<number[]>([]);
 
   useEffect(() => {
-    ice.setPaused(phase === 'flash');
-  }, [phase, ice.setPaused]);
+    ice.setPaused(phase === 'flash' || ice.locked);
+  }, [phase, ice.setPaused, ice.locked]);
 
   useEffect(() => {
     setPhase('flash');
     setInput([]);
     setFlashIdx(-1);
-  }, [round, seqLen]);
+    setFlashIsDecoy(false);
+  }, [round, seqLen, mode]);
 
   useEffect(() => {
-    if (phase !== 'flash') return;
+    if (phase !== 'flash' || ice.locked) return;
     let i = 0;
     const timers: ReturnType<typeof setTimeout>[] = [];
+    const showStep = (port: number, isDecoy: boolean, then: () => void) => {
+      setFlashIsDecoy(isDecoy);
+      setFlashIdx(port);
+      timers.push(setTimeout(() => setFlashIdx(-1), flashMs * 0.62));
+      timers.push(setTimeout(then, flashMs));
+    };
     const run = () => {
       if (i >= seq.length) {
-        timers.push(setTimeout(() => setPhase('input'), 400));
+        timers.push(
+          setTimeout(() => {
+            setFlashIsDecoy(false);
+            setPhase('input');
+          }, 380)
+        );
         return;
       }
-      setFlashIdx(i);
-      timers.push(setTimeout(() => setFlashIdx(-1), flashMs * 0.65));
-      timers.push(
-        setTimeout(() => {
-          i++;
-          run();
-        }, flashMs)
-      );
+      const insertNoise = mode === 'noise' && decoyPort != null && i === Math.floor(seq.length / 2);
+      if (insertNoise) {
+        showStep(decoyPort, true, () => {
+          showStep(seq[i]!, false, () => {
+            i++;
+            run();
+          });
+        });
+        return;
+      }
+      showStep(seq[i]!, false, () => {
+        i++;
+        run();
+      });
     };
     run();
     return () => timers.forEach(clearTimeout);
-  }, [phase, seq, flashMs]);
+  }, [phase, seq, flashMs, mode, decoyPort, ice.locked]);
+
+  const modeLabel =
+    mode === 'reverse' ? 'REVERSE · ввод с конца' : mode === 'noise' ? 'NOISE · игнорь ложный блик' : 'ECHO · повтори маршрут';
 
   const pick = (port: number) => {
-    if (phase !== 'input') return;
+    if (phase !== 'input' || ice.locked) return;
     const next = [...input, port];
     setInput(next);
     const idx = next.length - 1;
-    if (next[idx] !== seq[idx]) {
+    if (next[idx] !== expected[idx]) {
       ice.recordMistake('ICE: неверный порт · port scan anomaly');
       setInput([]);
       if (round > 0) setPhase('flash');
       return;
     }
-    if (next.length >= seq.length) {
+    if (next.length >= expected.length) {
       ice.rewardTrace(8);
       if (round + 1 >= totalRounds) {
         setPhase('done');
@@ -113,37 +167,40 @@ export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => 
         maxMistakes={params.maxMistakes}
       />
       <IceMiniHint pulse={phase === 'flash'}>
-        Раунд {round + 1}/{totalRounds} · {phase === 'flash' ? 'Запомни маршрут…' : 'Повтори порты'}
+        Раунд {round + 1}/{totalRounds} · {phase === 'flash' ? modeLabel : `Ввод · ${modeLabel}`}
       </IceMiniHint>
       <IceMiniFlashDisplay active={flashIdx >= 0}>
         {flashIdx >= 0 ? (
           <>
-            <IceMiniTag tone="warn">LISTEN</IceMiniTag>
-            <span className="ice-mini__flash-port">:{seq[flashIdx]}</span>
+            <IceMiniTag tone={flashIsDecoy ? 'err' : 'warn'}>{flashIsDecoy ? 'NOISE' : 'LISTEN'}</IceMiniTag>
+            <span className={`ice-mini__flash-port ${flashIsDecoy ? 'ice-mini__flash-port--noise' : ''}`}>
+              :{flashIdx}
+            </span>
           </>
         ) : (
           <span className="ice-mini__flash-idle">awaiting input…</span>
         )}
       </IceMiniFlashDisplay>
       <div className="ice-mini__grid ice-mini__grid--ports">
-        {ports.map((p) => {
-          const lit = phase === 'input' && input.includes(p) && input[input.length - 1] === p;
+        {activePorts.map((p) => {
+          const lit = phase === 'input' && input.includes(p.port) && input[input.length - 1] === p.port;
           return (
             <button
-              key={p}
+              key={`${round}-${p.port}`}
               type="button"
               className={`ice-mini__btn ice-mini__port-btn ${lit ? 'ice-mini__port-btn--lit' : ''}`}
-              onClick={() => pick(p)}
-              disabled={phase !== 'input'}
+              onClick={() => pick(p.port)}
+              disabled={phase !== 'input' || ice.locked}
             >
               <span className="ice-mini__port-led" aria-hidden />
-              <span className="ice-mini__port-num">{p}</span>
+              <span className="ice-mini__port-num">{p.port}</span>
+              <span className="ice-mini__port-svc mono-text">{p.svc}</span>
             </button>
           );
         })}
       </div>
       <IceMiniFooter>
-        Шаг {input.length}/{seq.length} · длина {seqLen}
+        Шаг {input.length}/{expected.length} · {mode.toUpperCase()}
       </IceMiniFooter>
     </IceMiniShell>
   );
@@ -157,21 +214,37 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [cleared, setCleared] = useState(0);
   const [openSlot, setOpenSlot] = useState(0);
   const [windowOpen, setWindowOpen] = useState(true);
-  // Keep reaction window readable on hard (~human reaction + aim).
-  const windowMs = Math.max(650, params.flashMs - cleared * 25);
+  const [decoySlot, setDecoySlot] = useState<number | null>(null);
+  const doneRef = useRef(false);
+  const hitWaveRef = useRef(false);
+  // Чуть быстрее, но всё ещё в зоне человеческой реакции.
+  const windowMs = Math.max(480, params.flashMs - cleared * 40);
 
   useEffect(() => {
-    setOpenSlot((Date.now() + wave * 313) % slotCount);
+    ice.setPaused(ice.locked);
+  }, [ice.locked, ice.setPaused]);
+
+  useEffect(() => {
+    if (doneRef.current || ice.locked) return;
+    hitWaveRef.current = false;
+    const open = (Date.now() + wave * 313) % slotCount;
+    setOpenSlot(open);
+    // Иногда мигает ложный «почти open» слот — не кликай.
+    const showDecoy = wave > 0 && wave % 3 === 2;
+    setDecoySlot(showDecoy ? (open + 2 + (wave % 3)) % slotCount : null);
     setWindowOpen(true);
     const closeT = window.setTimeout(() => {
       setWindowOpen(false);
-      // Missed window: punish once, then reopen same progress (don't burn a wave).
+      setDecoySlot(null);
+      if (doneRef.current || hitWaveRef.current || ice.locked) return;
       ice.recordMistake('ICE: слот закрыт · sweep timeout');
-      window.setTimeout(() => setWave((w) => w + 1), 420);
+      window.setTimeout(() => {
+        if (!doneRef.current && !ice.locked) setWave((w) => w + 1);
+      }, 320);
     }, windowMs);
     return () => window.clearTimeout(closeT);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally wave-driven
-  }, [wave, windowMs, slotCount]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- wave-driven; ice.recordMistake stable enough via pressure hook
+  }, [wave, windowMs, slotCount, ice.locked]);
 
   const slots = useMemo(
     () =>
@@ -183,18 +256,29 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   );
 
   const pick = (idx: number) => {
+    if (doneRef.current || ice.locked) return;
     if (!windowOpen) {
       ice.recordMistake('ICE: поздний клик · adaptive firewall');
       return;
     }
     if (idx === openSlot) {
+      hitWaveRef.current = true;
+      setDecoySlot(null);
       ice.rewardTrace(7);
       const nc = cleared + 1;
       setCleared(nc);
-      if (nc >= params.scanRounds) onWin();
-      else setWave((w) => w + 1);
+      if (nc >= params.scanRounds) {
+        doneRef.current = true;
+        onWin();
+      } else {
+        setWave((w) => w + 1);
+      }
     } else {
-      ice.recordMistake('COUNTERMEASURE: ложный слот · triangulation');
+      ice.recordMistake(
+        idx === decoySlot
+          ? 'COUNTERMEASURE: decoy slot · honeypot'
+          : 'COUNTERMEASURE: ложный слот · triangulation'
+      );
     }
   };
 
@@ -209,23 +293,30 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
         maxMistakes={params.maxMistakes}
       />
       <IceMiniHint pulse={windowOpen}>
-        Успешно {cleared}/{params.scanRounds} · {windowOpen ? 'OPEN — жми уязвимый слот!' : 'CLOSED…'}
+        Успешно {cleared}/{params.scanRounds} ·{' '}
+        {windowOpen ? 'OPEN — жми уязвимый слот!' : 'CLOSED…'}
       </IceMiniHint>
       <div className="ice-mini__firewall">
         {slots.map((s, i) => {
           const isOpen = windowOpen && i === openSlot;
+          const isDecoy = windowOpen && decoySlot === i && !isOpen;
           return (
             <button
               key={s.id}
               type="button"
-              className={`ice-mini__fw-slot ${isOpen ? 'ice-mini__fw-slot--open' : ''} ${!windowOpen && i === openSlot ? 'ice-mini__fw-slot--missed' : ''}`}
+              className={`ice-mini__fw-slot ${isOpen ? 'ice-mini__fw-slot--open' : ''} ${isDecoy ? 'ice-mini__fw-slot--decoy' : ''} ${!windowOpen && i === openSlot ? 'ice-mini__fw-slot--missed' : ''}`}
               onClick={() => pick(i)}
+              disabled={ice.locked}
             >
               <span className="mono-text ice-mini__fw-label">{s.label}</span>
               <span className="ice-mini__fw-bar">
-                <span className={`ice-mini__fw-fill ${isOpen ? 'ice-mini__fw-fill--open' : ''}`} />
+                <span
+                  className={`ice-mini__fw-fill ${isOpen ? 'ice-mini__fw-fill--open' : ''} ${isDecoy ? 'ice-mini__fw-fill--decoy' : ''}`}
+                />
               </span>
-              <IceMiniTag tone={isOpen ? 'ok' : 'ice'}>{isOpen ? 'OPEN' : 'HARDENED'}</IceMiniTag>
+              <IceMiniTag tone={isOpen ? 'ok' : isDecoy ? 'warn' : 'ice'}>
+                {isOpen ? 'OPEN' : isDecoy ? 'BAIT' : 'HARDENED'}
+              </IceMiniTag>
             </button>
           );
         })}
@@ -587,9 +678,11 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [hits, setHits] = useState(0);
   const [threats, setThreats] = useState<{ id: number; lane: number; y: number }[]>([]);
   const idRef = useRef(0);
+  const doneRef = useRef(false);
 
   useEffect(() => {
     const spawnIv = setInterval(() => {
+      if (doneRef.current) return;
       setThreats((prev) => {
         if (prev.length > 5) return prev;
         const l = Math.floor(Math.random() * lanes);
@@ -601,9 +694,13 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 
   useEffect(() => {
     const waveIv = setInterval(() => {
+      if (doneRef.current) return;
       setWave((w) => {
         const nw = w + 1;
-        if (nw >= params.dodgeWaves) onWin();
+        if (nw >= params.dodgeWaves) {
+          doneRef.current = true;
+          onWin();
+        }
         return nw;
       });
     }, Math.max(900, 1500 - params.traceSpeed * 160));
@@ -612,6 +709,7 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 
   useEffect(() => {
     const moveIv = setInterval(() => {
+      if (doneRef.current) return;
       setThreats((prev) => {
         const next: typeof prev = [];
         for (const t of prev) {
@@ -619,7 +717,10 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
           if (y >= 92 && t.lane === lane) {
             setHits((h) => {
               const nh = h + 1;
-              if (nh > params.maxMistakes) onFail();
+              if (nh > params.maxMistakes) {
+                doneRef.current = true;
+                onFail();
+              }
               return nh;
             });
           } else if (y < 100) {
@@ -676,22 +777,39 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [mistakes, setMistakes] = useState(0);
   const [timeLeft, setTimeLeft] = useState(params.logDurationSec);
   const idRef = useRef(0);
+  const doneRef = useRef(false);
+  const wipedRef = useRef(0);
   const targetWipes = 8 + params.sniffRounds * 2;
+  wipedRef.current = wiped;
+
+  const settleWin = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onWin();
+  }, [onWin]);
+  const settleFail = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onFail();
+  }, [onFail]);
 
   useEffect(() => {
-    const iv = setInterval(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
+    const iv = setInterval(() => {
+      if (doneRef.current) return;
+      setTimeLeft((t) => Math.max(0, t - 1));
+    }, 1000);
     return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
-      if (wiped >= targetWipes) onWin();
-      else onFail();
-    }
-  }, [timeLeft, wiped, targetWipes, onWin, onFail]);
+    if (timeLeft > 0 || doneRef.current) return;
+    if (wipedRef.current >= targetWipes) settleWin();
+    else settleFail();
+  }, [timeLeft, targetWipes, settleWin, settleFail]);
 
   useEffect(() => {
     const spawnIv = setInterval(() => {
+      if (doneRef.current) return;
       const threat = Math.random() < 0.38 + params.traceSpeed * 0.08;
       const texts = threat
         ? ['AUDIT_HOOK :: corp trace', 'SIEM_ALERT :: exfil sig', 'CORP_SEC :: node ping', 'ICE_PROBE :: active']
@@ -707,13 +825,14 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   useEffect(() => {
     // Age-out: only the oldest line can escape as a miss — not random 15%/tick.
     const fallIv = setInterval(() => {
+      if (doneRef.current) return;
       setLines((prev) => {
         if (prev.length === 0) return prev;
         const aged = prev[0]!;
         if (aged.threat && prev.length >= 6) {
           setMistakes((m) => {
             const nm = m + 1;
-            if (nm > params.maxMistakes) onFail();
+            if (nm > params.maxMistakes) settleFail();
             return nm;
           });
           return prev.slice(1);
@@ -722,18 +841,25 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       });
     }, 1100);
     return () => clearInterval(fallIv);
-  }, [params.maxMistakes, onFail]);
+  }, [params.maxMistakes, settleFail]);
 
   const tapLine = (line: LogLine) => {
+    if (doneRef.current) return;
     setLines((prev) => prev.filter((l) => l.id !== line.id));
-    if (line.threat) setWiped((w) => w + 1);
-    else {
-      const m = mistakes + 1;
-      setMistakes(m);
-      if (m > params.maxMistakes) onFail();
+    if (line.threat) {
+      setWiped((w) => {
+        const nw = w + 1;
+        if (nw >= targetWipes) settleWin();
+        return nw;
+      });
+    } else {
+      setMistakes((m) => {
+        const nm = m + 1;
+        if (nm > params.maxMistakes) settleFail();
+        return nm;
+      });
     }
   };
-
   return (
     <IceMiniShell variant="log">
       <IceMiniHint pulse={timeLeft <= 8}>
@@ -1019,6 +1145,7 @@ export const SignalLockGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [mistakes, setMistakes] = useState(0);
   const [trace, setTrace] = useState(5);
   const startRef = useRef(Date.now());
+  const doneRef = useRef(false);
 
   useEffect(() => {
     startRef.current = Date.now();
@@ -1026,17 +1153,25 @@ export const SignalLockGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 
   useEffect(() => {
     const iv = setInterval(() => {
+      if (doneRef.current) return;
       setTrace((t) => {
-        const next = Math.min(100, t + params.traceSpeed * 0.45);
-        if (next >= 100) onFail();
+        const next = Math.min(100, t + params.traceSpeed * 0.55);
+        if (next >= 100) {
+          queueMicrotask(() => {
+            if (doneRef.current) return;
+            doneRef.current = true;
+            onFail();
+          });
+        }
         return next;
       });
-    }, 300);
+    }, 280);
     return () => clearInterval(iv);
   }, [params.traceSpeed, onFail]);
 
   useEffect(() => {
     const iv = setInterval(() => {
+      if (doneRef.current) return;
       const elapsed = Date.now() - startRef.current;
       const phase = (elapsed % periodMs) / periodMs;
       setCursor(Math.sin(phase * Math.PI * 2) * 0.5 + 0.5);
@@ -1045,12 +1180,14 @@ export const SignalLockGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   }, [periodMs, synced, channel]);
 
   const trySync = () => {
+    if (doneRef.current) return;
     const pos = cursor * 100;
     const inZone = pos >= zoneStart && pos <= zoneStart + zoneWidth;
     if (inZone) {
       setTrace((t) => Math.max(0, t - 4));
       const nextSync = synced + 1;
       if (nextSync >= syncsNeeded) {
+        doneRef.current = true;
         onWin();
         return;
       }
@@ -1061,7 +1198,10 @@ export const SignalLockGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       const m = mistakes + 1;
       setMistakes(m);
       setTrace((t) => Math.min(100, t + 16));
-      if (m > params.maxMistakes) onFail();
+      if (m > params.maxMistakes) {
+        doneRef.current = true;
+        onFail();
+      }
     }
   };
 

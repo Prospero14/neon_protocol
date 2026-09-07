@@ -100,12 +100,14 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
 
   const handleMiniComplete = async (won: boolean) => {
     if (!activeGame || !authToken) return;
+    const { gameId, difficulty } = activeGame;
+    // Сразу размонтировать мини-игру — иначе таймеры Firewall/TRACE шлют второй onComplete.
+    setActiveGame(null);
     const iceRes = await nriReportIceResult(authToken, inviteCode, won);
     if (iceRes.ok && iceRes.newAchievements?.length) {
       onNewAchievements?.(iceRes.newAchievements);
     }
-    await submitArcadeScore(activeGame.gameId, activeGame.difficulty, won);
-    setActiveGame(null);
+    await submitArcadeScore(gameId, difficulty, won);
   };
 
   if (activeGame) {

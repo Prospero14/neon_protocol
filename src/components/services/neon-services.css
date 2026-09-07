@@ -3319,6 +3319,19 @@
   letter-spacing: 0.04em;
 }
 
+.ice-mini__port-svc {
+  font-size: 0.55rem;
+  opacity: 0.55;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ice-mini__flash-port--noise {
+  color: #f66;
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
 /* scan / sniff lists */
 .ice-mini__list {
   display: flex;
@@ -4042,6 +4055,11 @@
   animation: ice-fw-pulse 0.45s ease-in-out infinite;
 }
 
+.ice-mini__fw-slot--decoy {
+  border-color: rgba(255, 200, 40, 0.55);
+  box-shadow: 0 0 10px rgba(255, 180, 0, 0.15);
+}
+
 .ice-mini__fw-slot--missed {
   border-color: rgba(255, 80, 40, 0.45);
 }
@@ -4073,6 +4091,11 @@
 .ice-mini__fw-fill--open {
   width: 100%;
   background: linear-gradient(90deg, #080, #0f6);
+}
+
+.ice-mini__fw-fill--decoy {
+  width: 70%;
+  background: linear-gradient(90deg, #664400, #ffcc33);
 }
 
 /* Daemon Upload */

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import GibsonIceHack from './GibsonIceHack';
 import {
   AuthBypassGame,
@@ -54,8 +54,18 @@ export const IcebreakerRouter: React.FC<Props> = ({
     );
   }
 
-  const fail = () => onComplete(false);
-  const win = () => onComplete(true);
+  // Иначе async submit / таймеры после win/fail шлют повторный onComplete и ломают провал.
+  const settledRef = useRef(false);
+  const fail = useCallback(() => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onComplete(false);
+  }, [onComplete]);
+  const win = useCallback(() => {
+    if (settledRef.current) return;
+    settledRef.current = true;
+    onComplete(true);
+  }, [onComplete]);
   const p = { params, onWin: win, onFail: fail };
 
   if (game.engine === 'gibson') {

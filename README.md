@@ -63,4 +63,7 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
 - Хост: `test` / `test1234`
 - Игроки: `jojo` / `jojo1234`, `ratata` / `ratata1234`, `aoao` / `aoao1234`
 - Выключить: `NEON_IMPORT_ICEBREAKERS=0`
-- Перезалить стол: `NEON_IMPORT_ICEBREAKERS=force` (один редеплой), потом убрать флаг
+- Принудительно перезалить: `NEON_IMPORT_ICEBREAKERS=force`
+- По умолчанию (`auto`): создаёт стол, если его нет, или перезаливает, если стол «пустой»
+
+После логина: **НРИ → Мои столы → ICEBREAKERS** (или код `NRI-2U5R`).

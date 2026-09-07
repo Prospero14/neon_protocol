@@ -45,6 +45,32 @@ export async function nriFetchInfo(code: string): Promise<{ inviteCode: string; 
   return out.data as { inviteCode: string; title: string; hostUsername: string };
 }
 
+export async function nriFetchMySessions(token: string): Promise<
+  Array<{
+    inviteCode: string;
+    title: string;
+    status: string;
+    hostUsername: string;
+    isHost: boolean;
+    npcCount?: number;
+    playerCount?: number;
+  }>
+> {
+  const out = await nriSafeFetch('/neon_v1/services/nri/mine', {
+    headers: nriAuthHeaders(token),
+  });
+  if (!out || !out.res.ok) return [];
+  return (out.data.sessions as Array<{
+    inviteCode: string;
+    title: string;
+    status: string;
+    hostUsername: string;
+    isHost: boolean;
+    npcCount?: number;
+    playerCount?: number;
+  }>) ?? [];
+}
+
 export async function nriCreateSession(token: string, title?: string): Promise<NriSessionInfo | null> {
   const out = await nriSafeFetch('/neon_v1/services/nri/create', {
     method: 'POST',

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MAP_NODES } from '../logic/mapData';
 import type { SessionMode, CoopRole } from '../logic/sessionMode';
 import { COOP_ROLES, COOP_ROLE_LABELS } from '../logic/sessionMode';
 import type { CoopClassSave } from '../logic/coopClassProfiles';
 import type { CreationResumeInfo } from '../logic/hooks/useGameState';
+import { readNeonAuthToken } from '../logic/authTokenStorage';
+import { nriFetchMySessions } from '../logic/nriApi';
 
 type Phase = 'mode' | 'roster';
 
@@ -39,6 +41,17 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const [nriTitle, setNriTitle] = useState('');
   const nriCodeHint = pendingNriInvite ?? nriGuestInviteCode ?? '';
   const [nriCodeInput, setNriCodeInput] = useState(nriCodeHint);
+  const [myTables, setMyTables] = useState<
+    Array<{
+      inviteCode: string;
+      title: string;
+      hostUsername: string;
+      isHost: boolean;
+      npcCount?: number;
+      playerCount?: number;
+    }>
+  >([]);
+  const [myTablesLoading, setMyTablesLoading] = useState(false);
 
   const soloExists = creationResume?.soloPersonaExists ?? false;
   const coopExists = creationResume?.coopEstablished ?? false;
@@ -46,6 +59,28 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
   const coopSlotsFull = existingCoopRoles.length >= COOP_ROLES.length;
   const homeLabel = MAP_NODES.find((n) => n.id === homeDistrictId)?.name ?? homeDistrictId;
   const displayName = playerName !== 'ID_НЕИЗВЕСТЕН' ? playerName : '—';
+
+  useEffect(() => {
+    if (pickedMode !== 'nri') return;
+    const token = readNeonAuthToken();
+    if (!token) return;
+    let cancelled = false;
+    setMyTablesLoading(true);
+    void nriFetchMySessions(token)
+      .then((sessions) => {
+        if (cancelled) return;
+        setMyTables(sessions);
+        if (!nriCodeInput.trim() && sessions[0]?.inviteCode) {
+          setNriCodeInput(sessions[0].inviteCode);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMyTablesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pickedMode]);
 
   const pickMode = (mode: SessionMode) => {
     setPickedMode(mode);
@@ -120,6 +155,39 @@ const SessionGateView: React.FC<SessionGateViewProps> = ({
           <p className="session-resume-gate__hint">
             Мастер создаёт стол и шлёт ссылку друзьям. Игроки авторизуются и попадают в общее лобби с чатом.
           </p>
+
+          <div className="session-gate__nri-block">
+            <h3 className="mono-text">Мои столы</h3>
+            {myTablesLoading && <p className="session-resume-gate__hint">Загрузка…</p>}
+            {!myTablesLoading && myTables.length === 0 && (
+              <p className="session-resume-gate__hint">
+                Пока нет привязанных столов. Если ждали ICEBREAKERS — введите код <strong>NRI-2U5R</strong> ниже
+                или дождитесь редеплоя с сидом.
+              </p>
+            )}
+            <ul className="session-gate__roster">
+              {myTables.map((t) => (
+                <li key={t.inviteCode} className="session-gate__roster-card session-gate__roster-card--solo">
+                  <div>
+                    <div className="session-gate__roster-name">{t.title}</div>
+                    <div className="session-gate__roster-meta">
+                      {t.inviteCode} · хост {t.hostUsername}
+                      {t.isHost ? ' · вы мастер' : ''}
+                      {typeof t.npcCount === 'number' ? ` · NPC ${t.npcCount}` : ''}
+                      {typeof t.playerCount === 'number' ? ` · PC ${t.playerCount}` : ''}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="session-resume-btn session-gate__mode-btn--nri"
+                    onClick={() => onJoinNri(t.inviteCode)}
+                  >
+                    Войти
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <div className="session-gate__nri-block">
             <h3 className="mono-text">Создать стол (мастер)</h3>

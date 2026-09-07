@@ -158,3 +158,21 @@ export function generateDaemonSequences(count: number, len: number, seed: number
   }
   return out;
 }
+
+/**
+ * LIVE STREAM always includes the needed nibble — otherwise the round is soft-locked
+ * until a lucky reshuffle (felt unbeatable under TRACE).
+ */
+export function daemonStreamWithNeed(
+  need: string,
+  streamSize: number,
+  seed: number
+): string[] {
+  const hex = '0123456789ABCDEF'.split('');
+  const size = Math.max(2, Math.min(streamSize, hex.length));
+  const others = seededShuffle(
+    hex.filter((c) => c !== need),
+    seed
+  ).slice(0, size - 1);
+  return seededShuffle([need, ...others], seed + 17);
+}

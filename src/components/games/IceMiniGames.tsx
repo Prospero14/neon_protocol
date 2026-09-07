@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { IceGameParams } from '../../logic/nriGameCatalog';
 import {
   breachPickAllowed,
+  daemonStreamWithNeed,
   generateBreachMatrix,
   generateBreachRun,
   generateDaemonSequences,
@@ -32,7 +33,8 @@ type Props = {
 /** Запомни и повтори последовательность портов — несколько раундов под ICE. */
 export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
-  const ports = [443, 8080, 22, 8443, 21, 3306, 11211, 5900];
+  // Pool must match visible buttons — previously seq could pick ports 7–8 with no UI.
+  const ports = [443, 8080, 22, 8443, 21, 3306];
   const totalRounds = params.scanRounds;
   const [round, setRound] = useState(0);
   const seqLen = params.sequenceLen + Math.min(round, 2);
@@ -41,10 +43,14 @@ export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => 
     [seqLen, round]
   );
   const seq = useMemo(() => portIdx.map((i) => ports[i]), [portIdx]);
-  const flashMs = Math.max(220, params.flashMs - round * 40);
+  const flashMs = Math.max(280, params.flashMs - round * 35);
   const [phase, setPhase] = useState<'flash' | 'input' | 'done'>('flash');
   const [flashIdx, setFlashIdx] = useState(-1);
   const [input, setInput] = useState<number[]>([]);
+
+  useEffect(() => {
+    ice.setPaused(phase === 'flash');
+  }, [phase, ice.setPaused]);
 
   useEffect(() => {
     setPhase('flash');
@@ -86,7 +92,7 @@ export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => 
       return;
     }
     if (next.length >= seq.length) {
-      ice.rewardTrace(6);
+      ice.rewardTrace(8);
       if (round + 1 >= totalRounds) {
         setPhase('done');
         onWin();
@@ -120,7 +126,7 @@ export const PortSequenceGame: React.FC<Props> = ({ params, onWin, onFail }) => 
         )}
       </IceMiniFlashDisplay>
       <div className="ice-mini__grid ice-mini__grid--ports">
-        {ports.slice(0, 6).map((p) => {
+        {ports.map((p) => {
           const lit = phase === 'input' && input.includes(p) && input[input.length - 1] === p;
           return (
             <button
@@ -151,17 +157,20 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [cleared, setCleared] = useState(0);
   const [openSlot, setOpenSlot] = useState(0);
   const [windowOpen, setWindowOpen] = useState(true);
-  const windowMs = Math.max(400, params.flashMs - cleared * 30);
+  // Keep reaction window readable on hard (~human reaction + aim).
+  const windowMs = Math.max(650, params.flashMs - cleared * 25);
 
   useEffect(() => {
     setOpenSlot((Date.now() + wave * 313) % slotCount);
     setWindowOpen(true);
     const closeT = window.setTimeout(() => {
       setWindowOpen(false);
+      // Missed window: punish once, then reopen same progress (don't burn a wave).
       ice.recordMistake('ICE: слот закрыт · sweep timeout');
-      setWave((w) => w + 1);
+      window.setTimeout(() => setWave((w) => w + 1), 420);
     }, windowMs);
     return () => window.clearTimeout(closeT);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally wave-driven
   }, [wave, windowMs, slotCount]);
 
   const slots = useMemo(
@@ -179,7 +188,7 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       return;
     }
     if (idx === openSlot) {
-      ice.rewardTrace(5);
+      ice.rewardTrace(7);
       const nc = cleared + 1;
       setCleared(nc);
       if (nc >= params.scanRounds) onWin();
@@ -229,10 +238,10 @@ export const ScanPickGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 /** Breach Matrix — hex-сетка с чередованием строки/столбца. */
 export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
-  const rows = params.traceSpeed > 1.5 ? 6 : 5;
+  const rows = params.traceSpeed > 1.2 ? 6 : 5;
   const cols = 5;
   const targetLen = params.sequenceLen;
-  const bufferMax = params.tapTarget + 1;
+  const bufferMax = params.tapTarget + 2;
   const seed = Date.now();
 
   const matrix = useMemo(() => generateBreachMatrix(rows, cols, seed), [rows, cols, seed]);
@@ -242,6 +251,11 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
   const [buffer, setBuffer] = useState<string[]>([]);
   const [lastPick, setLastPick] = useState<{ row: number; col: number; code: string } | null>(null);
   const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    // CP2077: timer starts after first pick — plan freely.
+    ice.setPaused(!started);
+  }, [started, ice.setPaused]);
 
   const pick = (row: number, col: number) => {
     const code = matrix[row]![col]!;
@@ -261,7 +275,7 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
       return;
     }
 
-    ice.rewardTrace(4);
+    ice.rewardTrace(5);
     const ns = step + 1;
     setStep(ns);
     if (ns >= targetLen) onWin();
@@ -339,9 +353,9 @@ export const DaemonUploadGame: React.FC<Props> = ({ params, onWin, onFail }) => 
   const [streamTick, setStreamTick] = useState(0);
 
   const stream = useMemo(() => {
-    const hex = '0123456789ABCDEF'.split('');
-    return seededShuffle(hex, Date.now() + streamTick + daemonIdx * 31).slice(0, 8);
-  }, [streamTick, daemonIdx]);
+    const needChar = daemons[daemonIdx]?.[charIdx] ?? '0';
+    return daemonStreamWithNeed(needChar, 8, Date.now() + streamTick + daemonIdx * 31 + charIdx);
+  }, [streamTick, daemonIdx, charIdx, daemons]);
 
   useEffect(() => {
     const ms = Math.max(600, params.peekMs - daemonIdx * 120);
@@ -408,6 +422,7 @@ export const DaemonUploadGame: React.FC<Props> = ({ params, onWin, onFail }) => 
 
 /** Mesh Jack — узлы сети, без повторяющейся подсветки подряд. */
 export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
+  const ice = useIcePressure(params, onFail);
   const nodeCount = params.meshNodes;
   const pathLen = params.sequenceLen;
   const nodes = useMemo(
@@ -418,7 +433,10 @@ export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [phase, setPhase] = useState<'flash' | 'input'>('flash');
   const [flashIdx, setFlashIdx] = useState(-1);
   const [step, setStep] = useState(0);
-  const [mistakes, setMistakes] = useState(0);
+
+  useEffect(() => {
+    ice.setPaused(phase === 'flash');
+  }, [phase, ice.setPaused]);
 
   useEffect(() => {
     if (phase !== 'flash') return;
@@ -445,13 +463,12 @@ export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const pick = (idx: number) => {
     if (phase !== 'input') return;
     if (idx !== path[step]) {
-      const m = mistakes + 1;
-      setMistakes(m);
+      ice.recordMistake('ICE: неверный hop · mesh route broken');
       setStep(0);
-      if (m > params.maxMistakes) onFail();
-      else setPhase('flash');
+      setPhase('flash');
       return;
     }
+    ice.rewardTrace(4);
     const next = step + 1;
     setStep(next);
     if (next >= path.length) onWin();
@@ -459,6 +476,14 @@ export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 
   return (
     <IceMiniShell variant="mesh">
+      <IcePressureHUD
+        trace={ice.trace}
+        alertLevel={ice.alertLevel}
+        countermeasure={ice.countermeasure}
+        flash={ice.flash}
+        mistakes={ice.mistakes}
+        maxMistakes={params.maxMistakes}
+      />
       <IceMiniHint pulse={phase === 'flash'}>
         {phase === 'flash' ? 'Смотри маршрут по узлам…' : `Повтори путь · ${step}/${path.length}`}
       </IceMiniHint>
@@ -479,7 +504,7 @@ export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
           ))}
         </div>
       </div>
-      <IceMiniFooter>Узлов {nodeCount} · ошибок {mistakes}/{params.maxMistakes}</IceMiniFooter>
+      <IceMiniFooter>Узлов {nodeCount} · ошибок {ice.mistakes}/{params.maxMistakes}</IceMiniFooter>
     </IceMiniShell>
   );
 };
@@ -566,11 +591,11 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   useEffect(() => {
     const spawnIv = setInterval(() => {
       setThreats((prev) => {
-        if (prev.length > 6) return prev;
+        if (prev.length > 5) return prev;
         const l = Math.floor(Math.random() * lanes);
         return [...prev, { id: idRef.current++, lane: l, y: 0 }];
       });
-    }, Math.max(400, 900 - params.traceSpeed * 200));
+    }, Math.max(520, 1000 - params.traceSpeed * 160));
     return () => clearInterval(spawnIv);
   }, [params.traceSpeed]);
 
@@ -581,7 +606,7 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
         if (nw >= params.dodgeWaves) onWin();
         return nw;
       });
-    }, Math.max(800, 1400 - params.traceSpeed * 200));
+    }, Math.max(900, 1500 - params.traceSpeed * 160));
     return () => clearInterval(waveIv);
   }, [params.dodgeWaves, params.traceSpeed, onWin]);
 
@@ -590,7 +615,7 @@ export const ProxyDodgeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       setThreats((prev) => {
         const next: typeof prev = [];
         for (const t of prev) {
-          const y = t.y + 4 + params.traceSpeed * 3;
+          const y = t.y + 3.2 + params.traceSpeed * 2.2;
           if (y >= 92 && t.lane === lane) {
             setHits((h) => {
               const nh = h + 1;
@@ -680,22 +705,22 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   }, [params.traceSpeed]);
 
   useEffect(() => {
+    // Age-out: only the oldest line can escape as a miss — not random 15%/tick.
     const fallIv = setInterval(() => {
       setLines((prev) => {
-        const next = prev.map((l) => ({ ...l, id: l.id }));
-        const escaped = prev.filter(() => Math.random() < 0.15);
-        for (const e of escaped) {
-          if (e.threat) {
-            setMistakes((m) => {
-              const nm = m + 1;
-              if (nm > params.maxMistakes) onFail();
-              return nm;
-            });
-          }
+        if (prev.length === 0) return prev;
+        const aged = prev[0]!;
+        if (aged.threat && prev.length >= 6) {
+          setMistakes((m) => {
+            const nm = m + 1;
+            if (nm > params.maxMistakes) onFail();
+            return nm;
+          });
+          return prev.slice(1);
         }
-        return next.length > 8 ? next.slice(1) : next;
+        return prev.length > 8 ? prev.slice(1) : prev;
       });
-    }, 700);
+    }, 1100);
     return () => clearInterval(fallIv);
   }, [params.maxMistakes, onFail]);
 
@@ -745,16 +770,19 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 const AUTH_WORDS: { word: string; hint: string }[] = [
   { word: 'root', hint: 'слишком очевидно' },
   { word: 'дека', hint: 'левое железо' },
-  { word: 'пароль', hint: 'определённо не пароль' },
-  { word: 'нейромант', hint: 'гибсон' },
-  { word: 'взлом', hint: 'легально, честно' },
-  { word: 'токен', hint: 'не JWT' },
-  { word: 'матрица', hint: 'морфеус не одобрит' },
-  { word: 'гибсон', hint: 'автор льда' },
-  { word: 'брут', hint: 'грубая сила' },
-  { word: 'прокси', hint: 'не dodge' },
   { word: 'ice', hint: 'холодный протокол' },
+  { word: 'брут', hint: 'грубая сила' },
+  { word: 'токен', hint: 'не JWT' },
+  { word: 'взлом', hint: 'легально, честно' },
+  { word: 'хакер', hint: 'классика' },
+  { word: 'пароль', hint: 'определённо не пароль' },
+  { word: 'прокси', hint: 'не dodge' },
+  { word: 'гибсон', hint: 'автор льда' },
+  { word: 'daemon', hint: 'не linux init' },
+  { word: 'packet', hint: 'нюхаешь?' },
+  { word: 'матрица', hint: 'морфеус не одобрит' },
   { word: 'backdoor', hint: 'классика жанра' },
+  { word: 'нейромант', hint: 'гибсон' },
   { word: 'нейролинк', hint: 'слот neural' },
 ];
 
@@ -762,8 +790,8 @@ const AUTH_WORDS: { word: string; hint: string }[] = [
 export const AuthBypassGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const target = useMemo(() => {
     const pool = AUTH_WORDS.filter((w) => w.word.length === params.wordLength);
-    const list = pool.length ? pool : AUTH_WORDS;
-    return list[Date.now() % list.length];
+    const list = pool.length ? pool : AUTH_WORDS.filter((w) => w.word.length === 4);
+    return list[Date.now() % list.length]!;
   }, [params.wordLength]);
 
   const [guesses, setGuesses] = useState<{ word: string; marks: LetterMark[] }[]>([]);
@@ -999,7 +1027,7 @@ export const SignalLockGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   useEffect(() => {
     const iv = setInterval(() => {
       setTrace((t) => {
-        const next = Math.min(100, t + params.traceSpeed * 1.4);
+        const next = Math.min(100, t + params.traceSpeed * 0.45);
         if (next >= 100) onFail();
         return next;
       });

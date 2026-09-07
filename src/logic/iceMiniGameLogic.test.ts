@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   breachPickAllowed,
+  daemonStreamWithNeed,
   generateBreachMatrix,
   generateBreachRun,
   generateHexSecret,
@@ -136,6 +137,15 @@ describe('breach matrix helpers', () => {
   it('breachPickAllowed enforces first row only on step 0', () => {
     expect(breachPickAllowed(0, 2, 0, null)).toBe(true);
     expect(breachPickAllowed(2, 2, 0, null)).toBe(false);
+  });
+  it('daemonStreamWithNeed always includes the required nibble', () => {
+    for (let seed = 0; seed < 30; seed++) {
+      const need = 'ABCDEF0123456789'[seed % 16]!;
+      const stream = daemonStreamWithNeed(need, 8, seed);
+      expect(stream).toHaveLength(8);
+      expect(stream).toContain(need);
+      expect(new Set(stream).size).toBe(8);
+    }
   });
 });
 

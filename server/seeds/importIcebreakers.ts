@@ -98,12 +98,12 @@ function mapId(map: Map<string, string>, id: unknown): string {
 
 /**
  * Импорт заполненного стола ICEBREAKERS (NRI-2U5R) в текущую БД.
- * По умолчанию: только если стола ещё нет (безопасно для Amvera /data).
+ * По умолчанию (auto): создать если нет; если стол «пустой» — перезалить.
  * NEON_IMPORT_ICEBREAKERS=0 — выключить.
- * NEON_IMPORT_ICEBREAKERS=force — удалить существующий стол с этим invite и залить заново.
+ * NEON_IMPORT_ICEBREAKERS=force — всегда перезалить.
  */
 export async function importIcebreakersSeed(prisma: PrismaClient): Promise<void> {
-  const flag = (process.env.NEON_IMPORT_ICEBREAKERS ?? '1').trim().toLowerCase();
+  const flag = (process.env.NEON_IMPORT_ICEBREAKERS ?? 'auto').trim().toLowerCase();
   if (flag === '0' || flag === 'false' || flag === 'off') {
     console.log('[NEON_SEED] ICEBREAKERS import disabled');
     return;
@@ -114,19 +114,38 @@ export async function importIcebreakersSeed(prisma: PrismaClient): Promise<void>
     console.warn('[NEON_SEED] icebreakers-nri.json not found — skip');
     return;
   }
+  console.log(`[NEON_SEED] seed file: ${seedPath}`);
 
   const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8')) as IceSeed;
   const invite = seed.meta.inviteCode || seed.session.inviteCode;
 
   const existing = await prisma.nriSession.findUnique({ where: { inviteCode: invite } });
-  if (existing && flag !== 'force') {
-    console.log(`[NEON_SEED] ICEBREAKERS ${invite} already present — skip import`);
-    await syncSeedPasswords(prisma, seed);
-    return;
+  let shouldImport = !existing || flag === 'force';
+
+  if (existing && flag !== 'force' && flag !== '0') {
+    const [npcCount, playerCount, factionCount] = await Promise.all([
+      prisma.nriNpc.count({ where: { sessionId: existing.id } }),
+      prisma.nriPlayer.count({ where: { sessionId: existing.id } }),
+      prisma.nriFaction.count({ where: { sessionId: existing.id } }),
+    ]);
+    const thin = npcCount < 2 || playerCount < 1 || factionCount < 1;
+    if (thin) {
+      console.log(
+        `[NEON_SEED] ${invite} exists but thin (npc=${npcCount}, players=${playerCount}, factions=${factionCount}) — re-import`
+      );
+      shouldImport = true;
+    } else {
+      console.log(`[NEON_SEED] ICEBREAKERS ${invite} already present — skip import`);
+      await syncSeedPasswords(prisma, seed);
+      await ensureSeedMemberships(prisma, seed, invite);
+      return;
+    }
   }
 
-  if (existing && flag === 'force') {
-    console.log(`[NEON_SEED] force re-import: deleting session ${invite}`);
+  if (!shouldImport) return;
+
+  if (existing) {
+    console.log(`[NEON_SEED] replacing session ${invite}`);
     await prisma.nriSession.delete({ where: { id: existing.id } });
     if (existing.chatRoomId) {
       await prisma.chatRoom.delete({ where: { id: existing.chatRoomId } }).catch(() => undefined);
@@ -556,6 +575,90 @@ export async function importIcebreakersSeed(prisma: PrismaClient): Promise<void>
   }
 
   console.log(`[NEON_SEED] ICEBREAKERS ${invite} imported (host test / test1234)`);
+  await stampNriResumeSnapshot(prisma, userIdMap, seed, invite);
+}
+
+async function ensureSeedMemberships(
+  prisma: PrismaClient,
+  seed: IceSeed,
+  invite: string
+): Promise<void> {
+  const session = await prisma.nriSession.findUnique({ where: { inviteCode: invite } });
+  if (!session) return;
+  for (const m of seed.members) {
+    const user = await prisma.user.findUnique({ where: { username: String(m.username) } });
+    if (!user) continue;
+    await prisma.nriSessionMember.upsert({
+      where: { sessionId_userId: { sessionId: session.id, userId: user.id } },
+      create: {
+        sessionId: session.id,
+        userId: user.id,
+        username: user.username,
+        isHost: asBool(m.isHost, false) || session.hostUserId === user.id,
+      },
+      update: {
+        username: user.username,
+        isHost: asBool(m.isHost, false) || session.hostUserId === user.id,
+        lastSeenAt: new Date(),
+      },
+    });
+  }
+  const userIdMap = new Map<string, string>();
+  for (const u of seed.users) {
+    const row = await prisma.user.findUnique({ where: { username: u.username } });
+    if (row) userIdMap.set(u.id, row.id);
+  }
+  await stampNriResumeSnapshot(prisma, userIdMap, seed, invite);
+}
+
+async function stampNriResumeSnapshot(
+  prisma: PrismaClient,
+  userIdMap: Map<string, string>,
+  seed: IceSeed,
+  invite: string
+): Promise<void> {
+  for (const u of seed.users) {
+    const userId = userIdMap.get(u.id) ?? (
+      await prisma.user.findUnique({ where: { username: u.username } })
+    )?.id;
+    if (!userId) continue;
+    const gs = await prisma.gameState.findUnique({ where: { userId } });
+    const prev =
+      gs?.clientSnapshot && typeof gs.clientSnapshot === 'object' && !Array.isArray(gs.clientSnapshot)
+        ? (gs.clientSnapshot as Record<string, unknown>)
+        : {};
+    const next = {
+      ...prev,
+      sessionMode: 'nri',
+      nriInviteCode: invite,
+      currentView: 'NRI_LOBBY',
+    };
+    if (gs) {
+      await prisma.gameState.update({
+        where: { userId },
+        data: { clientSnapshot: next },
+      });
+    } else {
+      await prisma.gameState.create({
+        data: {
+          userId,
+          bits: 150,
+          level: 1,
+          ramPool: 4,
+          stress: 0,
+          maxStress: 100,
+          activeDeck: [],
+          inventory: [],
+          artifacts: [],
+          completedQuests: [],
+          reputation: {},
+          intel: [],
+          clientSnapshot: next,
+        },
+      });
+    }
+  }
+  console.log(`[NEON_SEED] stamped nriInviteCode=${invite} on seed user snapshots`);
 }
 
 async function syncSeedPasswords(prisma: PrismaClient, seed: IceSeed): Promise<void> {

@@ -1,4 +1,4 @@
-/** Каталог icebreaker-мини-игр для защищённых файлов (13 × 3 сложности). */
+/** Каталог icebreaker-мини-игр для защищённых файлов (16 × 3 сложности). */
 
 export type IceDifficulty = 'easy' | 'medium' | 'hard';
 export type IceEngine =
@@ -14,7 +14,10 @@ export type IceEngine =
   | 'wordle'
   | 'sniff'
   | 'hash'
-  | 'signallock';
+  | 'signallock'
+  | 'circuit'
+  | 'likeness'
+  | 'capture';
 
 export type IceGameParams = {
   sequenceLen: number;
@@ -333,6 +336,54 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
       easy: { sniffRounds: 3, signalZonePct: 26, traceSpeed: 0.65, maxMistakes: 3, flashMs: 1400 },
       medium: { sniffRounds: 4, signalZonePct: 18, traceSpeed: 0.95, maxMistakes: 3, flashMs: 1100 },
       hard: { sniffRounds: 5, signalZonePct: 14, traceSpeed: 1.25, maxMistakes: 2, flashMs: 900 },
+    },
+  ),
+  game(
+    'circuit_splice',
+    'Circuit Splice',
+    'Собери канал пайпами — ENTRY → CORE.',
+    'circuit',
+    {
+      how: 'Кликай плитки, чтобы крутить пайпы. Зелёные клетки уже под током от ENTRY. Нужно довести сигнал до CORE справа. На сложном ICE иногда сдвигает случайную плитку.',
+      win: 'CORE запитан — канал смонтирован до заполнения TRACE.',
+      fail: 'TRACE 100% — corp NOC перебил splice.',
+    },
+    {
+      easy: { meshNodes: 4, sequenceLen: 3, maxMistakes: 5, traceSpeed: 0.5, peekMs: 900 },
+      medium: { meshNodes: 5, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.9, peekMs: 700 },
+      hard: { meshNodes: 6, sequenceLen: 4, maxMistakes: 3, traceSpeed: 1.35, peekMs: 550 },
+    },
+  ),
+  game(
+    'likeness_vault',
+    'Likeness Vault',
+    'Угадай пароль по LIKENESS — как старый vault-terminal.',
+    'likeness',
+    {
+      how: 'На экране список кандидатов одной длины. Кликни слово: если не пароль, получишь LIKENESS (сколько букв стоят на тех же местах). Несовместимые слова гаснут. Не путать с цветным Wordle.',
+      win: 'Угадать секрет до исчерпания попыток и TRACE.',
+      fail: 'Попытки кончились или TRACE max — vault sealed.',
+    },
+    {
+      easy: { wordLength: 4, wordleAttempts: 8, scanRounds: 2, maxMistakes: 5, traceSpeed: 0.45 },
+      medium: { wordLength: 5, wordleAttempts: 6, scanRounds: 3, maxMistakes: 4, traceSpeed: 0.85 },
+      hard: { wordLength: 6, wordleAttempts: 5, scanRounds: 4, maxMistakes: 3, traceSpeed: 1.25 },
+    },
+  ),
+  game(
+    'node_capture',
+    'Node Capture',
+    'Захвати сеть probes — дойди до CORE.',
+    'capture',
+    {
+      how: 'Стартуешь с ENTRY. Кликай только смежные узлы — каждый стоит probes. HONEYPOT дешёвый, но жжёт TRACE. Нужен маршрут до CORE, пока probes и TRACE позволяют.',
+      win: 'Захватить CORE.',
+      fail: 'Нет ходов / probes / TRACE 100% — сегмент отрезан ICE.',
+    },
+    {
+      easy: { meshNodes: 4, tapTarget: 4, maxMistakes: 4, traceSpeed: 0.5 },
+      medium: { meshNodes: 5, tapTarget: 5, maxMistakes: 3, traceSpeed: 0.9 },
+      hard: { meshNodes: 6, tapTarget: 6, maxMistakes: 3, traceSpeed: 1.35 },
     },
   ),
 ];

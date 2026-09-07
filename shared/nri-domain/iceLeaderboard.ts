@@ -14,6 +14,9 @@ export const NRI_ICE_GAME_IDS = [
   'dead_drop',
   'proxy_dodge',
   'signal_lock',
+  'circuit_splice',
+  'likeness_vault',
+  'node_capture',
 ] as const;
 
 export type NriIceGameId = (typeof NRI_ICE_GAME_IDS)[number];

@@ -15,6 +15,11 @@ import {
   SignalLockGame,
 } from './IceMiniGames';
 import {
+  CircuitSpliceGame,
+  LikenessVaultGame,
+  NodeCaptureGame,
+} from './IceArcadeExtra';
+import {
   getIceGame,
   resolveIceParams,
   type IceDifficulty,
@@ -126,6 +131,9 @@ export const IcebreakerRouter: React.FC<Props> = ({
       {game.engine === 'sniff' && <PacketSniffGame {...p} />}
       {game.engine === 'hash' && <HashCrackGame {...p} />}
       {game.engine === 'signallock' && <SignalLockGame {...p} />}
+      {game.engine === 'circuit' && <CircuitSpliceGame {...p} />}
+      {game.engine === 'likeness' && <LikenessVaultGame {...p} />}
+      {game.engine === 'capture' && <NodeCaptureGame {...p} />}
       {onBack && (
         <button type="button" className="icebreaker-wrap__back" onClick={onBack}>
           ← Отмена

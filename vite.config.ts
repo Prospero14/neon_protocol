@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    base: './',
     define: {
       __OCTOBERLINE_BUILD_STAMP__: JSON.stringify(buildStamp),
     },

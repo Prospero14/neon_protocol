@@ -23,40 +23,59 @@ const ResponsiveNav: React.FC<ResponsiveNavProps> = ({ currentView, onViewChange
     { id: 'REFERENCE', label: 'ДОКИ', icon: Book },
   ];
 
+  const stressPct = Math.round((hp / maxStress) * 100);
+  const statusLabel = level >= 5 ? 'PRO' : 'SKID';
+
   return (
-    <nav className="game-nav">
-      <div className="nav-brand mono-text">
-        <span className="brand-icon">◆</span>
-        НЕОН_ПРОТОКОЛ
-        <span className="brand-ver">v0.09</span>
+    <>
+      <div className="nav-mobile-status" aria-hidden="false">
+        <span className="nav-mobile-status__brand">◆ НЕОН</span>
+        <div className="nav-mobile-status__meta">
+          {gameClockLine && <span title="Игровое время">{gameClockLine}</span>}
+          <span>STRESS {stressPct}%</span>
+          <span>{statusLabel}</span>
+          {onLogout && (
+            <button type="button" className="nav-mobile-logout" onClick={onLogout} title="Выйти">
+              ⎋
+            </button>
+          )}
+        </div>
       </div>
-      <div className="nav-links">
-        {navItems.map((item) => (
-          <button 
-            key={item.id} 
-            className={`nav-link ${currentView === item.id ? 'active' : ''}`}
-            onClick={() => onViewChange(item.id)}
-          >
-            <item.icon size={16} />
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="nav-stats mono-text">
-        {gameClockLine && (
-          <span className="nav-game-clock" title="Игровое время (12 ч игры = 4 ч реальных)">
-            {gameClockLine}
-          </span>
-        )}
-        <span className="nav-hp">STRESS: {Math.round((hp/maxStress)*100)}%</span>
-        <span className="nav-lvl">STATUS: {level >= 5 ? 'PROFESSIONAL' : 'SCRIPT-KIDDO'}</span>
-        {onLogout && (
-          <button className="nav-logout-btn" onClick={onLogout} title="Выйти из аккаунта">
-            ВЫХОД
-          </button>
-        )}
-      </div>
-    </nav>
+      <nav className="game-nav">
+        <div className="nav-brand mono-text">
+          <span className="brand-icon">◆</span>
+          НЕОН_ПРОТОКОЛ
+          <span className="brand-ver">v0.09</span>
+        </div>
+        <div className="nav-links">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`nav-link ${currentView === item.id ? 'active' : ''}`}
+              onClick={() => onViewChange(item.id)}
+            >
+              <item.icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="nav-stats mono-text">
+          {gameClockLine && (
+            <span className="nav-game-clock" title="Игровое время (12 ч игры = 4 ч реальных)">
+              {gameClockLine}
+            </span>
+          )}
+          <span className="nav-hp">STRESS: {stressPct}%</span>
+          <span className="nav-lvl">STATUS: {level >= 5 ? 'PROFESSIONAL' : 'SCRIPT-KIDDO'}</span>
+          {onLogout && (
+            <button type="button" className="nav-logout-btn" onClick={onLogout} title="Выйти из аккаунта">
+              ВЫХОД
+            </button>
+          )}
+        </div>
+      </nav>
+    </>
   );
 };
 

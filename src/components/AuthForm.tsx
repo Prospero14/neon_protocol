@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../logic/AuthContext';
 import { readLandingNriInviteCode } from '../logic/nriFeatureFlags';
 import { nriFetchInfo } from '../logic/nriApi';
+import { isLikelyNativeShell, readApiBase, writeApiBase } from '../logic/apiBase';
 
 export const AuthForm: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +11,8 @@ export const AuthForm: React.FC = () => {
     const [error, setError] = useState('');
     const [nriInvite, setNriInvite] = useState<string | null>(() => readLandingNriInviteCode());
     const [nriTitle, setNriTitle] = useState<string | null>(null);
+    const [apiBase, setApiBase] = useState(() => readApiBase());
+    const [showServer, setShowServer] = useState(() => isLikelyNativeShell() || Boolean(readApiBase()));
     const { login } = useAuth();
 
     useEffect(() => {
@@ -152,7 +155,8 @@ export const AuthForm: React.FC = () => {
                             type="text" 
                             value={username} 
                             onChange={(e) => setUsername(e.target.value)}
-                            style={{ width: '100%', background: '#000', border: '1px solid #0ff', color: '#fff', padding: '0.8rem' }}
+                            autoComplete="username"
+                            style={{ width: '100%', background: '#000', border: '1px solid #0ff', color: '#fff', padding: '0.8rem', fontSize: '16px' }}
                             required
                         />
                     </div>
@@ -163,16 +167,59 @@ export const AuthForm: React.FC = () => {
                             type="password" 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)}
-                            style={{ width: '100%', background: '#000', border: '1px solid #0ff', color: '#fff', padding: '0.8rem' }}
+                            autoComplete={isLogin ? 'current-password' : 'new-password'}
+                            style={{ width: '100%', background: '#000', border: '1px solid #0ff', color: '#fff', padding: '0.8rem', fontSize: '16px' }}
                             required
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <button
+                            type="button"
+                            onClick={() => setShowServer((v) => !v)}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#678',
+                                fontSize: '0.75rem',
+                                letterSpacing: '0.08em',
+                                cursor: 'pointer',
+                                padding: 0,
+                                textAlign: 'left',
+                                textTransform: 'uppercase',
+                            }}
+                        >
+                            {showServer ? '▾' : '▸'} Сервер API {isLikelyNativeShell() ? '(мобильный клиент)' : ''}
+                        </button>
+                        {showServer && (
+                            <div style={{ marginTop: '0.65rem' }}>
+                                <label style={{ color: '#0ff', display: 'block', marginBottom: '0.5rem', fontSize: '0.8rem' }}>
+                                    URL бэкенда (пусто = этот хост):
+                                </label>
+                                <input
+                                    type="url"
+                                    inputMode="url"
+                                    placeholder="https://your-neon-host.example"
+                                    value={apiBase}
+                                    onChange={(e) => {
+                                        setApiBase(e.target.value);
+                                        writeApiBase(e.target.value);
+                                    }}
+                                    style={{ width: '100%', background: '#000', border: '1px solid #0ff', color: '#fff', padding: '0.8rem', fontSize: '16px' }}
+                                />
+                                <p style={{ color: '#556', fontSize: '0.68rem', marginTop: '0.45rem', lineHeight: 1.4 }}>
+                                    В APK укажите URL деплоя (Timeweb / Amvera), иначе вход не достучится до `/neon_v1`.
+                                </p>
+                            </div>
+                        )}
                     </div>
                     
                     {error && <div style={{ color: '#f0f', fontSize: '0.8rem' }}>{`ERROR: ${error}`}</div>}
                     
                     <button type="submit" style={{
                         background: '#0ff', color: '#000', border: 'none', padding: '1rem', 
-                        fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase'
+                        fontWeight: 'bold', cursor: 'pointer', textTransform: 'uppercase',
+                        minHeight: '48px', touchAction: 'manipulation'
                     }}>
                         {isLogin ? 'Вход' : 'Регистрация'}
                     </button>

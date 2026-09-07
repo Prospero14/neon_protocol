@@ -1,11 +1,17 @@
 import { StrictMode, Component, type ErrorInfo, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './styles/mobile-shell.css'
 import App from './App.tsx'
 import { AuthProvider } from './logic/AuthContext.tsx'
 import { GlobalErrorHost } from './components/GlobalErrorHost.tsx'
 import { ClientErrorScreen } from './components/ClientErrorScreen.tsx'
 import { reportClientError } from './logic/globalErrorHandler.ts'
+import { installApiFetchPatch } from './logic/apiBase.ts'
+import { installNativeShellHandlers } from './logic/nativeShell.ts'
+
+installApiFetchPatch()
+installNativeShellHandlers()
 
 class RootErrorBoundary extends Component<{ children: ReactNode }, { report: { error: Error; source: string } | null }> {
   state: { report: { error: Error; source: string } | null } = { report: null };

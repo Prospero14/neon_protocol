@@ -153,7 +153,12 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
-    const zoneKey = req.params.zoneKey;
+    let zoneKey = String(req.params.zoneKey ?? '');
+    try {
+      zoneKey = decodeURIComponent(zoneKey);
+    } catch {
+      /* keep raw */
+    }
     const { name, corpName, pois, megaDistrict, color, iconId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel } = req.body as {
       name?: string;
       corpName?: string | null;
@@ -255,7 +260,12 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
     const code = String(req.params.code ?? '').trim().toUpperCase();
-    const zoneKey = String(req.params.zoneKey ?? '').trim();
+    let zoneKey = String(req.params.zoneKey ?? '').trim();
+    try {
+      zoneKey = decodeURIComponent(zoneKey);
+    } catch {
+      /* keep raw */
+    }
     if (!zoneKey) {
       return sendApiError(res, 400, 'NRI_ZONE_KEY', 'Укажите zoneKey.');
     }

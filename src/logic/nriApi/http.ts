@@ -31,7 +31,8 @@ export function formatNriApiError(data: Record<string, unknown>, fallback: strin
     data.code === 'API_NOT_FOUND' ||
     /Cannot (GET|POST|PATCH|DELETE)|<!DOCTYPE html>/i.test(message)
   ) {
-    return '[API_NOT_FOUND] API не найден — перезапустите сервер: npm run build && npm start (порт 8080).';
+    const detail = message && !/<!DOCTYPE/i.test(message) ? ` ${message}` : '';
+    return `[API_NOT_FOUND] API не найден — перезапустите сервер: npm run build && npm start (порт 8080).${detail}`;
   }
 
   if (code && message) return `[${code}] ${message}`;

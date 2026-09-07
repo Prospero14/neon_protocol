@@ -1,6 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
-import { isSubMapZoneKey, rootMapZoneKey, subMapZoneKey } from '../../shared/nri-domain/mapZones.js';
+import {
+  canDrillIntoDistrict,
+  isSubMapZoneKey,
+  rootMapZoneKey,
+  subMapZoneKey,
+} from '../../shared/nri-domain/mapZones.js';
 import {
   normalizeDistrictStyle,
   normalizePlaceType,
@@ -12,10 +17,13 @@ import {
   parseStoredLinksTo,
   type ZoneLinkTarget,
 } from '../../shared/nri-domain/exitLinks.js';
-import { computeDistrictGridLayout } from '../../src/logic/nriNeonCitySubzonesGen.js';
-import { ensureNriMapSchema, loadZoneSeedFile, type ZoneSeed } from './nriSchemaBootstrap.js';
+import {
+  computeDistrictGridLayout,
+  generateDistrictGrid,
+} from '../../shared/nri-domain/districtLayout.js';
+import { ensureNriMapSchema, loadTopLevelZoneSeeds, type ZoneSeed } from './nriSchemaBootstrap.js';
 
-export const MAP_LAYOUT_VERSION = 'v7-district-drill-grid';
+export const MAP_LAYOUT_VERSION = 'v8-lazy-district-tiles';
 
 let mapZonesSeedCacheVersion: string | null = null;
 let subTileCountCache: { at: number; map: Map<string, number> } | null = null;
@@ -248,6 +256,11 @@ async function syncTopLevelGeometryFromSeeds(prisma: PrismaClient, seeds: ZoneSe
   }
 }
 
+/**
+ * Сид только топ-районов (без тысяч клеток квартала).
+ * Клетки генерируются лениво в ensureDistrictTilesForParent — иначе Amvera
+ * на первом GET /map/zones OOM/таймаутит → HTML → клиент видит API_NOT_FOUND.
+ */
 export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> {
   if (mapZonesSeedCacheVersion === MAP_LAYOUT_VERSION) return;
   await ensureNriMapSchema(prisma);
@@ -256,45 +269,99 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
     mapZonesSeedCacheVersion = MAP_LAYOUT_VERSION;
     return;
   }
-  const seeds = loadZoneSeedFile();
-  const count = await prisma.nriMapZone.count({ where: { zoneKey: { not: '__layout__' } } });
 
-  if (count === 0) {
-    await insertMissingSeeds(prisma, seeds);
+  const topSeeds = loadTopLevelZoneSeeds();
+  const topCount = await prisma.nriMapZone.count({
+    where: { zoneKey: { not: '__layout__' }, parentZoneKey: null },
+  });
+
+  if (topCount === 0) {
+    await insertMissingSeeds(prisma, topSeeds);
     await upsertLayoutVersion(prisma);
     mapZonesSeedCacheVersion = MAP_LAYOUT_VERSION;
     return;
   }
 
-  await insertMissingSeeds(prisma, seeds);
+  await insertMissingSeeds(prisma, topSeeds);
 
   if (!layoutRow || layoutRow.name !== MAP_LAYOUT_VERSION) {
-    await syncTopLevelGeometryFromSeeds(prisma, seeds);
+    await syncTopLevelGeometryFromSeeds(prisma, topSeeds);
+    // Сбрасываем старые клетки — пересоберём по запросу drill, без bulk 5k+ insert.
     await prisma.nriMapZone.deleteMany({
       where: { parentZoneKey: { not: null }, NOT: { zoneKey: { startsWith: '__' } } },
     });
-    const subs = seeds.filter((s) => s.parentZoneKey);
-    if (subs.length > 0) {
-      await insertMissingSeeds(prisma, subs);
-    }
+    subTileCountCache = null;
     await upsertLayoutVersion(prisma);
   }
   mapZonesSeedCacheVersion = MAP_LAYOUT_VERSION;
 }
 
+/** Лениво создать сетку квартала, если мастер/игрок провалился в район. */
+export async function ensureDistrictTilesForParent(
+  prisma: PrismaClient,
+  parentZoneKey: string
+): Promise<void> {
+  await ensureNriMapSchema(prisma);
+  const parent = await prisma.nriMapZone.findUnique({ where: { zoneKey: parentZoneKey } });
+  if (!parent || parent.parentZoneKey) return;
+  if (['highway', 'overpass', 'tunnel', 'meta'].includes(parent.zoneType)) return;
+
+  const existing = await prisma.nriMapZone.count({ where: { parentZoneKey } });
+  if (existing > 0) return;
+
+  const tiles = generateDistrictGrid({
+    zoneKey: parent.zoneKey,
+    sortOrder: parent.sortOrder,
+    name: parent.name,
+    zoneType: parent.zoneType,
+    x: parent.x,
+    y: parent.y,
+    w: parent.w,
+    h: parent.h,
+    parentZoneKey: parent.parentZoneKey,
+    megaDistrict: parent.megaDistrict,
+    corpName: parent.corpName,
+  });
+  if (tiles.length === 0) return;
+
+  const chunk = 200;
+  for (let i = 0; i < tiles.length; i += chunk) {
+    const slice = tiles.slice(i, i + chunk);
+    await prisma.nriMapZone.createMany({
+      data: slice.map((t) => ({
+        zoneKey: t.zoneKey,
+        sortOrder: t.sortOrder,
+        name: t.name,
+        zoneType: t.zoneType,
+        x: t.x,
+        y: t.y,
+        w: t.w,
+        h: t.h,
+        corpName: t.corpName ?? null,
+        megaDistrict: t.megaDistrict ?? null,
+        color: null,
+        iconId: defaultZoneIconId(t.zoneType, t.zoneKey),
+        parentZoneKey: t.parentZoneKey,
+        placeType: t.placeType,
+        districtStyle: t.districtStyle,
+        gridRow: t.gridRow,
+        gridCol: t.gridCol,
+        locked: false,
+        pois: t.pois,
+      })),
+    });
+  }
+  subTileCountCache = null;
+}
+
 export async function listMapZones(prisma: PrismaClient, opts?: { parentZoneKey?: string | null }) {
   await ensureNriMapSchema(prisma);
   const parentFilter = opts?.parentZoneKey;
-  if (typeof parentFilter === 'string' && parentFilter.trim()) {
-    if (!mapZonesSeedCacheVersion) {
-      await ensureMapZonesSeeded(prisma);
-    }
-  } else {
-    await ensureMapZonesSeeded(prisma);
-  }
+  await ensureMapZonesSeeded(prisma);
 
   if (typeof parentFilter === 'string' && parentFilter.trim()) {
     const parentKey = parentFilter.trim();
+    await ensureDistrictTilesForParent(prisma, parentKey);
     const [parent, rows, topRows] = await Promise.all([
       prisma.nriMapZone.findUnique({ where: { zoneKey: parentKey } }),
       prisma.nriMapZone.findMany({
@@ -357,12 +424,16 @@ export async function listMapZones(prisma: PrismaClient, opts?: { parentZoneKey?
     })(),
   ]);
   const countByParent = subCounts;
-  return rows.map((z) =>
-    serializeMapZone({
-      ...z,
-      subTileCount: countByParent.get(z.zoneKey) ?? 0,
-    })
-  );
+  const layout = computeDistrictGridLayout();
+  const expectedTiles = layout.rows * layout.cols;
+  return rows.map((z) => {
+    const stored = countByParent.get(z.zoneKey) ?? 0;
+    // Пока клетки не сгенерированы лениво — отдаём ожидаемый размер сетки,
+    // иначе UI скрывает drill (subTileCount === 0).
+    const subTileCount =
+      stored > 0 ? stored : canDrillIntoDistrict(z) ? expectedTiles : 0;
+    return serializeMapZone({ ...z, subTileCount });
+  });
 }
 
 export async function patchMapZone(

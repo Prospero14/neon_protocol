@@ -211,6 +211,11 @@ function loadZoneSeedDir(dirPath: string): ZoneSeed[] | null {
   return merged;
 }
 
+/** Читает seed только топ-районов (без клеток квартала). */
+export function loadTopLevelZoneSeeds(): ZoneSeed[] {
+  return loadZoneSeedFile().filter((s) => !s.parentZoneKey && s.zoneKey !== '__layout__');
+}
+
 export function loadZoneSeedFile(): ZoneSeed[] {
   const here = dirname(fileURLToPath(import.meta.url));
   const dirPaths = [

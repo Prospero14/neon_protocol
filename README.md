@@ -44,3 +44,23 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
 4. Start dev environment:
   - Frontend: `npm run dev:client`
   - Backend: `npm run dev:server`
+
+## 📱 Mobile (Android / Capacitor)
+
+Телефонная оболочка: нижняя навигация, safe-area, поле URL сервера на экране входа.
+
+1. Соберите фронт и APK: `npm run mobile:apk`
+2. Debug APK: `android/app/build/outputs/apk/debug/app-debug.apk`
+3. В приложении на экране входа откройте **Сервер API** и укажите URL вашего деплоя (Timeweb / Amvera), без слэша в конце.
+4. Опционально при сборке: `VITE_API_BASE=https://your-host.example npm run mobile:apk`
+
+Бэкенд в APK не встроен — нужен живой Node-сервер с `/neon_v1`.
+
+## 🎲 ICEBREAKERS seed (NRI)
+
+Заполненный стол ролёвки лежит в `shared/seeds/icebreakers-nri.json` и при старте сервера **импортируется в текущую БД**, если invite `NRI-2U5R` ещё нет (Amvera `/data/dev.db` при этом не затирается целиком).
+
+- Хост: `test` / `test1234`
+- Игроки: `jojo` / `jojo1234`, `ratata` / `ratata1234`, `aoao` / `aoao1234`
+- Выключить: `NEON_IMPORT_ICEBREAKERS=0`
+- Перезалить стол: `NEON_IMPORT_ICEBREAKERS=force` (один редеплой), потом убрать флаг

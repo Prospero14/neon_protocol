@@ -17,10 +17,11 @@ import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemE
 import { applyConditionsToSheet } from '../logic/nriConditions';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
 import {
-  collectPlayerCyberEffects,
-  CYBER_EFFECT_LABELS,
+  collectActiveCyberEffects,
+  CYBER_EFFECT_META,
   hasCyberEffect,
 } from '../logic/nriCyberEffects';
+import { buildCyberCombatProfile } from '../logic/nriCyberCombat';
 import { encumbranceLabel, inventoryCarriedLb, maxCarryLbFromSheet } from '../logic/nriEncumbrance';
 import { sheetAutoFillSummary } from '../logic/nriSheetStatus';
 import { parseSheetTattoos } from '../../shared/nri-domain/tattoos';
@@ -63,11 +64,17 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const bloodToxLimit = getBloodToxLimit(augSheet);
   const combat = effectiveSheet
-    ? getSheetCombatView(effectiveSheet, profile.classId as NriClassId, augmentations)
+    ? getSheetCombatView(effectiveSheet, profile.classId as NriClassId, augmentations, inventory)
     : null;
-  const gearAttacks = effectiveSheet ? attacksFromEquippedGear(effectiveSheet, inventory) : [];
+  const gearAttacks = effectiveSheet
+    ? attacksFromEquippedGear(effectiveSheet, inventory, augmentations)
+    : [];
   const cyberEffects = useMemo(
-    () => collectPlayerCyberEffects(inventory, augmentations),
+    () => collectActiveCyberEffects(inventory, augmentations),
+    [inventory, augmentations]
+  );
+  const combatProfile = useMemo(
+    () => buildCyberCombatProfile(inventory, augmentations),
     [inventory, augmentations]
   );
   const carriedLb = useMemo(
@@ -81,14 +88,15 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
     : tpl
       ? [tpl.signature, ...tpl.traits]
       : [];
-  const displayAttacks =
-    gearAttacks.length > 0
-      ? gearAttacks.map((a) => ({
-          name: a.name,
-          atk: formatSignedMod(a.atkBonus),
-          damage: a.damage,
-        }))
-      : combat?.attacks ?? [];
+  const displayAttacks = [
+    ...(combat?.attacks ?? []),
+    ...gearAttacks.map((a) => ({
+      name: a.name,
+      atk: formatSignedMod(a.atkBonus),
+      damage: a.damage,
+      note: a.note,
+    })),
+  ];
   const dexMod = effectiveSheet ? abilityModifier(effectiveSheet.abilities.DEX) : null;
 
   if (compact) {
@@ -164,6 +172,15 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
       <div className="nri-c2185-grid nri-c2185-grid--combat">
         <Field label="PROFICIENCY BONUS" value={effectiveSheet ? `+${effectiveSheet.proficiencyBonus}` : '+2'} />
         <Field label="ARMOR CLASS" value={effectiveSheet?.ac != null ? String(effectiveSheet.ac) : undefined} />
+        {combat && combat.acVsSmartlink !== effectiveSheet?.ac && (
+          <Field label="AC VS SMARTLINK" value={String(combat.acVsSmartlink)} />
+        )}
+        {combatProfile.smartlinkAtk > 0 && (
+          <Field label="SMARTLINK ATK" value={`+${combatProfile.smartlinkAtk} (не стакается)`} />
+        )}
+        {hasCyberEffect(cyberEffects, 'smartlink_jam') && (
+          <Field label="SMARTLINK JAM" value="да — по тебе нет +1 линка" />
+        )}
         <Field label="INITIATIVE" value={dexMod !== null ? formatSignedMod(dexMod) : undefined} />
         <Field label="SPEED" value="30 ft" />
         <Field label="HP MAX" value={sheet?.hpMax != null ? String(sheet.hpMax) : tpl?.hpAt1} />
@@ -241,12 +258,22 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           <span>DAMAGE/TYPE</span>
           {(displayAttacks.length ? displayAttacks : [{ name: blank, atk: blank, damage: blank }]).map((a, i) => (
             <React.Fragment key={`${a.name}-${i}`}>
-              <span>{a.name}</span>
+              <span>
+                {a.name}
+                {'note' in a && a.note ? <span className="opacity-60"> ({a.note})</span> : null}
+              </span>
               <span>{a.atk}</span>
               <span>{a.damage}</span>
             </React.Fragment>
           ))}
         </div>
+        {combat?.combatNotes && combat.combatNotes.length > 0 && (
+          <ul className="mono-text opacity-70" style={{ marginTop: 8 }}>
+            {combat.combatNotes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="nri-c2185-block">
@@ -346,11 +373,20 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
 
       {cyberEffects.length > 0 && (
         <section className="nri-c2185-block">
-          <h4 className="nri-c2185-block__title">CYBER ABILITIES</h4>
+          <h4 className="nri-c2185-block__title">CYBER HOOKS / EFFECTS</h4>
+          <p className="mono-text opacity-60" style={{ marginBottom: 8 }}>
+            Сюжетные и боевые крючки с установленных имплантов (мастер).
+          </p>
           <ul className="nri-c2185-trait-list">
-            {cyberEffects.map((fx) => (
-              <li key={fx}>{CYBER_EFFECT_LABELS[fx]}</li>
-            ))}
+            {cyberEffects.map((fx) => {
+              const meta = CYBER_EFFECT_META[fx];
+              return (
+                <li key={fx}>
+                  <strong>[{meta.category}] {meta.label}</strong>
+                  <span className="opacity-70"> — {meta.blurb}</span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

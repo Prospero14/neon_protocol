@@ -378,7 +378,26 @@ async function syncFactionZonePlaces(prisma, sessionId, factionId, zoneKeys, fac
         }
     }
 }
+const placePropagateLocks = new Map();
 export async function propagatePlaceUpdate(prisma, sessionId, place) {
+    const prev = placePropagateLocks.get(sessionId);
+    if (prev)
+        await prev;
+    let release;
+    const gate = new Promise((r) => {
+        release = r;
+    });
+    placePropagateLocks.set(sessionId, gate);
+    try {
+        await propagatePlaceUpdateInner(prisma, sessionId, place);
+    }
+    finally {
+        release();
+        if (placePropagateLocks.get(sessionId) === gate)
+            placePropagateLocks.delete(sessionId);
+    }
+}
+async function propagatePlaceUpdateInner(prisma, sessionId, place) {
     if (place.zoneKey && !place.zoneKey.startsWith('__')) {
         await patchMapZone(prisma, place.zoneKey, {
             name: place.title,
@@ -942,89 +961,6 @@ export function mountNriLoreTravelRoutes(app, deps) {
         catch (error) {
             console.error('nri/place patch:', error);
             return sendApiError(res, 500, 'NRI_PLACE_PATCH_FAILED', 'Не удалось обновить место.');
-        }
-    });
-    app.get('/neon_v1/services/nri/:code/scenario/progress', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            if (!me || !(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Прогресс сценария — только мастер.');
-            }
-            const progress = await prisma.nriScenarioProgress.findUnique({ where: { sessionId: session.id } });
-            res.json({
-                progress: {
-                    currentScriptNodeId: progress?.currentScriptNodeId ?? null,
-                    completedNodeIds: parseIdList(progress?.completedNodeIds),
-                    updatedAt: progress?.updatedAt.getTime() ?? Date.now(),
-                },
-            });
-        }
-        catch (error) {
-            console.error('nri/scenario progress get:', error);
-            return sendApiError(res, 500, 'NRI_PROGRESS_GET_FAILED', 'Не удалось загрузить прогресс.');
-        }
-    });
-    app.patch('/neon_v1/services/nri/:code/scenario/progress', async (req, res) => {
-        const auth = jwtAuth(req);
-        if (!auth)
-            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
-        const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { currentScriptNodeId, completeNodeId } = req.body;
-        try {
-            const session = await resolveSession(code);
-            if (!session)
-                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
-            const me = await resolveUser(auth);
-            if (!me || !(await requireHost(session, auth, me))) {
-                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Прогресс сценария — только мастер.');
-            }
-            const prev = await prisma.nriScenarioProgress.findUnique({ where: { sessionId: session.id } });
-            let completed = parseIdList(prev?.completedNodeIds);
-            if (typeof completeNodeId === 'string' && completeNodeId.trim() && !completed.includes(completeNodeId.trim())) {
-                completed = [...completed, completeNodeId.trim()];
-            }
-            const progress = await prisma.nriScenarioProgress.upsert({
-                where: { sessionId: session.id },
-                create: {
-                    sessionId: session.id,
-                    currentScriptNodeId: currentScriptNodeId === null
-                        ? null
-                        : typeof currentScriptNodeId === 'string'
-                            ? currentScriptNodeId.trim() || null
-                            : null,
-                    completedNodeIds: completed,
-                },
-                update: {
-                    ...(currentScriptNodeId !== undefined
-                        ? {
-                            currentScriptNodeId: currentScriptNodeId === null
-                                ? null
-                                : typeof currentScriptNodeId === 'string'
-                                    ? currentScriptNodeId.trim() || null
-                                    : null,
-                        }
-                        : {}),
-                    ...(typeof completeNodeId === 'string' ? { completedNodeIds: completed } : {}),
-                },
-            });
-            res.json({
-                progress: {
-                    currentScriptNodeId: progress.currentScriptNodeId,
-                    completedNodeIds: parseIdList(progress.completedNodeIds),
-                    updatedAt: progress.updatedAt.getTime(),
-                },
-            });
-        }
-        catch (error) {
-            console.error('nri/scenario progress patch:', error);
-            return sendApiError(res, 500, 'NRI_PROGRESS_PATCH_FAILED', 'Не удалось обновить прогресс.');
         }
     });
     app.get('/neon_v1/services/nri/:code/map/positions', async (req, res) => {

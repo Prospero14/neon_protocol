@@ -75,6 +75,7 @@ export function catalogToInventoryItem(catalogId: string, instanceId?: string): 
     acBonus: c.acBonus,
     attack: c.attack ? { ...c.attack } : undefined,
     priceWonlongs: c.priceWonlongs,
+    tags: c.tags ? [...c.tags] : undefined,
     qty: 1,
   };
 }

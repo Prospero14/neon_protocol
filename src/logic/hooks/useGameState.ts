@@ -1204,7 +1204,7 @@ export function useGameState() {
         syncGame({
           sessionMode: 'solo',
           coopRole: null,
-          nriInviteCode: undefined,
+          nriInviteCode: null,
           devLanguageStack: null,
           coopStartupName: null,
           coopSquadFill: undefined,
@@ -1294,7 +1294,7 @@ export function useGameState() {
     void syncGame({
       currentView: 'HUB',
       sessionMode: 'solo',
-      nriInviteCode: undefined,
+      nriInviteCode: null,
     });
   }, [sessionMode, switchSessionMode, syncGame]);
 
@@ -1306,7 +1306,7 @@ export function useGameState() {
     window.location.hash = '';
     void syncGame({
       sessionMode: 'solo',
-      nriInviteCode: undefined,
+      nriInviteCode: null,
       currentView: 'SESSION_GATE',
     });
   }, [syncGame]);

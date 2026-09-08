@@ -13,6 +13,7 @@ import {
   type CyberBuildResult,
   type CyberSlot,
 } from '../logic/nriCyberware';
+import { CYBER_EFFECT_META } from '../logic/nriCyberEffects';
 import { getVehicleDef, type NriVehicleDef } from '../logic/nriVehicles';
 
 function catalogModsLine(c: CatalogItem): string {
@@ -133,8 +134,13 @@ export const NriCyberProductPreview: React.FC<{ product: NriCyberProduct; compac
               ))}
             </ul>
           )}
+          {build.effects.length > 0 && (
+            <p className="mono-text opacity-80">
+              Hooks: {build.effects.map((id) => CYBER_EFFECT_META[id]?.label ?? id).join(' · ')}
+            </p>
+          )}
           {build.features.length > 0 && (
-            <p className="mono-text opacity-60">Эффекты: {build.features.join(' · ')}</p>
+            <p className="mono-text opacity-60">Фичи: {build.features.join(' · ')}</p>
           )}
           {build.warnings.length > 0 && (
             <ul className="nri-selection-preview__warnings mono-text">

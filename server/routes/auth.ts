@@ -148,7 +148,10 @@ export function mountAuthRoutes(app: Express, deps: MountAuthRoutesDeps): void {
         prevSnapRaw && typeof prevSnapRaw === 'object' && !Array.isArray(prevSnapRaw)
           ? (prevSnapRaw as Record<string, unknown>)
           : {};
-      const mergedSnapshot = { ...prevSnap, ...body };
+      const mergedSnapshot = { ...prevSnap, ...body } as Record<string, unknown>;
+      for (const [k, v] of Object.entries(body as Record<string, unknown>)) {
+        if (v === null) delete mergedSnapshot[k];
+      }
       const rowPatch: Record<string, unknown> = { clientSnapshot: mergedSnapshot };
       if (stress !== undefined) rowPatch.stress = stress;
       if (maxStress !== undefined) rowPatch.maxStress = maxStress;

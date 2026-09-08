@@ -85,8 +85,13 @@ export function sanitizeClientGameState(raw: unknown): Record<string, unknown> |
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   const profiles = normalizeCoopClassProfiles(o.coopClassProfiles);
+  const inviteRaw = o.nriInviteCode;
+  const nriInviteCode =
+    typeof inviteRaw === 'string' && inviteRaw.trim() ? inviteRaw.trim() : undefined;
+  const { nriInviteCode: _dropInvite, ...rest } = o;
   return {
-    ...o,
+    ...rest,
+    ...(nriInviteCode ? { nriInviteCode } : {}),
     coopYardCompletedMissionIds: asStringArray(o.coopYardCompletedMissionIds),
     traits: Array.isArray(o.traits) ? o.traits : [],
     discoveredCardIds: asStringArray(o.discoveredCardIds),

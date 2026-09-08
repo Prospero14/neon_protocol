@@ -37,6 +37,8 @@ export type NriInventoryItem = {
   };
   priceWonlongs?: number;
   qty?: number;
+  /** Теги каталога / runtime (например cyber:smartlink_jam). */
+  tags?: string[];
 };
 
 export function parseNriInventory(raw: unknown): NriInventoryItem[] {

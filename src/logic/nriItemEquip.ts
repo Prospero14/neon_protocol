@@ -5,6 +5,13 @@ import type { NriSheetData } from './nriNpcGenerator';
 import { abilityModifier } from './nriNpcGenerator';
 import { formatSignedMod } from './nriSheetCombat';
 import type { C2185SheetAttack } from './nriSheetCombat';
+import type { InstalledAugmentation } from './nriCyberInstall';
+import {
+  buildCyberCombatProfile,
+  inventoryItemIsSmartWeapon,
+  smartlinkBonusAgainstTarget,
+  type CyberCombatProfile,
+} from './nriCyberCombat';
 
 const EQUIPPABLE_SLOTS = new Set(['weapon', 'armor', 'accessory']);
 
@@ -46,19 +53,32 @@ export function applyEquippedToSheet(sheet: NriSheetData, items: NriInventoryIte
 
 export function attacksFromEquippedGear(
   sheet: NriSheetData,
-  items: NriInventoryItem[]
+  items: NriInventoryItem[],
+  augmentations: InstalledAugmentation[] = [],
+  defenderProfile?: CyberCombatProfile | null
 ): C2185SheetAttack[] {
+  const attacker = buildCyberCombatProfile(items, augmentations);
+  const linkBonus = smartlinkBonusAgainstTarget(attacker, defenderProfile);
   const out: C2185SheetAttack[] = [];
   for (const item of equippedItems(items)) {
     if (!item.attack) continue;
     const abMod = abilityModifier(sheet.abilities[item.attack.ability]);
     const melee = item.attack.ability === 'STR';
+    let atkBonus = sheet.proficiencyBonus + abMod;
+    let note: string | undefined;
+    if (!melee && inventoryItemIsSmartWeapon(item) && linkBonus > 0) {
+      atkBonus += linkBonus;
+      note = `смартлинк +${linkBonus}`;
+    } else if (!melee && inventoryItemIsSmartWeapon(item) && attacker.smartlinkAtk > 0 && linkBonus === 0) {
+      note = 'смартлинк глушится целью';
+    }
     out.push({
       name: item.name,
-      atkBonus: sheet.proficiencyBonus + abMod,
+      atkBonus,
       damage: melee
         ? `${item.attack.damageDice}${formatSignedMod(abMod)} ${item.attack.damageType}`
         : `${item.attack.damageDice} ${item.attack.damageType}`,
+      note,
     });
   }
   return out;

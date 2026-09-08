@@ -14,7 +14,12 @@ interface User {
 function mergeGameStatePatch(prev: unknown, patch: GameSyncPayload): Record<string, unknown> {
   const base =
     prev && typeof prev === 'object' && !Array.isArray(prev) ? { ...(prev as Record<string, unknown>) } : {};
-  return { ...base, ...patch };
+  const next = { ...base, ...(patch as Record<string, unknown>) };
+  // Explicit null clears sticky fields (JSON omits undefined; leave must send null).
+  for (const [k, v] of Object.entries(patch as Record<string, unknown>)) {
+    if (v === null) delete next[k];
+  }
+  return next;
 }
 
 interface AuthContextType {

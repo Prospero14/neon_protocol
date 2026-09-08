@@ -21,6 +21,7 @@ type Props = {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onClick: (e: React.MouseEvent) => void;
+  onDoubleClick?: (e: React.MouseEvent) => void;
 };
 
 /** Обзорный блок района на карте города — «плита + силуэт + имя». */
@@ -38,6 +39,7 @@ export const NriCityOverviewZone: React.FC<Props> = ({
   onMouseEnter,
   onMouseLeave,
   onClick,
+  onDoubleClick,
 }) => {
   const isRoad = zoneType === 'highway' || zoneType === 'overpass';
   const peaks = computeDistrictPeaks(zoneKey, zoneType, x, y, w, h);
@@ -57,6 +59,7 @@ export const NriCityOverviewZone: React.FC<Props> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
     >
       <rect
         x={x}

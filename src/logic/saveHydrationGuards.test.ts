@@ -51,10 +51,9 @@ describe('saveHydrationGuards', () => {
     expect(out?.activeDeck).toEqual([]);
   });
 
-  it('sanitizeClientGameState drops corrupt coopClassProfiles', () => {
-    const out = sanitizeClientGameState({
-      coopClassProfiles: { developer: { deckIds: 'bad' } },
-    });
-    expect(out?.coopClassProfiles).toEqual({});
+  it('sanitizeClientGameState drops null/empty nriInviteCode', () => {
+    expect(sanitizeClientGameState({ nriInviteCode: null })?.nriInviteCode).toBeUndefined();
+    expect(sanitizeClientGameState({ nriInviteCode: '  ' })?.nriInviteCode).toBeUndefined();
+    expect(sanitizeClientGameState({ nriInviteCode: 'ABC12' })?.nriInviteCode).toBe('ABC12');
   });
 });

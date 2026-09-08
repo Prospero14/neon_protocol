@@ -86,7 +86,7 @@ export function useNriSession({
     window.location.hash = '';
     void syncGame({
       sessionMode: 'solo',
-      nriInviteCode: undefined,
+      nriInviteCode: null,
       currentView: 'SESSION_GATE',
     });
   }, [setSessionMode, setCurrentView, syncGame]);

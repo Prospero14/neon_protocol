@@ -20,6 +20,8 @@ export const gameSyncPayloadSchema = z
     completedQuests: z.array(z.unknown()).optional(),
     /** Legacy: токен в теле (предпочтительно Authorization). */
     token: z.string().optional(),
+    /** null clears sticky invite on leave (JSON omits undefined). */
+    nriInviteCode: z.union([z.string(), z.null()]).optional(),
   })
   .passthrough();
 

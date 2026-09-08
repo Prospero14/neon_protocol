@@ -129,6 +129,10 @@ export function mountAuthRoutes(app, deps) {
                 ? prevSnapRaw
                 : {};
             const mergedSnapshot = { ...prevSnap, ...body };
+            for (const [k, v] of Object.entries(body)) {
+                if (v === null)
+                    delete mergedSnapshot[k];
+            }
             const rowPatch = { clientSnapshot: mergedSnapshot };
             if (stress !== undefined)
                 rowPatch.stress = stress;

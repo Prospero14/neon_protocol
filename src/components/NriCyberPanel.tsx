@@ -28,6 +28,7 @@ import {
   type CyberBlueprint,
   type CyberSlot,
 } from '../logic/nriCyberware';
+import { CYBER_EFFECT_META } from '../logic/nriCyberEffects';
 import {
   getCyberBudget,
   isCyberSlotFree,
@@ -383,6 +384,14 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
                         {p.features.length > 0 && (
                           <p className="nri-cyber__part-fx mono-text opacity-70">{p.features.join(' · ')}</p>
                         )}
+                        {p.effects && p.effects.length > 0 && (
+                          <p className="nri-cyber__part-fx nri-cyber__part-fx--hooks mono-text">
+                            Hooks:{' '}
+                            {p.effects
+                              .map((id) => CYBER_EFFECT_META[id]?.label ?? id)
+                              .join(' · ')}
+                          </p>
+                        )}
                       </div>
                     </label>
                   </li>
@@ -428,6 +437,16 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
             </p>
             {build.overload && (
               <p className="nri-lobby__err mono-text">Перегруз: расход превышает ёмкость (или нет ячейки).</p>
+            )}
+            {build.effects.length > 0 && (
+              <ul className="nri-cyber__features nri-cyber__features--hooks">
+                {build.effects.map((id) => (
+                  <li key={id}>
+                    <strong>{CYBER_EFFECT_META[id]?.label ?? id}</strong>
+                    {CYBER_EFFECT_META[id] ? ` — ${CYBER_EFFECT_META[id].blurb}` : null}
+                  </li>
+                ))}
+              </ul>
             )}
             {build.features.length > 0 && (
               <ul className="nri-cyber__features">

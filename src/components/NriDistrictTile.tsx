@@ -404,7 +404,7 @@ function NriDistrictTileInner({
             rx={0.03}
           />
         )}
-        {visual.animate.includes('neon') && body && !spriteHref && (
+        {visual.animate.includes('neon') && body && (
           <rect
             x={z.x + z.w * (body.x + body.w * 0.08)}
             y={z.y + z.h * (visual.facadeDir === 'n' ? body.y + 0.02 : body.y + body.h * 0.1)}
@@ -418,7 +418,7 @@ function NriDistrictTileInner({
             rx={0.03}
           />
         )}
-        {visual.animate.includes('windows') && body && !spriteHref && (
+        {visual.animate.includes('windows') && body && (
           <>
             <rect
               x={z.x + z.w * (body.x + body.w * 0.2)}

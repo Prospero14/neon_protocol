@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
 import {
-  canDrillIntoDistrict,
   isSubMapZoneKey,
   rootMapZoneKey,
   subMapZoneKey,
@@ -296,62 +295,82 @@ export async function ensureMapZonesSeeded(prisma: PrismaClient): Promise<void> 
   mapZonesSeedCacheVersion = MAP_LAYOUT_VERSION;
 }
 
+const districtSeedLocks = new Map<string, Promise<void>>();
+
 /** Лениво создать сетку квартала, если мастер/игрок провалился в район. */
 export async function ensureDistrictTilesForParent(
   prisma: PrismaClient,
   parentZoneKey: string
 ): Promise<void> {
-  await ensureNriMapSchema(prisma);
-  const parent = await prisma.nriMapZone.findUnique({ where: { zoneKey: parentZoneKey } });
-  if (!parent || parent.parentZoneKey) return;
-  if (['highway', 'overpass', 'tunnel', 'meta'].includes(parent.zoneType)) return;
-
-  const existing = await prisma.nriMapZone.count({ where: { parentZoneKey } });
-  if (existing > 0) return;
-
-  const tiles = generateDistrictGrid({
-    zoneKey: parent.zoneKey,
-    sortOrder: parent.sortOrder,
-    name: parent.name,
-    zoneType: parent.zoneType,
-    x: parent.x,
-    y: parent.y,
-    w: parent.w,
-    h: parent.h,
-    parentZoneKey: parent.parentZoneKey,
-    megaDistrict: parent.megaDistrict,
-    corpName: parent.corpName,
-  });
-  if (tiles.length === 0) return;
-
-  const chunk = 200;
-  for (let i = 0; i < tiles.length; i += chunk) {
-    const slice = tiles.slice(i, i + chunk);
-    await prisma.nriMapZone.createMany({
-      data: slice.map((t) => ({
-        zoneKey: t.zoneKey,
-        sortOrder: t.sortOrder,
-        name: t.name,
-        zoneType: t.zoneType,
-        x: t.x,
-        y: t.y,
-        w: t.w,
-        h: t.h,
-        corpName: t.corpName ?? null,
-        megaDistrict: t.megaDistrict ?? null,
-        color: null,
-        iconId: defaultZoneIconId(t.zoneType, t.zoneKey),
-        parentZoneKey: t.parentZoneKey,
-        placeType: t.placeType,
-        districtStyle: t.districtStyle,
-        gridRow: t.gridRow,
-        gridCol: t.gridCol,
-        locked: false,
-        pois: t.pois,
-      })),
-    });
+  const inflight = districtSeedLocks.get(parentZoneKey);
+  if (inflight) {
+    await inflight;
+    return;
   }
-  subTileCountCache = null;
+  const run = (async () => {
+    await ensureNriMapSchema(prisma);
+    const parent = await prisma.nriMapZone.findUnique({ where: { zoneKey: parentZoneKey } });
+    if (!parent || parent.parentZoneKey) return;
+    if (['highway', 'overpass', 'tunnel', 'meta'].includes(parent.zoneType)) return;
+
+    const layout = computeDistrictGridLayout();
+    const expected = layout.rows * layout.cols;
+    const existing = await prisma.nriMapZone.count({ where: { parentZoneKey } });
+    if (existing > 0 && existing < expected) {
+      await prisma.nriMapZone.deleteMany({ where: { parentZoneKey } });
+    } else if (existing >= expected) {
+      return;
+    }
+
+    const tiles = generateDistrictGrid({
+      zoneKey: parent.zoneKey,
+      sortOrder: parent.sortOrder,
+      name: parent.name,
+      zoneType: parent.zoneType,
+      x: parent.x,
+      y: parent.y,
+      w: parent.w,
+      h: parent.h,
+      parentZoneKey: parent.parentZoneKey,
+      megaDistrict: parent.megaDistrict,
+      corpName: parent.corpName,
+    });
+    if (tiles.length === 0) return;
+
+    const chunk = 200;
+    for (let i = 0; i < tiles.length; i += chunk) {
+      const slice = tiles.slice(i, i + chunk);
+      await prisma.nriMapZone.createMany({
+        data: slice.map((t) => ({
+          zoneKey: t.zoneKey,
+          sortOrder: t.sortOrder,
+          name: t.name,
+          zoneType: t.zoneType,
+          x: t.x,
+          y: t.y,
+          w: t.w,
+          h: t.h,
+          corpName: t.corpName ?? null,
+          megaDistrict: t.megaDistrict ?? null,
+          color: null,
+          iconId: defaultZoneIconId(t.zoneType, t.zoneKey),
+          parentZoneKey: t.parentZoneKey,
+          placeType: t.placeType,
+          districtStyle: t.districtStyle,
+          gridRow: t.gridRow,
+          gridCol: t.gridCol,
+          locked: false,
+          pois: t.pois,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    subTileCountCache = null;
+  })().finally(() => {
+    districtSeedLocks.delete(parentZoneKey);
+  });
+  districtSeedLocks.set(parentZoneKey, run);
+  await run;
 }
 
 export async function listMapZones(prisma: PrismaClient, opts?: { parentZoneKey?: string | null }) {
@@ -381,6 +400,9 @@ export async function listMapZones(prisma: PrismaClient, opts?: { parentZoneKey?
         const link = computeExitLink(t, parent, layout, topRows, []);
         if (link) neighborKeys.add(rootMapZoneKey(link.zoneKey));
       }
+    }
+    for (const nk of neighborKeys) {
+      await ensureDistrictTilesForParent(prisma, nk);
     }
     const neighborSubTiles =
       neighborKeys.size > 0
@@ -424,14 +446,8 @@ export async function listMapZones(prisma: PrismaClient, opts?: { parentZoneKey?
     })(),
   ]);
   const countByParent = subCounts;
-  const layout = computeDistrictGridLayout();
-  const expectedTiles = layout.rows * layout.cols;
   return rows.map((z) => {
-    const stored = countByParent.get(z.zoneKey) ?? 0;
-    // Пока клетки не сгенерированы лениво — отдаём ожидаемый размер сетки,
-    // иначе UI скрывает drill (subTileCount === 0).
-    const subTileCount =
-      stored > 0 ? stored : canDrillIntoDistrict(z) ? expectedTiles : 0;
+    const subTileCount = countByParent.get(z.zoneKey) ?? 0;
     return serializeMapZone({ ...z, subTileCount });
   });
 }

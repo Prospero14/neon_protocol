@@ -123,7 +123,8 @@
     "priceWonlongs": 350,
     "tags": [
       "оружие",
-      "дальний"
+      "дальний",
+      "smart"
     ]
   },
   {
@@ -1704,5 +1705,106 @@
       "боеприпасы",
       "тех"
     ]
+  },
+  {
+    "id": "w_smart_pistol",
+    "name": "Смарт-пистолет",
+    "blurb": "Ствол под нейролинк. С смартлинком на имплантах: +1 к атаке (не стакается; глушилка цели снимает).",
+    "category": "weapon",
+    "slot": "weapon",
+    "attack": {
+      "damageDice": "2d6",
+      "damageType": "ballistic",
+      "ability": "DEX"
+    },
+    "priceWonlongs": 1200,
+    "tags": ["оружие", "дальний", "smart"]
+  },
+  {
+    "id": "a_reactive_weave_vest",
+    "name": "Жилет с реактивной тканью",
+    "blurb": "Глушит смартлинк по тебе и даёт блик (+1 AC vs linked). Теги cyber:smartlink_jam + optic_flare.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 2,
+    "c2185Mods": { "DEX": -1 },
+    "priceWonlongs": 2200,
+    "tags": ["броня", "cyber:smartlink_jam", "cyber:optic_flare"]
+  },
+  {
+    "id": "a_faraday_coat",
+    "name": "Пальто Faraday",
+    "blurb": "Подкладка глушит RF/mesh и диктофоны рядом.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 1,
+    "priceWonlongs": 900,
+    "tags": ["броня", "cyber:mesh_faraday", "cyber:evidence_scrub"]
+  },
+  {
+    "id": "a_thermal_poncho",
+    "name": "ИК-пончо",
+    "blurb": "Размывает тепловой силуэт — контр тепловизору.",
+    "category": "armor",
+    "slot": "armor",
+    "acBonus": 1,
+    "c2185Mods": { "DEX": -1 },
+    "priceWonlongs": 1400,
+    "tags": ["броня", "cyber:thermal_baffle"]
+  },
+  {
+    "id": "a_optic_flare_collar",
+    "name": "Ворот flare-блик",
+    "blurb": "Аксессуар: +1 AC vs дальний смартлинк (можно с другой бронёй).",
+    "category": "armor",
+    "slot": "accessory",
+    "acBonus": 0,
+    "priceWonlongs": 650,
+    "tags": ["броня", "cyber:optic_flare"]
+  },
+  {
+    "id": "a_biometric_badge",
+    "name": "Biometric-lock бейдж",
+    "blurb": "Жёсткая проверка лица у носителя/поста — ломает scrambler и spoof рядом.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 800,
+    "tags": ["gear", "cyber:biometric_lock"]
+  },
+  {
+    "id": "a_scent_flare_spray",
+    "name": "Scent-flare баллон",
+    "blurb": "Расходник-аксессуар: срывает scent-mask (пока экипирован — «заряжен»).",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 200,
+    "tags": ["gear", "cyber:scent_flare"]
+  },
+  {
+    "id": "a_pulse_shield_ring",
+    "name": "Кольцо pulse-shield",
+    "blurb": "Шумит биосигналы — lie-pulse читает мусор.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 450,
+    "tags": ["gear", "cyber:pulse_shield"]
+  },
+  {
+    "id": "a_conceal_wand",
+    "name": "Жезл сканера маскировки",
+    "blurb": "При обыске игнорирует бонус weapon_conceal у цели.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 500,
+    "tags": ["gear", "cyber:conceal_scan"]
+  },
+  {
+    "id": "a_uv_matte_spray",
+    "name": "УФ-глушащий спрей",
+    "blurb": "Покрытие: обычный УФ-глаз не читает метки на тебе.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 150,
+    "tags": ["gear", "cyber:uv_cloak"]
   }
 ]

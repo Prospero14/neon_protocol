@@ -69,6 +69,29 @@ type Props = {
   onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
+/** Blurb-prefix: district-local marker (0–100 of drill canvas). Hidden on city overview. */
+const DISTRICT_MARKER_PREFIX = '\u200B@d:';
+
+function isDistrictLocalMarker(m: Pick<NriMapMarker, 'blurb'>): boolean {
+  return typeof m.blurb === 'string' && m.blurb.startsWith(DISTRICT_MARKER_PREFIX);
+}
+
+function encodeDistrictMarkerBlurb(parentKey: string, userBlurb: string): string {
+  const note = userBlurb.trim();
+  return `${DISTRICT_MARKER_PREFIX}${parentKey}${note ? `\n${note}` : ''}`;
+}
+
+function displayMarkerBlurb(blurb: string | null): string {
+  if (!blurb) return '';
+  if (!blurb.startsWith(DISTRICT_MARKER_PREFIX)) return blurb;
+  const nl = blurb.indexOf('\n');
+  return nl >= 0 ? blurb.slice(nl + 1) : '';
+}
+
+function clampNum(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
 type ViewBox = { x: number; y: number; w: number; h: number };
 
 const LAYER_ORDER: Record<string, number> = {
@@ -328,17 +351,6 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     [authToken, inviteCode, mergeTopAndDistrictTiles, zones]
   );
 
-  const prefetchDistrictTiles = useCallback(
-    (parent: NriMapZone) => {
-      if (!authToken || !canDrillIntoDistrict(parent)) return;
-      const count = parent.subTileCount ?? zones.filter((z) => z.parentZoneKey === parent.zoneKey).length;
-      if (count === 0) return;
-      if (zones.some((z) => z.parentZoneKey === parent.zoneKey)) return;
-      void loadDistrictTiles(parent.zoneKey, parent);
-    },
-    [authToken, loadDistrictTiles, zones]
-  );
-
   const refreshZones = useCallback(async (opts?: { silent?: boolean }) => {
     if (mapRefreshPausedRef.current) return;
     const useFallback = (message: string) => {
@@ -424,12 +436,9 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
 
   useEffect(() => {
     void refreshZones();
-    if (!districtParentKey) {
-      refreshMarkers();
-      refreshPositions();
-    }
-    const pollMs = districtParentKey ? 0 : 12000;
-    if (pollMs <= 0) return;
+    refreshMarkers();
+    refreshPositions();
+    const pollMs = districtParentKey ? 20_000 : 12_000;
     const t = setInterval(() => {
       if (mapRefreshPausedRef.current) return;
       refreshMarkers();
@@ -485,11 +494,15 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     const ctm = svg.getScreenCTM();
     if (!ctm) return null;
     const local = pt.matrixTransform(ctm.inverse());
-    const gx = districtParent ? local.x + districtParent.x : local.x;
-    const gy = districtParent ? local.y + districtParent.y : local.y;
+    if (districtParent) {
+      return {
+        x: (local.x / DISTRICT_DRILL_CANVAS.w) * 100,
+        y: (local.y / DISTRICT_DRILL_CANVAS.h) * 100,
+      };
+    }
     return {
-      x: (gx / mapView.w) * 100,
-      y: (gy / mapView.h) * 100,
+      x: (local.x / mapView.w) * 100,
+      y: (local.y / mapView.h) * 100,
     };
   };
 
@@ -562,11 +575,6 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const enterDistrict = useCallback(
     async (z: NriMapZone) => {
       if (!authToken || !canDrillIntoDistrict(z)) return;
-      const count = z.subTileCount ?? zones.filter((s) => s.parentZoneKey === z.zoneKey).length;
-      if (count === 0) {
-        setErr('У этого района нет сетки клеток.');
-        return;
-      }
       setBusy(true);
       setErr(null);
       try {
@@ -583,7 +591,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         setBusy(false);
       }
     },
-    [authToken, loadDistrictTiles, zones]
+    [authToken, loadDistrictTiles]
   );
 
   const applyZoneSelection = (raw: NriMapZone) => {
@@ -606,9 +614,6 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     }
     zoomToZone(raw);
     setHoverZone(raw);
-    if (!districtParentKey && canDrillIntoDistrict(raw)) {
-      prefetchDistrictTiles(raw);
-    }
   };
 
   const resolveTapZoneKey = (target: EventTarget | null): string | null => {
@@ -722,12 +727,15 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   };
 
   const saveMarker = async () => {
-    if (!authToken || !draft?.label.trim()) return;
+    if (!authToken || !draft?.label.trim() || mapFromFallback) return;
     setBusy(true);
     setErr(null);
+    const userBlurb = draft.blurb.trim();
     const res = await nriCreateMapMarker(authToken, inviteCode, {
       label: draft.label.trim(),
-      blurb: draft.blurb.trim() || undefined,
+      blurb: districtParentKey
+        ? encodeDistrictMarkerBlurb(districtParentKey, userBlurb)
+        : userBlurb || undefined,
       x: draft.x,
       y: draft.y,
     });
@@ -753,7 +761,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const createSubZone = async () => {
     const parentKey =
       districtParentKey ?? (focusZone && canDrillIntoDistrict(focusZone) ? focusZone.zoneKey : null);
-    if (!authToken || !parentKey || !newSubName.trim()) return;
+    if (!authToken || !parentKey || !newSubName.trim() || mapFromFallback) return;
     setBusy(true);
     setErr(null);
     const res = await nriCreateMapSubZone(authToken, inviteCode, {
@@ -767,19 +775,15 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     }
     const createdKey = res.zone.zoneKey;
     setNewSubName('');
-    const data = await nriFetchMapZones(authToken, inviteCode);
-    if (!data.ok) {
-      setErr(data.error);
-      return;
-    }
-    setZones(data.zones);
-    setMapView(data.view);
-    const parent = data.zones.find((z) => z.zoneKey === parentKey);
-    if (parent) {
-      setDistrictParentKey(parentKey);
-      setViewBox({ x: 0, y: 0, w: DISTRICT_DRILL_CANVAS.w, h: DISTRICT_DRILL_CANVAS.h });
-    }
+    setZones((prev) => {
+      const kept = prev.filter((z) => z.parentZoneKey !== parentKey && z.zoneKey !== createdKey);
+      const siblings = prev.filter((z) => z.parentZoneKey === parentKey && z.zoneKey !== createdKey);
+      return [...kept, ...siblings, res.zone];
+    });
+    setDistrictParentKey(parentKey);
+    setViewBox({ x: 0, y: 0, w: DISTRICT_DRILL_CANVAS.w, h: DISTRICT_DRILL_CANVAS.h });
     setSelectedZoneKey(createdKey);
+    void refreshZones({ silent: true });
   };
 
   const deleteSubZone = async () => {
@@ -806,7 +810,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   };
 
   const saveZoneEdits = async () => {
-    if (!authToken || !focusZone) return;
+    if (!authToken || !focusZone || mapFromFallback) return;
     const payload: {
       name?: string;
       corpName?: string | null;
@@ -927,6 +931,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     focusZone && canDrillIntoDistrict(focusZone)
       ? focusZone.subTileCount ?? zones.filter((z) => z.parentZoneKey === focusZone.zoneKey).length
       : 0;
+  const canEnterFocus = !!(focusZone && canDrillIntoDistrict(focusZone));
   const districtUsesGrid =
     districtSubZones.some((z) => z.gridRow != null) || (districtParent?.subTileCount ?? 0) > 0;
   const typeLabel = panelZone
@@ -990,10 +995,21 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         z?.parentZoneKey === districtParent.zoneKey || z?.zoneKey === districtParent.zoneKey;
       if (!inDistrict) return null;
       const laid = z ? districtTilesLayout.find((t) => t.zoneKey === z.zoneKey) : null;
-      const px = p.x ?? (laid ? laid.x + laid.w / 2 : z ? z.x - districtParent.x + z.w / 2 : null);
-      const py = p.y ?? (laid ? laid.y + laid.h / 2 : z ? z.y - districtParent.y + z.h / 2 : null);
-      if (px == null || py == null) return null;
-      return { px, py, label: p.displayName ?? p.userId.slice(0, 6) };
+      if (laid) {
+        return {
+          px: laid.x + laid.w / 2,
+          py: laid.y + laid.h / 2,
+          label: p.displayName ?? p.userId.slice(0, 6),
+        };
+      }
+      if (p.x != null && p.y != null) {
+        return {
+          px: clampNum(p.x - districtParent.x, 0, DISTRICT_DRILL_CANVAS.w),
+          py: clampNum(p.y - districtParent.y, 0, DISTRICT_DRILL_CANVAS.h),
+          label: p.displayName ?? p.userId.slice(0, 6),
+        };
+      }
+      return null;
     }
     const px = p.x ?? (z ? z.x + z.w / 2 : null);
     const py = p.y ?? (z ? z.y + z.h / 2 : null);
@@ -1042,6 +1058,8 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
           <button
             type="button"
             className={`nri-modal__submit ${placeMode ? 'active' : ''} ${!isHost ? 'nri-city-map__place-player' : ''}`}
+            disabled={mapFromFallback}
+            title={mapFromFallback ? 'Локальная схема — метки не сохраняются' : undefined}
             onClick={() => {
               setPlaceMode((v) => !v);
               setDraft(null);
@@ -1052,6 +1070,11 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         </div>
       </header>
 
+      {mapFromFallback && (
+        <p className="nri-lobby__err mono-text">
+          Локальная схема города (read-only): правки зон, сабзоны и метки отключены, пока API карты недоступен.
+        </p>
+      )}
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
 
       <div className="nri-city-map__hover-slot" aria-live="polite">
@@ -1069,15 +1092,13 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             megaLabel={zoneMega(focusZone!)}
             selected
             drillLabel={
-              canDrillIntoDistrict(focusZone!) && subCountForFocus > 0
-                ? `Войти в район (${subCountForFocus} клеток)`
+              canEnterFocus
+                ? subCountForFocus > 0
+                  ? `Войти в район (${subCountForFocus} клеток)`
+                  : 'Войти в район'
                 : null
             }
-            onDrill={
-              canDrillIntoDistrict(focusZone!) && subCountForFocus > 0
-                ? () => void enterDistrict(focusZone!)
-                : undefined
-            }
+            onDrill={canEnterFocus ? () => void enterDistrict(focusZone!) : undefined}
           >
             {isHost ? (
               <div className="nri-city-map__zone-edit">
@@ -1166,7 +1187,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 <button
                   type="button"
                   className="nri-modal__submit"
-                  disabled={busy || !zoneEditsDirty || !editName.trim()}
+                  disabled={busy || !zoneEditsDirty || !editName.trim() || mapFromFallback}
                   onClick={() => void saveZoneEdits()}
                 >
                   {busy ? 'Сохранение…' : 'Сохранить'}
@@ -1308,7 +1329,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 <button
                   type="button"
                   className="nri-modal__submit"
-                  disabled={busy || !zoneEditsDirty || !editName.trim()}
+                  disabled={busy || !zoneEditsDirty || !editName.trim() || mapFromFallback}
                   onClick={() => void saveZoneEdits()}
                 >
                   {busy ? 'Сохранение…' : 'Сохранить'}
@@ -1336,7 +1357,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     <button
                       type="button"
                       className="nri-modal__submit"
-                      disabled={busy || !newSubName.trim()}
+                      disabled={busy || !newSubName.trim() || mapFromFallback}
                       onClick={createSubZone}
                     >
                       Добавить сабзону
@@ -1361,7 +1382,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 <button
                   type="button"
                   className="nri-modal__submit"
-                  disabled={busy || !newSubName.trim()}
+                  disabled={busy || !newSubName.trim() || mapFromFallback}
                   onClick={createSubZone}
                 >
                   Добавить сабзону
@@ -1621,6 +1642,10 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     onMouseEnter={() => setHoverZone(raw)}
                     onMouseLeave={() => setHoverZone((prev) => (prev?.zoneKey === raw.zoneKey ? null : prev))}
                     onClick={(e) => onZoneClick(raw, e)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      if (canDrillIntoDistrict(raw)) void enterDistrict(raw);
+                    }}
                   />
                 );
               }
@@ -1748,13 +1773,43 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
               );
             })}
             {markers.map((m) => {
-              let px = (m.x / 100) * mapView.w;
-              let py = (m.y / 100) * mapView.h;
+              const districtLocal = isDistrictLocalMarker(m);
               if (districtParent) {
-                px -= districtParent.x;
-                py -= districtParent.y;
+                if (!districtLocal) return null;
+                const px = (m.x / 100) * DISTRICT_DRILL_CANVAS.w;
+                const py = (m.y / 100) * DISTRICT_DRILL_CANVAS.h;
                 if (px < 0 || py < 0 || px > DISTRICT_DRILL_CANVAS.w || py > DISTRICT_DRILL_CANVAS.h) return null;
+                const isHostMarker = m.kind === 'host';
+                return (
+                  <g
+                    key={m.id}
+                    className={`nri-city-map__marker nri-city-map__marker--${isHostMarker ? 'host' : 'player'} ${selected?.id === m.id ? 'selected' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (panRef.current.didDrag) {
+                        panRef.current.didDrag = false;
+                        return;
+                      }
+                      setSelected(m);
+                      setDraft(null);
+                    }}
+                  >
+                    {isHostMarker ? (
+                      <circle cx={px} cy={py} r={2.2} />
+                    ) : (
+                      <polygon
+                        points={`${px},${py - 2.6} ${px + 2.2},${py} ${px},${py + 2.6} ${px - 2.2},${py}`}
+                      />
+                    )}
+                    <text x={px} y={py - 3.6} textAnchor="middle">
+                      {m.label}
+                    </text>
+                  </g>
+                );
               }
+              if (districtLocal) return null;
+              const px = (m.x / 100) * mapView.w;
+              const py = (m.y / 100) * mapView.h;
               const isHostMarker = m.kind === 'host';
               return (
                 <g
@@ -1811,7 +1866,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             <button type="button" className="nri-lobby__close" onClick={() => setDraft(null)}>
               Отмена
             </button>
-            <button type="button" className="nri-modal__submit" disabled={busy || !draft.label.trim()} onClick={saveMarker}>
+            <button type="button" className="nri-modal__submit" disabled={busy || !draft.label.trim() || mapFromFallback} onClick={saveMarker}>
               Поставить
             </button>
           </div>
@@ -1825,7 +1880,9 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             {selected.kind === 'host' ? 'Метка мастера' : 'Метка игрока'}
             {selected.ownerName ? ` · ${selected.ownerName}` : ''}
           </p>
-          {selected.blurb && <p className="opacity-70">{selected.blurb}</p>}
+          {selected.blurb && displayMarkerBlurb(selected.blurb) ? (
+            <p className="opacity-70">{displayMarkerBlurb(selected.blurb)}</p>
+          ) : null}
           {(isHost || (selected.ownerUserId != null && selected.ownerUserId === currentUserId)) && (
             <button type="button" className="nri-lobby__close" disabled={busy} onClick={() => removeMarker(selected.id)}>
               <Trash2 size={14} /> Удалить метку

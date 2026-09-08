@@ -5927,8 +5927,8 @@
 
 .nri-district-tile__exit-frame {
   fill: rgba(4, 8, 16, 0.35);
-  stroke: rgba(0, 255, 200, 0.28);
-  stroke-width: 0.1;
+  stroke: rgba(0, 255, 200, 0.55);
+  stroke-width: 0.14;
   pointer-events: none;
 }
 
@@ -6099,6 +6099,13 @@
   .nri-district-tile__window--anim,
   .nri-district-tile__tree--anim,
   .nri-district-tile__lantern--anim {
+    animation: none !important;
+  }
+
+  .nri-city-map__scan,
+  .nri-city-map__ambient-line,
+  .nri-city-map__ambient-line--dim,
+  .nri-city-map__ambient-line--magenta {
     animation: none !important;
   }
 }
@@ -6739,7 +6746,11 @@
 .nri-city-map__travel-msg { font-size: 0.72rem; color: var(--neon-cyan); }
 .nri-city-map__player-pos circle { fill: rgba(255, 200, 60, 0.9); stroke: rgba(0, 0, 0, 0.5); stroke-width: 0.2; }
 .nri-city-map__player-pos--me circle { fill: rgba(0, 255, 255, 0.95); }
-.nri-city-map__player-pos-label { font-size: 1.4px; fill: rgba(255, 255, 255, 0.85); pointer-events: none; }
+.nri-city-map__player-pos-label { font-size: 1.4px; fill: rgba(255, 255, 255, 0.35); pointer-events: none; }
+.nri-city-map__player-pos--me .nri-city-map__player-pos-label,
+.nri-city-map__player-pos:hover .nri-city-map__player-pos-label {
+  fill: rgba(255, 255, 255, 0.95);
+}
 
 .nri-dm-transfer { margin: 8px 0; }
 .nri-dm-transfer__panel {

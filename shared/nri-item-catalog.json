@@ -1806,5 +1806,14 @@
     "slot": "accessory",
     "priceWonlongs": 150,
     "tags": ["gear", "cyber:uv_cloak"]
+  },
+  {
+    "id": "a_voice_auth_badge",
+    "name": "Voice-auth бейдж",
+    "blurb": "Голосовой замок на двери/терминале носителя — ломает voice_auth spoof рядом.",
+    "category": "gear",
+    "slot": "accessory",
+    "priceWonlongs": 700,
+    "tags": ["gear", "cyber:voice_auth"]
   }
 ]

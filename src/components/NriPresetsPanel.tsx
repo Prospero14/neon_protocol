@@ -16,6 +16,7 @@ import {
 import { NRI_CLASS_SEEDS } from '../logic/nriClassSeeds';
 import { NRI_CLASSES, type NriClassId } from '../logic/nriClasses';
 import {
+  applyLevelProgressToSheet,
   applyMetaToSheet,
   archetypeForClass,
   buildFullCharacter,
@@ -132,10 +133,14 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     setErr(null);
     const patched = await nriPatchPreset(authToken, inviteCode, editId, {
       label: editLabel.trim(),
-      sheet: sheetHpForLevel(
-        { ...applyMetaToSheet(baseSheet, editMeta), skillProficiencies: editSkills },
-        presetClass
-      ),
+      sheet: {
+        ...applyLevelProgressToSheet(
+          applyMetaToSheet(baseSheet, editMeta),
+          presetClass,
+          editMeta.level ?? baseSheet.level
+        ),
+        skillProficiencies: editSkills,
+      },
     });
     setBusy(false);
     if (!patched.ok) {
@@ -209,10 +214,14 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     }
     setBusy(true);
     setErr(null);
-    const finalSheet = sheetHpForLevel(
-      { ...applyMetaToSheet(pendingPreset.sheet, pendingPreset.meta), skillProficiencies: skills },
-      pendingPreset.classId
-    );
+    const finalSheet = {
+      ...applyLevelProgressToSheet(
+        applyMetaToSheet(pendingPreset.sheet, pendingPreset.meta),
+        pendingPreset.classId,
+        pendingPreset.meta.level ?? pendingPreset.sheet.level
+      ),
+      skillProficiencies: skills,
+    };
     const res = await nriCreatePreset(authToken, inviteCode, {
       label: pendingPreset.label.trim(),
       classId: pendingPreset.classId,
@@ -448,7 +457,12 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             factions={factions}
             onChange={(m) => {
               setEditMeta(m);
-              if (editSheet) setEditSheet(applyMetaToSheet(editSheet, m));
+              if (editSheet) {
+                const cid = presets.find((x) => x.id === editId)?.classId as NriClassId;
+                setEditSheet(
+                  applyLevelProgressToSheet(applyMetaToSheet(editSheet, m), cid, m.level ?? editSheet.level)
+                );
+              }
             }}
           />
           <NriSkillPickField classId={presets.find((x) => x.id === editId)?.classId as NriClassId} picked={editSkills} onChange={setEditSkills} />

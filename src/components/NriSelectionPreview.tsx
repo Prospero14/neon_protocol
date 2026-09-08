@@ -25,6 +25,10 @@ function catalogModsLine(c: CatalogItem): string {
   }
   if (typeof c.acBonus === 'number') parts.push(`AC +${c.acBonus}`);
   if (c.attack) parts.push(`${c.attack.damageDice} ${c.attack.damageType} (${c.attack.ability})`);
+  if (c.tags?.length) {
+    const cyber = c.tags.filter((t) => t.startsWith('cyber:')).map((t) => t.slice(6));
+    if (cyber.length) parts.push(`hooks: ${cyber.join(', ')}`);
+  }
   return parts.join(' · ') || 'без боевых бонусов';
 }
 

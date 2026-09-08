@@ -172,7 +172,8 @@ export function enrichSheetCombat(sheet: NriSheetData, classId: NriClassId): Nri
     skillProficiencies: Array.isArray(sheet.skillProficiencies)
       ? sheet.skillProficiencies
       : [...CLASS_SKILL_DEFAULTS[classId]],
-    attacks: sheet.attacks ?? buildClassAttacks(sheet, classId),
+    /** Атаки класса всегда пересчитываются от текущих способностей. */
+    attacks: buildClassAttacks(sheet, classId),
   };
 }
 
@@ -206,7 +207,7 @@ export function getSheetCombatView(
     return { name: sk.name, ability: sk.ability, modifier, proficient };
   });
 
-  const baseAttacks = enriched.attacks ?? buildClassAttacks(enriched, classId);
+  const baseAttacks = buildClassAttacks(enriched, classId);
   const cyberAttacks = attacksFromAugmentations(enriched, augmentations, selfProfile, defenderProfile);
   const attacks = [...baseAttacks, ...cyberAttacks].map((a) => ({
     name: a.name,

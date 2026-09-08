@@ -8,6 +8,7 @@ type InstalledAugmentation = {
   slot: string;
   bloodTox: number;
   blurb?: string;
+  acBonus?: number;
   c2185Mods?: unknown;
   cyber?: unknown;
   installedAt: number;
@@ -66,6 +67,7 @@ export function tryInstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, it
     name: string;
     kind?: string;
     blurb?: string;
+    acBonus?: number;
     c2185Mods?: unknown;
     cyber?: {
       slot?: string;
@@ -73,6 +75,7 @@ export function tryInstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, it
       powerDrawW?: number;
       powerWh?: number;
       blueprint?: unknown;
+      features?: string[];
     };
   };
   if (item.kind !== 'cyberware' || !item.cyber?.slot) {
@@ -106,12 +109,21 @@ export function tryInstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, it
     return { ok: false, reason: 'Перегруз питания — установка невозможна.' };
   }
 
+  let acBonus = typeof item.acBonus === 'number' ? item.acBonus : 0;
+  if (!acBonus && Array.isArray(item.cyber.features)) {
+    for (const f of item.cyber.features) {
+      const m = String(f).match(/КБ\s*\+(\d+)/i);
+      if (m) acBonus += Number(m[1]);
+    }
+  }
+
   const aug: InstalledAugmentation = {
     itemId: item.id,
     name: item.name,
     slot,
     bloodTox,
     blurb: item.blurb,
+    acBonus: acBonus || undefined,
     c2185Mods: item.c2185Mods,
     cyber: item.cyber,
     installedAt: Date.now(),

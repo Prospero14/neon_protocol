@@ -43,6 +43,8 @@ export type CyberPartDef = {
   powerWh: number;
   powerDrawW: number;
   features: string[];
+  /** Бонус КБ/AC от детали (дублирует «КБ +N» в features при необходимости). */
+  acBonus?: number;
   /** Типизированные способности (УФ-зрение, смартлинк и т.д.). */
   effects?: CyberEffectId[];
   costBase: number;
@@ -82,6 +84,8 @@ export type CyberBuildResult = {
   name: string;
   slot: CyberSlot;
   c2185Mods: Partial<Record<'STR' | 'DEX' | 'CON' | 'INT' | 'TEC' | 'PEO', number>>;
+  /** Суммарный бонус брони от деталей (КБ). */
+  acBonus: number;
   bloodTox: number;
   cpuMhz: number;
   ramGb: number;
@@ -97,6 +101,21 @@ export type CyberBuildResult = {
   totals: AssemblyTotals;
   partLines: PartPowerLine[];
 };
+
+/** Парсит «КБ +N» из текста фич детали/сборки. */
+export function parseKbAcBonus(features: string[] | undefined): number {
+  if (!features?.length) return 0;
+  let sum = 0;
+  for (const f of features) {
+    const m = f.match(/КБ\s*\+(\d+)/i);
+    if (m) sum += Number(m[1]);
+  }
+  return sum;
+}
+
+export function partAcBonus(part: CyberPartDef): number {
+  return typeof part.acBonus === 'number' ? part.acBonus : parseKbAcBonus(part.features);
+}
 
 export const C2185_ABILITY_LABELS: Record<'STR' | 'DEX' | 'CON' | 'INT' | 'TEC' | 'PEO', string> = {
   STR: 'СИЛ',
@@ -612,6 +631,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 0,
     features: ['КБ +1', 'Поглощение 1 рубящего'],
+    acBonus: 1,
     costBase: 2000,
   },
   {
@@ -1204,6 +1224,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 0,
     features: ['КБ +1 (улица)', 'Минус: био-след для форензики'],
+    acBonus: 1,
     effects: ['wetware_leak'],
     costBase: 900,
   },
@@ -1252,6 +1273,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 2,
     features: ['КБ +1', 'Глушит смартлинк по тебе', '+1 AC vs linked дальних'],
+    acBonus: 1,
     effects: ['smartlink_jam', 'optic_flare'],
     costBase: 2800,
   },
@@ -1284,6 +1306,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     powerWh: 0,
     powerDrawW: 2,
     features: ['КБ +1', 'Контр тепловизору'],
+    acBonus: 1,
     effects: ['thermal_baffle'],
     costBase: 1900,
   },
@@ -1820,6 +1843,7 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
   const c2185Mods: CyberBuildResult['c2185Mods'] = {};
   let bloodTox = 0;
   let price = 500;
+  let acBonus = 0;
   const features = new Set<string>();
   const effects = new Set<CyberEffectId>();
 
@@ -1827,6 +1851,7 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
     sumMods(c2185Mods, p.c2185Mods);
     bloodTox += p.bloodTox;
     price += p.costBase;
+    acBonus += partAcBonus(p);
     p.features.forEach((f) => features.add(f));
     p.effects?.forEach((e) => effects.add(e));
   }
@@ -1851,6 +1876,7 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
     name: blueprint.name.trim() || 'Свой имплант',
     slot: blueprint.slot,
     c2185Mods,
+    acBonus,
     bloodTox,
     cpuMhz,
     ramGb,
@@ -1876,6 +1902,7 @@ export function blueprintToInventoryItem(blueprint: CyberBlueprint, build = buil
     blurb: `${CYBER_SLOT_LABELS[build.slot]} · BT ${build.bloodTox} · ${build.powerDrawW}/${build.powerWh} Вт`,
     qty: 1,
     c2185Mods: build.c2185Mods,
+    acBonus: build.acBonus || undefined,
     cyber: {
       slot: build.slot,
       blueprint,

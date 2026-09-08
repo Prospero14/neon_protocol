@@ -3,7 +3,7 @@
 import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos';
 
 import type { NriInventoryItem } from './nriInventory';
-import { bloodToxLimitFromCon, type CyberSlot } from './nriCyberware';
+import { bloodToxLimitFromCon, parseKbAcBonus, type CyberSlot } from './nriCyberware';
 import { parseNriSheet, type NriSheetData } from './nriNpcGenerator';
 
 export type InstalledAugmentation = {
@@ -12,6 +12,7 @@ export type InstalledAugmentation = {
   slot: string;
   bloodTox: number;
   blurb?: string;
+  acBonus?: number;
   c2185Mods?: NriInventoryItem['c2185Mods'];
   cyber?: NriInventoryItem['cyber'];
   installedAt: number;
@@ -60,20 +61,29 @@ export type InstallCyberResult =
   | { ok: true; sheet: AugmentedSheet; inventory: NriInventoryItem[] }
   | { ok: false; reason: string };
 
+export function acBonusFromAugmentation(aug: InstalledAugmentation): number {
+  if (typeof aug.acBonus === 'number') return aug.acBonus;
+  const features = aug.cyber?.features;
+  return parseKbAcBonus(Array.isArray(features) ? features : undefined);
+}
+
 export function applyAugmentationsToSheet(
   sheet: NriSheetData,
   augmentations: InstalledAugmentation[]
 ): NriSheetData {
   if (augmentations.length === 0) return sheet;
   const abilities = { ...sheet.abilities };
+  let ac = sheet.ac ?? 10;
   for (const aug of augmentations) {
-    if (!aug.c2185Mods) continue;
-    for (const key of Object.keys(aug.c2185Mods) as (keyof typeof abilities)[]) {
-      const delta = aug.c2185Mods[key];
-      if (typeof delta === 'number') abilities[key] = (abilities[key] ?? 10) + delta;
+    if (aug.c2185Mods) {
+      for (const key of Object.keys(aug.c2185Mods) as (keyof typeof abilities)[]) {
+        const delta = aug.c2185Mods[key];
+        if (typeof delta === 'number') abilities[key] = (abilities[key] ?? 10) + delta;
+      }
     }
+    ac += acBonusFromAugmentation(aug);
   }
-  return { ...sheet, abilities };
+  return { ...sheet, abilities, ac };
 }
 
 export function tryInstallCyberItem(
@@ -136,6 +146,7 @@ export function tryInstallCyberItem(
     slot,
     bloodTox,
     blurb: item.blurb,
+    acBonus: typeof item.acBonus === 'number' ? item.acBonus : parseKbAcBonus(item.cyber?.features),
     c2185Mods: item.c2185Mods,
     cyber: item.cyber,
     installedAt: Date.now(),
@@ -166,6 +177,7 @@ export function tryUninstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, 
     name: aug.name,
     kind: 'cyberware',
     blurb: aug.blurb,
+    acBonus: aug.acBonus,
     c2185Mods: aug.c2185Mods,
     cyber: aug.cyber,
     qty: 1,

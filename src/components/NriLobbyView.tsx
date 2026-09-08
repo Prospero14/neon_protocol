@@ -686,7 +686,13 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           />
         )}
         {tab === 'cyber' && (session?.isHost || session?.isAdmin) && (
-          <NriCyberPanel inviteCode={inviteCode} recipients={vaultRecipients} />
+          <NriCyberPanel
+            inviteCode={inviteCode}
+            recipients={vaultRecipients}
+            profile={profile}
+            currentUserId={user?.id}
+            onProfileUpdate={setProfile}
+          />
         )}
         {tab === 'transport' && session && (
           <NriTransportPanel

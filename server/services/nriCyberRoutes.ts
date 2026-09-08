@@ -47,6 +47,7 @@ function cyberGrantItem(product: {
     blurb: `${product.slot} · BT ${build.bloodTox ?? '?'} · ₩${product.priceWonlongs}`,
     qty: 1,
     c2185Mods: build.c2185Mods ?? {},
+    acBonus: typeof build.acBonus === 'number' && build.acBonus > 0 ? build.acBonus : undefined,
     cyber: {
       slot: product.slot,
       blueprint: product.blueprint,
@@ -270,7 +271,14 @@ export function mountNriCyberRoutes(app: Express, ctx: NriRouteContext): void {
         nextSheet &&
         typeof nextSheet === 'object' &&
         (nextSheet as { pendingHoloTattoo?: boolean }).pendingHoloTattoo === true;
-      res.json({ ok: true, item, installed, needsHoloTattooPick: installed ? needsHoloTattooPick : false });
+      res.json({
+        ok: true,
+        item,
+        installed,
+        needsHoloTattooPick: installed ? needsHoloTattooPick : false,
+        inventory: nextInv,
+        sheet: nextSheet,
+      });
     } catch (error) {
       console.error('nri/cyber grant:', error);
       return sendApiError(res, 500, 'NRI_CYBER_GRANT_FAILED', 'Не удалось выдать имплант.');
@@ -374,7 +382,13 @@ export function mountNriCyberRoutes(app: Express, ctx: NriRouteContext): void {
         sheet &&
         typeof sheet === 'object' &&
         (sheet as { pendingHoloTattoo?: boolean }).pendingHoloTattoo === true;
-      res.json({ ok: true, installed: true, needsHoloTattooPick });
+      res.json({
+        ok: true,
+        installed: true,
+        needsHoloTattooPick,
+        inventory: result.inventory,
+        sheet,
+      });
     } catch (error) {
       console.error('nri/cyber install:', error);
       return sendApiError(res, 500, 'NRI_CYBER_INSTALL_ERR', 'Не удалось установить имплант.');

@@ -1,5 +1,6 @@
 /** Cyberware catalog + install */
 
+import type { NriInventoryItem } from '../nriInventory';
 import type { NriPlayerProfile } from './players';
 import { nriAuthHeaders, nriParseJson, parseNriApiError } from './http.js';
 
@@ -21,7 +22,13 @@ export type NriCyberProduct = {
 
 type CyberMutateResult = { ok: true; product: NriCyberProduct } | { ok: false; error: string };
 type CyberGrantResult =
-  | { ok: true; installed?: boolean; needsHoloTattooPick?: boolean }
+  | {
+      ok: true;
+      installed?: boolean;
+      needsHoloTattooPick?: boolean;
+      inventory?: NriInventoryItem[];
+      sheet?: unknown;
+    }
   | { ok: false; error: string };
 
 export async function nriFetchCyberProducts(token: string, code: string): Promise<NriCyberProduct[] | null> {
@@ -94,7 +101,13 @@ export async function nriGrantCyberProduct(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось выдать имплант') };
-  return { ok: true, installed: !!data.installed, needsHoloTattooPick: !!data.needsHoloTattooPick };
+  return {
+    ok: true,
+    installed: !!data.installed,
+    needsHoloTattooPick: !!data.needsHoloTattooPick,
+    inventory: Array.isArray(data.inventory) ? (data.inventory as NriInventoryItem[]) : undefined,
+    sheet: data.sheet,
+  };
 }
 
 export async function nriGrantCyberProductToNpc(
@@ -133,7 +146,13 @@ export async function nriInstallCyberItem(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось установить имплант') };
-  return { ok: true, installed: true, needsHoloTattooPick: !!data.needsHoloTattooPick };
+  return {
+    ok: true,
+    installed: true,
+    needsHoloTattooPick: !!data.needsHoloTattooPick,
+    inventory: Array.isArray(data.inventory) ? (data.inventory as NriInventoryItem[]) : undefined,
+    sheet: data.sheet,
+  };
 }
 
 export type HoloTattooOption = {

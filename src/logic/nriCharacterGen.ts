@@ -4,6 +4,7 @@
 
 import type { NriClassId } from './nriClasses';
 import { getC2185ClassTemplate } from './nriCarbon2185';
+import { C2185_CLASS_GUIDES } from './nriCarbon2185RulesExtended';
 import {
   getBloodToxLimit,
   parseAugmentedSheet,
@@ -733,12 +734,56 @@ export function sheetToMetaDraft(sheet: NriSheetData | null | undefined, fallbac
   };
 }
 
-export function sheetHpForLevel(sheet: NriSheetData, classId: NriClassId): NriSheetData {
+/** Минимальный уровень, с которого открывается строка levelFeatures. */
+function featureUnlockLevel(levelSpec: string): number {
+  const m = levelSpec.match(/(\d+)/);
+  return m ? Number(m[1]) : 99;
+}
+
+/** Черты класса, доступные на текущем уровне (signature + levelFeatures). */
+export function classFeaturesForLevel(classId: NriClassId, level: number): string[] {
+  const lvl = Math.max(1, Math.floor(level) || 1);
+  const tpl = getC2185ClassTemplate(classId);
+  const guide = C2185_CLASS_GUIDES.find((g) => g.id === classId);
+  const out: string[] = [];
+  if (tpl?.signature) out.push(tpl.signature);
+  for (const row of guide?.levelFeatures ?? []) {
+    if (lvl >= featureUnlockLevel(row.level)) {
+      for (const f of row.features) out.push(f);
+    }
+  }
+  if (out.length <= 1 && tpl?.traits?.length) {
+    return [tpl.signature, ...tpl.traits];
+  }
+  return out;
+}
+
+export function computeHpMaxForLevel(sheet: NriSheetData, classId: NriClassId): number {
   const tpl = getC2185ClassTemplate(classId);
   const conMod = abilityModifier(sheet.abilities.CON);
   const hitDie = tpl?.hitDie ?? 'd8';
   const perLevel = hitDie === 'd12' ? 7 : hitDie === 'd10' ? 6 : 5;
   const base = (hitDie === 'd12' ? 12 : hitDie === 'd10' ? 10 : 8) + conMod;
-  const hpMax = base + perLevel * Math.max(0, sheet.level - 1);
+  return base + perLevel * Math.max(0, sheet.level - 1);
+}
+
+export function sheetHpForLevel(sheet: NriSheetData, classId: NriClassId): NriSheetData {
+  const hpMax = computeHpMaxForLevel(sheet, classId);
   return { ...sheet, hpMax, hp: hpMax };
+}
+
+/** Уровень → proficiency, HP, черты класса (для сейва мастера / пресетов). */
+export function applyLevelProgressToSheet(
+  sheet: NriSheetData,
+  classId: NriClassId,
+  level?: number
+): NriSheetData {
+  const nextLevel = Math.max(1, Math.floor(level ?? sheet.level) || 1);
+  const withLevel: NriSheetData = {
+    ...sheet,
+    level: nextLevel,
+    proficiencyBonus: proficiencyForLevel(nextLevel),
+    classFeatures: classFeaturesForLevel(classId, nextLevel),
+  };
+  return sheetHpForLevel(withLevel, classId);
 }

@@ -13,6 +13,7 @@ import {
   nriPatchCyberProduct,
   type NriCyberProduct,
   type NriNpc,
+  type NriPlayerProfile,
   type NriRosterPlayer,
 } from '../logic/nriApi';
 import {
@@ -42,6 +43,9 @@ import { NriCyberProductPreview } from './NriSelectionPreview';
 type Props = {
   inviteCode: string;
   recipients: VaultRecipient[];
+  profile?: NriPlayerProfile | null;
+  currentUserId?: string | null;
+  onProfileUpdate?: (p: NriPlayerProfile) => void;
 };
 
 type SubTab = 'build' | 'stock';
@@ -60,7 +64,13 @@ function productBuildMeta(p: NriCyberProduct) {
   };
 }
 
-export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
+export const NriCyberPanel: React.FC<Props> = ({
+  inviteCode,
+  recipients,
+  profile,
+  currentUserId,
+  onProfileUpdate,
+}) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [sub, setSub] = useState<SubTab>('build');
@@ -197,6 +207,20 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
         ? `«${grantProduct.name}» установлен: ${who}.`
         : `«${grantProduct.name}» в инвентаре: ${who}.`
     );
+    if (
+      grantTarget.kind === 'player' &&
+      currentUserId &&
+      grantTarget.id === currentUserId &&
+      profile &&
+      onProfileUpdate &&
+      (res.inventory || res.sheet)
+    ) {
+      onProfileUpdate({
+        ...profile,
+        ...(res.inventory ? { inventory: res.inventory } : {}),
+        ...(res.sheet !== undefined ? { sheet: res.sheet } : {}),
+      });
+    }
     setGrantProduct(null);
     setGrantTarget(null);
     await refreshTargets();
@@ -239,13 +263,14 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
 
   const modLine = (['STR', 'DEX', 'CON', 'INT', 'TEC', 'PEO'] as const)
     .map((k) => {
-      const v = build.c2185Mods[k];
-      if (!v) return null;
-      return `${C2185_ABILITY_LABELS[k]} ${v >= 0 ? '+' : ''}${v}`;
-    })
-    .filter(Boolean)
-    .join(' · ');
+              const v = build.c2185Mods[k];
+              if (!v) return null;
+              return `${C2185_ABILITY_LABELS[k]} ${v >= 0 ? '+' : ''}${v}`;
+            })
+            .filter(Boolean)
+            .join(' · ');
 
+  const acLine = build.acBonus > 0 ? `КБ +${build.acBonus}` : '';
   const btOverLimit = build.bloodTox > bloodToxLimit;
 
   const renderTargetRow = (t: GrantTarget) => {
@@ -430,7 +455,7 @@ export const NriCyberPanel: React.FC<Props> = ({ inviteCode, recipients }) => {
 
           <div className={`nri-cyber__preview ${build.overload || build.blocked ? 'overload' : ''}`}>
             <h4 className="mono-text">Итог</h4>
-            <p className="mono-text">{modLine || '— без модов характеристик'}</p>
+            <p className="mono-text">{[modLine, acLine].filter(Boolean).join(' · ') || '— без модов характеристик'}</p>
             <p className="mono-text opacity-70">
               Blood Tox {build.bloodTox} · CPU {build.cpuMhz} МГц · RAM {build.ramGb} ГБ · расход {build.powerDrawW}{' '}
               Вт / батарея {build.powerWh} Вт·ч · ₩{build.priceWonlongs}

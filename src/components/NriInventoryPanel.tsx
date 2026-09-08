@@ -6,6 +6,7 @@ import {
   nriTransferItem,
   nriToggleEquip,
   nriUseItem,
+  nriInstallCyberItem,
   type NriNpc,
   type NriPlayerProfile,
   type NriRosterPlayer,
@@ -25,6 +26,7 @@ import {
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 import { formatSignedMod } from '../logic/nriSheetCombat';
+import { CYBER_EFFECT_META } from '../logic/nriCyberEffects';
 import { NriCatalogItemPreview } from './NriSelectionPreview';
 
 type Props = {
@@ -43,8 +45,22 @@ function itemModsLine(item: NriInventoryItem): string {
       if (typeof v === 'number') parts.push(`${k} ${formatSignedMod(v)}`);
     }
   }
-  if (typeof item.acBonus === 'number') parts.push(`AC +${item.acBonus}`);
+  if (typeof item.acBonus === 'number' && item.acBonus !== 0) parts.push(`AC +${item.acBonus}`);
   if (item.attack) parts.push(`${item.attack.damageDice} ${item.attack.damageType}`);
+  if (item.tags?.length) {
+    for (const t of item.tags) {
+      if (!t.startsWith('cyber:')) continue;
+      const id = t.slice(6) as keyof typeof CYBER_EFFECT_META;
+      const meta = CYBER_EFFECT_META[id];
+      parts.push(meta?.label ?? id);
+    }
+  }
+  if (item.kind === 'cyberware' && item.cyber?.effects?.length) {
+    for (const id of item.cyber.effects) {
+      const meta = CYBER_EFFECT_META[id as keyof typeof CYBER_EFFECT_META];
+      if (meta) parts.push(meta.label);
+    }
+  }
   return parts.join(' · ') || 'без боевых бонусов';
 }
 
@@ -111,6 +127,23 @@ export const NriInventoryPanel: React.FC<Props> = ({
     if (res.newAchievements?.length) onNewAchievements?.(res.newAchievements);
   };
 
+  const installCyber = async (item: NriInventoryItem) => {
+    if (!authToken || !user?.id) return;
+    setBusy(item.id);
+    setErr(null);
+    const res = await nriInstallCyberItem(authToken, inviteCode, user.id, item.id);
+    setBusy(null);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    onProfileUpdate({
+      ...profile,
+      ...(res.inventory ? { inventory: res.inventory } : {}),
+      ...(res.sheet !== undefined ? { sheet: res.sheet } : {}),
+    });
+  };
+
   const canUseItem = (item: NriInventoryItem) => {
     if (canEquipItem(item)) return false;
     const cat = item.catalogId ? getCatalogItem(item.catalogId) : undefined;
@@ -119,6 +152,8 @@ export const NriInventoryPanel: React.FC<Props> = ({
     }
     return false;
   };
+
+  const canInstallCyber = (item: NriInventoryItem) => item.kind === 'cyberware' && !!item.cyber?.slot;
 
   const grantToPlayer = async () => {
     if (!authToken || !catalogPick || !grantTarget) return;
@@ -210,6 +245,17 @@ export const NriInventoryPanel: React.FC<Props> = ({
               >
                 <Zap size={14} />
                 Использовать
+              </button>
+            )}
+            {canInstallCyber(item) && (
+              <button
+                type="button"
+                className="nri-inventory__equip"
+                disabled={busy === item.id || !user?.id}
+                onClick={() => installCyber(item)}
+              >
+                <Zap size={14} />
+                Установить
               </button>
             )}
           </li>

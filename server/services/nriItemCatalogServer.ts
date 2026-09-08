@@ -15,6 +15,7 @@ type CatalogItem = {
   acBonus?: number;
   attack?: { damageDice: string; damageType: string; ability: string };
   priceWonlongs?: number;
+  tags?: string[];
 };
 
 let cache: CatalogItem[] | null = null;
@@ -47,6 +48,7 @@ export function catalogToServerInventoryItem(catalogId: string): InvItem | null 
     acBonus: c.acBonus,
     attack: c.attack,
     priceWonlongs: c.priceWonlongs,
+    tags: c.tags ? [...c.tags] : undefined,
     qty: 1,
   };
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../logic/AuthContext';
 import { nriFetchRoster, nriPatchPlayer, type NriRosterPlayer } from '../logic/nriApi';
 import {
   applyMetaToSheet,
+  applyLevelProgressToSheet,
   ensureCompleteSheet,
   sheetToMetaDraft,
   type CharacterMetaDraft,
@@ -69,7 +70,11 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
     const base = editSheet ?? sheetForEdit(p.sheet, p.classId, editDisplayName);
     setBusy(true);
     setErr(null);
-    const merged = applyMetaToSheet(base, editMeta);
+    const merged = applyLevelProgressToSheet(
+      applyMetaToSheet(base, editMeta),
+      p.classId as NriClassId,
+      editMeta.level ?? base.level
+    );
     const res = await nriPatchPlayer(authToken, inviteCode, editId, {
       displayName: editDisplayName.trim() || editMeta.characterName || p.displayName,
       sheet: merged,
@@ -86,7 +91,14 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
   const editingPlayer = editId ? roster.find((r) => r.userId === editId) : null;
   const previewSheet =
     editingPlayer && editId
-      ? applyMetaToSheet(editSheet ?? sheetForEdit(editingPlayer.sheet, editingPlayer.classId, editDisplayName), editMeta)
+      ? applyLevelProgressToSheet(
+          applyMetaToSheet(
+            editSheet ?? sheetForEdit(editingPlayer.sheet, editingPlayer.classId, editDisplayName),
+            editMeta
+          ),
+          editingPlayer.classId as NriClassId,
+          editMeta.level
+        )
       : null;
 
   return (
@@ -158,7 +170,15 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
                         sheet={editSheet ?? undefined}
                         onChange={(m) => {
                           setEditMeta(m);
-                          if (editSheet) setEditSheet(applyMetaToSheet(editSheet, m));
+                          if (editSheet) {
+                            setEditSheet(
+                              applyLevelProgressToSheet(
+                                applyMetaToSheet(editSheet, m),
+                                p.classId as NriClassId,
+                                m.level ?? editSheet.level
+                              )
+                            );
+                          }
                         }}
                       />
                     </div>

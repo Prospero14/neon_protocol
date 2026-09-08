@@ -8,7 +8,7 @@ import {
 } from '../logic/nriCarbon2185';
 import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory';
 import { abilityModifier, parseNriSheet } from '../logic/nriNpcGenerator';
-import { ensureCompleteSheet } from '../logic/nriCharacterGen';
+import { ensureCompleteSheet, classFeaturesForLevel, computeHpMaxForLevel } from '../logic/nriCharacterGen';
 import { readWonlongs } from '../logic/nriWallet';
 import { parseAugmentedSheet, getBloodToxLimit, applyAugmentationsToSheet } from '../logic/nriCyberInstall';
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
@@ -81,13 +81,19 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
     () => inventoryCarriedLb(inventory, augmentations),
     [inventory, augmentations]
   );
-  const maxCarryLb = useMemo(() => maxCarryLbFromSheet(sheet), [sheet]);
+  const maxCarryLb = useMemo(
+    () => maxCarryLbFromSheet(effectiveSheet ?? sheet),
+    [effectiveSheet, sheet]
+  );
   const encLabel = encumbranceLabel(carriedLb, maxCarryLb);
-  const classFeatures = sheet?.classFeatures?.length
-    ? sheet.classFeatures
-    : tpl
-      ? [tpl.signature, ...tpl.traits]
-      : [];
+  const classFeatures = classFeaturesForLevel(
+    profile.classId as NriClassId,
+    effectiveSheet?.level ?? sheet?.level ?? 1
+  );
+  const displayHpMax =
+    effectiveSheet != null
+      ? computeHpMaxForLevel(effectiveSheet, profile.classId as NriClassId)
+      : sheet?.hpMax;
   const displayAttacks = [
     ...(combat?.attacks ?? []),
     ...gearAttacks.map((a) => ({
@@ -183,7 +189,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         )}
         <Field label="INITIATIVE" value={dexMod !== null ? formatSignedMod(dexMod) : undefined} />
         <Field label="SPEED" value="30 ft" />
-        <Field label="HP MAX" value={sheet?.hpMax != null ? String(sheet.hpMax) : tpl?.hpAt1} />
+        <Field label="HP MAX" value={displayHpMax != null ? String(displayHpMax) : tpl?.hpAt1} />
         <Field label="HIT DICE" value={tpl ? `1${tpl.hitDie}` : undefined} />
         <Field label="HIT POINTS" value={sheet?.hp != null ? String(sheet.hp) : undefined} />
         <Field label="D/R" value={sheet?.dr} />

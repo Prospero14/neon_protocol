@@ -1,24 +1,56 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, MapPin, Minus, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  CloudRain,
+  Lightbulb,
+  MapPin,
+  Minus,
+  Plus,
+  RotateCcw,
+  RotateCw,
+  Shapes,
+  Trash2,
+  Wand2,
+} from 'lucide-react';
 import {
   nriCreateMapMarker,
   nriCreateMapSubZone,
+  nriCreateMapTopZone,
   nriDeleteMapMarker,
   nriDeleteMapSubZone,
   nriFetchMapMarkers,
   nriFetchMapPositions,
   nriFetchMapZones,
   nriFallbackCityZones,
-  applyCanonCityGeometry,
   nriFallbackDistrictTiles,
   nriFetchVehicles,
   nriMoveToZone,
   nriPatchMapZone,
+  nriRegenDistrictTiles,
+  nriClearDistrictTiles,
+  nriFetchUnderhive,
+  nriFetchMapLamps,
+  nriCreateMapLamp,
+  nriPatchMapLamp,
+  nriDeleteMapLamp,
+  nriCreateMetroLine,
+  nriCreateMetroStation,
+  nriDeleteMetroStation,
+  nriMetroEnter,
+  nriMetroRide,
+  nriMetroRideComplete,
+  nriMetroRideActive,
+  nriCreateMetroShop,
+  nriMetroShopBuy,
   type NriMapMarker,
   type NriMapZone,
   type NriMapView,
   type NriPlayerPosition,
   type NriTableVehicle,
+  type NriMapLamp,
+  type NriUnderhivePayload,
+  type NriMetroStationDto,
 } from '../logic/nriApi';
 import {
   DISTRICT_TYPE_LABELS,
@@ -59,22 +91,72 @@ import { zoneOverviewRect } from '../logic/nriCityMapVisual';
 import { DISTRICT_DRILL_CANVAS, relayoutDistrictGridTiles } from '../logic/nriNeonCitySubzonesGen';
 import { NriDistrictTile } from './NriDistrictTile';
 import { NriDistrictTileDefs } from './NriDistrictTileDefs';
+import { NriDistrictWeatherFx } from './NriDistrictWeatherFx';
 import { resolveTileVisual, tileAnimationCost } from '../../shared/nri-domain/districtTileVisual';
 import { neighborsForTile } from '../../shared/nri-domain/districtGrid';
+import type { CityZoneShapePreset } from '../../shared/nri-domain/cityZoneShapePresets';
+import { UNDERHIVE_PASSPORT_ID } from '../logic/nriItemCatalog';
+import {
+  NriMapObjectPicker,
+  type MapPickerSelection,
+} from './NriMapObjectPicker';
+import { NriDistrictBrushPicker } from './NriDistrictBrushPicker';
+import { NriUnderhiveLayer } from './NriUnderhiveLayer';
+import { NriMapLampLayer } from './NriMapLampLayer';
+import {
+  brushCellOffsets,
+  districtBrushRotatesShape,
+  isSelectBrush,
+  nextBrushOrientation,
+  SELECT_BRUSH,
+  withRotatedDistrictBrush,
+  type DistrictBrush,
+} from '../../shared/nri-domain/districtBrushCatalog';
+import {
+  DEFAULT_METRO_SHOP_CATALOG,
+  LAMP_COLOR_PRESETS,
+  neighborStationIds,
+} from '../../shared/nri-domain/metroGraph';
+import {
+  buildBlockMegaInfoMultiSize,
+  buildPlazaMegaInfo,
+  CORP_HQ_SIZE,
+  CORP_OFFICE_SIZE,
+  type BlockMegaInfo,
+} from '../../shared/nri-domain/plazaMega';
+import {
+  buildExplicitMegaInfo,
+  encodeMegaArtId,
+  encodeMegaCoverArtId,
+  isMegaMergeType,
+  parseMegaArtId,
+  shapeDims,
+} from '../../shared/nri-domain/districtMegaMerge';
+import {
+  buildCorpLogoInfo,
+  encodeCorpLogoArtId,
+  encodeCorpLogoCoverArtId,
+  parseCorpLogoArtId,
+  type CorpLogoInfo,
+  type CorpLogoShape,
+} from '../../shared/nri-domain/corpLogoOverlay';
 
 type Props = {
   inviteCode: string;
   isHost: boolean;
+  /** Мастер / админ стола — рубильник погоды */
+  canToggleWeather?: boolean;
   currentUserId: string;
+  /** Инвентарь текущего игрока — для доступа в Подулей */
+  inventoryItemIds?: string[];
   onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
+type MapLayer = 'city' | 'underhive';
+type EditTool = 'select' | 'paint' | 'swap';
+
 /** Blurb-prefix: district-local marker (0–100 of drill canvas). Hidden on city overview. */
 const DISTRICT_MARKER_PREFIX = '\u200B@d:';
-
-function isDistrictLocalMarker(m: Pick<NriMapMarker, 'blurb'>): boolean {
-  return typeof m.blurb === 'string' && m.blurb.startsWith(DISTRICT_MARKER_PREFIX);
-}
 
 function encodeDistrictMarkerBlurb(parentKey: string, userBlurb: string): string {
   const note = userBlurb.trim();
@@ -86,6 +168,10 @@ function displayMarkerBlurb(blurb: string | null): string {
   if (!blurb.startsWith(DISTRICT_MARKER_PREFIX)) return blurb;
   const nl = blurb.indexOf('\n');
   return nl >= 0 ? blurb.slice(nl + 1) : '';
+}
+
+function isDistrictLocalMarker(m: Pick<NriMapMarker, 'blurb'>): boolean {
+  return !!m.blurb?.startsWith(DISTRICT_MARKER_PREFIX);
 }
 
 function clampNum(n: number, lo: number, hi: number): number {
@@ -170,7 +256,15 @@ function defaultDistrictStyleFromZone(z: NriMapZone): DistrictStyle {
   return normalizeDistrictStyle(z.districtStyle ?? '') ?? defaultDistrictStyle(z.zoneType);
 }
 
-export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUserId, onNewAchievements }) => {
+export const NriCityMapPanel: React.FC<Props> = ({
+  inviteCode,
+  isHost,
+  canToggleWeather,
+  currentUserId,
+  inventoryItemIds,
+  onNewAchievements,
+}) => {
+  const weatherMaster = canToggleWeather ?? isHost;
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const svgRef = useRef<SVGSVGElement>(null);
@@ -219,6 +313,82 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   const [moveOverload, setMoveOverload] = useState(false);
   const [moveMsg, setMoveMsg] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editTool, setEditTool] = useState<EditTool>('select');
+  const [paintPlaceType, setPaintPlaceType] = useState<PlaceType>('shop');
+  const [swapFromKey, setSwapFromKey] = useState<string | null>(null);
+  const [mapLayer, setMapLayer] = useState<MapLayer>('city');
+  const [tileDragFrom, setTileDragFrom] = useState<string | null>(null);
+  const [, setTileDragOver] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [activeShapeId, setActiveShapeId] = useState<string | null>(null);
+  const [pendingPlaceShape, setPendingPlaceShape] = useState<CityZoneShapePreset | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [underhiveData, setUnderhiveData] = useState<NriUnderhivePayload | null>(null);
+  const [cityLamps, setCityLamps] = useState<NriMapLamp[]>([]);
+  const [lampTool, setLampTool] = useState<'off' | 'place' | 'erase'>('off');
+  const lampPlaceMode = lampTool === 'place';
+  const lampEraseMode = lampTool === 'erase';
+  const [lampColor, setLampColor] = useState('#ffb040');
+  const [selectedLampId, setSelectedLampId] = useState<string | null>(null);
+  const [selectedMetroStationId, setSelectedMetroStationId] = useState<string | null>(null);
+  const [metroConnectFromId, setMetroConnectFromId] = useState<string | null>(null);
+  const [activeMetroLineId, setActiveMetroLineId] = useState<string | null>(null);
+  const [metroPlaceMode, setMetroPlaceMode] = useState(false);
+  const [metroRide, setMetroRide] = useState<{
+    id: string;
+    arriveAt: number;
+    toStationId: string;
+    totalSeconds: number;
+  } | null>(null);
+  const [rideRemainingSec, setRideRemainingSec] = useState(0);
+  const [megaSelectMode, setMegaSelectMode] = useState(false);
+  const [megaSelection, setMegaSelection] = useState<string[]>([]);
+  const [brushPickerOpen, setBrushPickerOpen] = useState(false);
+  const [activeBrush, setActiveBrush] = useState<DistrictBrush | null>(() => SELECT_BRUSH);
+  const [brushOrientation, setBrushOrientation] = useState(0);
+  const [brushPreviewKeys, setBrushPreviewKeys] = useState<string[]>([]);
+  const [districtUndo, setDistrictUndo] = useState<
+    Array<{ zoneKey: string; placeType: string | null; artId: string | null }> | null
+  >(null);
+  const tileDragRef = useRef<{
+    fromKey: string | null;
+    active: boolean;
+    moved: boolean;
+    pointerId: number | null;
+    sx: number;
+    sy: number;
+  }>({ fromKey: null, active: false, moved: false, pointerId: null, sx: 0, sy: 0 });
+  const weatherStorageKey = `nri-map-weather:${inviteCode}`;
+  const [weatherOn, setWeatherOn] = useState(() => {
+    try {
+      return localStorage.getItem(`nri-map-weather:${inviteCode}`) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(weatherStorageKey, weatherOn ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [weatherOn, weatherStorageKey]);
+  const canAccessUnderhive =
+    isHost || (inventoryItemIds ?? []).includes(UNDERHIVE_PASSPORT_ID);
+
+  useEffect(() => {
+    if (districtParentKey && editMode) {
+      setEditTool((t) => (t === 'swap' ? t : 'paint'));
+    }
+  }, [districtParentKey, editMode]);
+
+  useEffect(() => {
+    if (editMode && districtParentKey) {
+      setPaintPlaceType(editPlaceType);
+    }
+  }, [editPlaceType, editMode, districtParentKey]);
+
   const focusZone = useMemo(
     () => (selectedZoneKey ? zones.find((z) => z.zoneKey === selectedZoneKey) ?? null : null),
     [zones, selectedZoneKey]
@@ -232,7 +402,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     [districtParent, mapView]
   );
   const cityZones = useMemo(
-    () => sortedZones(applyCanonCityGeometry(zones.filter((z) => !z.parentZoneKey))),
+    () => sortedZones(zones.filter((z) => !z.parentZoneKey)),
     [zones]
   );
   const districtSubZones = useMemo(() => {
@@ -448,6 +618,274 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   }, [refreshZones, refreshMarkers, refreshPositions, districtParentKey]);
 
   useEffect(() => {
+    if (mapLayer !== 'city' || !authToken) return;
+    let cancelled = false;
+    void (async () => {
+      const lamps = await nriFetchMapLamps(authToken, inviteCode, 'city');
+      if (!cancelled) setCityLamps(lamps);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mapLayer, authToken, inviteCode, districtParentKey]);
+
+  useEffect(() => {
+    if (mapLayer !== 'underhive' || !authToken) return;
+    let cancelled = false;
+    const tick = async () => {
+      const { ride } = await nriMetroRideActive(authToken, inviteCode);
+      if (cancelled) return;
+      if (!ride) {
+        setMetroRide(null);
+        setRideRemainingSec(0);
+        return;
+      }
+      setMetroRide({
+        id: ride.id,
+        arriveAt: ride.arriveAt,
+        toStationId: ride.toStationId,
+        totalSeconds: ride.totalSeconds,
+      });
+      const rem = Math.max(0, Math.ceil(ride.remainingMs / 1000));
+      setRideRemainingSec(rem);
+      if (rem <= 0) {
+        const done = await nriMetroRideComplete(authToken, inviteCode, ride.id);
+        if (cancelled) return;
+        if (done.ok) {
+          setMetroRide(null);
+          setRideRemainingSec(0);
+          if (done.station) setSelectedMetroStationId(done.station.id);
+          setSaveMsg('Поездка завершена');
+          void refreshPositions();
+        }
+      }
+    };
+    void tick();
+    const id = setInterval(() => void tick(), 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [mapLayer, authToken, inviteCode, refreshPositions]);
+
+  const refreshUnderhive = useCallback(async () => {
+    if (!authToken) return false;
+    const res = await nriFetchUnderhive(authToken, inviteCode);
+    if (res.ok) {
+      setUnderhiveData(res.data);
+      setActiveMetroLineId((prev) => prev ?? res.data.metro.lines[0]?.id ?? null);
+      setCityLamps((prev) => {
+        const others = prev.filter((l) => l.layer !== 'underhive');
+        return [...others, ...res.data.lamps];
+      });
+      return true;
+    }
+    return false;
+  }, [authToken, inviteCode]);
+
+  const onLampClick = useCallback(
+    (lamp: NriMapLamp) => {
+      if (!isHost) return;
+      if (lampEraseMode) {
+        void (async () => {
+          if (!authToken) return;
+          setBusy(true);
+          setErr(null);
+          const ok = await nriDeleteMapLamp(authToken, inviteCode, lamp.id);
+          setBusy(false);
+          if (!ok) {
+            setErr('Не удалось удалить фонарь');
+            return;
+          }
+          setCityLamps((prev) => prev.filter((l) => l.id !== lamp.id));
+          setUnderhiveData((prev) =>
+            prev ? { ...prev, lamps: prev.lamps.filter((l) => l.id !== lamp.id) } : prev
+          );
+          setSelectedLampId((id) => (id === lamp.id ? null : id));
+          setSaveMsg('Фонарь удалён');
+        })();
+        return;
+      }
+      setSelectedLampId(lamp.id);
+      setLampColor(lamp.color);
+      setLampTool('off');
+      setSaveMsg(`Фонарь выбран · Del или «Удалить»`);
+    },
+    [isHost, lampEraseMode, authToken, inviteCode]
+  );
+
+  const toggleSelectedLamp = useCallback(async () => {
+    if (!isHost || !authToken || !selectedLampId) return;
+    const lamp = cityLamps.find((l) => l.id === selectedLampId);
+    if (!lamp) return;
+    const res = await nriPatchMapLamp(authToken, inviteCode, lamp.id, { on: !lamp.on });
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setCityLamps((prev) => prev.map((l) => (l.id === res.lamp.id ? res.lamp : l)));
+    if (lamp.layer === 'underhive') {
+      setUnderhiveData((prev) =>
+        prev
+          ? { ...prev, lamps: prev.lamps.map((l) => (l.id === res.lamp.id ? res.lamp : l)) }
+          : prev
+      );
+    }
+    setSaveMsg(res.lamp.on ? 'Фонарь включён' : 'Фонарь выключен');
+  }, [isHost, authToken, inviteCode, selectedLampId, cityLamps]);
+
+  const recolorSelectedLamp = useCallback(
+    async (color: string) => {
+      setLampColor(color);
+      if (!isHost || !authToken || !selectedLampId) return;
+      const res = await nriPatchMapLamp(authToken, inviteCode, selectedLampId, { color });
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      setCityLamps((prev) => prev.map((l) => (l.id === res.lamp.id ? res.lamp : l)));
+      setUnderhiveData((prev) =>
+        prev
+          ? { ...prev, lamps: prev.lamps.map((l) => (l.id === res.lamp.id ? res.lamp : l)) }
+          : prev
+      );
+      setSaveMsg('Цвет фонаря обновлён');
+    },
+    [isHost, authToken, inviteCode, selectedLampId]
+  );
+
+  const deleteSelectedLamp = useCallback(async () => {
+    if (!isHost || !authToken || !selectedLampId) return;
+    setBusy(true);
+    setErr(null);
+    const id = selectedLampId;
+    const ok = await nriDeleteMapLamp(authToken, inviteCode, id);
+    setBusy(false);
+    if (!ok) {
+      setErr('Не удалось удалить фонарь');
+      return;
+    }
+    setCityLamps((prev) => prev.filter((l) => l.id !== id));
+    setUnderhiveData((prev) =>
+      prev ? { ...prev, lamps: prev.lamps.filter((l) => l.id !== id) } : prev
+    );
+    setSelectedLampId(null);
+    setSaveMsg('Фонарь удалён');
+  }, [isHost, authToken, inviteCode, selectedLampId]);
+
+  useEffect(() => {
+    if (!isHost || !selectedLampId) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        void deleteSelectedLamp();
+      }
+      if (e.key === 'Escape') {
+        setSelectedLampId(null);
+        setLampTool('off');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isHost, selectedLampId, deleteSelectedLamp]);
+
+  const findNearLamp = useCallback(
+    (xPct: number, yPct: number): NriMapLamp | null => {
+      const layer = mapLayer === 'underhive' ? 'underhive' : 'city';
+      const list = cityLamps.filter((l) => {
+        if (l.layer !== layer) return false;
+        if (layer === 'city' && districtParentKey) return l.parentZoneKey === districtParentKey;
+        if (layer === 'city') return !l.parentZoneKey;
+        return true;
+      });
+      let best: NriMapLamp | null = null;
+      let bestD = 3.5; // % of map
+      for (const l of list) {
+        const d = Math.hypot(l.x - xPct, l.y - yPct);
+        if (d < bestD) {
+          bestD = d;
+          best = l;
+        }
+      }
+      return best;
+    },
+    [cityLamps, mapLayer, districtParentKey]
+  );
+
+  const visibleCityLamps = useMemo(() => {
+    return cityLamps.filter((l) => {
+      if (l.layer !== 'city') return false;
+      if (districtParentKey) return l.parentZoneKey === districtParentKey;
+      return !l.parentZoneKey;
+    });
+  }, [cityLamps, districtParentKey]);
+
+  const districtBlockMega = useMemo(() => {
+    const out = new Map<string, BlockMegaInfo>();
+    if (!districtParentKey || districtTilesLayout.length === 0) return out;
+    const tiles = districtTilesLayout.map((z) => ({
+      zoneKey: z.zoneKey,
+      gridRow: z.gridRow ?? 0,
+      gridCol: z.gridCol ?? 0,
+      x: z.x,
+      y: z.y,
+      w: z.w,
+      h: z.h,
+      placeType: normalizePlaceType(z.placeType ?? 'generic'),
+      artId: z.artId ?? null,
+    }));
+    const explicit = buildExplicitMegaInfo(tiles);
+    for (const [k, info] of explicit) {
+      const { rows, cols } = shapeDims(info.shape);
+      out.set(k, {
+        role: info.role,
+        span: info.span,
+        kind: info.placeType,
+        size: Math.max(rows, cols),
+      });
+    }
+    const plaza = buildPlazaMegaInfo(tiles);
+    for (const [k, v] of plaza) {
+      if (!out.has(k)) out.set(k, { ...v, kind: 'plaza', size: 2 });
+    }
+    const autoBlocks: Array<{
+      placeType: PlaceType;
+      kind: BlockMegaInfo['kind'];
+      sizes: number[];
+    }> = [
+      { placeType: 'shack', kind: 'shack', sizes: [2] },
+      { placeType: 'corp_office', kind: 'corp_office', sizes: [CORP_OFFICE_SIZE, 2] },
+      { placeType: 'corp_hq', kind: 'corp_hq', sizes: [CORP_HQ_SIZE, 4, 3, 2] },
+      { placeType: 'house', kind: 'house', sizes: [2] },
+    ];
+    for (const spec of autoBlocks) {
+      const m = buildBlockMegaInfoMultiSize(tiles, spec.placeType, spec.kind, spec.sizes);
+      for (const [k, v] of m) {
+        if (!out.has(k)) out.set(k, v);
+      }
+    }
+    return out;
+  }, [districtParentKey, districtTilesLayout]);
+
+  const districtCorpLogos = useMemo(() => {
+    const out = new Map<string, CorpLogoInfo>();
+    if (!districtParentKey || districtTilesLayout.length === 0) return out;
+    const tiles = districtTilesLayout.map((z) => ({
+      zoneKey: z.zoneKey,
+      gridRow: z.gridRow ?? 0,
+      gridCol: z.gridCol ?? 0,
+      x: z.x,
+      y: z.y,
+      w: z.w,
+      h: z.h,
+      artId: z.artId ?? null,
+    }));
+    return buildCorpLogoInfo(tiles);
+  }, [districtParentKey, districtTilesLayout]);
+
+  useEffect(() => {
     if (!focusZone) {
       setEditName('');
       setEditMega('');
@@ -457,6 +895,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       setColorUseDefault(true);
       setEditPlaceType('generic');
       setEditDistrictStyle('residential');
+      setDeleteConfirmName('');
       return;
     }
     setEditName(focusZone.name);
@@ -469,6 +908,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     setEditDistrictStyle(
       normalizeDistrictStyle(focusZone.districtStyle ?? districtVisualStyle) ?? 'residential'
     );
+    setDeleteConfirmName('');
   }, [
     focusZone?.zoneKey,
     focusZone?.name,
@@ -482,81 +922,6 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     districtVisualStyle,
   ]);
 
-  const isZoomedIn =
-    !!districtParentKey || viewBox.w < canvasView.w - 1 || viewBox.x > 0.5 || viewBox.y > 0.5;
-
-  const clickToPercent = (e: React.MouseEvent<SVGSVGElement>) => {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return null;
-    const local = pt.matrixTransform(ctm.inverse());
-    if (districtParent) {
-      return {
-        x: (local.x / DISTRICT_DRILL_CANVAS.w) * 100,
-        y: (local.y / DISTRICT_DRILL_CANVAS.h) * 100,
-      };
-    }
-    return {
-      x: (local.x / mapView.w) * 100,
-      y: (local.y / mapView.h) * 100,
-    };
-  };
-
-  const onSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (panRef.current.didDrag) {
-      panRef.current.didDrag = false;
-      return;
-    }
-    if (placeMode) {
-      const pos = clickToPercent(e);
-      if (!pos) return;
-      setDraft({ x: pos.x, y: pos.y, label: '', blurb: '' });
-      setSelected(null);
-    }
-  };
-
-  const zoomAt = (factor: number, clientX?: number, clientY?: number) => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    setViewBox((vb) => {
-      const nw = Math.min(canvasView.w, Math.max(MIN_ZOOM_W, vb.w * factor));
-      const nh = (nw / canvasView.w) * canvasView.h;
-      let anchorX = vb.x + vb.w / 2;
-      let anchorY = vb.y + vb.h / 2;
-      if (clientX != null && clientY != null) {
-        const pt = svg.createSVGPoint();
-        pt.x = clientX;
-        pt.y = clientY;
-        const ctm = svg.getScreenCTM();
-        if (ctm) {
-          const local = pt.matrixTransform(ctm.inverse());
-          anchorX = local.x;
-          anchorY = local.y;
-        }
-      }
-      const ratioX = (anchorX - vb.x) / vb.w;
-      const ratioY = (anchorY - vb.y) / vb.h;
-      return clampViewBox(
-        {
-          w: nw,
-          h: nh,
-          x: anchorX - nw * ratioX,
-          y: anchorY - nh * ratioY,
-        },
-        canvasView
-      );
-    });
-  };
-
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    zoomAt(e.deltaY > 0 ? 1.1 : 0.9, e.clientX, e.clientY);
-  };
-
   const resetView = () => {
     if (districtParentKey) {
       exitDistrict();
@@ -569,7 +934,272 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     setDistrictParentKey(null);
     setSelectedZoneKey(null);
     setHoverZone(null);
+    setSwapFromKey(null);
+    setEditTool('select');
+    setPendingPlaceShape(null);
+    setActiveShapeId(null);
     setViewBox(defaultFocusView(mapView));
+  };
+
+  const regenDistrict = async () => {
+    if (!authToken || !districtParentKey || !isHost || !editMode || mapFromFallback) return;
+    if (
+      !window.confirm(
+        'Перегенерировать квартал? Клетки и их имена сбросятся. Игроки с клеток переедут в район.'
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    setSaveMsg(null);
+    const res = await nriRegenDistrictTiles(authToken, inviteCode, districtParentKey);
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setZones((prev) => {
+      const tops = prev.filter((z) => z.parentZoneKey !== districtParentKey);
+      const parent = tops.find((z) => z.zoneKey === districtParentKey);
+      const merged = [...tops.filter((z) => z.zoneKey !== districtParentKey), ...(parent ? [parent] : []), ...res.zones];
+      return merged;
+    });
+    setSelectedZoneKey(null);
+    setSaveMsg(`Квартал пересобран · ${res.count} клеток`);
+  };
+
+  const clearDistrict = async () => {
+    if (!authToken || !districtParentKey || !isHost || !editMode || mapFromFallback) return;
+    if (
+      !window.confirm(
+        'Очистить квартал? Дома/магазины станут пустыми клетками; дороги и выходы сохранятся.'
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setErr(null);
+    setSaveMsg(null);
+    const res = await nriClearDistrictTiles(authToken, inviteCode, districtParentKey);
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setZones((prev) => {
+      const tops = prev.filter((z) => z.parentZoneKey !== districtParentKey);
+      const parent = tops.find((z) => z.zoneKey === districtParentKey);
+      const merged = [
+        ...tops.filter((z) => z.zoneKey !== districtParentKey),
+        ...(parent ? [parent] : []),
+        ...res.zones,
+      ];
+      return merged;
+    });
+    setSelectedZoneKey(null);
+    setSaveMsg(`Квартал очищен · ${res.count} клеток`);
+  };
+
+  const rotateFocusTile = async (delta: number) => {
+    if (!authToken || !focusZone || !isHost || !editMode || mapFromFallback) return;
+    if (!isSubMapZoneKey(focusZone.zoneKey) || !parseSubTileGrid(focusZone.zoneKey)) return;
+    const cur = typeof focusZone.rotation === 'number' ? focusZone.rotation : 0;
+    const next = ((Math.round((cur + delta) / 90) * 90) % 360 + 360) % 360;
+    setBusy(true);
+    setErr(null);
+    const res = await nriPatchMapZone(authToken, inviteCode, focusZone.zoneKey, { rotation: next });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
+    setSaveMsg(`Поворот ${next}°`);
+  };
+
+  const paintTile = async (zoneKey: string, placeType: PlaceType) => {
+    if (!authToken || mapFromFallback) return;
+    setBusy(true);
+    setErr(null);
+    const z = zones.find((x) => x.zoneKey === zoneKey);
+    const parsed = parseMegaArtId(z?.artId);
+    const clearKeys = new Set<string>([zoneKey]);
+    if (parsed?.kind === 'cover') clearKeys.add(parsed.anchorKey);
+    if (parsed?.kind === 'anchor') {
+      for (const t of zones) {
+        const p = parseMegaArtId(t.artId);
+        if (p?.kind === 'cover' && p.anchorKey === zoneKey) clearKeys.add(t.zoneKey);
+      }
+    }
+    for (const key of clearKeys) {
+      if (key === zoneKey) continue;
+      await nriPatchMapZone(authToken, inviteCode, key, { artId: null });
+    }
+    const res = await nriPatchMapZone(authToken, inviteCode, zoneKey, {
+      placeType,
+      artId: null,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refreshZones({ silent: true });
+  };
+
+
+  const snapshotZoneCells = (keys: Iterable<string>) => {
+    const out: Array<{ zoneKey: string; placeType: string | null; artId: string | null }> = [];
+    for (const zoneKey of keys) {
+      const z = zones.find((x) => x.zoneKey === zoneKey);
+      if (!z) continue;
+      out.push({
+        zoneKey,
+        placeType: z.placeType ?? null,
+        artId: z.artId ?? null,
+      });
+    }
+    return out;
+  };
+
+  const placeDistrictBrush = async (origin: NriMapZone) => {
+    if (!authToken || !districtParentKey || !activeBrush || mapFromFallback) return;
+    if (isSelectBrush(activeBrush)) return;
+    if (origin.gridRow == null || origin.gridCol == null) return;
+    const offsets = brushCellOffsets(activeBrush.shape);
+    const byPos = new Map(
+      districtTilesLayout
+        .filter((t) => t.gridRow != null && t.gridCol != null)
+        .map((t) => [`${t.gridRow},${t.gridCol}`, t] as const)
+    );
+    const footprint = offsets.map(([dr, dc]) =>
+      byPos.get(`${origin.gridRow! + dr},${origin.gridCol! + dc}`)
+    );
+    if (footprint.some((c) => !c)) {
+      setErr(`Кисти «${activeBrush.label}» не хватает клеток отсюда (нужен свободный контур).`);
+      return;
+    }
+    const cells = footprint as typeof districtTilesLayout;
+    const rewrite = new Set(cells.map((c) => c.zoneKey));
+    const clearKeys = new Set<string>();
+    for (const z of districtSubZones) {
+      const p = parseMegaArtId(z.artId) ?? parseCorpLogoArtId(z.artId);
+      if (!p) continue;
+      if (p.kind === 'cover' && rewrite.has(p.anchorKey)) clearKeys.add(z.zoneKey);
+      if (p.kind === 'anchor' && rewrite.has(z.zoneKey)) {
+        clearKeys.add(z.zoneKey);
+        for (const t of districtSubZones) {
+          const cp = parseMegaArtId(t.artId) ?? parseCorpLogoArtId(t.artId);
+          if (cp?.kind === 'cover' && cp.anchorKey === z.zoneKey) clearKeys.add(t.zoneKey);
+        }
+      }
+      if (rewrite.has(z.zoneKey)) clearKeys.add(z.zoneKey);
+    }
+    const touchKeys = new Set([...rewrite, ...clearKeys]);
+    const undo = snapshotZoneCells(touchKeys);
+    setBusy(true);
+    setErr(null);
+    for (const key of clearKeys) {
+      if (rewrite.has(key)) continue;
+      const res = await nriPatchMapZone(authToken, inviteCode, key, { artId: null });
+      if (res.ok) setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
+    }
+    const anchor = cells[0]!;
+    const isLogo = activeBrush.kind === 'logo';
+    const artAnchor = isLogo
+      ? encodeCorpLogoArtId(activeBrush.logoThemeId ?? 'default', activeBrush.shape as CorpLogoShape)
+      : activeBrush.shape === '1x1' || !isMegaMergeType(activeBrush.placeType)
+        ? null
+        : encodeMegaArtId(activeBrush.placeType, activeBrush.shape);
+    const coverArt = artAnchor
+      ? isLogo
+        ? encodeCorpLogoCoverArtId(anchor.zoneKey)
+        : encodeMegaCoverArtId(anchor.zoneKey)
+      : null;
+    for (const c of cells) {
+      const artId =
+        !artAnchor
+          ? null
+          : c.zoneKey === anchor.zoneKey
+            ? artAnchor
+            : coverArt;
+      const payload: { placeType?: PlaceType; artId: string | null; rotation?: number } = {
+        artId,
+        rotation: brushOrientation,
+      };
+      if (!isLogo) payload.placeType = activeBrush.placeType;
+      const res = await nriPatchMapZone(authToken, inviteCode, c.zoneKey, payload);
+      if (!res.ok) {
+        setBusy(false);
+        setErr(res.error);
+        return;
+      }
+      setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
+    }
+    setDistrictUndo(undo);
+    setBusy(false);
+    setMegaSelectMode(false);
+    setMegaSelection([]);
+    setSaveMsg(isLogo ? `Лого: ${activeBrush.label}` : `Поставлено: ${activeBrush.label}`);
+    await refreshZones({ silent: true });
+  };
+
+  const undoDistrictEdit = async () => {
+    if (!authToken || !districtUndo || districtUndo.length === 0 || mapFromFallback) return;
+    setBusy(true);
+    setErr(null);
+    const snap = districtUndo;
+    setDistrictUndo(null);
+    for (const cell of snap) {
+      const res = await nriPatchMapZone(authToken, inviteCode, cell.zoneKey, {
+        placeType: normalizePlaceType(cell.placeType ?? 'generic'),
+        artId: cell.artId,
+      });
+      if (!res.ok) {
+        setBusy(false);
+        setErr(res.error);
+        return;
+      }
+      setZones((prev) => prev.map((z) => (z.zoneKey === res.zone.zoneKey ? res.zone : z)));
+    }
+    setBusy(false);
+    setSaveMsg('Откат: 1 действие');
+    await refreshZones({ silent: true });
+  };
+
+  const brushPreviewForZone = (raw: NriMapZone, brush: DistrictBrush | null = activeBrush): string[] => {
+    if (!brush || isSelectBrush(brush) || raw.gridRow == null || raw.gridCol == null) return [];
+    const offsets = brushCellOffsets(brush.shape);
+    const byPos = new Map(
+      districtTilesLayout
+        .filter((t) => t.gridRow != null && t.gridCol != null)
+        .map((t) => [`${t.gridRow},${t.gridCol}`, t.zoneKey] as const)
+    );
+    const keys: string[] = [];
+    for (const [dr, dc] of offsets) {
+      const k = byPos.get(`${raw.gridRow + dr},${raw.gridCol + dc}`);
+      if (!k) return [];
+      keys.push(k);
+    }
+    return keys;
+  };
+
+
+  const swapTiles = async (fromKey: string, toKey: string) => {
+    if (!authToken || mapFromFallback || fromKey === toKey) return;
+    setBusy(true);
+    setErr(null);
+    const res = await nriPatchMapZone(authToken, inviteCode, fromKey, { swapWithZoneKey: toKey });
+    setBusy(false);
+    setSwapFromKey(null);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    await refreshZones({ silent: true });
+    setSelectedZoneKey(toKey);
+    setSaveMsg(districtParentKey ? 'Клетки обменены' : 'Геометрия районов обменена');
   };
 
   const enterDistrict = useCallback(
@@ -616,13 +1246,410 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     setHoverZone(raw);
   };
 
+  const clearTileDrag = () => {
+    tileDragRef.current = { fromKey: null, active: false, moved: false, pointerId: null, sx: 0, sy: 0 };
+    setTileDragFrom(null);
+    setTileDragOver(null);
+  };
+
+  const placeLampAtEvent = (e: React.MouseEvent) => {
+    if (!isHost || !authToken) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const local = pt.matrixTransform(ctm.inverse());
+    const vw = districtParent ? DISTRICT_DRILL_CANVAS.w : mapView.w;
+    const vh = districtParent ? DISTRICT_DRILL_CANVAS.h : mapView.h;
+    const x = Math.max(0, Math.min(100, (local.x / vw) * 100));
+    const y = Math.max(0, Math.min(100, (local.y / vh) * 100));
+    const near = findNearLamp(x, y);
+    if (near) {
+      onLampClick(near);
+      return;
+    }
+    if (lampEraseMode) {
+      setSaveMsg('Кликните по маркеру фонаря, чтобы снять');
+      return;
+    }
+    if (!lampPlaceMode) return;
+    void (async () => {
+      setBusy(true);
+      setErr(null);
+      const res = await nriCreateMapLamp(authToken, inviteCode, {
+        x,
+        y,
+        color: lampColor,
+        on: true,
+        layer: mapLayer === 'underhive' ? 'underhive' : 'city',
+        parentZoneKey: mapLayer === 'underhive' ? null : districtParentKey,
+      });
+      setBusy(false);
+      if (!res.ok) {
+        setErr(res.error);
+        return;
+      }
+      if (mapLayer === 'underhive') {
+        setUnderhiveData((prev) =>
+          prev ? { ...prev, lamps: [...prev.lamps, res.lamp] } : prev
+        );
+      }
+      setCityLamps((prev) => [...prev.filter((l) => l.id !== res.lamp.id), res.lamp]);
+      setSelectedLampId(res.lamp.id);
+      setSaveMsg('Фонарь поставлен · выберите цвет / Del — удалить');
+    })();
+  };
+
+  const handleZoneClick = (raw: NriMapZone, e?: React.MouseEvent) => {
+    if ((lampPlaceMode || lampEraseMode) && isHost && e) {
+      placeLampAtEvent(e);
+      return;
+    }
+    if (
+      editMode &&
+      isHost &&
+      !mapFromFallback &&
+      mapLayer === 'city' &&
+      megaSelectMode &&
+      districtParentKey &&
+      isSubMapZoneKey(raw.zoneKey)
+    ) {
+      // Toggle off if already selected; otherwise grow a solid rectangle
+      // from previous selection + this cell (two corners → full 3×3).
+      setMegaSelection((prev) => {
+        if (prev.includes(raw.zoneKey)) {
+          return prev.filter((k) => k !== raw.zoneKey);
+        }
+        const pool = districtTilesLayout.filter((t) => t.gridRow != null && t.gridCol != null);
+        const byKey = new Map(pool.map((t) => [t.zoneKey, t]));
+        const seed = [...prev.map((k) => byKey.get(k)).filter(Boolean), byKey.get(raw.zoneKey)].filter(
+          (t): t is (typeof pool)[number] => !!t
+        );
+        if (seed.length === 0) return [raw.zoneKey];
+        const minR = Math.min(...seed.map((t) => t.gridRow!));
+        const maxR = Math.max(...seed.map((t) => t.gridRow!));
+        const minC = Math.min(...seed.map((t) => t.gridCol!));
+        const maxC = Math.max(...seed.map((t) => t.gridCol!));
+        const filled = pool
+          .filter(
+            (t) =>
+              t.gridRow! >= minR &&
+              t.gridRow! <= maxR &&
+              t.gridCol! >= minC &&
+              t.gridCol! <= maxC
+          )
+          .map((t) => t.zoneKey);
+        return filled.length >= 2 ? filled : [...prev, raw.zoneKey];
+      });
+      applyZoneSelection(raw);
+      return;
+    }
+    if (
+      editMode &&
+      isHost &&
+      !mapFromFallback &&
+      mapLayer === 'city'
+    ) {
+      if (districtParentKey && isSubMapZoneKey(raw.zoneKey) && parseSubTileGrid(raw.zoneKey)) {
+        if (editTool === 'swap') {
+          if (!swapFromKey) {
+            setSwapFromKey(raw.zoneKey);
+            applyZoneSelection(raw);
+            setSaveMsg('Выберите вторую клетку для обмена');
+            return;
+          }
+          void swapTiles(swapFromKey, raw.zoneKey);
+          return;
+        }
+        if (
+          activeBrush &&
+          !isSelectBrush(activeBrush) &&
+          (editTool === 'paint' || editTool === 'select') &&
+          !megaSelectMode
+        ) {
+          void placeDistrictBrush(raw);
+          applyZoneSelection(raw);
+          return;
+        }
+        // Выделение / без кисти постановки — только выбрать клетку
+        if (isSelectBrush(activeBrush) || editTool === 'select') {
+          applyZoneSelection(raw);
+          setSaveMsg('Клетка выбрана · колесо или «Поворот» — крутить');
+          return;
+        }
+        // Fallback 1×1 paint
+        if (editTool === 'paint') {
+          void paintTile(raw.zoneKey, paintPlaceType);
+          applyZoneSelection(raw);
+          return;
+        }
+      }
+      if (!districtParentKey && !raw.parentZoneKey && editTool === 'swap') {
+        if (!swapFromKey) {
+          setSwapFromKey(raw.zoneKey);
+          applyZoneSelection(raw);
+          setSaveMsg('Выберите второй район для обмена геометрией');
+          return;
+        }
+        void swapTiles(swapFromKey, raw.zoneKey);
+        return;
+      }
+    }
+    applyZoneSelection(raw);
+  };
+
+  const zoomToZone = (z: NriMapZone) => {
+    const pad = Math.max(4, Math.min(z.w, z.h) * 0.2);
+    setViewBox(
+      clampViewBox(
+        {
+          x: z.x - pad,
+          y: z.y - pad,
+          w: z.w + pad * 2,
+          h: z.h + pad * 2,
+        },
+        mapView
+      )
+    );
+    setSelectedZoneKey(z.zoneKey);
+  };
+
+  const clearZoneSelection = () => {
+    setSelectedZoneKey(null);
+    setViewBox(
+      districtParentKey
+        ? { x: 0, y: 0, w: DISTRICT_DRILL_CANVAS.w, h: DISTRICT_DRILL_CANVAS.h }
+        : defaultFocusView(mapView)
+    );
+  };
+
+  const createTopZoneAt = async (preset: CityZoneShapePreset, worldX: number, worldY: number) => {
+    if (!authToken || !isHost || mapFromFallback) return;
+    const name = window.prompt('Название района / зоны (обязательно)');
+    if (!name?.trim()) return;
+    const x = Math.max(0, worldX - preset.w / 2);
+    const y = Math.max(0, worldY - preset.h / 2);
+    setBusy(true);
+    setErr(null);
+    const res = await nriCreateMapTopZone(authToken, inviteCode, {
+      name: name.trim(),
+      zoneType: preset.defaultZoneType,
+      x,
+      y,
+      w: preset.w,
+      h: preset.h,
+      artId: preset.defaultArtId ?? null,
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setZones((prev) => [...prev.filter((z) => z.zoneKey !== res.zone.zoneKey), res.zone]);
+    setSelectedZoneKey(res.zone.zoneKey);
+    setPendingPlaceShape(null);
+    setActiveShapeId(null);
+    setSaveMsg(`Создан район «${res.zone.name}»`);
+    void refreshZones({ silent: true });
+  };
+
+  const deleteTopZoneTyped = async () => {
+    if (!authToken || !focusZone || focusZone.parentZoneKey || !editMode || mapFromFallback) return;
+    const confirmName = deleteConfirmName.trim();
+    if (!confirmName) {
+      setErr('Введите точное название района для удаления');
+      return;
+    }
+    if (!window.confirm(`Удалить район «${focusZone.name}»?`)) return;
+    setBusy(true);
+    setErr(null);
+    const res = await nriDeleteMapSubZone(authToken, inviteCode, focusZone.zoneKey, { confirmName });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setSelectedZoneKey(null);
+    setDeleteConfirmName('');
+    setSaveMsg('Район удалён');
+    await refreshZones();
+  };
+
+  const clickToWorld = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const local = pt.matrixTransform(ctm.inverse());
+    return { x: local.x, y: local.y };
+  };
+
+  const clickToPercent = (e: React.MouseEvent<SVGSVGElement>) => {
+    const world = clickToWorld(e);
+    if (!world) return null;
+    if (districtParent) {
+      return {
+        x: (world.x / DISTRICT_DRILL_CANVAS.w) * 100,
+        y: (world.y / DISTRICT_DRILL_CANVAS.h) * 100,
+      };
+    }
+    return {
+      x: (world.x / mapView.w) * 100,
+      y: (world.y / mapView.h) * 100,
+    };
+  };
+
+  const onSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (panRef.current.didDrag) {
+      panRef.current.didDrag = false;
+      return;
+    }
+    if ((lampPlaceMode || lampEraseMode) && isHost && authToken) {
+      placeLampAtEvent(e);
+      return;
+    }
+    if (mapLayer === 'underhive' && metroPlaceMode && isHost && authToken && activeMetroLineId) {
+      const world = clickToWorld(e);
+      if (!world) return;
+      void (async () => {
+        setBusy(true);
+        setErr(null);
+        const res = await nriCreateMetroStation(authToken, inviteCode, {
+          lineId: activeMetroLineId,
+          x: world.x,
+          y: world.y,
+          connectFromStationId: metroConnectFromId,
+        });
+        setBusy(false);
+        if (!res.ok) {
+          setErr(res.error);
+          return;
+        }
+        setSelectedMetroStationId(res.station.id);
+        setMetroConnectFromId(null);
+        setMetroPlaceMode(false);
+        await refreshUnderhive();
+        setSaveMsg(`Станция «${res.station.name}»`);
+      })();
+      return;
+    }
+    if (placeMode) {
+      const pos = clickToPercent(e);
+      if (!pos) return;
+      setDraft({ x: pos.x, y: pos.y, label: '', blurb: '' });
+      setSelected(null);
+      return;
+    }
+    if (
+      pendingPlaceShape &&
+      isHost &&
+      editMode &&
+      !districtParentKey &&
+      mapLayer === 'city' &&
+      !mapFromFallback
+    ) {
+      const world = clickToWorld(e);
+      if (!world) return;
+      void createTopZoneAt(pendingPlaceShape, world.x, world.y);
+      return;
+    }
+  };
+
+  const zoomAt = (factor: number, clientX?: number, clientY?: number) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    setViewBox((vb) => {
+      const nw = Math.min(canvasView.w, Math.max(MIN_ZOOM_W, vb.w * factor));
+      const nh = (nw / canvasView.w) * canvasView.h;
+      let anchorX = vb.x + vb.w / 2;
+      let anchorY = vb.y + vb.h / 2;
+      if (clientX != null && clientY != null) {
+        const pt = svg.createSVGPoint();
+        pt.x = clientX;
+        pt.y = clientY;
+        const ctm = svg.getScreenCTM();
+        if (ctm) {
+          const local = pt.matrixTransform(ctm.inverse());
+          anchorX = local.x;
+          anchorY = local.y;
+        }
+      }
+      const ratioX = (anchorX - vb.x) / vb.w;
+      const ratioY = (anchorY - vb.y) / vb.h;
+      return clampViewBox(
+        {
+          w: nw,
+          h: nh,
+          x: anchorX - nw * ratioX,
+          y: anchorY - nh * ratioY,
+        },
+        canvasView
+      );
+    });
+  };
+
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    // Выделение: колесо крутит выбранную клетку (не зум).
+    if (
+      mapLayer === 'city' &&
+      districtParentKey &&
+      editMode &&
+      isSelectBrush(activeBrush) &&
+      editTool !== 'swap' &&
+      !megaSelectMode &&
+      focusZone &&
+      isSubMapZoneKey(focusZone.zoneKey)
+    ) {
+      const dir: 1 | -1 = e.deltaY > 0 ? 1 : -1;
+      void rotateFocusTile(dir * 90);
+      return;
+    }
+    // Кисть постановки: колесо поворачивает форму / orientation.
+    if (
+      mapLayer === 'city' &&
+      districtParentKey &&
+      editMode &&
+      activeBrush &&
+      !isSelectBrush(activeBrush) &&
+      editTool !== 'swap' &&
+      !megaSelectMode
+    ) {
+      const dir: 1 | -1 = e.deltaY > 0 ? 1 : -1;
+      if (districtBrushRotatesShape(activeBrush.shape)) {
+        const next = withRotatedDistrictBrush(activeBrush, dir);
+        if (next.id !== activeBrush.id) {
+          setActiveBrush(next);
+          setPaintPlaceType(next.placeType);
+          if (hoverZone?.parentZoneKey === districtParentKey) {
+            setBrushPreviewKeys(brushPreviewForZone(hoverZone, next));
+          }
+          setSaveMsg(`Кисть «${next.label}» · колесо = поворот`);
+        }
+      } else {
+        const nextOri = nextBrushOrientation(brushOrientation, dir);
+        setBrushOrientation(nextOri);
+        setSaveMsg(`Кисть «${activeBrush.label}» · поворот ${nextOri}°`);
+      }
+      return;
+    }
+    if (mapLayer !== 'city' && mapLayer !== 'underhive') return;
+    zoomAt(e.deltaY > 0 ? 1.1 : 0.9, e.clientX, e.clientY);
+  };
+
   const resolveTapZoneKey = (target: EventTarget | null): string | null => {
     if (!(target instanceof Element)) return null;
     return target.closest('[data-zone-key]')?.getAttribute('data-zone-key') ?? null;
   };
 
   const armPan = (e: React.PointerEvent, tapZoneKey: string | null = null) => {
-    if (placeMode || e.button !== 0) return;
+    if (e.button !== 0) return;
     panRef.current = {
       active: true,
       moved: false,
@@ -646,34 +1673,20 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       panRef.current.didDrag = false;
       return;
     }
-    applyZoneSelection(raw);
-  };
-
-  const zoomToZone = (z: NriMapZone) => {
-    const pad = Math.max(4, Math.min(z.w, z.h) * 0.2);
-    setViewBox(
-      clampViewBox(
-        {
-          x: z.x - pad,
-          y: z.y - pad,
-          w: z.w + pad * 2,
-          h: z.h + pad * 2,
-        },
-        mapView
-      )
-    );
-    setSelectedZoneKey(z.zoneKey);
-  };
-
-  const clearZoneSelection = () => {
-    setSelectedZoneKey(null);
-    setViewBox(districtParentKey ? { x: 0, y: 0, w: DISTRICT_DRILL_CANVAS.w, h: DISTRICT_DRILL_CANVAS.h } : defaultFocusView(mapView));
+    handleZoneClick(raw, e);
   };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (placeMode || e.button !== 0) return;
+    if (e.button !== 0) return;
+    if (mapLayer !== 'city' && mapLayer !== 'underhive') return;
     if ((e.target as Element).closest('.nri-city-map__marker')) return;
     armPan(e, resolveTapZoneKey(e.target));
+    // Сразу берём capture — иначе pan ломается на SVG/зоне
+    try {
+      wrapRef.current?.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -685,9 +1698,9 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       panRef.current.moved = true;
       panRef.current.tapZoneKey = null;
       setPanning(true);
-      wrapRef.current?.setPointerCapture(e.pointerId);
     }
     const rect = svgRef.current.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
     const scaleX = viewBox.w / rect.width;
     const scaleY = viewBox.h / rect.height;
     setViewBox((vb) =>
@@ -721,9 +1734,26 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       const raw = zones.find((z) => z.zoneKey === tapKey);
       if (raw) {
         panRef.current.suppressClick = true;
-        applyZoneSelection(raw);
+        handleZoneClick(raw, e as unknown as React.MouseEvent);
       }
     }
+  };
+
+  const onPickerSelect = (sel: MapPickerSelection) => {
+    if (sel.kind === 'place') {
+      setPaintPlaceType(sel.placeType);
+      setEditTool('paint');
+      setPendingPlaceShape(null);
+      setActiveShapeId(null);
+      setSwapFromKey(null);
+      setSaveMsg(`Кисть «${PLACE_TYPE_LABELS[sel.placeType]}»`);
+      return;
+    }
+    setPendingPlaceShape(sel.preset);
+    setActiveShapeId(sel.preset.id);
+    setEditTool('select');
+    setSwapFromKey(null);
+    setSaveMsg(`Форма «${sel.preset.label}»: клик по фону карты для размещения`);
   };
 
   const saveMarker = async () => {
@@ -787,7 +1817,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
   };
 
   const deleteSubZone = async () => {
-    if (!authToken || !focusZone || !isSubMapZoneKey(focusZone.zoneKey)) return;
+    if (!authToken || !focusZone || !isSubMapZoneKey(focusZone.zoneKey) || !editMode) return;
     const isGrid = !!parseSubTileGrid(focusZone.zoneKey);
     const msg = isGrid
       ? `Сбросить клетку «${focusZone.name}» (тип → пусто, игроки уйдут в родительский район)?`
@@ -840,7 +1870,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     const curColor = focusZone.color ?? null;
     if (nextColor !== curColor) payload.color = nextColor;
     const curPlace = normalizePlaceType(focusZone.placeType ?? 'generic');
-    if (isSubMapZoneKey(focusZone.zoneKey) && editPlaceType !== curPlace) {
+    if (editMode && isSubMapZoneKey(focusZone.zoneKey) && editPlaceType !== curPlace) {
       payload.placeType = editPlaceType;
     }
     const curStyle = normalizeDistrictStyle(focusZone.districtStyle ?? '') ?? null;
@@ -848,7 +1878,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     if (!isSubMapZoneKey(focusZone.zoneKey) && canDrillIntoDistrict(focusZone)) {
       const base = curStyle ?? defaultDistrictStyleFromZone(focusZone);
       if (nextStyle !== base) payload.districtStyle = nextStyle;
-    } else if (isSubMapZoneKey(focusZone.zoneKey) && curStyle !== nextStyle) {
+    } else if (editMode && isSubMapZoneKey(focusZone.zoneKey) && curStyle !== nextStyle) {
       payload.districtStyle = nextStyle;
     }
 
@@ -899,6 +1929,11 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     }
   };
 
+  const districtList = renderZones;
+  const megaClusters = useMemo(
+    () => (districtParent || cityZones.length === 0 || mapLayer !== 'city' ? [] : getMegaClusters()),
+    [districtParent, cityZones.length, mapLayer]
+  );
   const zoneEditsDirty =
     !!focusZone &&
     (editName.trim() !== focusZone.name ||
@@ -910,18 +1945,18 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         .filter(Boolean)
         .join('\0') !== (focusZone.pois ?? []).join('\0') ||
       (colorUseDefault ? null : editColor.trim().toLowerCase()) !== (focusZone.color ?? null) ||
-      (isSubMapZoneKey(focusZone.zoneKey) &&
+      (editMode &&
+        isSubMapZoneKey(focusZone.zoneKey) &&
         editPlaceType !== normalizePlaceType(focusZone.placeType ?? 'generic')) ||
-      editDistrictStyle !==
-        (isSubMapZoneKey(focusZone.zoneKey)
-          ? normalizeDistrictStyle(focusZone.districtStyle ?? districtVisualStyle) ?? 'residential'
-          : defaultDistrictStyleFromZone(focusZone)));
+      (editMode &&
+        editDistrictStyle !==
+          (isSubMapZoneKey(focusZone.zoneKey)
+            ? normalizeDistrictStyle(focusZone.districtStyle ?? districtVisualStyle) ?? 'residential'
+            : defaultDistrictStyleFromZone(focusZone))) ||
+      (!editMode &&
+        !isSubMapZoneKey(focusZone.zoneKey) &&
+        editDistrictStyle !== defaultDistrictStyleFromZone(focusZone)));
 
-  const districtList = renderZones;
-  const megaClusters = useMemo(
-    () => (districtParent || cityZones.length === 0 ? [] : getMegaClusters()),
-    [districtParent, cityZones.length]
-  );
   const panelZone = focusZone ?? hoverZone;
   const cityOverviewFocus =
     !!focusZone && !districtParentKey && !isSubMapZoneKey(focusZone.zoneKey);
@@ -960,6 +1995,19 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     () => (myPosition?.zoneKey ? zones.find((z) => z.zoneKey === myPosition.zoneKey) ?? null : null),
     [myPosition?.zoneKey, zones]
   );
+  const selectedMetroStation = useMemo((): NriMetroStationDto | null => {
+    if (!selectedMetroStationId || !underhiveData) return null;
+    return underhiveData.metro.stations.find((s) => s.id === selectedMetroStationId) ?? null;
+  }, [selectedMetroStationId, underhiveData]);
+  const selectedMetroNeighbors = useMemo(() => {
+    if (!selectedMetroStation || !underhiveData) return [];
+    const ids = neighborStationIds(selectedMetroStation.id, underhiveData.metro.edges);
+    return underhiveData.metro.stations.filter((s) => ids.includes(s.id));
+  }, [selectedMetroStation, underhiveData]);
+  const selectedMetroShops = useMemo(() => {
+    if (!selectedMetroStation || !underhiveData) return [];
+    return underhiveData.metro.shops.filter((s) => s.stationId === selectedMetroStation.id);
+  }, [selectedMetroStation, underhiveData]);
   const selectedVehicle = moveVehicleId ? vehicles.find((v) => v.id === moveVehicleId) ?? null : null;
   const selectedVehicleDef = selectedVehicle ? getVehicleDef(selectedVehicle.catalogId) : null;
 
@@ -1017,6 +2065,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
     return { px, py, label: p.displayName ?? p.userId.slice(0, 6) };
   };
 
+
   return (
     <div className="nri-city-map">
       <header className="nri-city-map__head">
@@ -1033,42 +2082,459 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             </nav>
           ) : null}
           <p className="mono-text opacity-70">
-            {districtParent
-              ? 'Клик по клетке — выбрать · мастер задаёт тип и название.'
-              : `Neon City · ${NEON_CITY_POP_LABEL} жителей · клик — район · двойной клик — сетка.`}
-            {' '}Колёсико — зум · ЛКМ — сдвиг.
-            {isHost ? ' Редактирование доступно для выбранной зоны.' : ''}
+            {mapLayer === 'underhive'
+              ? underhiveData
+                ? 'Подулей / Underhive — метро, фонари, корп-подземелья.'
+                : 'Подулей / Underhive — загрузка слоя…'
+              : districtParent
+                ? editMode
+                  ? 'Редактор: объект / обмен / поворот / очистка.'
+                  : 'Клик по клетке — выбрать · имя и привязки без редактора.'
+                : `Neon City · ${NEON_CITY_POP_LABEL} жителей · клик — район · карточка — войти.`}
+            {mapLayer === 'city' || mapLayer === 'underhive' ? ' Колёсико — зум · ЛКМ — сдвиг.' : ''}
           </p>
         </div>
         <div className="nri-city-map__toolbar">
-          {(isZoomedIn || districtParentKey) && (
-            <button type="button" className="nri-modal__submit" onClick={resetView}>
-              <ArrowLeft size={14} /> {districtParentKey ? 'Neon City' : 'Общая карта'}
+          <span className="nri-city-map__tb-group" role="group" aria-label="Слой">
+            <button
+              type="button"
+              className={`nri-lobby__close ${mapLayer === 'city' ? 'active' : ''}`}
+              onClick={() => {
+                setMapLayer('city');
+                setLampTool('off');
+                setMetroPlaceMode(false);
+                setErr(null);
+              }}
+            >
+              Город
             </button>
+            <button
+              type="button"
+              className={`nri-lobby__close ${mapLayer === 'underhive' ? 'active' : ''}`}
+              disabled={!canAccessUnderhive}
+              title={
+                canAccessUnderhive
+                  ? 'Подулей / Underhive'
+                  : 'Нужна Метка поручителя из Подулья'
+              }
+              onClick={() => {
+                if (!canAccessUnderhive) return;
+                void (async () => {
+                  if (authToken) {
+                    const res = await nriFetchUnderhive(authToken, inviteCode);
+                    if (res.ok) {
+                      setUnderhiveData(res.data);
+                      setActiveMetroLineId((prev) => prev ?? res.data.metro.lines[0]?.id ?? null);
+                      setCityLamps((prev) => {
+                        const others = prev.filter((l) => l.layer !== 'underhive');
+                        return [...others, ...res.data.lamps];
+                      });
+                      setErr(null);
+                    } else if (!isHost) {
+                      const softFail =
+                        /404|не найден|unavailable|сеть|network|timeout|таймаут/i.test(res.error) ||
+                        res.error.includes('Подулей недоступен');
+                      if (!softFail) {
+                        setErr(res.error);
+                        return;
+                      }
+                      setErr(null);
+                    } else {
+                      setErr(res.error);
+                    }
+                  }
+                  setMapLayer('underhive');
+                  setDistrictParentKey(null);
+                  setSelectedZoneKey(null);
+                  setEditMode(false);
+                  setEditTool('select');
+                  setSwapFromKey(null);
+                  setPendingPlaceShape(null);
+                  setActiveShapeId(null);
+                  setLampTool('off');
+                  setMetroPlaceMode(false);
+                  setMegaSelectMode(false);
+                  setViewBox(defaultFocusView(mapView));
+                })();
+              }}
+            >
+              Подулей
+            </button>
+          </span>
+
+          {(mapLayer === 'city' || mapLayer === 'underhive') && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Вид">
+              {mapLayer === 'city' && districtParentKey && (
+                <button type="button" className="nri-modal__submit" onClick={resetView}>
+                  <ArrowLeft size={14} /> Neon City
+                </button>
+              )}
+              <button
+                type="button"
+                className="nri-lobby__close"
+                title="Приблизить"
+                onClick={() => zoomAt(0.82)}
+              >
+                <Plus size={14} />
+              </button>
+              <button
+                type="button"
+                className="nri-lobby__close"
+                title="Отдалить"
+                onClick={() => zoomAt(1.12)}
+              >
+                <Minus size={14} />
+              </button>
+              <button
+                type="button"
+                className="nri-lobby__close"
+                title="Сбросить камеру"
+                onClick={resetView}
+              >
+                <RotateCcw size={14} />
+              </button>
+            </span>
           )}
-          <button type="button" className="nri-lobby__close" title="Приблизить" onClick={() => zoomAt(0.82)}>
-            <Plus size={14} />
-          </button>
-          <button type="button" className="nri-lobby__close" title="Отдалить" onClick={() => zoomAt(1.12)}>
-            <Minus size={14} />
-          </button>
-          <button type="button" className="nri-lobby__close" title="Сбросить" onClick={resetView}>
-            <RotateCcw size={14} />
-          </button>
-          <button
-            type="button"
-            className={`nri-modal__submit ${placeMode ? 'active' : ''} ${!isHost ? 'nri-city-map__place-player' : ''}`}
-            disabled={mapFromFallback}
-            title={mapFromFallback ? 'Локальная схема — метки не сохраняются' : undefined}
-            onClick={() => {
-              setPlaceMode((v) => !v);
-              setDraft(null);
-            }}
-          >
-            <Plus size={14} /> {placeMode ? 'Метки: ВКЛ' : 'Ставить метку'}
-          </button>
+
+          {weatherMaster && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Атмосфера">
+              <button
+                type="button"
+                className={`nri-city-map__weather-toggle ${weatherOn ? 'active' : ''}`}
+                onClick={() => setWeatherOn((v) => !v)}
+              >
+                <CloudRain size={15} /> {weatherOn ? 'Дождь: ВКЛ' : 'Дождь'}
+              </button>
+            </span>
+          )}
+
+          {mapLayer === 'city' && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Метки">
+              <button
+                type="button"
+                className={`nri-modal__submit ${placeMode ? 'active' : ''} ${!isHost ? 'nri-city-map__place-player' : ''}`}
+                disabled={mapFromFallback}
+                title={mapFromFallback ? 'Локальная схема — метки не сохраняются' : undefined}
+                onClick={() => {
+                  setPlaceMode((v) => !v);
+                  setDraft(null);
+                  setPendingPlaceShape(null);
+                }}
+              >
+                <Plus size={14} /> {placeMode ? 'Метки: ВКЛ' : 'Ставить метку'}
+              </button>
+            </span>
+          )}
+
+          {isHost && mapLayer === 'city' && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Редактор">
+              <button
+                type="button"
+                className={`nri-modal__submit ${editMode ? 'active' : ''}`}
+                disabled={mapFromFallback}
+                title="Режим редактирования карты"
+                onClick={() => {
+                  setEditMode((v) => {
+                    if (v) {
+                      setEditTool('select');
+                      setSwapFromKey(null);
+                      setPendingPlaceShape(null);
+                      setActiveShapeId(null);
+                      setBrushPickerOpen(false);
+                      setBrushPreviewKeys([]);
+                      clearTileDrag();
+                      return false;
+                    }
+                    setEditTool('select');
+                    setSwapFromKey(null);
+                    setMegaSelectMode(false);
+                    setMegaSelection([]);
+                    if (districtParentKey) {
+                      setActiveBrush(SELECT_BRUSH);
+                      setSaveMsg('Выделение: клик = выбрать клетку · колесо = поворот');
+                    } else {
+                      setSaveMsg('Выберите форму в пикере · клик по фону — новый район');
+                    }
+                    return true;
+                  });
+                }}
+              >
+                {editMode ? 'Редактор: ВКЛ' : 'Редактор'}
+              </button>
+              {editMode && (
+                <>
+                  {districtParentKey ? (
+                    <>
+                      <button
+                        type="button"
+                        className={`nri-modal__submit ${brushPickerOpen ? 'active' : ''}`}
+                        title="Каталог кистей по размерам"
+                        onClick={() => setBrushPickerOpen(true)}
+                      >
+                        <Shapes size={14} /> {activeBrush ? activeBrush.label : 'Кисти'}
+                      </button>
+                      <button
+                        type="button"
+                        className="nri-lobby__close"
+                        disabled={busy || !districtUndo || mapFromFallback}
+                        title="Откатить последнее размещение"
+                        onClick={() => void undoDistrictEdit()}
+                      >
+                        <RotateCcw size={14} /> Откатить
+                      </button>
+                      <button
+                        type="button"
+                        className={`nri-lobby__close ${editTool === 'swap' ? 'active' : ''}`}
+                        title="Два клика или drag-and-drop для обмена"
+                        onClick={() => {
+                          setEditTool((t) =>
+                            t === 'swap' ? (isSelectBrush(activeBrush) ? 'select' : 'paint') : 'swap'
+                          );
+                          setSwapFromKey(null);
+                        }}
+                      >
+                        <ArrowLeftRight size={14} /> Обмен
+                      </button>
+                      <button
+                        type="button"
+                        className="nri-lobby__close"
+                        disabled={busy || mapFromFallback}
+                        title="Очистить здания квартала"
+                        onClick={() => void clearDistrict()}
+                      >
+                        <Trash2 size={14} /> Очистить
+                      </button>
+                      <button
+                        type="button"
+                        className="nri-lobby__close"
+                        disabled={busy || mapFromFallback}
+                        title="Сбросить клетки и собрать квартал заново"
+                        onClick={() => void regenDistrict()}
+                      >
+                        <Wand2 size={14} /> Переген
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                  <button
+                    type="button"
+                    className={`nri-lobby__close ${pickerOpen ? 'active' : ''}`}
+                    title="Выбор объекта / формы"
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    <Shapes size={14} />{' '}
+                    {pendingPlaceShape ? pendingPlaceShape.label : 'Объект'}
+                  </button>
+                  <button
+                    type="button"
+                    className={`nri-lobby__close ${editTool === 'swap' ? 'active' : ''}`}
+                    title="Два клика или drag-and-drop для обмена"
+                    onClick={() => {
+                      setEditTool((t) => (t === 'swap' ? 'select' : 'swap'));
+                      setSwapFromKey(null);
+                      setPendingPlaceShape(null);
+                    }}
+                  >
+                    <ArrowLeftRight size={14} /> Обмен
+                  </button>
+                    </>
+                  )}
+                </>
+              )}
+            </span>
+          )}
+
+          {isHost && ((editMode && mapLayer === 'city') || mapLayer === 'underhive') && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Фонари">
+              <button
+                type="button"
+                className={`nri-modal__submit ${lampTool === 'place' ? 'active' : ''}`}
+                title="Клик по карте — поставить фонарь. Клик по маркеру — выбрать."
+                onClick={() => {
+                  setLampTool((t) => (t === 'place' ? 'off' : 'place'));
+                  setMetroPlaceMode(false);
+                  setPlaceMode(false);
+                }}
+              >
+                <Lightbulb size={14} /> {lampTool === 'place' ? 'Ставить' : 'Фонарь'}
+              </button>
+              <button
+                type="button"
+                className={`nri-lobby__close ${lampTool === 'erase' ? 'active' : ''}`}
+                title="Режим снятия: клик по фонарю удаляет его сразу"
+                onClick={() => {
+                  setLampTool((t) => (t === 'erase' ? 'off' : 'erase'));
+                  setMetroPlaceMode(false);
+                  setPlaceMode(false);
+                  setSaveMsg(lampTool === 'erase' ? null : 'Снять фонарь: клик по маркеру');
+                }}
+              >
+                <Trash2 size={14} /> Снять
+              </button>
+              <span className="nri-city-map__lamp-swatches" role="group" aria-label="Цвета фонарей">
+                {LAMP_COLOR_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`nri-city-map__lamp-swatch${lampColor === p.color ? ' active' : ''}`}
+                    title={selectedLampId ? `Перекрасить · ${p.label}` : `Кисть · ${p.label}`}
+                    style={{ background: p.color }}
+                    onClick={() => void recolorSelectedLamp(p.color)}
+                  />
+                ))}
+              </span>
+              {selectedLampId && (
+                <>
+                  <button
+                    type="button"
+                    className="nri-lobby__close"
+                    disabled={busy}
+                    title="Вкл / выкл"
+                    onClick={() => void toggleSelectedLamp()}
+                  >
+                    {cityLamps.find((l) => l.id === selectedLampId)?.on ? 'Выкл' : 'Вкл'}
+                  </button>
+                  <button
+                    type="button"
+                    className="nri-modal__submit nri-city-map__lamp-delete"
+                    disabled={busy}
+                    title="Удалить выбранный фонарь (Delete)"
+                    onClick={() => void deleteSelectedLamp()}
+                  >
+                    <Trash2 size={14} /> Удалить
+                  </button>
+                </>
+              )}
+            </span>
+          )}
+
+          {isHost && mapLayer === 'underhive' && (
+            <span className="nri-city-map__tb-group" role="group" aria-label="Метро">
+              <button
+                type="button"
+                className="nri-lobby__close"
+                disabled={busy || !authToken}
+                onClick={() => {
+                  void (async () => {
+                    if (!authToken) return;
+                    setBusy(true);
+                    const res = await nriCreateMetroLine(authToken, inviteCode);
+                    setBusy(false);
+                    if (!res.ok) {
+                      setErr(res.error);
+                      return;
+                    }
+                    setActiveMetroLineId(res.line.id);
+                    await refreshUnderhive();
+                    setSaveMsg(`Ветка «${res.line.name}»`);
+                  })();
+                }}
+              >
+                Новая ветка
+              </button>
+              <button
+                type="button"
+                className={`nri-lobby__close ${metroPlaceMode ? 'active' : ''}`}
+                disabled={!activeMetroLineId}
+                title={activeMetroLineId ? 'Клик по карте — станция' : 'Сначала создайте ветку'}
+                onClick={() => {
+                  setMetroPlaceMode((v) => !v);
+                  setLampTool('off');
+                }}
+              >
+                Станция
+              </button>
+              <button
+                type="button"
+                className={`nri-lobby__close ${metroConnectFromId ? 'active' : ''}`}
+                disabled={!selectedMetroStationId}
+                title="Следующая станция соединится с выбранной"
+                onClick={() => {
+                  if (!selectedMetroStationId) return;
+                  setMetroConnectFromId(selectedMetroStationId);
+                  setMetroPlaceMode(true);
+                  setLampTool('off');
+                  setSaveMsg('Кликните место новой станции для связи');
+                }}
+              >
+                Связать
+              </button>
+              <button
+                type="button"
+                className="nri-lobby__close"
+                disabled={!selectedMetroStationId || busy || !authToken}
+                onClick={() => {
+                  void (async () => {
+                    if (!authToken || !selectedMetroStationId) return;
+                    setBusy(true);
+                    const res = await nriCreateMetroShop(authToken, inviteCode, {
+                      stationId: selectedMetroStationId,
+                      catalogIds: [...DEFAULT_METRO_SHOP_CATALOG],
+                    });
+                    setBusy(false);
+                    if (!res.ok) {
+                      setErr(res.error);
+                      return;
+                    }
+                    await refreshUnderhive();
+                    setSaveMsg(`Лавка «${res.shop.label}»`);
+                  })();
+                }}
+              >
+                Лавка
+              </button>
+            </span>
+          )}
         </div>
       </header>
+
+      {isHost && editMode && mapLayer === 'city' && (
+        <p className="mono-text nri-city-map__edit-dock-hint">
+          {districtParentKey
+            ? editTool === 'swap'
+              ? swapFromKey
+                ? 'Обмен: кликните вторую клетку (или перетащите).'
+                : 'Обмен: кликните первую клетку или перетащите клетку на другую.'
+              : activeBrush && !isSelectBrush(activeBrush)
+                ? `Кисть «${activeBrush.label}»${brushOrientation ? ` · ${brushOrientation}°` : ''}: клик = поставить · колесо = поворот кисти`
+                : 'Выделение: клик = выбрать · колесо = поворот клетки · «Кисти» — поставить объект'
+            : editTool === 'swap'
+              ? swapFromKey
+                ? 'Обмен геометрией: кликните второй район.'
+                : 'Обмен геометрией: кликните первый район или перетащите.'
+              : pendingPlaceShape
+                ? `Форма «${pendingPlaceShape.label}»: клик по фону карты — создать район.`
+                : 'Откройте «Объект» — выберите форму, затем клик по фону.'}
+        </p>
+      )}
+
+      <NriMapObjectPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={onPickerSelect}
+        mode={districtParentKey ? 'buildings' : 'all'}
+        activePlaceType={paintPlaceType}
+        activeShapeId={activeShapeId}
+      />
+      <NriDistrictBrushPicker
+        open={brushPickerOpen}
+        onClose={() => setBrushPickerOpen(false)}
+        activeBrushId={activeBrush?.id ?? null}
+        onSelect={(brush) => {
+          setActiveBrush(brush);
+          setBrushOrientation(0);
+          setMegaSelectMode(false);
+          setMegaSelection([]);
+          if (isSelectBrush(brush)) {
+            setEditTool('select');
+            setSaveMsg('Выделение: клик = выбрать · колесо = поворот клетки');
+          } else {
+            setPaintPlaceType(brush.placeType);
+            setEditTool('paint');
+            setSaveMsg(`Кисть «${brush.label}»: клик = угол · колесо = поворот`);
+          }
+        }}
+      />
 
       {mapFromFallback && (
         <p className="nri-lobby__err mono-text">
@@ -1078,15 +2544,25 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
 
       <div className="nri-city-map__hover-slot" aria-live="polite">
-        {districtParent && districtScale ? (
-          <NriCityDistrictDossier
-            zoneType={districtParent.zoneType}
-            scale={districtParent}
-            megaLabel={districtParent.megaDistrict ?? megaFromZoneKey(districtParent.zoneKey)}
-            compact
-          />
+        {mapLayer === 'underhive' ? (
+          <p className="mono-text nri-city-map__hover">
+            {metroRide
+              ? `Поездка… ${rideRemainingSec}с`
+              : canAccessUnderhive
+                ? underhiveData?.label ?? 'Подулей открыт.'
+                : 'Нужна «Метка поручителя из Подулья» — выдаёт мастер.'}
+          </p>
+        ) : districtParent && districtScale ? (
+          <>
+            <NriCityDistrictDossier
+              zoneType={districtParent.zoneType}
+              scale={districtParent}
+              megaLabel={districtParent.megaDistrict ?? megaFromZoneKey(districtParent.zoneKey)}
+              compact
+            />
+          </>
         ) : null}
-        {cityOverviewFocus ? (
+        {mapLayer === 'city' && cityOverviewFocus ? (
           <NriCityDistrictCard
             zone={focusZone!}
             megaLabel={zoneMega(focusZone!)}
@@ -1192,6 +2668,24 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 >
                   {busy ? 'Сохранение…' : 'Сохранить'}
                 </button>
+                {editMode && (
+                  <div className="nri-city-map__zone-field mono-text nri-city-map__zone-field--wide">
+                    <span>Удалить район (введите точное имя)</span>
+                    <input
+                      value={deleteConfirmName}
+                      onChange={(e) => setDeleteConfirmName(e.target.value)}
+                      placeholder={focusZone!.name}
+                    />
+                    <button
+                      type="button"
+                      className="nri-lobby__close"
+                      disabled={busy || mapFromFallback || !deleteConfirmName.trim()}
+                      onClick={() => void deleteTopZoneTyped()}
+                    >
+                      <Trash2 size={14} /> Удалить район
+                    </button>
+                  </div>
+                )}
                 {saveMsg && <p className="mono-text nri-scenario__checkpoint-ok">{saveMsg}</p>}
               </div>
             ) : (
@@ -1255,20 +2749,22 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
               </div>
             )}
           </NriCityDistrictCard>
-        ) : cityOverviewHoverOnly ? (
+        ) : mapLayer === 'city' && cityOverviewHoverOnly ? (
           <p className="mono-text nri-city-map__hover-hint">
             <strong>{hoverZone!.name}</strong> · {DISTRICT_TYPE_LABELS[hoverZone!.zoneType as NeonCityDistrictType] ?? hoverZone!.zoneType}
             {' '}— клик для карточки района
           </p>
-        ) : panelZone ? (
+        ) : mapLayer === 'city' && panelZone ? (
           <>
-            <p className={`mono-text nri-city-map__hover${focusZone ? ' nri-city-map__hover--selected' : ''}`}>
-              {focusZone && <span className="nri-city-map__selected-tag">выбран</span>}
-              <strong>{panelZone.name}</strong> · {typeLabel}
-              {panelZone.locked && ' · доступ только корпам'}
-              {panelZone.corpName && ` · ${panelZone.corpName}`}
-              {panelZone.pois?.length ? ` · ${panelZone.pois.join(', ')}` : ''}
-            </p>
+            {!districtParentKey && (
+              <p className={`mono-text nri-city-map__hover${focusZone ? ' nri-city-map__hover--selected' : ''}`}>
+                {focusZone && <span className="nri-city-map__selected-tag">выбран</span>}
+                <strong>{panelZone.name}</strong> · {typeLabel}
+                {panelZone.locked && ' · доступ только корпам'}
+                {panelZone.corpName && ` · ${panelZone.corpName}`}
+                {panelZone.pois?.length ? ` · ${panelZone.pois.join(', ')}` : ''}
+              </p>
+            )}
             {focusZone?.placeType === 'exit' && focusZone.linksTo && focusZone.linksTo.length > 0 ? (
               <div className="nri-city-map__exit-links">
                 {focusZone.linksTo.map((link) => (
@@ -1299,7 +2795,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     placeholder="бар, рынок, засада…"
                   />
                 </label>
-                {isSubMapZoneKey(focusZone.zoneKey) && (
+                {editMode && isSubMapZoneKey(focusZone.zoneKey) && (
                   <>
                     <label className="nri-city-map__zone-field mono-text">
                       <span>Тип клетки</span>
@@ -1324,7 +2820,32 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                         ))}
                       </select>
                     </label>
+                    {parseSubTileGrid(focusZone.zoneKey) && (
+                      <div className="nri-city-map__zone-field mono-text">
+                        <span>Поворот {typeof focusZone.rotation === 'number' ? focusZone.rotation : 0}°</span>
+                        <button
+                          type="button"
+                          className="nri-lobby__close"
+                          disabled={busy}
+                          onClick={() => void rotateFocusTile(90)}
+                        >
+                          <RotateCw size={14} /> +90°
+                        </button>
+                      </div>
+                    )}
                   </>
+                )}
+                {editMode && editTool === 'paint' && (
+                  <p className="mono-text opacity-70">
+                    Кисть: выберите тип в «Объект» и кликните клетку. Перетаскивание = обмен.
+                  </p>
+                )}
+                {editMode && editTool === 'swap' && (
+                  <p className="mono-text opacity-70">
+                    {swapFromKey
+                      ? `Обмен: ${swapFromKey} → кликните вторую клетку или перетащите`
+                      : 'Кликните первую клетку или перетащите клетку на другую'}
+                  </p>
                 )}
                 <button
                   type="button"
@@ -1335,13 +2856,13 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                   {busy ? 'Сохранение…' : 'Сохранить'}
                 </button>
                 {saveMsg && <p className="mono-text nri-scenario__checkpoint-ok">{saveMsg}</p>}
-                {isSubMapZoneKey(focusZone.zoneKey) && (
+                {editMode && isSubMapZoneKey(focusZone.zoneKey) && (
                   <button type="button" className="nri-lobby__close" disabled={busy} onClick={deleteSubZone}>
                     <Trash2 size={14} />{' '}
                     {parseSubTileGrid(focusZone.zoneKey) ? 'Сбросить клетку' : 'Удалить сабзону'}
                   </button>
                 )}
-                {!districtUsesGrid && (
+                {editMode && !districtUsesGrid && (
                   <div className="nri-city-map__sub-create">
                     <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--wide">
                       <span>Новая сабзона</span>
@@ -1366,7 +2887,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 )}
               </div>
             )}
-            {isHost && districtParentKey && !focusZone && !districtUsesGrid && (
+            {isHost && editMode && districtParentKey && !focusZone && !districtUsesGrid && (
               <div className="nri-city-map__sub-create">
                 <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--wide">
                   <span>Новая сабзона в «{districtParent?.name}»</span>
@@ -1455,11 +2976,11 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
               </div>
             )}
           </>
-        ) : (
+        ) : mapLayer === 'city' ? (
           <p className="mono-text nri-city-map__hover nri-city-map__hover--empty">
             {districtParent ? 'Наведите на клетку или кликните, чтобы выбрать' : 'Наведите на район или кликните для карточки'}
           </p>
-        )}
+        ) : null}
       </div>
 
       <div className="nri-city-map__chassis">
@@ -1467,12 +2988,12 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
         <span className="nri-city-map__corner nri-city-map__corner--tr" />
         <span className="nri-city-map__corner nri-city-map__corner--bl" />
         <span className="nri-city-map__corner nri-city-map__corner--br" />
-        {zonesLoading && (
+        {zonesLoading && mapLayer === 'city' && (
           <div className="nri-city-map__empty nri-city-map__loading">
             <p className="mono-text">Загрузка карты…</p>
           </div>
         )}
-        {!zonesLoading && cityZones.length === 0 && !districtParent && (
+        {!zonesLoading && mapLayer === 'city' && cityZones.length === 0 && !districtParent && (
           <div className="nri-city-map__empty">
             <p className="mono-text">{err ?? 'Районы не загрузились с сервера.'}</p>
             <button type="button" className="nri-lobby__copy" onClick={() => void refreshZones()}>
@@ -1480,7 +3001,7 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             </button>
           </div>
         )}
-        {!zonesLoading && districtParent && districtSubZones.length === 0 && (
+        {!zonesLoading && mapLayer === 'city' && districtParent && districtSubZones.length === 0 && (
           <div className="nri-city-map__empty">
             <p className="mono-text">{err ?? 'Клетки района не загрузились.'}</p>
             <button type="button" className="nri-lobby__copy" onClick={() => void exitDistrict()}>
@@ -1488,8 +3009,38 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             </button>
           </div>
         )}
+        {mapLayer === 'underhive' ? (
+          <div
+            className={`nri-city-map__wrap ${panning ? 'nri-city-map__wrap--panning' : ''} ${lampPlaceMode || lampEraseMode || metroPlaceMode ? 'nri-city-map__wrap--place' : ''} ${editMode ? 'nri-city-map__wrap--edit' : ''}`}
+            ref={wrapRef}
+            onWheel={onWheel}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endPan}
+            onPointerCancel={endPan}
+          >
+            <svg
+              ref={svgRef}
+              className="nri-city-map__svg nri-city-map__svg--underhive"
+              viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+              onClick={onSvgClick}
+              aria-label="Подулей"
+            >
+              <NriUnderhiveLayer
+                data={underhiveData}
+                lamps={underhiveData?.lamps ?? []}
+                isHost={isHost}
+                selectedStationId={selectedMetroStationId}
+                selectedLampId={selectedLampId}
+                myZoneKey={positions.find((p) => p.userId === currentUserId)?.zoneKey ?? null}
+                onSelectStation={setSelectedMetroStationId}
+                onLampClick={(lamp) => onLampClick(lamp)}
+              />
+            </svg>
+          </div>
+        ) : (
         <div
-          className={`nri-city-map__wrap ${panning ? 'nri-city-map__wrap--panning' : ''} ${placeMode ? 'nri-city-map__wrap--place' : ''}`}
+          className={`nri-city-map__wrap ${panning ? 'nri-city-map__wrap--panning' : ''} ${placeMode || pendingPlaceShape || lampPlaceMode || lampEraseMode ? 'nri-city-map__wrap--place' : ''} ${tileDragFrom ? 'nri-city-map__wrap--tile-drag' : ''} ${editMode ? 'nri-city-map__wrap--edit' : ''} ${weatherOn ? 'nri-city-map__wrap--weather' : ''}`}
           ref={wrapRef}
           onWheel={onWheel}
             onPointerDown={onPointerDown}
@@ -1583,10 +3134,18 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 </text>
               </g>
             ))}
+            <NriMapLampLayer
+              lamps={visibleCityLamps}
+              isHost={isHost}
+              viewW={canvasView.w}
+              viewH={canvasView.h}
+              mode="glow"
+            />
             {districtList.map(({ raw, z }) => {
               if (districtParent && raw.gridRow != null) {
                 const isFocused = selectedZoneKey === raw.zoneKey;
                 const isHovered = hoverZone?.zoneKey === raw.zoneKey;
+                const megaKey = `${raw.gridRow},${raw.gridCol}`;
                 return (
                   <NriDistrictTile
                     key={raw.zoneKey}
@@ -1596,11 +3155,30 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                     gridRows={districtGridDims.rows}
                     gridCols={districtGridDims.cols}
                     neighborTypes={districtNeighborTypes}
+                    blockMega={districtBlockMega.get(megaKey) ?? null}
+                    corpLogo={districtCorpLogos.get(megaKey) ?? null}
+                    corpName={districtParent.corpName}
                     animationSlot={districtTileAnimSlots.get(raw.zoneKey) ?? null}
                     isFocused={isFocused}
                     isHovered={isHovered}
-                    onMouseEnter={() => setHoverZone(raw)}
-                    onMouseLeave={() => setHoverZone((prev) => (prev?.zoneKey === raw.zoneKey ? null : prev))}
+                    onMouseEnter={() => {
+                      setHoverZone(raw);
+                      if (
+                        editMode &&
+                        activeBrush &&
+                        !isSelectBrush(activeBrush) &&
+                        !megaSelectMode &&
+                        editTool !== 'swap'
+                      ) {
+                        setBrushPreviewKeys(brushPreviewForZone(raw));
+                      } else {
+                        setBrushPreviewKeys([]);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      setHoverZone((prev) => (prev?.zoneKey === raw.zoneKey ? null : prev));
+                      setBrushPreviewKeys([]);
+                    }}
                     onClick={(e) => onZoneClick(raw, e)}
                   />
                 );
@@ -1759,6 +3337,53 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 </g>
               );
             })}
+            <NriMapLampLayer
+              lamps={visibleCityLamps}
+              isHost={isHost}
+              viewW={canvasView.w}
+              viewH={canvasView.h}
+              mode="markers"
+              selectedLampId={selectedLampId}
+              onLampClick={(lamp) => onLampClick(lamp)}
+            />
+            {megaSelectMode &&
+              megaSelection.map((key) => {
+                const tile = districtTilesLayout.find((t) => t.zoneKey === key);
+                if (!tile) return null;
+                return (
+                  <rect
+                    key={`mega-sel-${key}`}
+                    x={tile.x}
+                    y={tile.y}
+                    width={tile.w}
+                    height={tile.h}
+                    className="nri-city-map__mega-select"
+                    fill="rgba(77, 232, 255, 0.22)"
+                    stroke="rgba(77, 232, 255, 0.9)"
+                    strokeWidth={0.35}
+                    pointerEvents="none"
+                  />
+                );
+              })}
+            {editMode &&
+              !megaSelectMode &&
+              brushPreviewKeys.map((key) => {
+                const tile = districtTilesLayout.find((t) => t.zoneKey === key);
+                if (!tile) return null;
+                return (
+                  <rect
+                    key={`brush-prev-${key}`}
+                    x={tile.x}
+                    y={tile.y}
+                    width={tile.w}
+                    height={tile.h}
+                    className="nri-city-map__brush-preview"
+                    fill="rgba(255, 180, 60, 0.2)"
+                    stroke="rgba(255, 200, 80, 0.85)"
+                    strokeWidth={0.35}
+                  />
+                );
+              })}
             {positions.map((p) => {
               const dot = positionDot(p);
               if (!dot) return null;
@@ -1838,11 +3463,15 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
                 </g>
               );
             })}
+            {weatherOn && mapLayer === 'city' ? (
+              <NriDistrictWeatherFx x={0} y={0} w={canvasView.w} h={canvasView.h} />
+            ) : null}
           </svg>
         </div>
+        )}
       </div>
 
-      {draft && (
+      {draft && mapLayer === 'city' && (
         <div className="nri-city-map__draft">
           <h4 className="mono-text">Новая метка</h4>
           <label className="nri-modal__field">
@@ -1889,6 +3518,134 @@ export const NriCityMapPanel: React.FC<Props> = ({ inviteCode, isHost, currentUs
             </button>
           )}
         </div>
+      )}
+
+      {mapLayer === 'underhive' && selectedMetroStation && (
+          <div className="nri-city-map__selected mono-text">
+            <strong>{selectedMetroStation.name}</strong>
+            <p className="opacity-70">Станция метро</p>
+            {metroRide && (
+              <p className="opacity-70">
+                В пути… {rideRemainingSec}с
+              </p>
+            )}
+            <div className="nri-presets__actions">
+              <button
+                type="button"
+                className="nri-modal__submit"
+                disabled={busy || !authToken || !!metroRide}
+                onClick={() => {
+                  void (async () => {
+                    if (!authToken) return;
+                    setBusy(true);
+                    const res = await nriMetroEnter(authToken, inviteCode, selectedMetroStation.id);
+                    setBusy(false);
+                    if (!res.ok) {
+                      setErr(res.error);
+                      return;
+                    }
+                    setSaveMsg(`Вы на станции «${res.station.name}»`);
+                    await refreshPositions();
+                  })();
+                }}
+              >
+                Войти
+              </button>
+              {isHost && (
+                <button
+                  type="button"
+                  className="nri-lobby__close"
+                  disabled={busy || !authToken}
+                  onClick={() => {
+                    void (async () => {
+                      if (!authToken) return;
+                      if (!window.confirm(`Удалить станцию «${selectedMetroStation.name}»?`)) return;
+                      setBusy(true);
+                      const ok = await nriDeleteMetroStation(
+                        authToken,
+                        inviteCode,
+                        selectedMetroStation.id
+                      );
+                      setBusy(false);
+                      if (!ok) {
+                        setErr('Не удалось удалить станцию');
+                        return;
+                      }
+                      setSelectedMetroStationId(null);
+                      await refreshUnderhive();
+                    })();
+                  }}
+                >
+                  <Trash2 size={14} /> Станция
+                </button>
+              )}
+            </div>
+            {selectedMetroNeighbors.length > 0 && (
+              <div className="nri-city-map__metro-rides">
+                <p className="opacity-70">Поездки:</p>
+                {selectedMetroNeighbors.map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    className="nri-lobby__close"
+                    disabled={busy || !authToken || !!metroRide}
+                    onClick={() => {
+                      void (async () => {
+                        if (!authToken) return;
+                        setBusy(true);
+                        const res = await nriMetroRide(authToken, inviteCode, n.id);
+                        setBusy(false);
+                        if (!res.ok) {
+                          setErr(res.error);
+                          return;
+                        }
+                        setMetroRide({
+                          id: res.ride.id,
+                          arriveAt: res.ride.arriveAt,
+                          toStationId: res.ride.toStationId,
+                          totalSeconds: res.ride.totalSeconds,
+                        });
+                        setRideRemainingSec(res.ride.totalSeconds);
+                        setSaveMsg(`Поездка → ${n.name}`);
+                      })();
+                    }}
+                  >
+                    → {n.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedMetroShops.map((shop) => (
+              <div key={shop.id} className="nri-city-map__metro-shop">
+                <p>
+                  <strong>{shop.label}</strong>
+                </p>
+                {(shop.catalogIds.length ? shop.catalogIds : [...DEFAULT_METRO_SHOP_CATALOG]).map((cid) => (
+                  <button
+                    key={`${shop.id}-${cid}`}
+                    type="button"
+                    className="nri-lobby__close"
+                    disabled={busy || !authToken}
+                    onClick={() => {
+                      void (async () => {
+                        if (!authToken) return;
+                        setBusy(true);
+                        const res = await nriMetroShopBuy(authToken, inviteCode, shop.id, cid);
+                        setBusy(false);
+                        if (!res.ok) {
+                          setErr(res.error);
+                          return;
+                        }
+                        setSaveMsg(`Куплено · ${res.price}₩ · остаток ${res.wonlongs}`);
+                      })();
+                    }}
+                  >
+                    Купить {cid}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
       )}
 
       <ul className="nri-city-map__legend">

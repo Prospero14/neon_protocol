@@ -3,7 +3,6 @@ import GibsonIceHack from './GibsonIceHack';
 import {
   AuthBypassGame,
   BreachMatrixGame,
-  DeadDropGame,
   DaemonUploadGame,
   HashCrackGame,
   MeshJackGame,
@@ -94,12 +93,12 @@ export const IcebreakerRouter: React.FC<Props> = ({
             : undefined
         }
         onBack={onBack}
-        onFinish={() => {
+        onFinish={(bits) => {
           if (tableArcadeMode) {
             onBack?.();
             return;
           }
-          onComplete(false);
+          onComplete(bits > 0);
         }}
       />
     );
@@ -125,7 +124,6 @@ export const IcebreakerRouter: React.FC<Props> = ({
       {game.engine === 'breach' && <BreachMatrixGame {...p} />}
       {game.engine === 'daemon' && <DaemonUploadGame {...p} />}
       {game.engine === 'mesh' && <MeshJackGame {...p} />}
-      {game.engine === 'memory' && <DeadDropGame {...p} />}
       {game.engine === 'dodge' && <ProxyDodgeGame {...p} />}
       {game.engine === 'logwipe' && <LogWipeGame {...p} />}
       {game.engine === 'wordle' && <AuthBypassGame {...p} />}

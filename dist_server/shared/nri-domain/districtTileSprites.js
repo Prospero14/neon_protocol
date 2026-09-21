@@ -1,12 +1,9 @@
-/** PNG/SVG спрайты клеток (public/map-tiles). Base без запечённого мерцания — FX поверх в NriDistrictTile. */
-export const DISTRICT_TILE_SPRITE = {
-    house: '/map-tiles/district-house.svg',
-    restaurant: '/map-tiles/district-restaurant.svg',
-    shop: '/map-tiles/district-shop.svg',
-    secondhand: '/map-tiles/district-secondhand.svg',
-    metro: '/map-tiles/district-metro.svg',
-};
-export function districtTileSprite(placeType) {
-    return DISTRICT_TILE_SPRITE[placeType] ?? null;
+/** Спрайты клеток квартала — через галерею построек. */
+import { resolveBuildingArt } from './districtBuildingArtGallery';
+/** @deprecated nested SVG <image> — не использовать для mega */
+export const DISTRICT_PLAZA_MEGA_SPRITE = '/map-tiles/district-plaza-2x2.svg';
+export function districtTileSprite(placeType, zoneKey, artId) {
+    const entry = resolveBuildingArt(artId, placeType, zoneKey);
+    return entry?.href ?? null;
 }
 //# sourceMappingURL=districtTileSprites.js.map

@@ -70,12 +70,21 @@ export function tryInstallCyberItem(sheetRaw, inventoryRaw, itemId) {
     if (draw > 0 && wh > 0 && draw > wh) {
         return { ok: false, reason: 'Перегруз питания — установка невозможна.' };
     }
+    let acBonus = typeof item.acBonus === 'number' ? item.acBonus : 0;
+    if (!acBonus && Array.isArray(item.cyber.features)) {
+        for (const f of item.cyber.features) {
+            const m = String(f).match(/КБ\s*\+(\d+)/i);
+            if (m)
+                acBonus += Number(m[1]);
+        }
+    }
     const aug = {
         itemId: item.id,
         name: item.name,
         slot,
         bloodTox,
         blurb: item.blurb,
+        acBonus: acBonus || undefined,
         c2185Mods: item.c2185Mods,
         cyber: item.cyber,
         installedAt: Date.now(),

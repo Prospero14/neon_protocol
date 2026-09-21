@@ -45,6 +45,12 @@ model NriSession {
   combatants NriCombatant[]
   cyberProducts NriCyberProduct[]
   mapMarkers NriMapMarker[]
+  mapLamps   NriMapLamp[]
+  metroLines NriMetroLine[]
+  metroStations NriMetroStation[]
+  metroEdges NriMetroEdge[]
+  metroRides NriMetroRide[]
+  metroShops NriMetroShop[]
   vehicles   NriSessionVehicle[]
   iceScores  NriIceScore[]
   scenarioNodes NriScenarioNode[]
@@ -345,6 +351,103 @@ model NriMapMarker {
   @@index([sessionId, ownerUserId])
 }
 
+/** Фонари под тайлами — цветная подсветка мастера. */
+model NriMapLamp {
+  id             String     @id @default(uuid())
+  sessionId      String
+  session        NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  x              Float
+  y              Float
+  color          String     @default("#ffb040")
+  on             Boolean    @default(true)
+  radius         Float      @default(12)
+  /** city | underhive | district */
+  layer          String     @default("city")
+  parentZoneKey  String?
+  createdAt      DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([sessionId, layer])
+}
+
+model NriMetroLine {
+  id        String     @id @default(uuid())
+  sessionId String
+  session   NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  name      String
+  color     String     @default("#4de8ff")
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  stations  NriMetroStation[]
+  edges     NriMetroEdge[]
+
+  @@index([sessionId])
+}
+
+model NriMetroStation {
+  id               String     @id @default(uuid())
+  sessionId        String
+  session          NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lineId           String
+  line             NriMetroLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  name             String
+  x                Float
+  y                Float
+  districtZoneKey  String?
+  /** JSON string[] of extra line ids for transfers */
+  extraLineIds     Json       @default("[]")
+  createdAt        DateTime   @default(now())
+  shops            NriMetroShop[]
+
+  @@index([sessionId])
+  @@index([lineId])
+}
+
+model NriMetroEdge {
+  id             String     @id @default(uuid())
+  sessionId      String
+  session        NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lineId         String
+  line           NriMetroLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  fromStationId  String
+  toStationId    String
+  travelSeconds  Int?
+  createdAt      DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([lineId])
+}
+
+model NriMetroRide {
+  id             String     @id @default(uuid())
+  sessionId      String
+  session        NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId         String
+  fromStationId  String
+  toStationId    String
+  pathJson       Json
+  totalSeconds   Int
+  startedAt      DateTime   @default(now())
+  arriveAt       DateTime
+  completedAt    DateTime?
+
+  @@index([sessionId, userId])
+}
+
+model NriMetroShop {
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     NriSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  stationId   String
+  station     NriMetroStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  label       String     @default("Лавка у станции")
+  catalogIds  Json       @default("[]")
+  createdAt   DateTime   @default(now())
+
+  @@index([sessionId])
+  @@index([stationId])
+}
+
 /** Районы карты Neon City — названия и геометрия (редактируемые). */
 model NriMapZone {
   zoneKey   String   @id
@@ -359,11 +462,15 @@ model NriMapZone {
   megaDistrict  String?
   color         String?
   iconId        String?
+  /** Gallery art id (city-zone or district-building). */
+  artId         String?
   parentZoneKey String?
   placeType     String?
   districtStyle String?
   gridRow       Int?
   gridCol       Int?
+  /** 0 | 90 | 180 | 270 — поворот спрайта клетки */
+  rotation      Int      @default(0)
   populationBand  String?
   densityLabel    String?
   trafficLevel    Int?

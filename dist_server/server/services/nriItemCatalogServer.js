@@ -12,6 +12,19 @@ function loadCatalog() {
 export function getServerCatalogItem(id) {
     return loadCatalog().find((c) => c.id === id);
 }
+export function isPersonalServerCatalogItem(item) {
+    return !!item?.tags?.includes('персональное');
+}
+export function canTransferServerItem(item) {
+    if (!item)
+        return false;
+    if (item.transferLocked === true)
+        return false;
+    if (Array.isArray(item.tags) && item.tags.includes('персональное'))
+        return false;
+    const catalog = typeof item.catalogId === 'string' ? getServerCatalogItem(item.catalogId) : undefined;
+    return !isPersonalServerCatalogItem(catalog);
+}
 export function catalogToServerInventoryItem(catalogId) {
     const c = getServerCatalogItem(catalogId);
     if (!c)
@@ -21,6 +34,7 @@ export function catalogToServerInventoryItem(catalogId) {
         id,
         catalogId: c.id,
         name: c.name,
+        baseName: c.name,
         blurb: c.blurb,
         kind: 'gear',
         slot: c.slot,
@@ -29,6 +43,9 @@ export function catalogToServerInventoryItem(catalogId) {
         acBonus: c.acBonus,
         attack: c.attack,
         priceWonlongs: c.priceWonlongs,
+        tags: c.tags ? [...c.tags] : undefined,
+        transferLocked: isPersonalServerCatalogItem(c),
+        inscriptionLocked: false,
         qty: 1,
     };
 }

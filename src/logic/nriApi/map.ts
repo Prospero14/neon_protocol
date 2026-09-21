@@ -39,6 +39,7 @@ export type NriMapZone = {
   districtStyle?: string | null;
   gridRow?: number | null;
   gridCol?: number | null;
+  rotation?: number;
   subTileCount?: number;
   megaDistrict?: string | null;
   corpName: string | null;
@@ -46,6 +47,7 @@ export type NriMapZone = {
   pois: string[];
   color: string | null;
   iconId?: string | null;
+  artId?: string | null;
   updatedAt: number;
   populationBand?: PopulationBand | null;
   densityLabel?: string | null;
@@ -60,7 +62,7 @@ export type NriMapZonesResult =
   | { ok: true; zones: NriMapZone[]; view: NriMapView }
   | { ok: false; error: string };
 
-/** Подтягивает x/y/w/h верхнего уровня из канона (актуально для corp grid после правок layout). */
+/** Подтягивает x/y/w/h верхнего уровня из канона (только для offline fallback / миграций — не на live API). */
 export function applyCanonCityGeometry(zones: NriMapZone[]): NriMapZone[] {
   const canon = new Map(
     generateNeonCityZones()
@@ -137,7 +139,7 @@ export function nriFallbackDistrictTiles(parent: NriMapZone): NriMapZone[] {
     gridRow: s.gridRow ?? null,
     gridCol: s.gridCol ?? null,
     corpName: s.corpName ?? null,
-    locked: s.locked ?? false,
+    locked: false,
     pois: s.pois ?? [],
     color: null,
     iconId: null,
@@ -188,6 +190,14 @@ export async function nriPatchMapZone(
     iconId?: string | null;
     placeType?: string;
     districtStyle?: string | null;
+    rotation?: number;
+    swapWithZoneKey?: string;
+    artId?: string | null;
+    x?: number;
+    y?: number;
+    w?: number;
+    h?: number;
+    zoneType?: string;
   }
 ): Promise<MapZonePatchResult> {
   const url = `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(zoneKey)}`;
@@ -229,17 +239,453 @@ export async function nriCreateMapSubZone(
   return { ok: true, zone: data.zone };
 }
 
+export async function nriCreateMapTopZone(
+  token: string,
+  code: string,
+  payload: {
+    name: string;
+    zoneType?: string;
+    slug?: string;
+    x?: number;
+    y?: number;
+    w?: number;
+    h?: number;
+    artId?: string | null;
+    color?: string | null;
+    megaDistrict?: string | null;
+  }
+): Promise<MapZonePatchResult> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать район') };
+  if (!data.zone) return { ok: false, error: 'Сервер не вернул район' };
+  return { ok: true, zone: data.zone as NriMapZone };
+}
+
+export async function nriRegenDistrictTiles(
+  token: string,
+  code: string,
+  parentZoneKey: string
+): Promise<
+  | { ok: true; count: number; zones: NriMapZone[]; view: NriMapView }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(parentZoneKey)}/regen`,
+    { method: 'POST', headers: authHeaders(token) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось перегенерировать квартал') };
+  return {
+    ok: true,
+    count: typeof data.count === 'number' ? data.count : 0,
+    zones: Array.isArray(data.zones) ? (data.zones as NriMapZone[]) : [],
+    view: (data.view as NriMapView) ?? { w: 240, h: 165 },
+  };
+}
+
+export async function nriClearDistrictTiles(
+  token: string,
+  code: string,
+  parentZoneKey: string
+): Promise<
+  | { ok: true; count: number; zones: NriMapZone[]; view: NriMapView }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(parentZoneKey)}/clear`,
+    { method: 'POST', headers: authHeaders(token) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось очистить квартал') };
+  return {
+    ok: true,
+    count: typeof data.count === 'number' ? data.count : 0,
+    zones: Array.isArray(data.zones) ? (data.zones as NriMapZone[]) : [],
+    view: (data.view as NriMapView) ?? { w: 240, h: 165 },
+  };
+}
+
+export type NriMapLamp = {
+  id: string;
+  x: number;
+  y: number;
+  color: string;
+  on: boolean;
+  radius: number;
+  layer: string;
+  parentZoneKey: string | null;
+  createdAt: number;
+};
+
+export type NriMetroLineDto = { id: string; name: string; color: string; sortOrder: number };
+export type NriMetroStationDto = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  lineId: string;
+  lineIds: string[];
+  districtZoneKey: string | null;
+};
+export type NriMetroEdgeDto = {
+  id: string;
+  lineId: string;
+  fromStationId: string;
+  toStationId: string;
+  travelSeconds: number | null;
+};
+export type NriMetroShopDto = {
+  id: string;
+  stationId: string;
+  label: string;
+  catalogIds: string[];
+};
+
+export type NriUnderhivePayload = {
+  label: string;
+  districtFrames: Array<{
+    zoneKey: string;
+    name: string;
+    zoneType: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    color: string | null;
+  }>;
+  corpUndergrounds: Array<{
+    sourceZoneKey: string;
+    corpName: string | null;
+    name: string;
+    zoneType: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    theme: {
+      id: string;
+      primary: string;
+      secondary: string;
+      accent: string;
+      glow: string;
+      label: string;
+      abbrev: string;
+    };
+  }>;
+  metro: {
+    lines: NriMetroLineDto[];
+    stations: NriMetroStationDto[];
+    edges: NriMetroEdgeDto[];
+    shops: NriMetroShopDto[];
+  };
+  lamps: NriMapLamp[];
+};
+
+export async function nriFetchUnderhive(
+  token: string,
+  code: string
+): Promise<{ ok: true; data: NriUnderhivePayload } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/underhive`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Подулей недоступен') };
+  return {
+    ok: true,
+    data: {
+      label: typeof data.label === 'string' ? data.label : 'Подулей / Underhive',
+      districtFrames: Array.isArray(data.districtFrames) ? data.districtFrames : [],
+      corpUndergrounds: Array.isArray(data.corpUndergrounds) ? data.corpUndergrounds : [],
+      metro: {
+        lines: Array.isArray(data.metro?.lines) ? data.metro.lines : [],
+        stations: Array.isArray(data.metro?.stations) ? data.metro.stations : [],
+        edges: Array.isArray(data.metro?.edges) ? data.metro.edges : [],
+        shops: Array.isArray(data.metro?.shops) ? data.metro.shops : [],
+      },
+      lamps: Array.isArray(data.lamps) ? data.lamps : [],
+    },
+  };
+}
+
+export async function nriFetchMapLamps(
+  token: string,
+  code: string,
+  layer?: string
+): Promise<NriMapLamp[]> {
+  const qs = layer ? `?layer=${encodeURIComponent(layer)}` : '';
+  const out = await nriSafeFetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/lamps${qs}`, {
+    headers: authHeaders(token),
+  });
+  if (!out || !out.res.ok) return [];
+  return (out.data.lamps as NriMapLamp[]) ?? [];
+}
+
+export async function nriCreateMapLamp(
+  token: string,
+  code: string,
+  payload: {
+    x: number;
+    y: number;
+    color?: string;
+    on?: boolean;
+    radius?: number;
+    layer?: string;
+    parentZoneKey?: string | null;
+  }
+): Promise<{ ok: true; lamp: NriMapLamp } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/lamps`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось поставить фонарь') };
+  if (!data.lamp) return { ok: false, error: 'Сервер не вернул фонарь' };
+  return { ok: true, lamp: data.lamp };
+}
+
+export async function nriPatchMapLamp(
+  token: string,
+  code: string,
+  lampId: string,
+  payload: { color?: string; on?: boolean; radius?: number; x?: number; y?: number }
+): Promise<{ ok: true; lamp: NriMapLamp } | { ok: false; error: string }> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/lamps/${encodeURIComponent(lampId)}`,
+    { method: 'PATCH', headers: authHeaders(token), body: JSON.stringify(payload) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось обновить фонарь') };
+  if (!data.lamp) return { ok: false, error: 'Сервер не вернул фонарь' };
+  return { ok: true, lamp: data.lamp };
+}
+
+export async function nriDeleteMapLamp(token: string, code: string, lampId: string): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/lamps/${encodeURIComponent(lampId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriCreateMetroLine(
+  token: string,
+  code: string,
+  payload?: { name?: string; color?: string }
+): Promise<{ ok: true; line: NriMetroLineDto } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/lines`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload ?? {}),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать ветку') };
+  if (!data.line) return { ok: false, error: 'Нет ветки' };
+  return { ok: true, line: data.line };
+}
+
+export async function nriCreateMetroStation(
+  token: string,
+  code: string,
+  payload: {
+    lineId: string;
+    name?: string;
+    x: number;
+    y: number;
+    districtZoneKey?: string | null;
+    connectFromStationId?: string | null;
+    travelSeconds?: number | null;
+  }
+): Promise<
+  | { ok: true; station: NriMetroStationDto; edge: NriMetroEdgeDto | null }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/stations`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать станцию') };
+  if (!data.station) return { ok: false, error: 'Нет станции' };
+  return { ok: true, station: data.station, edge: data.edge ?? null };
+}
+
+export async function nriDeleteMetroStation(
+  token: string,
+  code: string,
+  stationId: string
+): Promise<boolean> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/stations/${encodeURIComponent(stationId)}`,
+    { method: 'DELETE', headers: authHeaders(token) }
+  );
+  return res.ok;
+}
+
+export async function nriMetroEnter(
+  token: string,
+  code: string,
+  stationId: string
+): Promise<
+  | { ok: true; station: NriMetroStationDto; neighbors: NriMetroStationDto[]; zoneKey: string }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/enter`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ stationId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось войти на станцию') };
+  return {
+    ok: true,
+    station: data.station,
+    neighbors: Array.isArray(data.neighbors) ? data.neighbors : [],
+    zoneKey: data.zoneKey,
+  };
+}
+
+export async function nriMetroRide(
+  token: string,
+  code: string,
+  toStationId: string
+): Promise<
+  | {
+      ok: true;
+      ride: {
+        id: string;
+        fromStationId: string;
+        toStationId: string;
+        totalSeconds: number;
+        startedAt: number;
+        arriveAt: number;
+      };
+    }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/ride`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ toStationId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось начать поездку') };
+  return { ok: true, ride: data.ride };
+}
+
+export async function nriMetroRideComplete(
+  token: string,
+  code: string,
+  rideId: string
+): Promise<
+  | { ok: true; station?: NriMetroStationDto; neighbors?: NriMetroStationDto[]; zoneKey?: string }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/ride/${encodeURIComponent(rideId)}/complete`,
+    { method: 'POST', headers: authHeaders(token) }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось завершить поездку') };
+  return { ok: true, station: data.station, neighbors: data.neighbors, zoneKey: data.zoneKey };
+}
+
+export async function nriMetroRideActive(
+  token: string,
+  code: string
+): Promise<{
+  ride: {
+    id: string;
+    fromStationId: string;
+    toStationId: string;
+    totalSeconds: number;
+    startedAt: number;
+    arriveAt: number;
+    remainingMs: number;
+  } | null;
+}> {
+  const out = await nriSafeFetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/ride/active`,
+    { headers: authHeaders(token) }
+  );
+  if (!out || !out.res.ok) return { ride: null };
+  const ride = out.data.ride;
+  if (!ride || typeof ride !== 'object' || typeof (ride as { id?: unknown }).id !== 'string') {
+    return { ride: null };
+  }
+  const r = ride as {
+    id: string;
+    fromStationId: string;
+    toStationId: string;
+    totalSeconds: number;
+    startedAt: number;
+    arriveAt: number;
+    remainingMs: number;
+  };
+  return { ride: r };
+}
+
+export async function nriCreateMetroShop(
+  token: string,
+  code: string,
+  payload: { stationId: string; label?: string; catalogIds?: string[] }
+): Promise<{ ok: true; shop: NriMetroShopDto } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/shops`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось создать лавку') };
+  if (!data.shop) return { ok: false, error: 'Нет лавки' };
+  return { ok: true, shop: data.shop };
+}
+
+export async function nriMetroShopBuy(
+  token: string,
+  code: string,
+  shopId: string,
+  catalogId: string
+): Promise<{ ok: true; item: unknown; price: number; wonlongs: number } | { ok: false; error: string }> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/metro/shops/${encodeURIComponent(shopId)}/buy`,
+    {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ catalogId }),
+    }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось купить') };
+  return { ok: true, item: data.item, price: data.price ?? 0, wonlongs: data.wonlongs ?? 0 };
+}
+
 export async function nriDeleteMapSubZone(
   token: string,
   code: string,
-  zoneKey: string
+  zoneKey: string,
+  opts?: { confirmName?: string }
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const qs =
+    opts?.confirmName != null && opts.confirmName !== ''
+      ? `?confirmName=${encodeURIComponent(opts.confirmName)}`
+      : '';
   const res = await fetch(
-    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(zoneKey)}`,
-    { method: 'DELETE', headers: authHeaders(token) }
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/map/zones/${encodeURIComponent(zoneKey)}${qs}`,
+    {
+      method: 'DELETE',
+      headers: authHeaders(token),
+      body: opts?.confirmName != null ? JSON.stringify({ confirmName: opts.confirmName }) : undefined,
+    }
   );
   const data = await parseJson(res);
-  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось удалить сабзону') };
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось удалить зону') };
   return { ok: true };
 }
 

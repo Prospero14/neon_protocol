@@ -183,6 +183,27 @@ export async function nriGrantItem(
   return { ok: true, inventory: data.inventory ?? [] };
 }
 
+export async function nriInscribeItem(
+  token: string,
+  code: string,
+  itemId: string,
+  inscribedName: string,
+): Promise<NriInventoryUpdateResult> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/player/items/${encodeURIComponent(itemId)}/inscribe`,
+    {
+      method: 'PATCH',
+      headers: nriAuthHeaders(token),
+      body: JSON.stringify({ inscribedName }),
+    },
+  );
+  const data = await nriParseJson(res);
+  if (!res.ok) {
+    return { ok: false, error: parseNriApiError(data, 'Не удалось вписать имя в предмет') };
+  }
+  return { ok: true, inventory: data.inventory ?? [] };
+}
+
 export async function nriSavePlayerNotes(
   token: string,
   code: string,

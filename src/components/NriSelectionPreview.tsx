@@ -1,6 +1,8 @@
 import React from 'react';
 import {
   ITEM_CATEGORY_LABELS,
+  isInscribableCatalogItem,
+  isPersonalCatalogItem,
   getCatalogItem,
   type CatalogItem,
 } from '../logic/nriItemCatalog';
@@ -46,6 +48,12 @@ export const NriCatalogItemPreview: React.FC<{ catalogId: string }> = ({ catalog
       </p>
       <p className="mono-text">{item.blurb}</p>
       <p className="mono-text nri-selection-preview__stats">{catalogModsLine(item)}</p>
+      {isPersonalCatalogItem(item) && (
+        <p className="mono-text opacity-60">Персональный предмет: после получения не передаётся.</p>
+      )}
+      {isInscribableCatalogItem(item) && (
+        <p className="mono-text opacity-60">Имя владельца вписывается один раз после получения.</p>
+      )}
       {item.tags && item.tags.length > 0 && (
         <p className="mono-text opacity-60">Теги: {item.tags.join(', ')}</p>
       )}

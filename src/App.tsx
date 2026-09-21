@@ -588,6 +588,8 @@ function App() {
   };
 
   const hideNav = ['SESSION_GATE', 'CREATION', 'COOP_LOBBY', 'NRI_LOBBY', 'FIXER_BAR', 'COMBAT'].includes(gs.currentView);
+  /** НРИ лобби само держит меню сессии / выход — не дублировать плавающий chip. */
+  const showFloatingLogout = hideNav && gs.currentView !== 'NRI_LOBBY';
 
   if (gs.isLoading || (gs.user && !gs.hydrationReady)) {
     return <div className="loading-screen mono-text">[ LOADING_NEURAL_BUS... ]</div>;
@@ -596,7 +598,7 @@ function App() {
 
   return (
     <div className="app-root main-crt">
-      {hideNav && <AppAccountLogout username={gs.user.username} onLogout={gs.logout} />}
+      {showFloatingLogout && <AppAccountLogout username={gs.user.username} onLogout={gs.logout} />}
       {!hideNav && (
         <ResponsiveNav 
           currentView={gs.currentView} 

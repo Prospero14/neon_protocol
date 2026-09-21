@@ -10,7 +10,7 @@ import {
 import { rejectIfInvalidSheetConditions } from './sheetConditionGate.js';
 import { mergeInventoryItem, takeOneCatalogItem, toggleEquipServer, type InvItem } from './nriItemGrant.js';
 import { tryUseItemServer } from './nriItemConsumeServer.js';
-import { catalogToServerInventoryItem } from './nriItemCatalogServer.js';
+import { catalogToServerInventoryItem, getServerCatalogItem } from './nriItemCatalogServer.js';
 import { touchNriMember } from './nriMemberDb.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
 import {
@@ -54,6 +54,23 @@ export type NriRouteContext = {
     me: { username: string } | null,
   ) => Promise<boolean>;
 };
+
+const VEHICLE_LICENSE_ID = 'g_vehicle_license';
+
+function normalizeInscribedName(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return null;
+  return trimmed.slice(0, 60);
+}
+
+function canInscribeItem(item: InvItem): boolean {
+  if (item.inscriptionLocked === true) return false;
+  if (typeof item.inscribedName === 'string' && item.inscribedName.trim()) return false;
+  if (Array.isArray(item.tags) && item.tags.includes('вписать_имя')) return true;
+  const catalog = typeof item.catalogId === 'string' ? getServerCatalogItem(item.catalogId) : undefined;
+  return !!catalog && (catalog.id === VEHICLE_LICENSE_ID || catalog.tags?.includes('вписать_имя') === true);
+}
 
 export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
   const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
@@ -370,6 +387,52 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
     } catch (error) {
       console.error('nri/use-item:', error);
       return sendApiError(res, 500, 'NRI_USE_ERR', 'Не удалось использовать предмет.');
+    }
+  });
+
+  app.patch('/neon_v1/services/nri/:code/player/items/:itemId/inscribe', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const itemId = String(req.params.itemId ?? '').trim();
+    const inscribedName = normalizeInscribedName((req.body as { inscribedName?: unknown })?.inscribedName);
+    if (!itemId) return sendApiError(res, 400, 'NRI_ITEM_ID', 'Укажите предмет.');
+    if (!inscribedName) {
+      return sendApiError(res, 400, 'NRI_ITEM_NAME', 'Укажите имя для подписи.');
+    }
+    try {
+      const session = await resolveSession(code);
+      if (!session || session.status !== 'open') {
+        return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+      }
+      const player = await prisma.nriPlayer.findUnique({
+        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+      });
+      if (!player) return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Персонаж не найден.');
+      const inv = Array.isArray(player.inventory) ? ([...(player.inventory as InvItem[])]) : [];
+      const idx = inv.findIndex((i) => i.id === itemId);
+      if (idx < 0) return sendApiError(res, 404, 'NRI_ITEM_NOT_FOUND', 'Предмет не найден в инвентаре.');
+      const current = inv[idx]!;
+      if (!canInscribeItem(current)) {
+        return sendApiError(res, 400, 'NRI_ITEM_INSCRIBE_FORBIDDEN', 'У этого предмета имя уже зафиксировано.');
+      }
+      const baseName =
+        typeof current.baseName === 'string' && current.baseName.trim() ? current.baseName : current.name;
+      inv[idx] = {
+        ...current,
+        baseName,
+        inscribedName,
+        inscriptionLocked: true,
+        name: `${baseName} — ${inscribedName}`,
+      };
+      await prisma.nriPlayer.update({
+        where: { id: player.id },
+        data: { inventory: inv as object[] },
+      });
+      res.json({ ok: true, inventory: inv });
+    } catch (error) {
+      console.error('nri/inscribe-item:', error);
+      return sendApiError(res, 500, 'NRI_ITEM_INSCRIBE_ERR', 'Не удалось вписать имя в предмет.');
     }
   });
 

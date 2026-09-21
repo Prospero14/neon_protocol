@@ -1,10 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="#1c1a22"/>
-  <rect x="12" y="18" width="40" height="38" rx="1" fill="#3a3344"/>
-  <rect x="12" y="18" width="40" height="10" fill="#8a6a3a"/>
-  <rect x="18" y="34" width="12" height="16" fill="#221c28"/>
-  <rect x="34" y="34" width="12" height="16" fill="#221c28"/>
-  <path d="M20 28h24v4H20z" fill="#c9a066"/>
-  <circle cx="24" cy="42" r="1.5" fill="#d4b878"/>
-  <circle cx="40" cy="42" r="1.5" fill="#d4b878"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <rect x="10" y="16" width="44" height="40" rx="1" fill="#12141e"/>
+  <rect x="10" y="16" width="44" height="11" fill="#181e28"/>
+  <!-- неон вместо коричневой крыши -->
+  <rect x="14" y="18" width="16" height="2.6" rx="0.5" fill="#b07aff"/>
+  <rect x="32" y="19" width="10" height="2" rx="0.4" fill="#4de8ff"/>
+  <rect x="44" y="18" width="6" height="2.4" rx="0.4" fill="#ff5ec8"/>
+  <rect x="16" y="34" width="13" height="16" fill="#080a0d"/>
+  <rect x="35" y="34" width="13" height="16" fill="#080a0d"/>
+  <path d="M18 28h28v3H18z" fill="#7ad8ff" opacity="0.85"/>
+  <circle cx="22" cy="42" r="1.8" fill="#ffe08a"/>
+  <circle cx="41" cy="42" r="1.8" fill="#ff9ad8"/>
 </svg>

@@ -136,10 +136,11 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
 /** Likeness Vault — Fallout-terminal: угадай слово по LIKENESS. */
 export const LikenessVaultGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
-  const listSize = Math.max(6, Math.min(12, 4 + params.scanRounds * 2));
+  const listSize = Math.max(8, Math.min(14, 6 + params.scanRounds * 2));
+  const [seed] = useState(() => Date.now());
   const vault = useMemo(
-    () => generateLikenessVault(params.wordLength, listSize, Date.now()),
-    [params.wordLength, listSize]
+    () => generateLikenessVault(params.wordLength, listSize, seed),
+    [params.wordLength, listSize, seed]
   );
   const [history, setHistory] = useState<Array<{ guess: string; likeness: number }>>([]);
   const [done, setDone] = useState(false);
@@ -161,7 +162,8 @@ export const LikenessVaultGame: React.FC<Props> = ({ params, onWin, onFail }) =>
     const likeness = likenessScore(vault.secret, word);
     const nextHist = [...history, { guess: word, likeness }];
     setHistory(nextHist);
-    ice.recordMistake(`LIKENESS ${likeness}/${word.length} · mismatch`);
+    // Лёгкий TRACE без счётчика mistakes — иначе medium почти непобедим.
+    ice.spikeTrace(5, `LIKENESS ${likeness}/${word.length}`);
     if (nextHist.length >= params.wordleAttempts) {
       setDone(true);
       onFail();
@@ -219,9 +221,10 @@ export const LikenessVaultGame: React.FC<Props> = ({ params, onWin, onFail }) =>
 /** Node Capture — захватывай смежные узлы probes до CORE. */
 export const NodeCaptureGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
+  const [seed] = useState(() => Date.now());
   const graph = useMemo(
-    () => generateCaptureGraph(params.meshNodes + 2, params.tapTarget + 4, Date.now()),
-    [params.meshNodes, params.tapTarget]
+    () => generateCaptureGraph(params.meshNodes + 2, params.tapTarget + 4, seed),
+    [params.meshNodes, params.tapTarget, seed]
   );
   const [captured, setCaptured] = useState(() => new Set<number>([graph.entryId]));
   const [probes, setProbes] = useState(graph.probes);

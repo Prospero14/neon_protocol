@@ -1,15 +1,26 @@
 import React from 'react';
 import { DISTRICT_STYLES, PLACE_TYPES } from '../../shared/nri-domain/districtGrid';
 
-const TEXTURED = new Set(['road', 'bridge', 'crossing', 'alley', 'park', 'plaza', 'parking']);
+const TEXTURED = new Set(['road', 'bridge', 'crossing', 'park', 'pond', 'plaza', 'parking', 'dump']);
 
 const BUILDING_GRADIENTS: { id: string; top: string; bottom: string }[] = [
-  { id: 'ndi-bld-house', top: '#1a3058', bottom: '#0c1628' },
-  { id: 'ndi-bld-restaurant', top: '#5a1838', bottom: '#2a0c1c' },
-  { id: 'ndi-bld-shop', top: '#123c5c', bottom: '#081c30' },
-  { id: 'ndi-bld-secondhand', top: '#3a2850', bottom: '#1a1028' },
-  { id: 'ndi-bld-metro', top: '#0c2848', bottom: '#061428' },
-  { id: 'ndi-bld-generic', top: '#243040', bottom: '#121820' },
+  { id: 'ndi-bld-house', top: '#0e1828', bottom: '#060a12' },
+  { id: 'ndi-bld-shack', top: '#141c28', bottom: '#080c14' },
+  { id: 'ndi-bld-restaurant', top: '#2a0c1c', bottom: '#10060e' },
+  { id: 'ndi-bld-shop', top: '#0a2030', bottom: '#040e18' },
+  { id: 'ndi-bld-secondhand', top: '#1c1428', bottom: '#0a0814' },
+  { id: 'ndi-bld-nightclub', top: '#280818', bottom: '#0c0410' },
+  { id: 'ndi-bld-hospital', top: '#3a4a58', bottom: '#182028' },
+  { id: 'ndi-bld-police', top: '#0e1a30', bottom: '#060c18' },
+  { id: 'ndi-bld-electronics', top: '#0c241c', bottom: '#061410' },
+  { id: 'ndi-bld-metro', top: '#061828', bottom: '#030c16' },
+  { id: 'ndi-bld-hotel', top: '#101c2c', bottom: '#060a14' },
+  { id: 'ndi-bld-service', top: '#121820', bottom: '#080a10' },
+  { id: 'ndi-bld-shop_asian', top: '#1a1020', bottom: '#0a0610' },
+  { id: 'ndi-bld-market', top: '#181410', bottom: '#0a0806' },
+  { id: 'ndi-bld-gunshop', top: '#141818', bottom: '#080a0c' },
+  { id: 'ndi-bld-corp_annex', top: '#141018', bottom: '#08060c' },
+  { id: 'ndi-bld-generic', top: '#121820', bottom: '#080a10' },
 ];
 
 function patternBody(placeType: string, style: string): React.ReactNode {
@@ -38,19 +49,26 @@ function patternBody(placeType: string, style: string): React.ReactNode {
           fill="none"
         />
       );
-    case 'alley':
-      return (
-        <>
-          <rect width="6" height="6" fill="rgba(6,8,14,0.35)" />
-          <rect width="0.8" height="6" x="0.2" fill="rgba(40,40,55,0.35)" />
-          <rect width="0.8" height="6" x="5" fill="rgba(40,40,55,0.35)" />
-        </>
-      );
     case 'park':
       return (
         <>
           <circle cx="1.5" cy="2" r="0.9" fill="rgba(60,180,100,0.18)" />
           <circle cx="4.2" cy="4" r="0.7" fill="rgba(50,150,90,0.14)" />
+        </>
+      );
+    case 'dump':
+      return (
+        <>
+          <ellipse cx="2" cy="3.2" rx="1.4" ry="0.9" fill="rgba(120,100,60,0.22)" />
+          <ellipse cx="4.2" cy="2.5" rx="1.1" ry="0.8" fill="rgba(90,80,50,0.18)" />
+          <rect width="1.2" height="0.7" x="2.5" y="1.5" fill="rgba(80,100,120,0.15)" />
+        </>
+      );
+    case 'pond':
+      return (
+        <>
+          <ellipse cx="3" cy="3" rx="2.2" ry="1.6" fill="rgba(40,140,180,0.22)" />
+          <ellipse cx="2.4" cy="2.6" rx="0.9" ry="0.4" fill="rgba(120,200,230,0.18)" />
         </>
       );
     case 'plaza':

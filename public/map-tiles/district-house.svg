@@ -1,12 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="#1a2433"/>
-  <rect x="10" y="14" width="44" height="42" rx="2" fill="#2c3d55"/>
-  <rect x="10" y="14" width="44" height="8" fill="#3d5573"/>
-  <rect x="16" y="28" width="8" height="8" fill="#0d1520"/>
-  <rect x="28" y="28" width="8" height="8" fill="#0d1520"/>
-  <rect x="40" y="28" width="8" height="8" fill="#0d1520"/>
-  <rect x="16" y="40" width="8" height="8" fill="#0d1520"/>
-  <rect x="28" y="40" width="8" height="8" fill="#0d1520"/>
-  <rect x="40" y="40" width="8" height="8" fill="#0d1520"/>
-  <rect x="28" y="48" width="8" height="8" fill="#1b2838"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <rect x="8" y="12" width="48" height="44" rx="2" fill="#121a24"/>
+  <rect x="8" y="12" width="48" height="9" fill="#1a2430"/>
+  <!-- неоновые вывески -->
+  <rect x="12" y="14" width="14" height="2.2" rx="0.5" fill="#4de8ff"/>
+  <rect x="28" y="15" width="10" height="1.8" rx="0.4" fill="#ff5ec8"/>
+  <rect x="40" y="14" width="12" height="2" rx="0.4" fill="#b8ff4d"/>
+  <!-- окна с свечением -->
+  <rect x="14" y="28" width="9" height="9" fill="#05090d"/>
+  <rect x="15.5" y="29.5" width="6" height="6" fill="#7ad8ff" opacity="0.85"/>
+  <rect x="27.5" y="28" width="9" height="9" fill="#05090d"/>
+  <rect x="29" y="29.5" width="6" height="6" fill="#ff9ad8" opacity="0.75"/>
+  <rect x="41" y="28" width="9" height="9" fill="#05090d"/>
+  <rect x="42.5" y="29.5" width="6" height="6" fill="#7ad8ff" opacity="0.7"/>
+  <rect x="14" y="41" width="9" height="9" fill="#05090d"/>
+  <rect x="15.5" y="42.5" width="6" height="6" fill="#ffe08a" opacity="0.55"/>
+  <rect x="27.5" y="41" width="9" height="9" fill="#05090d"/>
+  <rect x="29" y="42.5" width="6" height="6" fill="#7ad8ff" opacity="0.65"/>
+  <rect x="41" y="41" width="9" height="9" fill="#05090d"/>
+  <rect x="42.5" y="42.5" width="6" height="6" fill="#ff9ad8" opacity="0.55"/>
+  <rect x="27.5" y="50" width="9" height="6" fill="#0b1118"/>
+  <rect x="10" y="22" width="2" height="8" rx="0.4" fill="#ff5ec8" opacity="0.8"/>
 </svg>

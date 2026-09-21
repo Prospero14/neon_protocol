@@ -16,6 +16,70 @@ function genInviteCode() {
 }
 export function mountNriSessionLobbyRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
+    /** Столы, где текущий пользователь — участник или хост. Должен быть ДО /:code/… */
+    app.get('/neon_v1/services/nri/mine', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        try {
+            const me = await resolveUser(auth);
+            if (!me)
+                return sendApiError(res, 401, 'NRI_USER_NOT_FOUND', 'Пользователь не найден.');
+            const memberships = await prisma.nriSessionMember.findMany({
+                where: { userId: me.id },
+                include: {
+                    session: {
+                        include: { host: { select: { username: true } } },
+                    },
+                },
+                orderBy: { lastSeenAt: 'desc' },
+            });
+            const hosted = await prisma.nriSession.findMany({
+                where: { hostUserId: me.id },
+                include: { host: { select: { username: true } } },
+                orderBy: { createdAt: 'desc' },
+            });
+            const byCode = new Map();
+            for (const h of hosted) {
+                byCode.set(h.inviteCode, {
+                    inviteCode: h.inviteCode,
+                    title: h.title,
+                    status: h.status,
+                    hostUsername: h.host.username,
+                    isHost: true,
+                });
+            }
+            for (const m of memberships) {
+                const s = m.session;
+                if (!s)
+                    continue;
+                const prev = byCode.get(s.inviteCode);
+                byCode.set(s.inviteCode, {
+                    inviteCode: s.inviteCode,
+                    title: s.title,
+                    status: s.status,
+                    hostUsername: s.host.username,
+                    isHost: Boolean(prev?.isHost || m.isHost || s.hostUserId === me.id),
+                });
+            }
+            const sessions = [...byCode.values()].filter((s) => s.status === 'open');
+            for (const s of sessions) {
+                const row = await prisma.nriSession.findUnique({
+                    where: { inviteCode: s.inviteCode },
+                    select: {
+                        _count: { select: { npcs: true, players: true } },
+                    },
+                });
+                s.npcCount = row?._count.npcs ?? 0;
+                s.playerCount = row?._count.players ?? 0;
+            }
+            res.json({ sessions });
+        }
+        catch (error) {
+            console.error('nri/mine:', error);
+            return sendApiError(res, 500, 'NRI_MINE_FAILED', 'Не удалось загрузить список столов.');
+        }
+    });
     app.get('/neon_v1/services/nri/:code/info', async (req, res) => {
         const code = String(req.params.code ?? '').trim().toUpperCase();
         if (!code)

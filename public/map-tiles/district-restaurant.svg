@@ -1,9 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect width="64" height="64" fill="#1a2030"/>
-  <rect x="8" y="18" width="48" height="38" rx="2" fill="#3a2a28"/>
-  <rect x="8" y="18" width="48" height="10" fill="#c45c3a"/>
-  <rect x="14" y="34" width="36" height="14" fill="#1a1210"/>
-  <rect x="22" y="38" width="6" height="6" fill="#e8b86a"/>
-  <rect x="36" y="38" width="6" height="6" fill="#e8b86a"/>
-  <circle cx="32" cy="28" r="3" fill="#ffd27a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <rect x="6" y="16" width="52" height="40" rx="2" fill="#120d18"/>
+  <rect x="6" y="16" width="52" height="11" fill="#181122"/>
+  <!-- неоновая вывеска вместо коричневой полосы -->
+  <rect x="10" y="18" width="20" height="3" rx="0.6" fill="#ff5ec8"/>
+  <rect x="32" y="19" width="12" height="2.4" rx="0.5" fill="#4de8ff"/>
+  <rect x="46" y="18" width="8" height="2.8" rx="0.5" fill="#ffe066"/>
+  <rect x="12" y="34" width="40" height="14" fill="#08050a"/>
+  <rect x="20" y="38" width="7" height="7" fill="#ffb86a" opacity="0.9"/>
+  <rect x="37" y="38" width="7" height="7" fill="#7ad8ff" opacity="0.85"/>
+  <circle cx="32" cy="27" r="3.5" fill="#ff5ec8"/>
+  <circle cx="32" cy="27" r="1.8" fill="#6b5e65"/>
 </svg>

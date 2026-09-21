@@ -10,7 +10,7 @@ import {
   takeOneInstanceItem,
   type InvItem,
 } from './nriItemGrant.js';
-import { catalogToServerInventoryItem } from './nriItemCatalogServer.js';
+import { canTransferServerItem, catalogToServerInventoryItem } from './nriItemCatalogServer.js';
 
 type Deps = {
   prisma: PrismaClient;
@@ -119,6 +119,9 @@ export function mountNriItemTransferRoutes(app: Express, deps: Deps) {
         if (!taken.item) {
           return sendApiError(res, 404, 'NRI_ITEM_NOT_FOUND', 'Предмет не найден у НПС.');
         }
+        if (!canTransferServerItem(taken.item)) {
+          return sendApiError(res, 400, 'NRI_ITEM_PERSONAL', 'Этот предмет персональный и не передаётся.');
+        }
         await prisma.nriNpc.update({
           where: { id: npc.id },
           data: { inventory: taken.inventory as object[] },
@@ -146,6 +149,9 @@ export function mountNriItemTransferRoutes(app: Express, deps: Deps) {
         const taken = takeOneInstanceItem(inv, itemId.trim());
         if (!taken.item) {
           return sendApiError(res, 404, 'NRI_ITEM_NOT_FOUND', 'Предмет не найден в инвентаре.');
+        }
+        if (!canTransferServerItem(taken.item)) {
+          return sendApiError(res, 400, 'NRI_ITEM_PERSONAL', 'Этот предмет персональный и не передаётся.');
         }
         if (taken.item.equipped) {
           return sendApiError(res, 400, 'NRI_ITEM_EQUIPPED', 'Снимите предмет перед передачей.');

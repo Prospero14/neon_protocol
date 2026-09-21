@@ -42,7 +42,7 @@ body {
   z-index ниже контента приложения (.app-root получает z-index в App.css).
 */
 
-/* 1. Глобальный оверлей со сканлайнами (горизонтальные полосы) */
+/* Сканлайны без анимации (раньше плыли и давали мерцание) */
 #root::before {
   content: " ";
   display: block;
@@ -54,8 +54,9 @@ body {
   );
   background-size: 100% 4px;
   z-index: 0;
-  pointer-events: none; /* Пропускаем клики сквось слой */
-  animation: scanline 10s linear infinite;
+  pointer-events: none;
+  animation: none !important;
+  opacity: 0.35;
 }
 
 /* 2. Виньетка (затемнение по углам для эффекта выпуклого экрана) */

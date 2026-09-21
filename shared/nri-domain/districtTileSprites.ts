@@ -1,14 +1,12 @@
+/** Спрайты клеток квартала — через галерею построек. */
+
 import type { PlaceType } from './districtGrid';
+import { resolveBuildingArt } from './districtBuildingArtGallery';
 
-/** PNG/SVG спрайты клеток (public/map-tiles). Base без запечённого мерцания — FX поверх в NriDistrictTile. */
-export const DISTRICT_TILE_SPRITE: Partial<Record<PlaceType, string>> = {
-  house: '/map-tiles/district-house.svg',
-  restaurant: '/map-tiles/district-restaurant.svg',
-  shop: '/map-tiles/district-shop.svg',
-  secondhand: '/map-tiles/district-secondhand.svg',
-  metro: '/map-tiles/district-metro.svg',
-};
+/** @deprecated nested SVG <image> — не использовать для mega */
+export const DISTRICT_PLAZA_MEGA_SPRITE = '/map-tiles/district-plaza-2x2.svg';
 
-export function districtTileSprite(placeType: PlaceType): string | null {
-  return DISTRICT_TILE_SPRITE[placeType] ?? null;
+export function districtTileSprite(placeType: PlaceType, zoneKey?: string, artId?: string | null): string | null {
+  const entry = resolveBuildingArt(artId, placeType, zoneKey);
+  return entry?.href ?? null;
 }

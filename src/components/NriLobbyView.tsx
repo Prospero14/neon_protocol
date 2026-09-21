@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Copy, FileArchive, FolderOpen, LogOut, Map as MapIcon, Megaphone, MessageSquare, Package, Skull, User, Users, UserCircle, XCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
+import { BookOpen, FileArchive, FolderOpen, Map as MapIcon, Megaphone, MessageSquare, Package, Skull, User, Users, UserCircle, Coins, Car, ScrollText, StickyNote, Wrench } from 'lucide-react';
 import { useAuth } from '../logic/AuthContext';
+import { NriLobbySessionMenu } from './NriLobbySessionMenu';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import {
   buildNriInviteUrl,
@@ -48,6 +49,7 @@ import { NriTattooPickModal } from './NriTattooPickModal';
 
 import type { NriAchievementUnlock } from '../logic/nriApi';
 import { parseNriSheet } from '../logic/nriNpcGenerator';
+import { parseNriInventory } from '../logic/nriInventory';
 import { SPAM_BOT_USERNAME } from '../logic/spamBotMeta';
 
 type Tab = 'chat' | 'ice' | 'inventory' | 'wallet' | 'vault' | 'people' | 'cyber' | 'map' | 'transport' | 'scenario' | 'notes' | 'dossier' | 'tools';
@@ -59,7 +61,7 @@ type Props = {
 };
 
 export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward: _onIceReward }) => {
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const [session, setSession] = useState<NriSessionInfo | null>(null);
   const [members, setMembers] = useState<NriMember[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -410,7 +412,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   }
 
   return (
-    <div className="nri-lobby main-crt">
+    <div className="nri-lobby">
       <header className="nri-lobby__head">
         <div>
           <div className="nri-lobby__kicker">NEON_PROTOCOL // НРИ</div>
@@ -429,23 +431,19 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
               <User size={14} /> Лист персонажа
             </button>
           )}
-          <button type="button" className="nri-lobby__leave" onClick={onLeave} title="Вернуться к выбору режима, аккаунт остаётся">
-            <LogOut size={16} /> Покинуть стол
-          </button>
+          <NriLobbySessionMenu
+            username={user?.username ?? 'user'}
+            isHost={!!session?.isHost}
+            onCopyLink={() => void copyLink()}
+            onLeaveTable={onLeave}
+            onCloseTable={() => void closeTable()}
+            onLogout={() => logout()}
+            copied={copied}
+          />
         </div>
       </header>
 
-      <div className="nri-lobby__invite">
-        <code className="nri-lobby__link">{buildNriInviteUrl(inviteCode)}</code>
-        <button type="button" className="nri-lobby__copy" onClick={copyLink}>
-          <Copy size={14} /> {copied ? 'OK' : 'Ссылка'}
-        </button>
-        {session?.isHost && (
-          <button type="button" className="nri-lobby__close" onClick={closeTable}>
-            <XCircle size={14} /> Закрыть стол
-          </button>
-        )}
-      </div>
+      <div className="nri-lobby__stripe" aria-hidden="true" />
 
       {!session && (
         <div className="nri-lobby__boot">
@@ -630,7 +628,15 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           <NriCityMapPanel
             inviteCode={inviteCode}
             isHost={!!session.isHost}
+            canToggleWeather={!!(session.isHost || session.isAdmin)}
             currentUserId={user.id}
+            inventoryItemIds={
+              profile
+                ? parseNriInventory(profile.inventory)
+                    .map((i) => i.catalogId)
+                    .filter((id): id is string => typeof id === 'string' && id.length > 0)
+                : []
+            }
             onNewAchievements={handleNewAchievements}
           />
         )}

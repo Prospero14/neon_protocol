@@ -133,7 +133,7 @@ alley | park | plaza | parking | metro | exit
 | `POST .../map/zones` | (legacy) создать клетку — позже replace на regen grid |
 | `DELETE .../map/zones/:key` | сабзона: игроки → родитель |
 
-Seed: `MAP_LAYOUT_VERSION = v6-district-grid`, merge missing без wipe.
+Seed: `MAP_LAYOUT_VERSION = v10-composed-district-grid`, merge missing без wipe топ-зон; клетки — lazy + compose (дороги/застройка/парки). Хост: `POST …/map/zones/:parent/regen`. Старые all-generic сетки пересобираются при drill.
 
 ---
 

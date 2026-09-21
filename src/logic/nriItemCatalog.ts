@@ -55,6 +55,42 @@ function assertUniqueCatalogIds() {
 }
 assertUniqueCatalogIds();
 
+export const UNDERHIVE_PASSPORT_ID = 'g_underhive_passport';
+export const VEHICLE_LICENSE_ID = 'g_vehicle_license';
+
+/** Сюжетные выдачи только из вкладки «Инвентарь мастера». */
+export function isMasterGrantOnly(item: Pick<CatalogItem, 'tags'> | undefined | null): boolean {
+  return !!item?.tags?.includes('мастер');
+}
+
+export function isPersonalCatalogItem(item: Pick<CatalogItem, 'tags'> | undefined | null): boolean {
+  return !!item?.tags?.includes('персональное');
+}
+
+export function isInscribableCatalogItem(item: Pick<CatalogItem, 'id' | 'tags'> | undefined | null): boolean {
+  return !!item && (item.id === VEHICLE_LICENSE_ID || item.tags?.includes('вписать_имя') === true);
+}
+
+export function canTransferInventoryItem(item: Pick<NriInventoryItem, 'catalogId' | 'tags' | 'transferLocked'>): boolean {
+  if (item.transferLocked) return false;
+  if (item.tags?.includes('персональное')) return false;
+  const catalog = item.catalogId ? getCatalogItem(item.catalogId) : undefined;
+  return !isPersonalCatalogItem(catalog);
+}
+
+export function canInscribeInventoryItem(
+  item: Pick<NriInventoryItem, 'catalogId' | 'tags' | 'inscribedName' | 'inscriptionLocked'>
+): boolean {
+  if (item.inscriptionLocked || item.inscribedName?.trim()) return false;
+  if (item.tags?.includes('вписать_имя')) return true;
+  const catalog = item.catalogId ? getCatalogItem(item.catalogId) : undefined;
+  return isInscribableCatalogItem(catalog);
+}
+
+export function listMasterGrantCatalog(): CatalogItem[] {
+  return NRI_ITEM_CATALOG.filter((c) => isMasterGrantOnly(c));
+}
+
 export function getCatalogItem(id: string): CatalogItem | undefined {
   return BY_ID.get(id);
 }
@@ -67,6 +103,7 @@ export function catalogToInventoryItem(catalogId: string, instanceId?: string): 
     id,
     catalogId: c.id,
     name: c.name,
+    baseName: c.name,
     blurb: c.blurb,
     kind: 'gear',
     slot: c.slot,
@@ -76,6 +113,8 @@ export function catalogToInventoryItem(catalogId: string, instanceId?: string): 
     attack: c.attack ? { ...c.attack } : undefined,
     priceWonlongs: c.priceWonlongs,
     tags: c.tags ? [...c.tags] : undefined,
+    transferLocked: isPersonalCatalogItem(c),
+    inscriptionLocked: false,
     qty: 1,
   };
 }

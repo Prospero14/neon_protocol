@@ -34,8 +34,9 @@ describe('corpo plaza grid', () => {
 });
 
 describe('overviewLabelLines', () => {
-  it('splits corp names by words', () => {
-    expect(overviewLabelLines('Kang Tao', 'corp', 'Kang Tao')).toEqual(['Kang', 'Tao']);
-    expect(overviewLabelLines('Arasaka', 'corp')).toEqual(['Arasaka']);
+  it('uses corp abbrev for campus tiles', () => {
+    expect(overviewLabelLines('Kang Tao', 'corp', 'Kang Tao')).toEqual(['KT']);
+    expect(overviewLabelLines('Arasaka', 'corp')).toEqual(['ARA']);
+    expect(overviewLabelLines('HQ', 'corp', 'Biotechnica')).toEqual(['BIO']);
   });
 });

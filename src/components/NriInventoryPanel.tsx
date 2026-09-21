@@ -3,6 +3,7 @@ import { Package, Search, Shield, Sword, Zap } from 'lucide-react';
 import {
   nriFetchNpcs,
   nriGrantNpcItem,
+  nriInscribeItem,
   nriTransferItem,
   nriToggleEquip,
   nriUseItem,
@@ -16,9 +17,12 @@ import { canEquipItem } from '../logic/nriItemEquip';
 import { getConsumeEffect } from '../logic/nriConsumeEffects';
 import { getCatalogItem } from '../logic/nriItemCatalog';
 import {
+  canInscribeInventoryItem,
+  canTransferInventoryItem,
   ITEM_CATEGORY_LABELS,
   ITEM_CATEGORY_ORDER,
   NRI_ITEM_CATALOG,
+  isMasterGrantOnly,
   searchCatalog,
   type CatalogItem,
   type ItemCategory,
@@ -82,10 +86,14 @@ export const NriInventoryPanel: React.FC<Props> = ({
   const [grantFromNpc, setGrantFromNpc] = useState('');
   const [grantToNpc, setGrantToNpc] = useState('');
   const [npcs, setNpcs] = useState<NriNpc[]>([]);
-  const [catalogPick, setCatalogPick] = useState(NRI_ITEM_CATALOG[0]?.id ?? '');
+  const grantCatalogSeed = NRI_ITEM_CATALOG.find((c) => !isMasterGrantOnly(c));
+  const [catalogPick, setCatalogPick] = useState(grantCatalogSeed?.id ?? '');
 
   const inventory = useMemo(() => parseNriInventory(profile.inventory), [profile.inventory]);
-  const catalog = useMemo(() => searchCatalog(search, category), [search, category]);
+  const catalog = useMemo(
+    () => searchCatalog(search, category).filter((c) => !isMasterGrantOnly(c)),
+    [search, category]
+  );
 
   React.useEffect(() => {
     if (!catalog.some((c) => c.id === catalogPick) && catalog[0]) {
@@ -155,6 +163,22 @@ export const NriInventoryPanel: React.FC<Props> = ({
 
   const canInstallCyber = (item: NriInventoryItem) => item.kind === 'cyberware' && !!item.cyber?.slot;
 
+  const inscribeItem = async (item: NriInventoryItem) => {
+    if (!authToken) return;
+    const raw = window.prompt('Впишите имя владельца. Изменить потом нельзя.', '');
+    const inscribedName = raw?.trim();
+    if (!inscribedName) return;
+    setBusy(item.id);
+    setErr(null);
+    const res = await nriInscribeItem(authToken, inviteCode, item.id, inscribedName);
+    setBusy(null);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    onProfileUpdate({ ...profile, inventory: res.inventory });
+  };
+
   const grantToPlayer = async () => {
     if (!authToken || !catalogPick || !grantTarget) return;
     setBusy('grant');
@@ -221,8 +245,10 @@ export const NriInventoryPanel: React.FC<Props> = ({
                 {item.name}
                 {item.qty && item.qty > 1 ? ` ×${item.qty}` : ''}
                 {item.equipped && <span className="nri-inventory__badge">ЭКИП</span>}
+                {!canTransferInventoryItem(item) && <span className="nri-inventory__badge">ПЕРСОН.</span>}
               </strong>
               <p className="mono-text opacity-70">{item.blurb}</p>
+              {item.inscribedName && <p className="mono-text opacity-60">Вписано имя: {item.inscribedName}</p>}
               <p className="mono-text nri-inventory__mods">{itemModsLine(item)}</p>
             </div>
             {canEquipItem(item) && (
@@ -258,6 +284,17 @@ export const NriInventoryPanel: React.FC<Props> = ({
                 Установить
               </button>
             )}
+            {canInscribeInventoryItem(item) && (
+              <button
+                type="button"
+                className="nri-inventory__equip"
+                disabled={busy === item.id}
+                onClick={() => void inscribeItem(item)}
+              >
+                <Zap size={14} />
+                Вписать имя
+              </button>
+            )}
           </li>
         ))}
         {inventory.length === 0 && (
@@ -269,7 +306,7 @@ export const NriInventoryPanel: React.FC<Props> = ({
         <section className="nri-inventory__grant">
           <h3 className="mono-text">Выдать из каталога (мастер → личка)</h3>
           <p className="mono-text opacity-50 nri-inventory__hint">
-            Предмет уходит в личку игроку. Показать за столом — из сообщения передачи в личке.
+            Предмет уходит в личку игроку. Сюжетные вещи с тегом «мастер» — во вкладке «Инвентарь мастера».
           </p>
 
           <div className="nri-inventory__category-tabs">

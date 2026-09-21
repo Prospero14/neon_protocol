@@ -416,6 +416,11 @@ const GibsonIceHack: React.FC<Props> = ({
                 {icebreakerMode ? '[ ФАЙЛ РАЗБЛОКИРОВАН ]' : tableLeaderboardMode ? '[ В РЕЙТИНГ ]' : '[ ЗАБРАТЬ LOOT ]'}
               </button>
             )}
+            {phase === 'busted' && icebreakerMode && (
+              <button type="button" className="ice-btn primary" onClick={() => onFinish(0)}>
+                [ СЕССИЯ СБРОШЕНА ]
+              </button>
+            )}
             <button type="button" className="ice-btn" onClick={tryAgain}>
               [ ЕЩЁ РАЗ ]
             </button>

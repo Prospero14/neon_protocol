@@ -10,6 +10,7 @@ import {
   likenessWordEliminated,
   pipeOpenings,
   rotatePipe,
+  type PipeCell,
 } from './iceArcadeExtraLogic.js';
 
 describe('Circuit Splice', () => {
@@ -21,12 +22,12 @@ describe('Circuit Splice', () => {
   });
 
   it('rotatePipe cycles I by 2 and L by 4', () => {
-    let c = { kind: 'I' as const, rot: 0 };
+    let c: PipeCell = { kind: 'I', rot: 0 };
     c = rotatePipe(c);
     expect(c.rot).toBe(1);
     c = rotatePipe(c);
     expect(c.rot).toBe(0);
-    let l = { kind: 'L' as const, rot: 3 };
+    let l: PipeCell = { kind: 'L', rot: 3 };
     l = rotatePipe(l);
     expect(l.rot).toBe(0);
   });
@@ -56,13 +57,13 @@ describe('Circuit Splice', () => {
 
 describe('Likeness Vault', () => {
   it('likeness counts positional matches only', () => {
-    expect(likenessScore('root', 'riot')).toBe(2);
-    expect(likenessScore('root', 'toor')).toBe(0);
+    expect(likenessScore('root', 'riot')).toBe(3); // r _ o t
+    expect(likenessScore('root', 'toor')).toBe(2); // _ o o _
     expect(likenessScore('proxy', 'proxy')).toBe(5);
   });
 
   it('eliminates words inconsistent with history', () => {
-    expect(likenessWordEliminated('riot', [{ guess: 'root', likeness: 2 }])).toBe(false);
+    expect(likenessWordEliminated('riot', [{ guess: 'root', likeness: 3 }])).toBe(false);
     expect(likenessWordEliminated('xxxx', [{ guess: 'root', likeness: 2 }])).toBe(true);
   });
 

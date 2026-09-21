@@ -249,18 +249,26 @@ const LIKENESS_POOL: Record<number, string[]> = {
   4: [
     'root', 'deck', 'node', 'corp', 'data', 'link', 'port', 'hash', 'null',
     'kern', 'boot', 'dump', 'ping', 'rack', 'slot', 'wire', 'grid', 'byte', 'code', 'jail',
+    'flux', 'neon', 'void', 'apex', 'chip', 'disk', 'echo', 'fuse', 'glow', 'hive',
+    'iris', 'jade', 'kite', 'loom', 'myth', 'onyx', 'rift', 'silk', 'zinc', 'warp',
   ],
   5: [
     'proxy', 'trace', 'vault', 'cyber', 'ghost', 'spike', 'relay', 'token',
     'cache', 'stack', 'frame', 'patch', 'clone', 'optic', 'modem', 'swarm', 'glitch', 'nova',
+    'blade', 'crane', 'drift', 'ember', 'forge', 'glyph', 'hyper', 'inode', 'jolt', 'karma',
+    'laser', 'morph', 'nexus', 'orbit', 'prism', 'quake', 'radar', 'servo', 'turbo', 'ultra',
   ],
   6: [
     'buffer', 'packet', 'kernel', 'cipher', 'router', 'socket', 'access', 'payload',
     'script', 'module', 'mirror', 'shadow', 'vector', 'system', 'binary', 'daemon', 'breach',
+    'beacon', 'engine', 'filter', 'hammer', 'inject', 'ledger', 'nebula', 'oracle',
+    'quartz', 'ripple', 'signal', 'tunnel', 'uplink', 'vortex', 'weapon', 'zenith', 'crypto',
   ],
   7: [
     'netrunr', 'backdor', 'exploit', 'sandbox', 'runtime', 'compile',
-    'synapse', 'overlay', 'segment', 'handler', 'gateway', 'payload',
+    'synapse', 'overlay', 'segment', 'handler', 'gateway', 'phantom',
+    'breaker', 'conduit', 'decrypt', 'glitchr', 'hotswap',
+    'icewall', 'jackpot', 'keyhole', 'latency', 'malware', 'netmask',
   ],
 };
 
@@ -278,7 +286,8 @@ export function generateLikenessVault(
   if (words.length === 0) {
     return { secret: 'ice', words: ['ice', 'net', 'run', 'cpu'] };
   }
-  const secret = words[seed % words.length]!;
+  // Секрет — отдельный shuffle, чтобы не совпадал с «первым словом списка» каждый раз.
+  const secret = seededShuffle(words, seed + 91)[0]!;
   return { secret, words: seededShuffle(words, seed + 17) };
 }
 

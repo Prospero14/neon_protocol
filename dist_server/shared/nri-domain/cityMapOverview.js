@@ -1,10 +1,23 @@
 /** Силуэт района на обзорной карте — несколько «пиков», без мелкой сетки. */
+import { corpTileTheme } from './corpTileThemes.js';
+/**
+ * Оценка fontSize для SVG-подписи тайла (viewBox units).
+ * Для corp — жёстче вписываем в ширину по длине самой длинной строки.
+ */
+export function overviewLabelFontSize(w, h, lines, zoneType) {
+    const base = Math.max(1.8, Math.min(3.1, w * 0.22, h * 0.2));
+    if (zoneType !== 'corp' && w > 17)
+        return base;
+    const longest = Math.max(1, ...lines.map((l) => l.length));
+    const fit = (w * 0.88) / (longest * 0.62);
+    return Math.max(1.35, Math.min(base, fit));
+}
 /** Подписи на обзорной карте — по словам, без рваного split по символам. */
 export function overviewLabelLines(name, zoneType, corpName) {
     if (zoneType === 'corp') {
-        const label = corpName || name;
-        const parts = label.split(/\s+/).filter(Boolean);
-        return parts.length > 1 ? [parts[0], parts.slice(1).join(' ')] : [label];
+        const theme = corpTileTheme(corpName || name);
+        // Узкие HQ-тайлы: abbrev, чтобы не склеивались с соседями.
+        return [theme.abbrev || theme.label];
     }
     if (['park', 'mid', 'slum', 'industrial'].includes(zoneType)) {
         const words = name.split(/\s+/).filter(Boolean);
@@ -56,37 +69,41 @@ export function computeDistrictPeaks(zoneKey, zoneType, zx, zy, zw, zh) {
 export function districtNeonStroke(zoneType) {
     switch (zoneType) {
         case 'corp':
-            return 'rgba(210, 120, 255, 0.75)';
+            return 'rgba(220, 140, 255, 0.95)';
         case 'slum':
-            return 'rgba(255, 90, 120, 0.65)';
+            return 'rgba(255, 110, 140, 0.9)';
         case 'industrial':
-            return 'rgba(255, 180, 70, 0.6)';
+            return 'rgba(255, 190, 90, 0.88)';
         case 'park':
-            return 'rgba(90, 230, 140, 0.55)';
+            return 'rgba(100, 240, 150, 0.85)';
         case 'highway':
-            return 'rgba(255, 210, 90, 0.7)';
+            return 'rgba(255, 220, 110, 0.9)';
         case 'overpass':
-            return 'rgba(180, 190, 220, 0.55)';
+            return 'rgba(190, 200, 230, 0.75)';
+        case 'tunnel':
+            return 'rgba(140, 160, 200, 0.7)';
         default:
-            return 'rgba(110, 180, 255, 0.6)';
+            return 'rgba(120, 200, 255, 0.88)';
     }
 }
 export function districtPlateFill(zoneType) {
     switch (zoneType) {
         case 'highway':
-            return 'rgba(16, 14, 12, 0.92)';
+            return 'rgba(28, 24, 18, 0.82)';
         case 'overpass':
-            return 'rgba(14, 14, 20, 0.9)';
+            return 'rgba(22, 22, 32, 0.8)';
+        case 'tunnel':
+            return 'rgba(16, 18, 28, 0.82)';
         case 'corp':
-            return 'rgba(10, 6, 18, 0.88)';
+            return 'rgba(28, 12, 48, 0.78)';
         case 'slum':
-            return 'rgba(16, 6, 10, 0.86)';
+            return 'rgba(42, 12, 22, 0.78)';
         case 'industrial':
-            return 'rgba(14, 10, 6, 0.86)';
+            return 'rgba(36, 28, 12, 0.78)';
         case 'park':
-            return 'rgba(6, 16, 10, 0.82)';
+            return 'rgba(10, 36, 22, 0.76)';
         default:
-            return 'rgba(8, 12, 22, 0.86)';
+            return 'rgba(14, 28, 48, 0.78)';
     }
 }
 //# sourceMappingURL=cityMapOverview.js.map

@@ -7,6 +7,7 @@ import {
   ITEM_CATEGORY_ORDER,
   ITEM_CATEGORY_LABELS,
   NRI_ITEM_CATALOG,
+  canTransferInventoryItem,
   searchCatalog,
   type ItemCategory,
 } from '../logic/nriItemCatalog';
@@ -127,7 +128,7 @@ export const NriDmItemTransfer: React.FC<Props> = ({
               <span>Ваш предмет</span>
               <select value={itemId} onChange={(e) => setItemId(e.target.value)}>
                 <option value="">— выберите —</option>
-                {myItems.filter((i) => !i.equipped).map((i) => (
+                {myItems.filter((i) => !i.equipped && canTransferInventoryItem(i)).map((i) => (
                   <option key={i.id} value={i.id}>
                     {i.name}
                   </option>
@@ -206,6 +207,7 @@ export const NriDmItemTransfer: React.FC<Props> = ({
           {previewItem && (
             <p className="mono-text nri-dm-transfer__preview">
               <strong>{previewItem.name}</strong> · {nriItemStatsLine(previewItem)}
+              {'transferLocked' in previewItem && !canTransferInventoryItem(previewItem) ? ' · персональный, не передаётся' : ''}
             </p>
           )}
           <button

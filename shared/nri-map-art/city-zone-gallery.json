@@ -1,0 +1,11 @@
+[
+  { "id": "city_mid", "label": "Жилой / mid", "kind": "district", "href": "", "defaultZoneType": "mid", "fill": "#2a4060" },
+  { "id": "city_corp", "label": "Корп", "kind": "district", "href": "", "defaultZoneType": "corp", "fill": "#4a2060" },
+  { "id": "city_slum", "label": "Трущобы", "kind": "district", "href": "", "defaultZoneType": "slum", "fill": "#502030" },
+  { "id": "city_industrial", "label": "Промзона", "kind": "district", "href": "", "defaultZoneType": "industrial", "fill": "#405020" },
+  { "id": "city_park", "label": "Парк", "kind": "district", "href": "", "defaultZoneType": "park", "fill": "#204828" },
+  { "id": "city_tunnel_ns", "label": "Тоннель С–Ю", "kind": "tunnel", "href": "", "defaultZoneType": "tunnel", "fill": "#1a1a28" },
+  { "id": "city_tunnel_ew", "label": "Тоннель З–В", "kind": "tunnel", "href": "", "defaultZoneType": "tunnel", "fill": "#1a1a28" },
+  { "id": "city_tunnel_short", "label": "Короткий тоннель", "kind": "tunnel", "href": "", "defaultZoneType": "tunnel", "fill": "#222230" },
+  { "id": "city_highway", "label": "Трасса", "kind": "highway", "href": "", "defaultZoneType": "highway", "fill": "#3a3820" }
+]

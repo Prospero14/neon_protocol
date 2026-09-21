@@ -1,11 +1,11 @@
 import { defaultZoneIconId, normalizeZoneIconId } from '../../shared/nri-domain/zoneIcons.js';
 import { isSubMapZoneKey, rootMapZoneKey, subMapZoneKey, } from '../../shared/nri-domain/mapZones.js';
-import { normalizeDistrictStyle, normalizePlaceType, parseSubTileGrid, } from '../../shared/nri-domain/districtGrid.js';
+import { defaultDistrictStyle, normalizeDistrictStyle, normalizePlaceType, parseSubTileGrid, } from '../../shared/nri-domain/districtGrid.js';
 import { resolveCityScale, isPopulationBand } from '../../shared/nri-domain/cityScale.js';
 import { computeExitLink, parseStoredLinksTo, } from '../../shared/nri-domain/exitLinks.js';
 import { computeDistrictGridLayout, generateDistrictGrid, } from '../../shared/nri-domain/districtLayout.js';
 import { ensureNriMapSchema, loadTopLevelZoneSeeds } from './nriSchemaBootstrap.js';
-export const MAP_LAYOUT_VERSION = 'v8-lazy-district-tiles';
+export const MAP_LAYOUT_VERSION = 'v27-corp-campus-underhive';
 let mapZonesSeedCacheVersion = null;
 let subTileCountCache = null;
 const SUB_COUNT_CACHE_MS = 45_000;
@@ -95,11 +95,13 @@ export function serializeMapZone(z) {
         megaDistrict: megaDistrictFor(z.zoneKey, z.megaDistrict),
         color: z.color ?? null,
         iconId: z.iconId ?? defaultZoneIconId(z.zoneType, z.zoneKey),
+        artId: z.artId ?? null,
         parentZoneKey: z.parentZoneKey ?? null,
         placeType: z.placeType ?? null,
         districtStyle: z.districtStyle ?? null,
         gridRow: z.gridRow ?? null,
         gridCol: z.gridCol ?? null,
+        rotation: typeof z.rotation === 'number' ? ((Math.round(z.rotation / 90) * 90) % 360 + 360) % 360 : 0,
         ...cityScale,
         linksTo: z.linksToResolved ?? storedLinks ?? [],
         ...(z.subTileCount !== undefined ? { subTileCount: z.subTileCount } : {}),
@@ -197,9 +199,13 @@ export async function ensureMapZonesSeeded(prisma) {
     if (!layoutRow || layoutRow.name !== MAP_LAYOUT_VERSION) {
         await syncTopLevelGeometryFromSeeds(prisma, topSeeds);
         // Сбрасываем старые клетки — пересоберём по запросу drill, без bulk 5k+ insert.
-        await prisma.nriMapZone.deleteMany({
-            where: { parentZoneKey: { not: null }, NOT: { zoneKey: { startsWith: '__' } } },
-        });
+        // Важно: НЕ использовать LIKE/startsWith с «__» — в SQLite «_» = wildcard,
+        // и zoneKey вида watson_kabuki__3_4 ложно матчится → deleteMany удаляет 0 строк.
+        await prisma.$executeRaw `
+      DELETE FROM NriMapZone
+      WHERE parentZoneKey IS NOT NULL
+        AND zoneKey NOT GLOB '__*'
+    `;
         subTileCountCache = null;
         await upsertLayoutVersion(prisma);
     }
@@ -223,11 +229,44 @@ export async function ensureDistrictTilesForParent(prisma, parentZoneKey) {
         const layout = computeDistrictGridLayout();
         const expected = layout.rows * layout.cols;
         const existing = await prisma.nriMapZone.count({ where: { parentZoneKey } });
-        if (existing > 0 && existing < expected) {
-            await prisma.nriMapZone.deleteMany({ where: { parentZoneKey } });
-        }
-        else if (existing >= expected) {
-            return;
+        if (existing > 0) {
+            const style = normalizeDistrictStyle(parent.districtStyle ?? '') ?? defaultDistrictStyle(parent.zoneType);
+            const [composed, staleAlleys, landmarks, dumps, corpHq] = await Promise.all([
+                prisma.nriMapZone.count({
+                    where: { parentZoneKey, placeType: { notIn: ['generic', 'exit'] } },
+                }),
+                prisma.nriMapZone.count({
+                    where: {
+                        parentZoneKey,
+                        OR: [{ placeType: 'alley' }, { name: { startsWith: 'Переулок' } }],
+                    },
+                }),
+                prisma.nriMapZone.count({
+                    where: {
+                        parentZoneKey,
+                        placeType: { in: ['nightclub', 'hospital', 'police', 'electronics', 'pond'] },
+                    },
+                }),
+                prisma.nriMapZone.count({
+                    where: { parentZoneKey, placeType: 'dump' },
+                }),
+                prisma.nriMapZone.count({
+                    where: { parentZoneKey, placeType: 'corp_hq' },
+                }),
+            ]);
+            const missingCorpCampus = (style === 'corp_clean' || parent.zoneType === 'corp') && corpHq === 0;
+            // Старые сетки (переулки / без landmark'ов / без корп-кампуса / слишком много свалок) — пересобрать.
+            if (existing < expected ||
+                composed === 0 ||
+                staleAlleys > 0 ||
+                landmarks === 0 ||
+                dumps > 3 ||
+                missingCorpCampus) {
+                await prisma.nriMapZone.deleteMany({ where: { parentZoneKey } });
+            }
+            else {
+                return;
+            }
         }
         const tiles = generateDistrictGrid({
             zoneKey: parent.zoneKey,
@@ -241,6 +280,7 @@ export async function ensureDistrictTilesForParent(prisma, parentZoneKey) {
             parentZoneKey: parent.parentZoneKey,
             megaDistrict: parent.megaDistrict,
             corpName: parent.corpName,
+            districtStyle: parent.districtStyle,
         });
         if (tiles.length === 0)
             return;
@@ -269,7 +309,6 @@ export async function ensureDistrictTilesForParent(prisma, parentZoneKey) {
                     locked: false,
                     pois: t.pois,
                 })),
-                skipDuplicates: true,
             });
         }
         subTileCountCache = null;
@@ -278,6 +317,32 @@ export async function ensureDistrictTilesForParent(prisma, parentZoneKey) {
     });
     districtSeedLocks.set(parentZoneKey, run);
     await run;
+}
+/**
+ * Хост: сбросить клетки квартала и сгенерировать заново (игроков с клеток — на родителя).
+ * Кастомные имена клеток не сохраняются — это явный regen.
+ */
+export async function regenerateDistrictTilesForParent(prisma, parentZoneKey) {
+    await ensureNriMapSchema(prisma);
+    const parent = await prisma.nriMapZone.findUnique({ where: { zoneKey: parentZoneKey } });
+    if (!parent || parent.parentZoneKey) {
+        return { ok: false, reason: 'Нужен топ-район (не клетка).' };
+    }
+    if (['highway', 'overpass', 'tunnel', 'meta'].includes(parent.zoneType)) {
+        return { ok: false, reason: 'В этот тип зоны нельзя провалиться / перегенерировать.' };
+    }
+    const prefix = `${parentZoneKey}__`;
+    await prisma.nriPlayerPosition.updateMany({
+        where: { zoneKey: { startsWith: prefix } },
+        data: { zoneKey: parentZoneKey },
+    });
+    await prisma.nriMapZone.deleteMany({ where: { parentZoneKey } });
+    subTileCountCache = null;
+    // Снимаем lock-кэш, чтобы ensure точно пересоздал
+    districtSeedLocks.delete(parentZoneKey);
+    await ensureDistrictTilesForParent(prisma, parentZoneKey);
+    const count = await prisma.nriMapZone.count({ where: { parentZoneKey } });
+    return { ok: true, count };
 }
 export async function listMapZones(prisma, opts) {
     await ensureNriMapSchema(prisma);
@@ -324,7 +389,8 @@ export async function listMapZones(prisma, opts) {
                 if (computed)
                     linksToResolved = [computed];
             }
-            return serializeMapZone({ ...row, linksToResolved });
+            const placeType = normalizePlaceType(row.placeType);
+            return serializeMapZone({ ...row, placeType, linksToResolved });
         });
     }
     const [rows, subCounts] = await Promise.all([
@@ -361,6 +427,55 @@ export async function patchMapZone(prisma, zoneKey, payload) {
     const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
     if (!existing)
         return null;
+    if (typeof payload.swapWithZoneKey === 'string' && payload.swapWithZoneKey.trim()) {
+        const otherKey = payload.swapWithZoneKey.trim();
+        const other = await prisma.nriMapZone.findUnique({ where: { zoneKey: otherKey } });
+        if (!other)
+            return { error: 'SWAP_INVALID' };
+        // Sibling district tiles: swap content
+        if (existing.parentZoneKey && other.parentZoneKey === existing.parentZoneKey) {
+            await prisma.$transaction([
+                prisma.nriMapZone.update({
+                    where: { zoneKey },
+                    data: {
+                        placeType: other.placeType,
+                        name: other.name,
+                        rotation: other.rotation ?? 0,
+                        artId: other.artId ?? null,
+                        pois: other.pois,
+                    },
+                }),
+                prisma.nriMapZone.update({
+                    where: { zoneKey: otherKey },
+                    data: {
+                        placeType: existing.placeType,
+                        name: existing.name,
+                        rotation: existing.rotation ?? 0,
+                        artId: existing.artId ?? null,
+                        pois: existing.pois,
+                    },
+                }),
+            ]);
+            const zone = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
+            return zone ? serializeMapZone(zone) : null;
+        }
+        // Top-level zones: swap AABB geometry
+        if (!existing.parentZoneKey && !other.parentZoneKey) {
+            await prisma.$transaction([
+                prisma.nriMapZone.update({
+                    where: { zoneKey },
+                    data: { x: other.x, y: other.y, w: other.w, h: other.h },
+                }),
+                prisma.nriMapZone.update({
+                    where: { zoneKey: otherKey },
+                    data: { x: existing.x, y: existing.y, w: existing.w, h: existing.h },
+                }),
+            ]);
+            const zone = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
+            return zone ? serializeMapZone(zone) : null;
+        }
+        return { error: 'SWAP_INVALID' };
+    }
     const color = normalizeZoneColor(payload.color);
     const iconId = payload.iconId !== undefined
         ? normalizeZoneIconId(payload.iconId, existing.zoneType, zoneKey)
@@ -401,6 +516,24 @@ export async function patchMapZone(prisma, zoneKey, payload) {
                 : {}),
             ...(color !== undefined ? { color } : {}),
             ...(iconId !== undefined ? { iconId } : {}),
+            ...(payload.artId !== undefined
+                ? {
+                    artId: typeof payload.artId === 'string' && payload.artId.trim()
+                        ? payload.artId.trim().slice(0, 80)
+                        : null,
+                }
+                : {}),
+            ...(payload.zoneType !== undefined && typeof payload.zoneType === 'string' && payload.zoneType.trim()
+                ? { zoneType: payload.zoneType.trim().slice(0, 40) }
+                : {}),
+            ...(typeof payload.x === 'number' && Number.isFinite(payload.x) ? { x: payload.x } : {}),
+            ...(typeof payload.y === 'number' && Number.isFinite(payload.y) ? { y: payload.y } : {}),
+            ...(typeof payload.w === 'number' && Number.isFinite(payload.w) && payload.w > 0
+                ? { w: Math.min(240, payload.w) }
+                : {}),
+            ...(typeof payload.h === 'number' && Number.isFinite(payload.h) && payload.h > 0
+                ? { h: Math.min(165, payload.h) }
+                : {}),
             ...(payload.placeType !== undefined ? { placeType: normalizePlaceType(payload.placeType) } : {}),
             ...(payload.districtStyle !== undefined
                 ? {
@@ -441,6 +574,11 @@ export async function patchMapZone(prisma, zoneKey, payload) {
                         payload.nightlifeLevel <= 3
                         ? Math.round(payload.nightlifeLevel)
                         : null,
+                }
+                : {}),
+            ...(payload.rotation !== undefined
+                ? {
+                    rotation: ((Math.round(Number(payload.rotation) / 90) * 90) % 360 + 360) % 360,
                 }
                 : {}),
         },
@@ -506,6 +644,102 @@ export async function createMapSubZone(prisma, payload) {
     });
     return { zone: serializeMapZone(row) };
 }
+function slugifyZoneKey(raw) {
+    const s = raw
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9а-яё_+-]+/gi, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 48);
+    return s || `zone_${Date.now().toString(36)}`;
+}
+/** Создать топ-район / тоннель (parentZoneKey = null). Имя обязательно. */
+export async function createMapTopZone(prisma, payload) {
+    const name = payload.name.trim().slice(0, 120);
+    if (!name)
+        return { error: 'NAME_REQUIRED' };
+    const zoneType = (payload.zoneType?.trim() || 'mid').slice(0, 40);
+    let zoneKey = slugifyZoneKey(payload.slug?.trim() || name);
+    if (zoneKey.startsWith('__'))
+        zoneKey = `z_${zoneKey}`;
+    const exists = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
+    if (exists) {
+        zoneKey = `${zoneKey}_${Date.now().toString(36).slice(-4)}`;
+    }
+    const w = typeof payload.w === 'number' && payload.w > 0 ? Math.min(80, payload.w) : 22;
+    const h = typeof payload.h === 'number' && payload.h > 0 ? Math.min(80, payload.h) : 22;
+    const x = typeof payload.x === 'number' && Number.isFinite(payload.x)
+        ? Math.max(0, Math.min(240 - w, payload.x))
+        : 100;
+    const y = typeof payload.y === 'number' && Number.isFinite(payload.y)
+        ? Math.max(0, Math.min(165 - h, payload.y))
+        : 60;
+    const color = normalizeZoneColor(payload.color);
+    const maxSort = await prisma.nriMapZone.aggregate({
+        where: { parentZoneKey: null, NOT: { zoneKey: '__layout__' } },
+        _max: { sortOrder: true },
+    });
+    const row = await prisma.nriMapZone.create({
+        data: {
+            zoneKey,
+            sortOrder: (maxSort._max.sortOrder ?? 0) + 10,
+            name,
+            zoneType,
+            x,
+            y,
+            w,
+            h,
+            corpName: null,
+            megaDistrict: typeof payload.megaDistrict === 'string' && payload.megaDistrict.trim()
+                ? payload.megaDistrict.trim().slice(0, 80)
+                : defaultMegaLabel(zoneKey),
+            color: color === undefined ? null : color,
+            iconId: defaultZoneIconId(zoneType, zoneKey),
+            artId: typeof payload.artId === 'string' && payload.artId.trim()
+                ? payload.artId.trim().slice(0, 80)
+                : null,
+            parentZoneKey: null,
+            locked: false,
+            pois: [],
+        },
+    });
+    return { zone: serializeMapZone(row) };
+}
+/** Удалить зону. Топ — только с confirmName === name; сабзоны — как раньше. */
+export async function deleteMapZone(prisma, zoneKey, opts) {
+    const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
+    if (!existing)
+        return { error: 'NOT_FOUND' };
+    if (existing.zoneKey === '__layout__')
+        return { error: 'FORBIDDEN' };
+    if (!existing.parentZoneKey) {
+        const confirm = (opts?.confirmName ?? '').trim();
+        if (!confirm || confirm !== existing.name) {
+            return { error: 'CONFIRM_NAME' };
+        }
+        await prisma.nriMapZone.deleteMany({ where: { parentZoneKey: zoneKey } });
+        const positions = await prisma.nriPlayerPosition.count({ where: { zoneKey } });
+        if (positions > 0) {
+            const fallback = await prisma.nriMapZone.findFirst({
+                where: { parentZoneKey: null, NOT: { zoneKey: { in: [zoneKey, '__layout__'] } } },
+                orderBy: { sortOrder: 'asc' },
+            });
+            if (fallback) {
+                await prisma.nriPlayerPosition.updateMany({
+                    where: { zoneKey },
+                    data: { zoneKey: fallback.zoneKey },
+                });
+            }
+            else {
+                await prisma.nriPlayerPosition.deleteMany({ where: { zoneKey } });
+            }
+        }
+        await prisma.nriMapZone.delete({ where: { zoneKey } });
+        return { ok: true, reset: false };
+    }
+    return deleteMapSubZone(prisma, zoneKey);
+}
 export async function deleteMapSubZone(prisma, zoneKey) {
     const existing = await prisma.nriMapZone.findUnique({ where: { zoneKey } });
     if (!existing?.parentZoneKey)
@@ -532,6 +766,33 @@ export async function deleteMapSubZone(prisma, zoneKey) {
     }
     await prisma.nriMapZone.delete({ where: { zoneKey } });
     return { ok: true, reset: false };
+}
+/** Очистить клетки квартала до generic (дороги/exit не трогаем). */
+export async function clearDistrictTiles(prisma, parentZoneKey) {
+    const parent = await prisma.nriMapZone.findUnique({ where: { zoneKey: parentZoneKey } });
+    if (!parent || parent.parentZoneKey)
+        return { error: 'NOT_PARENT' };
+    const keep = new Set(['road', 'crossing', 'bridge', 'exit', 'metro']);
+    const children = await prisma.nriMapZone.findMany({ where: { parentZoneKey } });
+    let n = 0;
+    for (const c of children) {
+        const pt = normalizePlaceType(c.placeType);
+        if (keep.has(pt))
+            continue;
+        await prisma.nriMapZone.update({
+            where: { zoneKey: c.zoneKey },
+            data: {
+                placeType: 'generic',
+                name: c.gridRow != null && c.gridCol != null
+                    ? `Клетка ${c.gridRow + 1}.${c.gridCol + 1}`
+                    : c.name,
+                rotation: 0,
+                pois: [],
+            },
+        });
+        n++;
+    }
+    return { ok: true, count: n };
 }
 export { megaKeyFromZoneKey, rootMapZoneKey };
 //# sourceMappingURL=nriMapZones.js.map

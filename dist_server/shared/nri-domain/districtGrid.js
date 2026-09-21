@@ -5,15 +5,29 @@ export const PLACE_TYPES = [
     'bridge',
     'crossing',
     'house',
+    'shack',
     'restaurant',
     'shop',
     'secondhand',
-    'alley',
+    'nightclub',
+    'hospital',
+    'police',
+    'electronics',
     'park',
+    'pond',
     'plaza',
     'parking',
+    'dump',
     'metro',
     'exit',
+    'corp_hq',
+    'corp_office',
+    'corp_annex',
+    'hotel',
+    'service',
+    'shop_asian',
+    'market',
+    'gunshop',
 ];
 export const DISTRICT_STYLES = [
     'residential',
@@ -31,10 +45,16 @@ export function isPlaceType(v) {
 export function isDistrictStyle(v) {
     return STYLE_SET.has(v);
 }
+/** Старые сейвы/БД могли хранить `alley` — маппим в дом. */
+const LEGACY_PLACE_TYPE = {
+    alley: 'house',
+};
 export function normalizePlaceType(raw) {
-    if (typeof raw === 'string' && isPlaceType(raw))
+    if (typeof raw !== 'string')
+        return 'generic';
+    if (isPlaceType(raw))
         return raw;
-    return 'generic';
+    return LEGACY_PLACE_TYPE[raw] ?? 'generic';
 }
 export function normalizeDistrictStyle(raw) {
     if (typeof raw === 'string' && isDistrictStyle(raw))
@@ -68,8 +88,12 @@ export function tileCenterDecay(row, col, rows, cols) {
 }
 /** Уровень «грязи» / декора для пропсов и бомжей. */
 export function tileDecayAmount(decay, style, placeType) {
-    if (placeType === 'park' || placeType === 'plaza' || placeType === 'exit')
+    if (placeType === 'park' || placeType === 'plaza' || placeType === 'pond' || placeType === 'exit')
         return decay * 0.35;
+    if (placeType === 'dump')
+        return 0.55 + decay * 0.45;
+    if (placeType === 'shack')
+        return 0.4 + decay * 0.55;
     if (style === 'corp_clean')
         return decay * 0.15;
     if (style === 'slum')
@@ -106,15 +130,29 @@ export const PLACE_TYPE_LABELS = {
     bridge: 'Мост',
     crossing: 'Перекрёсток',
     house: 'Жилой дом',
+    shack: 'Трущобы',
     restaurant: 'Ресторан',
     shop: 'Магазин',
     secondhand: 'Секонд-хенд',
-    alley: 'Переулок',
+    nightclub: 'Ночной клуб',
+    hospital: 'Больница',
+    police: 'Полиция',
+    electronics: 'Рынок электроники',
     park: 'Парк',
+    pond: 'Водоём',
     plaza: 'Площадь',
     parking: 'Парковка',
+    dump: 'Свалка',
     metro: 'Подземка',
     exit: 'Выход в район',
+    corp_hq: 'Штаб корпорации',
+    corp_office: 'Корпус',
+    corp_annex: 'Корп. блок',
+    hotel: 'Гостиница',
+    service: 'Служебный дом',
+    shop_asian: 'Азиатская лавка',
+    market: 'Рынок',
+    gunshop: 'Оружейный',
 };
 export const DISTRICT_STYLE_LABELS = {
     residential: 'Спальный',

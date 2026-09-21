@@ -10,9 +10,11 @@ export const NRI_ICE_GAME_IDS = [
     'auth_bypass',
     'log_wipe',
     'mesh_jack',
-    'dead_drop',
     'proxy_dodge',
     'signal_lock',
+    'circuit_splice',
+    'likeness_vault',
+    'node_capture',
 ];
 export const DEFAULT_ICE_GAME_ID = 'gibson_ice';
 export function isNriIceGameId(id) {

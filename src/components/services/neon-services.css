@@ -686,6 +686,7 @@
 
 /* —— NRI lobby —— */
 .nri-lobby {
+  position: relative;
   max-width: 960px;
   margin: 0 auto;
   padding: 12px 14px 24px;
@@ -702,6 +703,35 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* Бывшая invite-полоса: та же фиолетовая рамка + заливка, без кнопок */
+.nri-lobby__stripe {
+  flex-shrink: 0;
+  display: block;
+  height: 3px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nri-lobby__stripe::after {
+  content: '';
+  display: block;
+  height: 3px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(120, 40, 180, 0.2) 0%,
+    rgba(200, 140, 255, 0.95) 20%,
+    #bc13fe 50%,
+    rgba(200, 140, 255, 0.95) 80%,
+    rgba(120, 40, 180, 0.2) 100%
+  );
+  box-shadow:
+    0 0 10px rgba(188, 19, 254, 0.85),
+    0 0 22px rgba(153, 102, 204, 0.5);
 }
 
 .nri-lobby__kicker {
@@ -5068,19 +5098,8 @@
 }
 
 .nri-city-map__chassis::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent 0,
-    transparent 2px,
-    rgba(0, 255, 255, 0.025) 2px,
-    rgba(0, 255, 255, 0.025) 3px
-  );
-  opacity: 0.65;
+  content: none;
+  display: none;
 }
 
 .nri-city-map__corner {
@@ -5309,6 +5328,7 @@
 }
 
 .nri-city-map__wrap {
+  position: relative;
   overflow: hidden;
   border: 1px solid rgba(0, 255, 255, 0.2);
   background: #06040c;
@@ -5345,6 +5365,20 @@
   background: rgba(0, 255, 255, 0.06);
   border: 1px solid rgba(0, 255, 255, 0.2);
   font-size: 0.75rem;
+}
+
+.nri-city-map__tile-readout {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(100, 210, 255, 0.4);
+  background: rgba(10, 24, 40, 0.8);
+  font-size: 0.8rem;
+  color: #e8f6ff;
+}
+
+.nri-city-map__tile-readout strong {
+  color: #fff;
+  font-weight: 700;
 }
 
 .nri-city-map__hover-slot {
@@ -5547,11 +5581,11 @@
 }
 
 .nri-city-overview-zone--active .nri-city-overview-zone__plate {
-  stroke-width: 0.28;
+  stroke-width: 0.45;
 }
 
 .nri-city-overview-zone--focused .nri-city-overview-zone__plate {
-  stroke-width: 0.32;
+  stroke-width: 0.58;
 }
 
 .nri-city-overview-zone__peak {
@@ -5559,38 +5593,39 @@
 }
 
 .nri-city-overview-zone__peak--mid {
-  fill: rgba(70, 110, 160, 0.55);
+  fill: rgba(90, 140, 200, 0.72);
 }
 
 .nri-city-overview-zone__peak--corp {
-  fill: rgba(140, 70, 200, 0.6);
+  fill: rgba(170, 90, 230, 0.75);
 }
 
 .nri-city-overview-zone__peak--slum {
-  fill: rgba(140, 50, 70, 0.55);
+  fill: rgba(180, 60, 90, 0.7);
 }
 
 .nri-city-overview-zone__peak--industrial {
-  fill: rgba(160, 110, 50, 0.55);
+  fill: rgba(200, 140, 60, 0.72);
 }
 
 .nri-city-overview-zone__peak--park {
-  fill: rgba(50, 140, 80, 0.45);
+  fill: rgba(60, 170, 100, 0.6);
 }
 
 .nri-city-overview-zone__label-text {
   font-family: var(--font-mono, 'Share Tech Mono', monospace);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  fill: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.02em;
+  fill: rgba(255, 255, 255, 0.96);
   paint-order: stroke fill;
-  stroke: rgba(0, 0, 0, 0.55);
-  stroke-width: 0.12;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 0.22;
 }
 
 .nri-city-overview-zone__label-text--corp {
   fill: rgba(235, 195, 255, 0.96);
+  letter-spacing: 0.01em;
 }
 
 .nri-city-overview-zone--tile .nri-city-overview-zone__plate {
@@ -5767,94 +5802,253 @@
 }
 
 .nri-district-tile {
-  fill: rgba(18, 24, 38, 0.92);
-  stroke: rgba(0, 220, 255, 0.18);
-  stroke-width: 0.12;
+  fill: rgba(4, 6, 12, 0.78);
+  stroke: rgba(100, 210, 255, 0.42);
+  stroke-width: 0.28;
   transition: fill 0.2s ease, stroke 0.2s ease;
 }
 
 .nri-district-tile--generic {
   fill: rgba(8, 10, 18, 0.92);
-  stroke: rgba(60, 80, 110, 0.16);
+  stroke: rgba(90, 110, 150, 0.32);
 }
 
 .nri-district-tile--house {
   fill: rgba(6, 10, 20, 0.94);
-  stroke: rgba(80, 120, 200, 0.2);
+  stroke: rgba(100, 150, 230, 0.42);
+}
+
+.nri-district-tile--shack {
+  fill: rgba(6, 10, 18, 0.96);
+  stroke: rgba(90, 120, 160, 0.35);
 }
 
 .nri-district-tile--restaurant {
   fill: rgba(10, 8, 16, 0.94);
-  stroke: rgba(255, 80, 140, 0.35);
+  stroke: rgba(255, 90, 150, 0.48);
 }
 
 .nri-district-tile--shop {
   fill: rgba(6, 12, 22, 0.94);
-  stroke: rgba(80, 200, 255, 0.3);
+  stroke: rgba(80, 210, 255, 0.45);
 }
 
 .nri-district-tile--secondhand {
   fill: rgba(8, 8, 18, 0.94);
-  stroke: rgba(200, 120, 255, 0.28);
+  stroke: rgba(210, 130, 255, 0.42);
 }
 
 .nri-district-tile--metro {
   fill: rgba(4, 10, 22, 0.95);
-  stroke: rgba(0, 255, 220, 0.35);
+  stroke: rgba(0, 255, 220, 0.5);
 }
 
 .nri-district-tile--exit {
   fill: rgba(8, 12, 22, 0.55);
   stroke-dasharray: 0.4 0.35;
-  stroke: rgba(0, 255, 200, 0.35);
+  stroke: rgba(0, 255, 200, 0.45);
 }
 
 .nri-district-tile--road {
+  fill: rgba(28, 32, 40, 0.98);
+  stroke: rgba(160, 170, 190, 0.45);
+}
+
+.nri-district-tile__asphalt {
   fill: rgba(14, 16, 22, 0.98);
-  stroke: rgba(100, 110, 130, 0.22);
+  stroke: none;
+  pointer-events: none;
 }
 
-.nri-district-tile--crossing {
-  fill: rgba(18, 20, 28, 0.98);
-  stroke: rgba(200, 200, 120, 0.28);
-}
-
-.nri-district-tile--bridge {
-  fill: rgba(16, 22, 36, 0.96);
-  stroke: rgba(100, 180, 255, 0.35);
-}
-
-.nri-district-tile--alley {
-  fill: rgba(6, 8, 14, 0.97);
-  stroke: rgba(50, 55, 70, 0.2);
-}
-
-.nri-district-tile--park {
-  fill: rgba(8, 42, 28, 0.9);
-  stroke: rgba(80, 220, 140, 0.35);
-}
-
-.nri-district-tile--plaza {
-  fill: rgba(28, 32, 48, 0.92);
-  stroke: rgba(180, 190, 220, 0.3);
-}
-
-.nri-district-tile--parking {
-  fill: rgba(12, 14, 20, 0.97);
-  stroke: rgba(140, 150, 170, 0.2);
-}
-
-.nri-district-tile__street-road {
-  fill: rgba(12, 14, 20, 0.95);
-  stroke: rgba(220, 190, 70, 0.2);
+.nri-district-tile__road-band {
+  fill: rgba(22, 24, 32, 0.98);
+  stroke: rgba(80, 90, 110, 0.2);
   stroke-width: 0.04;
   pointer-events: none;
 }
 
 .nri-district-tile__street-sidewalk {
-  fill: rgba(40, 44, 56, 0.55);
+  fill: rgba(36, 40, 52, 0.72);
+  stroke: none;
   pointer-events: none;
 }
+
+.nri-district-tile__street-road {
+  fill: rgba(18, 20, 28, 0.96);
+  stroke: none;
+  pointer-events: none;
+}
+
+.nri-district-tile__lane-yellow {
+  fill: none;
+  stroke: rgba(255, 220, 70, 0.9);
+  stroke-width: 0.14;
+  stroke-dasharray: 0.5 0.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.nri-district-tile__lane-white {
+  fill: none;
+  stroke: rgba(220, 230, 245, 0.55);
+  stroke-width: 0.06;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.nri-district-tile--crossing {
+  fill: rgba(14, 16, 22, 0.98);
+  stroke: rgba(220, 210, 110, 0.42);
+}
+
+.nri-district-tile--bridge {
+  fill: rgba(16, 22, 36, 0.96);
+  stroke: rgba(100, 180, 255, 0.45);
+}
+
+.nri-district-tile--park {
+  fill: rgba(8, 42, 28, 0.9);
+  stroke: rgba(80, 220, 140, 0.45);
+}
+
+.nri-district-tile--plaza {
+  fill: rgba(28, 32, 48, 0.92);
+  stroke: rgba(180, 190, 220, 0.4);
+}
+
+/* Клетки блока 2×2 — только hit-area; картинка рисуется слоем поверх. */
+.nri-district-tile--plaza-mega-cell {
+  fill: transparent;
+  stroke: none;
+}
+
+.nri-district-tile__plaza-mega-pad {
+  fill: rgba(22, 30, 42, 0.96);
+  stroke: rgba(120, 170, 210, 0.45);
+  stroke-width: 0.12;
+  pointer-events: none;
+}
+
+.nri-district-tile__sprite--plaza-mega {
+  opacity: 0.98;
+  pointer-events: none;
+}
+
+.nri-district-tile__plaza-mega-label {
+  font-size: 1.35px;
+  fill: rgba(200, 230, 255, 0.9);
+  pointer-events: none;
+}
+
+.nri-district-tile--parking {
+  fill: rgba(12, 14, 20, 0.97);
+  stroke: rgba(150, 160, 180, 0.35);
+}
+
+.nri-district-tile--dump {
+  fill: rgba(22, 18, 12, 0.95);
+  stroke: rgba(160, 130, 70, 0.42);
+}
+
+.nri-district-tile--pond {
+  fill: rgba(12, 36, 48, 0.92);
+  stroke: rgba(80, 180, 210, 0.45);
+}
+
+.nri-district-tile--nightclub {
+  fill: rgba(18, 6, 22, 0.96);
+  stroke: rgba(255, 70, 180, 0.5);
+}
+
+.nri-district-tile--hospital {
+  fill: rgba(220, 230, 240, 0.35);
+  stroke: rgba(200, 60, 80, 0.55);
+}
+
+.nri-district-tile--police {
+  fill: rgba(8, 14, 28, 0.96);
+  stroke: rgba(80, 140, 220, 0.5);
+}
+
+.nri-district-tile--electronics {
+  fill: rgba(8, 22, 20, 0.96);
+  stroke: rgba(60, 220, 200, 0.48);
+}
+
+.nri-district-tile__yard {
+  fill: rgba(16, 18, 26, 0.92);
+  pointer-events: none;
+}
+
+.nri-district-tile__street-fill {
+  fill: rgba(48, 52, 64, 0.95);
+  pointer-events: none;
+}
+
+.nri-district-tile__alley {
+  fill: rgba(14, 18, 26, 0.92);
+  pointer-events: none;
+}
+
+.nri-district-tile__stall {
+  fill: rgba(32, 40, 55, 0.95);
+  stroke: rgba(100, 130, 170, 0.35);
+  stroke-width: 0.06;
+  pointer-events: none;
+}
+
+.nri-district-tile__stall-neon {
+  pointer-events: none;
+  filter: drop-shadow(0 0 0.3px currentColor);
+}
+
+.nri-district-tile__stall-neon--cyan { fill: #4de8ff; }
+.nri-district-tile__stall-neon--magenta { fill: #ff5ec8; }
+.nri-district-tile__stall-neon--lime { fill: #b8ff4d; }
+.nri-district-tile__stall-neon--amber { fill: #ffc04d; }
+
+.nri-district-tile__building-pad {
+  fill: rgba(22, 28, 40, 0.55);
+  stroke: rgba(160, 180, 210, 0.35);
+  stroke-width: 0.08;
+  pointer-events: none;
+}
+
+.nri-district-tile__crosswalk {
+  fill: rgba(230, 240, 255, 0.82);
+  stroke: none;
+  pointer-events: none;
+}
+
+.nri-district-tile__crosswalk--yellow {
+  fill: rgba(255, 210, 50, 0.88);
+}
+
+.nri-district-tile__waffle-box {
+  fill: none;
+  stroke: rgba(255, 210, 40, 0.92);
+  stroke-width: 0.14;
+  pointer-events: none;
+}
+
+.nri-district-tile__waffle-line {
+  fill: none;
+  stroke: rgba(255, 210, 40, 0.78);
+  stroke-width: 0.09;
+  pointer-events: none;
+}
+
+.nri-district-tile__traffic-light rect {
+  fill: rgba(20, 24, 32, 0.92);
+  stroke: rgba(140, 160, 180, 0.45);
+  stroke-width: 0.04;
+  pointer-events: none;
+}
+
+.nri-district-tile__tl-red { fill: rgba(255, 70, 70, 0.85); pointer-events: none; }
+.nri-district-tile__tl-amber { fill: rgba(255, 200, 60, 0.55); pointer-events: none; }
+.nri-district-tile__tl-green { fill: rgba(60, 220, 120, 0.4); pointer-events: none; }
 
 .nri-district-tile__building {
   stroke: rgba(0, 255, 255, 0.12);
@@ -5869,9 +6063,14 @@
 }
 
 .nri-district-tile__facade--house { fill: rgba(100, 160, 255, 0.35); }
+.nri-district-tile__facade--shack { fill: rgba(120, 150, 190, 0.28); }
 .nri-district-tile__facade--restaurant { fill: rgba(255, 60, 120, 0.4); }
 .nri-district-tile__facade--shop { fill: rgba(60, 200, 255, 0.35); }
 .nri-district-tile__facade--secondhand { fill: rgba(180, 100, 255, 0.3); }
+.nri-district-tile__facade--nightclub { fill: rgba(255, 60, 180, 0.45); }
+.nri-district-tile__facade--hospital { fill: rgba(200, 60, 80, 0.35); }
+.nri-district-tile__facade--police { fill: rgba(80, 140, 255, 0.35); }
+.nri-district-tile__facade--electronics { fill: rgba(60, 230, 200, 0.35); }
 .nri-district-tile__facade--metro { fill: rgba(0, 255, 200, 0.28); }
 .nri-district-tile__facade--generic { fill: rgba(120, 140, 180, 0.28); }
 
@@ -5900,12 +6099,18 @@
 }
 
 .nri-city-map__zone-g--tile.focused .nri-district-tile {
-  stroke-width: 0.22;
+  stroke: rgba(120, 255, 255, 0.95);
+  stroke-width: 0.55;
   filter: url(#nc-glow);
 }
 
+.nri-city-map__zone-g--tile:hover .nri-district-tile {
+  stroke: rgba(180, 230, 255, 0.75);
+  stroke-width: 0.4;
+}
+
 .nri-city-map__zone-g--soft .nri-district-tile {
-  stroke-width: 0.08;
+  stroke-width: 0.22;
 }
 
 .nri-district-tile__tex {
@@ -5945,13 +6150,31 @@
 }
 
 .nri-district-tile__lane {
-  fill: rgba(220, 200, 80, 0.35);
+  fill: none;
+  stroke: rgba(255, 230, 80, 0.9);
+  stroke-width: 0.09;
+  stroke-dasharray: 0.35 0.28;
   pointer-events: none;
 }
 
 .nri-district-tile__bridge {
   stroke: rgba(160, 210, 255, 0.55);
   stroke-width: 0.2;
+  pointer-events: none;
+}
+
+.nri-district-tile__bridge-deck {
+  fill: rgba(40, 55, 80, 0.55);
+  stroke: rgba(140, 190, 255, 0.65);
+  stroke-width: 0.1;
+  pointer-events: none;
+}
+
+.nri-district-tile__bridge-rail {
+  fill: none;
+  stroke: rgba(180, 220, 255, 0.85);
+  stroke-width: 0.1;
+  filter: drop-shadow(0 0 0.12px rgba(140, 200, 255, 0.8));
   pointer-events: none;
 }
 
@@ -5999,29 +6222,43 @@
 }
 
 .nri-district-tile__neon {
-  fill: rgba(255, 40, 120, 0.85);
   pointer-events: none;
+  filter: drop-shadow(0 0 0.35px currentColor);
 }
 
-.nri-district-tile__neon--chinatown {
-  fill: rgba(255, 70, 30, 0.9);
+.nri-district-tile__neon--cyan {
+  fill: #4de8ff;
+}
+
+.nri-district-tile__neon--magenta {
+  fill: #ff5ec8;
+}
+
+.nri-district-tile__neon--lime {
+  fill: #b8ff4d;
+}
+
+.nri-district-tile__neon--amber {
+  fill: #ffc04d;
 }
 
 .nri-district-tile__neon--anim {
   animation: nri-tile-neon 1.8s steps(2, end) infinite;
 }
 
-.nri-district-tile__neon--chinatown.nri-district-tile__neon--chinatown--anim {
-  animation: nri-tile-neon-chinatown 1.6s steps(2, end) infinite;
+.nri-district-tile__neon--chinatown {
+  fill: #ff8a3a;
 }
 
 .nri-district-tile__window {
-  fill: rgba(255, 220, 120, 0.55);
+  fill: rgba(120, 220, 255, 0.75);
   pointer-events: none;
+  filter: drop-shadow(0 0 0.4px #7ad8ff);
 }
 
 .nri-district-tile__window--violet {
-  fill: rgba(180, 120, 255, 0.5);
+  fill: rgba(255, 120, 220, 0.7);
+  filter: drop-shadow(0 0 0.4px #ff7ad8);
 }
 
 .nri-district-tile__window--anim {
@@ -6029,7 +6266,8 @@
 }
 
 .nri-district-tile__window--violet.nri-district-tile__window--anim {
-  animation-delay: 1.1s;
+  /* delay задаётся инлайном per-tile; fallback для старых путей */
+  animation-delay: var(--nri-blink-delay, 1.1s);
 }
 
 .nri-district-tile__tree {
@@ -6052,14 +6290,165 @@
 }
 
 .nri-district-tile__sprite {
-  opacity: 0.96;
+  opacity: 1;
   pointer-events: none;
+  filter:
+    brightness(1.05)
+    contrast(1.08)
+    saturate(1.12)
+    drop-shadow(0 0.12px 0.1px rgba(0, 0, 0, 0.45));
+}
+
+.nri-district-tile__sprite--open {
+  opacity: 1;
+  filter: brightness(1.02) contrast(1.1) saturate(1.15);
 }
 
 .nri-district-tile__label {
-  font-size: 1.1px;
-  fill: rgba(200, 230, 255, 0.85);
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  fill: rgba(220, 240, 255, 0.95);
   pointer-events: none;
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.85);
+  stroke-width: 0.28px;
+  letter-spacing: 0.02em;
+}
+
+.nri-district-tile__label--hot {
+  fill: #fff;
+  stroke: rgba(0, 40, 60, 0.9);
+}
+
+/* Ночной слой: дождь / туман / точки света */
+.nri-district-night__veil {
+  fill: rgba(1, 2, 8, 0.64);
+  pointer-events: none;
+}
+
+.nri-district-night__fog {
+  fill: rgba(70, 95, 130, 0.1);
+  pointer-events: none;
+}
+
+.nri-district-night__smoke {
+  fill: rgba(110, 120, 140, 0.07);
+  pointer-events: none;
+}
+
+.nri-district-night__rain {
+  stroke: rgba(160, 195, 240, 0.2);
+  stroke-width: 0.045;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.nri-district-night__lamp,
+.nri-district-night__neon {
+  pointer-events: none;
+}
+
+.nri-district-night__neon {
+  animation: none;
+}
+
+.nri-district-night__lamp {
+  animation: none;
+}
+
+.nri-district-night__hotspot {
+  animation: none;
+}
+
+/* Погода поверх тайлов (мастерский рубильник) */
+.nri-district-weather {
+  pointer-events: none;
+}
+
+.nri-district-weather__veil {
+  fill: rgba(8, 14, 28, 0.18);
+}
+
+.nri-district-weather__cloud {
+  animation: nri-weather-cloud-drift 22s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.nri-district-weather__rain {
+  stroke: rgba(170, 205, 245, 0.38);
+  stroke-width: 0.06;
+  stroke-linecap: round;
+  animation: nri-weather-rain-fall 0.9s linear infinite;
+}
+
+@keyframes nri-weather-cloud-drift {
+  0% {
+    transform: translateX(-2%);
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(3%);
+    opacity: 0.8;
+  }
+}
+
+@keyframes nri-weather-rain-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -4%);
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(1.2%, 12%);
+  }
+}
+
+@keyframes nri-tile-neon-pulse {
+  0%,
+  100% {
+    opacity: 0.92;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes nri-tile-lamp-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  40% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.78;
+  }
+}
+
+@keyframes nri-tile-hotspot-pulse {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.nri-district-plaza-cell,
+.nri-district-plaza-mega,
+.nri-district-corp-hq,
+.nri-district-corp-office,
+.nri-district-corp-annex {
+  filter: brightness(0.78) contrast(1.1) saturate(1.15);
 }
 
 @keyframes nri-tile-headlights {
@@ -6068,7 +6457,7 @@
 }
 
 @keyframes nri-tile-neon {
-  0%, 49% { opacity: 0.45; }
+  0%, 49% { opacity: 0.7; }
   50%, 100% { opacity: 1; }
 }
 
@@ -6098,7 +6487,12 @@
   .nri-district-tile__neon--chinatown--anim,
   .nri-district-tile__window--anim,
   .nri-district-tile__tree--anim,
-  .nri-district-tile__lantern--anim {
+  .nri-district-tile__lantern--anim,
+  .nri-district-night__neon,
+  .nri-district-night__lamp,
+  .nri-district-night__hotspot,
+  .nri-district-weather__cloud,
+  .nri-district-weather__rain {
     animation: none !important;
   }
 
@@ -6111,11 +6505,354 @@
 }
 
 .nri-city-map__toolbar {
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   margin-left: auto;
+}
+
+.nri-city-map__tb-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding-right: 8px;
+  border-right: 1px solid rgba(196, 165, 116, 0.25);
+}
+
+.nri-city-map__tb-group:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.nri-city-map__lamp-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+}
+
+.nri-city-map__lamp-swatches {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 220px;
+  align-items: center;
+}
+
+.nri-city-map__lamp-swatch.active {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+.nri-district-brush-picker {
+  max-width: min(720px, 96vw);
+}
+
+.nri-district-brush-picker__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 12px 8px;
+}
+
+.nri-district-brush-picker__tab {
+  border: 1px solid rgba(120, 190, 255, 0.35);
+  background: rgba(20, 40, 60, 0.5);
+  color: #c8e0ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.nri-district-brush-picker__tab.active {
+  border-color: rgba(120, 220, 255, 0.85);
+  background: rgba(40, 100, 140, 0.45);
+  color: #fff;
+}
+
+.nri-district-brush-picker__hint {
+  margin: 0;
+  padding: 8px 12px 12px;
+  font-size: 0.68rem;
+  opacity: 0.65;
+}
+
+.nri-city-map__brush-preview {
+  pointer-events: none;
+}
+
+.nri-city-map__mega-hint {
+  font-size: 0.68rem;
+  opacity: 0.7;
+  padding: 0 4px;
+}
+
+.nri-city-map__toolbar .nri-lobby__close.active,
+.nri-city-map__toolbar .nri-modal__submit.active {
+  outline: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+.nri-city-map__toolbar .nri-lobby__close,
+.nri-city-map__toolbar .nri-modal__submit {
+  min-height: 32px;
+}
+
+.nri-city-map__weather-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(120, 190, 255, 0.45);
+  background: rgba(40, 90, 140, 0.25);
+  color: #c8e8ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.nri-city-map__weather-toggle.active {
+  border-color: rgba(120, 200, 255, 0.85);
+  background: rgba(60, 130, 200, 0.35);
+  color: #e8f6ff;
+  box-shadow: 0 0 10px rgba(80, 160, 255, 0.25);
+}
+
+.nri-city-map__edit-dock-hint {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  opacity: 0.85;
+  color: #e8d4a8;
+}
+
+.nri-city-map__pixi {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  display: block;
+}
+
+.nri-city-map__wrap--weather::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(40, 70, 110, 0.18), transparent 35%),
+    repeating-linear-gradient(
+      105deg,
+      transparent 0,
+      transparent 6px,
+      rgba(160, 200, 255, 0.07) 6px,
+      rgba(160, 200, 255, 0.07) 7px
+    );
+  z-index: 2;
+}
+
+.nri-map-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nri-map-picker {
+  width: min(520px, 94vw);
+  max-height: 80vh;
+  overflow: auto;
+  background: #12141c;
+  border: 1px solid rgba(196, 165, 116, 0.45);
+  padding: 12px;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(120, 190, 255, 0.75) rgba(0, 0, 0, 0.35);
+}
+
+.nri-map-picker::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.nri-map-picker::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+}
+
+.nri-map-picker::-webkit-scrollbar-thumb {
+  background: rgba(100, 170, 220, 0.7);
+  border-radius: 6px;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  min-height: 40px;
+}
+
+.nri-map-picker::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 210, 255, 0.95);
+}
+
+.nri-map-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nri-map-picker__title {
+  margin: 0;
+  font-size: 1rem;
+  color: #e8d4a8;
+}
+
+.nri-map-picker__search {
+  width: 100%;
+  margin: 8px 0;
+}
+
+.nri-map-picker__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nri-map-picker__group {
+  margin: 0 0 6px;
+  font-size: 0.75rem;
+  color: #a89060;
+}
+
+.nri-map-picker__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nri-map-picker__item {
+  border: 1px solid rgba(196, 165, 116, 0.35);
+  background: rgba(0, 0, 0, 0.3);
+  color: #d8c8a0;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nri-map-picker__item.active {
+  border-color: rgba(255, 200, 100, 0.85);
+  background: rgba(180, 120, 40, 0.35);
+  color: #fff0c8;
+}
+
+.nri-map-picker__meta {
+  opacity: 0.65;
+  font-size: 0.6rem;
+}
+
+.nri-session-menu {
+  position: relative;
+}
+
+.nri-session-menu__trigger {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nri-session-menu__list {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 40;
+  min-width: 220px;
+  margin: 4px 0 0;
+  padding: 6px;
+  list-style: none;
+  background: #141820;
+  border: 1px solid rgba(196, 165, 116, 0.4);
+}
+
+.nri-session-menu__item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.nri-session-menu__item:hover {
+  background: rgba(196, 165, 116, 0.12);
+}
+
+.nri-session-menu__item--danger {
+  color: #f88;
+}
+
+.nri-city-map__wrap--edit {
+  cursor: grab;
+}
+
+.nri-city-map__wrap--tile-drag {
+  cursor: grabbing;
+}
+
+.nri-city-map__zone-g--drag-from .nri-district-tile {
+  stroke: rgba(255, 220, 120, 0.95) !important;
+  stroke-width: 0.35px;
+  filter: brightness(1.15);
+}
+
+.nri-city-map__zone-g--drag-over .nri-district-tile {
+  stroke: rgba(80, 220, 255, 0.95) !important;
+  stroke-width: 0.4px;
+  filter: brightness(1.2);
+}
+
+.nri-city-map__layer-toggle {
+  display: inline-flex;
+  gap: 4px;
+  margin-right: 4px;
+}
+
+.nri-city-map__layer-toggle .active,
+.nri-city-map__toolbar .nri-modal__submit.active,
+.nri-city-map__toolbar .nri-lobby__close.active {
+  outline: 1px solid rgba(196, 165, 116, 0.55);
+  background: rgba(196, 165, 116, 0.12);
+}
+
+.nri-city-map__underhive {
+  width: 100%;
+  min-height: 420px;
+  display: flex;
+  align-items: stretch;
+}
+
+.nri-city-map__svg--underhive {
+  width: 100%;
+  min-height: 420px;
+}
+
+.nri-city-map__underhive-title {
+  font-family: inherit;
+  letter-spacing: 0.08em;
 }
 
 .nri-city-map__svg {
@@ -6124,15 +6861,17 @@
   min-height: 420px;
   display: block;
   user-select: none;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
 }
 
 .nri-city-map__svg--city .nri-city-map__grid,
 .nri-city-map__svg--city .nri-city-map__bg-fine {
-  opacity: 0.12;
+  opacity: 0.1;
 }
 
 .nri-city-map__svg--city .nri-city-map__scan {
-  opacity: 0.35;
+  opacity: 0.12;
 }
 
 .nri-city-map__bg-asphalt {
@@ -7521,4 +8260,19 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.nri-map-pixi {
+  width: 100%;
+  min-height: 420px;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  background: #0a0c12;
+}
+
+.nri-map-pixi canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }

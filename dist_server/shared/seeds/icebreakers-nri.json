@@ -1,0 +1,661 @@
+{
+  "meta": {
+    "exportedAt": "2026-09-07T11:08:34.516Z",
+    "inviteCode": "NRI-2U5R",
+    "title": "ICEBREAKERS",
+    "note": "ICEBREAKERS NRI table seed for Amvera import without replacing /data/dev.db",
+    "passwords": {
+      "test": "test1234",
+      "jojo": "jojo1234",
+      "ratata": "ratata1234",
+      "aoao": "aoao1234"
+    }
+  },
+  "users": [
+    {
+      "id": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "username": "test",
+      "passwordHash": "$2b$10$88N7Tta5pwJB8wzIZqJzKuqGHLumTUfZsCP/jAynJzdG.NFiR2vIu",
+      "createdAt": "2026-06-14T23:01:48.959+00:00",
+      "updatedAt": "2026-09-07 11:03:28"
+    },
+    {
+      "id": "2586d23b-131b-4948-8db8-8d6fc7a6a16a",
+      "username": "aoao",
+      "passwordHash": "$2b$10$H7c0ZOyToyZyIZKTM6dGBexEJpT3DoO6VaLK2owsdul/gDzUctbVW",
+      "createdAt": "2026-06-15T16:44:11.582+00:00",
+      "updatedAt": "2026-06-15T16:44:11.582+00:00"
+    },
+    {
+      "id": "59495e14-28b8-4689-ac8e-5abbd47060a2",
+      "username": "ratata",
+      "passwordHash": "$2b$10$sNG0xGkSSOk9onXIlXOYe./iHGIGzYg3pvi73F1M/x33jyvvkou9q",
+      "createdAt": "2026-06-15T15:27:15.589+00:00",
+      "updatedAt": "2026-06-15T15:27:15.589+00:00"
+    },
+    {
+      "id": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "username": "jojo",
+      "passwordHash": "$2b$10$aChz9BoASnMRHhUGkhlAte9Wt.x25tK0audZODr.uKLXV/EO4crBO",
+      "createdAt": "2026-06-15T07:42:19.524+00:00",
+      "updatedAt": "2026-06-15T07:42:19.524+00:00"
+    }
+  ],
+  "chatRoom": {
+    "id": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+    "kind": "nri",
+    "slug": "NRI-2U5R",
+    "dmKey": null,
+    "createdAt": "2026-06-14T23:02:02.093+00:00"
+  },
+  "chatMessages": [
+    {
+      "id": "1b51750b-3b4b-47c5-a806-67d8e34038ba",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "вап",
+      "createdAt": "2026-06-14T23:03:08.728+00:00",
+      "payload": null
+    },
+    {
+      "id": "25f04d77-5f9b-4c8d-ba73-580ed2fda461",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "дложо",
+      "createdAt": "2026-06-14T23:20:51.667+00:00",
+      "payload": null
+    },
+    {
+      "id": "5881ecdb-d3fb-4ca6-896a-be5e5e2f8d95",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "📎 пкпк",
+      "createdAt": "2026-06-15T00:19:00.175+00:00",
+      "payload": "{\"type\":\"file\",\"fileId\":\"0fac6c5c-9ae7-4e2e-bf54-894a35371de3\",\"title\":\"пкпк\",\"protected\":false}"
+    },
+    {
+      "id": "d28621d8-9bb8-4c7f-812e-02c7471fefd0",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "ыва",
+      "createdAt": "2026-06-15T07:08:23.098+00:00",
+      "payload": null
+    },
+    {
+      "id": "1f7a6ec7-cd9b-4aa4-94c3-1b7787b079d8",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "чва",
+      "createdAt": "2026-06-15T07:51:21.000+00:00",
+      "payload": null
+    },
+    {
+      "id": "9651ed85-3aa5-4816-93d2-79a047678372",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "text": "ыва",
+      "createdAt": "2026-06-15T07:51:28.254+00:00",
+      "payload": null
+    },
+    {
+      "id": "140ec2eb-993a-4ff8-89a8-9d06c33babc9",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "сми",
+      "createdAt": "2026-06-15T08:31:41.177+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"1e4f541b-d233-4671-85b9-dbd9e28e632f\",\"displayName\":\"Nova Park\",\"imageUrl\":null,\"npcArchetype\":\"Фиксер\"}"
+    },
+    {
+      "id": "6f18271f-bf44-4148-8875-df840b447bb6",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "хау ду ю ду",
+      "createdAt": "2026-06-15T12:45:56.694+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"f7e50d84-16b2-4eaa-8e00-8d6dfaf3d290\",\"displayName\":\"Yuki Lin\",\"imageUrl\":\"https://i.pinimg.com/originals/54/29/52/54295270186530862a0ecf7cdc8ac698.jpg\",\"npcArchetype\":\"Торчок\"}"
+    },
+    {
+      "id": "aaab9d54-7280-4d49-adf6-ac1d8a99d2be",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "эй",
+      "createdAt": "2026-06-15T13:03:07.035+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"09acda14-4683-43c2-9149-b42eb1d7a33a\",\"displayName\":\"Nix Vega\",\"imageUrl\":null,\"npcArchetype\":\"Бандит / якудза\"}"
+    },
+    {
+      "id": "4a5ce0fe-5634-4442-af77-0b8a22bc862b",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "Nova Park передаёт Мекеке: «Heavy plate carrier».",
+      "createdAt": "2026-06-15T20:17:43.478+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"1e4f541b-d233-4671-85b9-dbd9e28e632f\",\"displayName\":\"Nova Park\"}"
+    },
+    {
+      "id": "6edca55e-a5a4-46e3-82a6-04aa96477293",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "Nova Park передаёт Мекеке: «Heavy plate carrier».",
+      "createdAt": "2026-06-15T20:17:45.949+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"1e4f541b-d233-4671-85b9-dbd9e28e632f\",\"displayName\":\"Nova Park\"}"
+    },
+    {
+      "id": "2f800946-9d8f-4600-8290-ad5144852e67",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "ца",
+      "createdAt": "2026-06-15T20:56:32.208+00:00",
+      "payload": null
+    },
+    {
+      "id": "771f09c3-0071-4398-a32b-ab5726c65768",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "ывап",
+      "createdAt": "2026-06-15T21:12:36.197+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"cc092de5-3f24-4ead-980a-9ae747b04af5\",\"displayName\":\"Juno Vega\",\"imageUrl\":null,\"npcArchetype\":\"Робот / андроид\"}"
+    },
+    {
+      "id": "5e474172-6da5-4a71-9875-e093a697aaab",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "text": "аррп",
+      "createdAt": "2026-06-15T21:26:39.771+00:00",
+      "payload": "{\"type\":\"npc\",\"npcId\":\"cc092de5-3f24-4ead-980a-9ae747b04af5\",\"displayName\":\"Juno Vega\",\"imageUrl\":null,\"npcArchetype\":\"Робот / андроид\"}"
+    },
+    {
+      "id": "13ffa191-5e48-4af6-a49e-9b1d964fbc18",
+      "roomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "text": "цуцк",
+      "createdAt": "2026-06-15T21:30:00.548+00:00",
+      "payload": null
+    }
+  ],
+  "session": {
+    "id": "6366ae56-72f5-4294-846a-ef877e6733f3",
+    "inviteCode": "NRI-2U5R",
+    "hostUserId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+    "title": "ICEBREAKERS",
+    "chatRoomId": "6923117f-ac7f-4c7b-a8a5-6d0061e12f52",
+    "status": "open",
+    "spamBotEnabled": 1,
+    "createdAt": "2026-06-14T23:02:02.130+00:00",
+    "spamPausedUntil": null
+  },
+  "members": [
+    {
+      "id": "a3783e12-585e-4807-8645-512fb32dfe9e",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "2586d23b-131b-4948-8db8-8d6fc7a6a16a",
+      "username": "aoao",
+      "isHost": 0,
+      "joinedAt": "2026-06-15T16:44:13.402+00:00",
+      "lastSeenAt": "2026-06-16T13:19:53.696+00:00"
+    },
+    {
+      "id": "29b3dc2c-fa7b-42ae-a268-ab686e386329",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "59495e14-28b8-4689-ac8e-5abbd47060a2",
+      "username": "ratata",
+      "isHost": 0,
+      "joinedAt": "2026-06-15T15:27:18.582+00:00",
+      "lastSeenAt": "2026-06-15T15:28:09.899+00:00"
+    },
+    {
+      "id": "ee551f07-4705-459a-96ce-98cdf252b827",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "username": "test",
+      "isHost": 1,
+      "joinedAt": "2026-06-15T00:15:05.686+00:00",
+      "lastSeenAt": "2026-06-16T15:29:59.435+00:00"
+    },
+    {
+      "id": "44668141-210c-44cf-8990-2c1a44ca1705",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "username": "jojo",
+      "isHost": 0,
+      "joinedAt": "2026-06-15T07:42:21.932+00:00",
+      "lastSeenAt": "2026-06-15T21:38:55.673+00:00"
+    }
+  ],
+  "players": [
+    {
+      "id": "2b0bfdc8-83b4-4433-b98b-04fb1bf69f4a",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "2586d23b-131b-4948-8db8-8d6fc7a6a16a",
+      "displayName": "Саня",
+      "classId": "daimyo",
+      "inventory": "[{\"id\":\"w_katana\",\"name\":\"Katana (melee)\",\"qty\":1},{\"id\":\"a_medium\",\"name\":\"Medium armor vest\",\"qty\":1}]",
+      "sheet": "{\"abilities\":{\"STR\":15,\"DEX\":12,\"CON\":14,\"INT\":10,\"TEC\":9,\"PEO\":11},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":14,\"hp\":14,\"ac\":9,\"wonlongs\":0,\"skillProficiencies\":[\"Athletics\",\"Intimidation\"],\"attacks\":[{\"name\":\"Katana\",\"atkBonus\":3,\"damage\":\"1d8+1 slashing\"}],\"height\":\"189 cm\",\"weight\":\"94 kg\",\"skin\":\"загорелая\",\"hair\":\"короткие\",\"eyes\":\"зелёные\",\"culture\":\"Japanese\",\"origin\":\"Москва\",\"activity\":\"Армия / охрана\",\"npcArchetype\":\"Корп-менеджер\",\"characterName\":\"Валентин Кочегарин\",\"age\":\"29\",\"career\":\"Сборщик металлолома\",\"yearsServed\":\"4\",\"streetInfluence\":\"6\",\"corporateInfluence\":\"5\",\"backstory\":\"Zara Blake — корп-менеджер из Нео-Токио. Деятельность: улица / выживание. Класс: Daimyo. Подставлен конкурентом.\",\"vice\":\"Wine synth\",\"dr\":\"1\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781541885925\",\"name\":\"Нейролинк (нетраннер)\",\"slot\":\"neural\",\"bloodTox\":10,\"blurb\":\"Нейро / нейролинк · BT 10 · 22/68 Вт\",\"c2185Mods\":{\"TEC\":2,\"INT\":3,\"DEX\":1,\"CON\":1},\"cyber\":{\"slot\":\"neural\",\"blueprint\":{\"slot\":\"neural\",\"name\":\"Нейролинк (нетраннер)\",\"partIds\":[\"iface_neural_bus\",\"cpu_cortex_2\",\"mem_syn_4\",\"fw_reflex\",\"power_cell_l\"],\"notes\":\"ИНТ/ТЕХ, взлом — BT на пределе (10).\"},\"bloodTox\":10,\"powerDrawW\":22,\"powerWh\":68,\"cpuMhz\":2500,\"ramGb\":5.5,\"features\":[\"Прямой доступ в сеть\",\"Взлом +2\",\"Вычисления / взлом +1\",\"Инициатива +2\",\"Спасбросок Ловкости +1\",\"Сильно видно — не спрятать\"],\"effects\":[\"net_deep_scan\"]},\"installedAt\":1781541885925},{\"itemId\":\"gen_aug_1_1781541885925\",\"name\":\"УФ-оптика\",\"slot\":\"head\",\"bloodTox\":3,\"blurb\":\"Голова · BT 3 · 5/22 Вт\",\"c2185Mods\":{\"INT\":1},\"cyber\":{\"slot\":\"head\",\"blueprint\":{\"slot\":\"head\",\"name\":\"УФ-оптика\",\"partIds\":[\"chassis_eye\",\"sensor_uv\",\"power_cell_s\"],\"notes\":\"Глаз + УФ-сканер + батарея — видны УФ-метки на валюте и документах.\"},\"bloodTox\":3,\"powerDrawW\":5,\"powerWh\":22,\"cpuMhz\":300,\"ramGb\":0.5,\"features\":[\"База для оптики\",\"УФ-зрение\",\"Метки на ₩\"],\"effects\":[\"vision_uv\",\"currency_uv\"]},\"installedAt\":1781541885926},{\"itemId\":\"gen_aug_2_1781541885925\",\"name\":\"Подкожная броня + питание\",\"slot\":\"torso\",\"bloodTox\":5,\"blurb\":\"Торс · BT 5 · 0/68 Вт\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2},\"cyber\":{\"slot\":\"torso\",\"blueprint\":{\"slot\":\"torso\",\"name\":\"Подкожная броня + питание\",\"partIds\":[\"armor_subdermal\",\"power_cell_l\"],\"notes\":\"КБ/поглощение, ВЫН.\"},\"bloodTox\":5,\"powerDrawW\":0,\"powerWh\":68,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"КБ +1\",\"Поглощение 1 рубящего\",\"Сильно видно — не спрятать\"],\"effects\":[]},\"installedAt\":1781541885927}],\"bloodToxCurrent\":18,\"bloodToxLimit\":11,\"encumberedLb\":\"130\",\"heavilyEncumberedLb\":\"161\",\"maxCarryLb\":\"195\"}",
+      "portraitUrl": null,
+      "presetId": "5c9347fe-60ff-4dc9-8a8c-4c6401911d10",
+      "privateNotes": "",
+      "createdAt": "2026-06-15T16:46:45.662+00:00",
+      "updatedAt": "2026-06-16T12:46:54.067+00:00"
+    },
+    {
+      "id": "faa17c34-b0c4-42b5-ba18-467ddb0bbf02",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "59495e14-28b8-4689-ac8e-5abbd47060a2",
+      "displayName": "Мекеке",
+      "classId": "fixer",
+      "inventory": "[{\"id\":\"a_heavy_plate_mqfnnc44_l4fp\",\"catalogId\":\"a_heavy_plate\",\"name\":\"Heavy plate carrier\",\"blurb\":\"Тяжёлый плитник — максимум защиты.\",\"kind\":\"gear\",\"slot\":\"armor\",\"equipped\":false,\"c2185Mods\":{\"DEX\":-2},\"acBonus\":4,\"priceWonlongs\":1500,\"qty\":1},{\"id\":\"a_heavy_plate_mqfnne19_qf2i\",\"catalogId\":\"a_heavy_plate\",\"name\":\"Heavy plate carrier\",\"blurb\":\"Тяжёлый плитник — максимум защиты.\",\"kind\":\"gear\",\"slot\":\"armor\",\"equipped\":false,\"c2185Mods\":{\"DEX\":-2},\"acBonus\":4,\"priceWonlongs\":1500,\"qty\":1}]",
+      "sheet": "{\"abilities\":{\"STR\":14,\"DEX\":12,\"CON\":14,\"INT\":13,\"TEC\":16,\"PEO\":10},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":10,\"hp\":10,\"ac\":11,\"wonlongs\":300,\"skillProficiencies\":[\"Stealth\",\"Streetwise\"],\"attacks\":[{\"name\":\"Mono-knife\",\"atkBonus\":3,\"damage\":\"1d4+1 piercing\"}],\"height\":\"178 cm\",\"weight\":\"82 kg\",\"skin\":\"загорелая\",\"hair\":\"бритая голова\",\"eyes\":\"фиолетовые имплант\",\"culture\":\"Japanese\",\"origin\":\"Нео-Токио\",\"activity\":\"Криминал\",\"npcArchetype\":\"Фиксер\",\"characterName\":\"Мекеке\",\"age\":\"41\",\"career\":\"Взломщик\",\"yearsServed\":\"4\",\"streetInfluence\":\"6\",\"corporateInfluence\":\"5\",\"backstory\":\"Мекеке — фиксер из Нео-Токио. Деятельность: криминал. Класс: Scoundrel. Должен крупную сумму синдикату.\",\"vice\":\"Nicotine\",\"dr\":\"0\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781537253216\",\"name\":\"Нейролинк (нетраннер)\",\"slot\":\"neural\",\"bloodTox\":10,\"blurb\":\"Нейро / нейролинк · BT 10 · 22/60 Вт\",\"c2185Mods\":{\"TEC\":2,\"INT\":3,\"DEX\":1,\"CON\":1},\"cyber\":{\"slot\":\"neural\",\"blueprint\":{\"slot\":\"neural\",\"name\":\"Нейролинк (нетраннер)\",\"partIds\":[\"iface_neural_bus\",\"cpu_cortex_2\",\"mem_syn_4\",\"fw_reflex\",\"power_cell_l\"],\"notes\":\"ИНТ/ТЕХ, взлом — BT на пределе (10).\"},\"bloodTox\":10,\"powerDrawW\":22,\"powerWh\":60,\"cpuMhz\":2500,\"ramGb\":5.5,\"features\":[\"Прямой доступ в сеть\",\"Взлом +2\",\"Вычисления / взлом +1\",\"Инициатива +2\",\"Спасбросок Ловкости +1\"]},\"installedAt\":1781537253216}],\"bloodToxCurrent\":10,\"bloodToxLimit\":12,\"encumberedLb\":\"140\",\"heavilyEncumberedLb\":\"174\",\"maxCarryLb\":\"210\"}",
+      "portraitUrl": null,
+      "presetId": null,
+      "privateNotes": "",
+      "createdAt": "2026-06-15T15:27:33.220+00:00",
+      "updatedAt": "2026-06-16T12:46:54.067+00:00"
+    },
+    {
+      "id": "e3a339d6-f22b-4ed0-a1a9-516e2e9e5aaa",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "displayName": "Пешек",
+      "classId": "hacker",
+      "inventory": "[{\"id\":\"g_handcuffs_mqf7la0g_6utg\",\"catalogId\":\"g_handcuffs\",\"name\":\"Magn cuffs\",\"blurb\":\"Магнитные наручники.\",\"kind\":\"gear\",\"slot\":\"accessory\",\"equipped\":true,\"priceWonlongs\":70,\"qty\":1}]",
+      "sheet": "{\"wonlongs\":100,\"iceBan\":{\"consecutiveFails\":1,\"hardwareBanned\":false}}",
+      "portraitUrl": null,
+      "presetId": null,
+      "privateNotes": "ыукку\n\nукукп",
+      "createdAt": "2026-06-15T07:45:06.120+00:00",
+      "updatedAt": "2026-06-15T20:53:52.488+00:00"
+    }
+  ],
+  "presets": [
+    {
+      "id": "390ff2b1-c94d-4647-97f6-0600c932ffab",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "label": "Жора",
+      "classId": "merc",
+      "inventory": "[{\"id\":\"w_smg\",\"name\":\"SMG + 2 mags\",\"qty\":1},{\"id\":\"a_light\",\"name\":\"Light armor\",\"qty\":1}]",
+      "sheet": "{\"abilities\":{\"STR\":13,\"DEX\":13,\"CON\":12,\"INT\":10,\"TEC\":11,\"PEO\":9},\"level\":2,\"proficiencyBonus\":2,\"hpMax\":17,\"hp\":17,\"ac\":12,\"wonlongs\":200,\"classFeatures\":[\"Fighting Style + Second Wind — стиль боя и восстановление HP\",\"Fighting Style (1 ур.)\",\"Second Wind (1 ур.)\",\"Combat Archetype (3 ур.): Marine / Street Samurai / …\"],\"skillProficiencies\":[\"Intimidation\",\"Sense Motive\"],\"attacks\":[{\"name\":\"SMG\",\"atkBonus\":4,\"damage\":\"2d6 ballistic\"}],\"height\":\"174 cm\",\"weight\":\"69 kg\",\"skin\":\"загорелая\",\"hair\":\"серебристые синтетические\",\"eyes\":\"серые\",\"culture\":\"Japanese\",\"origin\":\"Москва\",\"activity\":\"Тех / инженерия\",\"npcArchetype\":\"Наёмник\",\"characterName\":\"Ляпупу\",\"age\":\"38\",\"career\":\"Разработчик\",\"yearsServed\":\"5\",\"streetInfluence\":\"1\",\"corporateInfluence\":\"3\",\"backstory\":\"Nix Reed — наёмник из Нео-Токио. Деятельность: улица / выживание. Класс: Enforcer. Контракт сорван — нужны кредиты.\",\"vice\":\"Nicotine\",\"dr\":\"0\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781557277292\",\"name\":\"Протез руки (базовый)\",\"slot\":\"arm\",\"bloodTox\":5,\"blurb\":\"Рука / кисть · BT 5 · 7/26 Вт\",\"c2185Mods\":{\"CON\":1,\"STR\":2,\"DEX\":-4},\"cyber\":{\"slot\":\"arm\",\"blueprint\":{\"slot\":\"arm\",\"name\":\"Протез руки (базовый)\",\"partIds\":[\"chassis_limb_std\",\"actuator_bulk_grip\",\"power_cell_s\"],\"notes\":\"ВЫН +1, СИЛ +2, ЛОВ −4 — грубая хватка.\"},\"bloodTox\":5,\"powerDrawW\":7,\"powerWh\":26,\"cpuMhz\":200,\"ramGb\":0.5,\"features\":[\"Нет тонкой моторики\"],\"effects\":[]},\"installedAt\":1781557277292}],\"bloodToxCurrent\":5,\"bloodToxLimit\":11,\"encumberedLb\":\"130\",\"heavilyEncumberedLb\":\"161\",\"maxCarryLb\":\"195\"}",
+      "portraitUrl": null,
+      "publishedToPlayers": 1,
+      "sortOrder": 0,
+      "claimedByUserId": null,
+      "createdAt": "2026-06-15T21:03:28.267+00:00"
+    },
+    {
+      "id": "5c9347fe-60ff-4dc9-8a8c-4c6401911d10",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "label": "Даймё",
+      "classId": "daimyo",
+      "inventory": "[{\"id\":\"w_katana\",\"name\":\"Katana (melee)\",\"qty\":1},{\"id\":\"a_medium\",\"name\":\"Medium armor vest\",\"qty\":1}]",
+      "sheet": "{\"abilities\":{\"STR\":15,\"DEX\":12,\"CON\":14,\"INT\":10,\"TEC\":9,\"PEO\":11},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":14,\"hp\":14,\"ac\":9,\"wonlongs\":50,\"skillProficiencies\":[\"Athletics\",\"Intimidation\"],\"attacks\":[{\"name\":\"Katana\",\"atkBonus\":3,\"damage\":\"1d8+1 slashing\"}],\"height\":\"189 cm\",\"weight\":\"94 kg\",\"skin\":\"загорелая\",\"hair\":\"короткие\",\"eyes\":\"зелёные\",\"culture\":\"Japanese\",\"origin\":\"Москва\",\"activity\":\"Армия / охрана\",\"npcArchetype\":\"Корп-менеджер\",\"characterName\":\"Валентин Кочегарин\",\"age\":\"29\",\"career\":\"Сборщик металлолома\",\"yearsServed\":\"4\",\"streetInfluence\":\"6\",\"corporateInfluence\":\"5\",\"backstory\":\"Zara Blake — корп-менеджер из Нео-Токио. Деятельность: улица / выживание. Класс: Daimyo. Подставлен конкурентом.\",\"vice\":\"Wine synth\",\"dr\":\"1\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781541885925\",\"name\":\"Нейролинк (нетраннер)\",\"slot\":\"neural\",\"bloodTox\":10,\"blurb\":\"Нейро / нейролинк · BT 10 · 22/68 Вт\",\"c2185Mods\":{\"TEC\":2,\"INT\":3,\"DEX\":1,\"CON\":1},\"cyber\":{\"slot\":\"neural\",\"blueprint\":{\"slot\":\"neural\",\"name\":\"Нейролинк (нетраннер)\",\"partIds\":[\"iface_neural_bus\",\"cpu_cortex_2\",\"mem_syn_4\",\"fw_reflex\",\"power_cell_l\"],\"notes\":\"ИНТ/ТЕХ, взлом — BT на пределе (10).\"},\"bloodTox\":10,\"powerDrawW\":22,\"powerWh\":68,\"cpuMhz\":2500,\"ramGb\":5.5,\"features\":[\"Прямой доступ в сеть\",\"Взлом +2\",\"Вычисления / взлом +1\",\"Инициатива +2\",\"Спасбросок Ловкости +1\",\"Сильно видно — не спрятать\"],\"effects\":[\"net_deep_scan\"]},\"installedAt\":1781541885925},{\"itemId\":\"gen_aug_1_1781541885925\",\"name\":\"УФ-оптика\",\"slot\":\"head\",\"bloodTox\":3,\"blurb\":\"Голова · BT 3 · 5/22 Вт\",\"c2185Mods\":{\"INT\":1},\"cyber\":{\"slot\":\"head\",\"blueprint\":{\"slot\":\"head\",\"name\":\"УФ-оптика\",\"partIds\":[\"chassis_eye\",\"sensor_uv\",\"power_cell_s\"],\"notes\":\"Глаз + УФ-сканер + батарея — видны УФ-метки на валюте и документах.\"},\"bloodTox\":3,\"powerDrawW\":5,\"powerWh\":22,\"cpuMhz\":300,\"ramGb\":0.5,\"features\":[\"База для оптики\",\"УФ-зрение\",\"Метки на ₩\"],\"effects\":[\"vision_uv\",\"currency_uv\"]},\"installedAt\":1781541885926},{\"itemId\":\"gen_aug_2_1781541885925\",\"name\":\"Подкожная броня + питание\",\"slot\":\"torso\",\"bloodTox\":5,\"blurb\":\"Торс · BT 5 · 0/68 Вт\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2},\"cyber\":{\"slot\":\"torso\",\"blueprint\":{\"slot\":\"torso\",\"name\":\"Подкожная броня + питание\",\"partIds\":[\"armor_subdermal\",\"power_cell_l\"],\"notes\":\"КБ/поглощение, ВЫН.\"},\"bloodTox\":5,\"powerDrawW\":0,\"powerWh\":68,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"КБ +1\",\"Поглощение 1 рубящего\",\"Сильно видно — не спрятать\"],\"effects\":[]},\"installedAt\":1781541885927}],\"bloodToxCurrent\":18,\"bloodToxLimit\":11,\"encumberedLb\":\"130\",\"heavilyEncumberedLb\":\"161\",\"maxCarryLb\":\"195\"}",
+      "portraitUrl": null,
+      "publishedToPlayers": 1,
+      "sortOrder": 0,
+      "claimedByUserId": "2586d23b-131b-4948-8db8-8d6fc7a6a16a",
+      "createdAt": "2026-06-15T16:46:11.555+00:00"
+    }
+  ],
+  "npcs": [
+    {
+      "id": "1e4f541b-d233-4671-85b9-dbd9e28e632f",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Nova Park",
+      "classId": "doc",
+      "imageUrl": null,
+      "inventory": "[{\"id\":\"cyber_5617e53f-5377-462d-acae-38892534ad14_1781532136368\",\"name\":\"Рука + неон\",\"kind\":\"cyberware\",\"blurb\":\"arm · BT 5 · ₩3625\",\"qty\":1,\"c2185Mods\":{\"DEX\":-1,\"CON\":2,\"STR\":1},\"cyber\":{\"slot\":\"arm\",\"blueprint\":{\"slot\":\"arm\",\"name\":\"Рука + неон\",\"partIds\":[\"chassis_limb_heavy\",\"actuator_myomer\",\"power_cell_s\",\"cosm_led_skin\"]},\"bloodTox\":5,\"powerDrawW\":8,\"powerWh\":32,\"cpuMhz\":150,\"ramGb\":0.5,\"features\":[\"Поглощение 1 дробящего (конечность)\",\"+1 к проверкам СИЛ (конечность)\",\"Световые узоры\",\"Реакция на звук\"]},\"priceWonlongs\":3625}]",
+      "sheet": "{\"abilities\":{\"STR\":11,\"DEX\":11,\"CON\":16,\"INT\":15,\"TEC\":12,\"PEO\":14},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":11,\"hp\":11,\"ac\":10,\"origin\":\"Нео-Токио\",\"activity\":\"Улица / выживание\",\"npcArchetype\":\"Фиксер\",\"characterName\":\"Nova Park\",\"age\":\"43\",\"career\":\"Вышибала\",\"yearsServed\":\"3\",\"streetInfluence\":\"3\",\"corporateInfluence\":\"4\",\"backstory\":\"Nova Park — фиксер из Нео-Токио. Деятельность: улица / выживание. Класс: Doc. Должен крупную сумму синдикату.\"}",
+      "notes": "Nova Park — фиксер из Нео-Токио. Деятельность: улица / выживание. Класс: Doc. Должен крупную сумму синдикату.",
+      "createdAt": "2026-06-15T07:57:25.513+00:00",
+      "updatedAt": "2026-06-15T14:02:16.369+00:00"
+    },
+    {
+      "id": "f7e50d84-16b2-4eaa-8e00-8d6dfaf3d290",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Yuki Lin",
+      "classId": "doc",
+      "imageUrl": "https://i.pinimg.com/originals/54/29/52/54295270186530862a0ecf7cdc8ac698.jpg",
+      "inventory": "[{\"id\":\"drug_juice_mqf7ke0i_xeod\",\"catalogId\":\"drug_juice\",\"name\":\"Juice vial\",\"blurb\":\"Уличный коктейль — случайный эффект (мастер).\",\"kind\":\"gear\",\"slot\":\"quick\",\"equipped\":false,\"priceWonlongs\":40,\"qty\":3},{\"id\":\"drug_shard_mqf7kj44_v4dy\",\"catalogId\":\"drug_shard\",\"name\":\"Shard dust\",\"blurb\":\"Кристаллический стим — +1 REF на час.\",\"kind\":\"gear\",\"slot\":\"quick\",\"equipped\":false,\"c2185Mods\":{\"DEX\":1},\"priceWonlongs\":120,\"qty\":1},{\"id\":\"w_machete_mqf7yxfu_4svr\",\"catalogId\":\"w_machete\",\"name\":\"Machete\",\"blurb\":\"Мачете для джунглей и переулков.\",\"kind\":\"gear\",\"slot\":\"weapon\",\"equipped\":false,\"attack\":{\"damageDice\":\"1d6\",\"damageType\":\"slashing\",\"ability\":\"STR\"},\"priceWonlongs\":90,\"qty\":1}]",
+      "sheet": "{\"abilities\":{\"STR\":15,\"DEX\":11,\"CON\":7,\"INT\":7,\"TEC\":7,\"PEO\":13},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":6,\"hp\":6,\"ac\":10,\"wonlongs\":150,\"skillProficiencies\":[\"Medicine\",\"Perception\"],\"attacks\":[{\"name\":\"Shock baton\",\"atkBonus\":4,\"damage\":\"1d4+2 blunt\"}],\"height\":\"174 cm\",\"weight\":\"83 kg\",\"skin\":\"оливковая\",\"hair\":\"дреды\",\"eyes\":\"фиолетовые имплант\",\"culture\":\"Brazilian\",\"origin\":\"Сан-Паулу\",\"activity\":\"Медицина\",\"npcArchetype\":\"Торчок\",\"characterName\":\"Yuki Lin\",\"age\":\"33\",\"career\":\"Парамедик\",\"yearsServed\":\"4\",\"streetInfluence\":\"3\",\"corporateInfluence\":\"5\",\"backstory\":\"Yuki Lin — торчок из Сан-Паулу. Деятельность: медицина. Класс: Doc. Бывший медик, сломался после войны.\",\"vice\":\"Neuro-stim\",\"dr\":\"1\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781527474736\",\"name\":\"Неон-комплект\",\"slot\":\"cosmetic\",\"bloodTox\":0,\"blurb\":\"Косметика · BT 0 · 5/0 Вт\",\"c2185Mods\":{},\"cyber\":{\"slot\":\"cosmetic\",\"blueprint\":{\"slot\":\"cosmetic\",\"name\":\"Неон-комплект\",\"partIds\":[\"cosm_led_skin\",\"cosm_synth_hair\",\"cosm_eye_glow\",\"cosm_holo_tattoo\"],\"notes\":\"Косметика, BT 0 — для витрины риппердока.\"},\"bloodTox\":0,\"powerDrawW\":5,\"powerWh\":0,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"Световые узоры\",\"Реакция на звук\",\"Светящиеся пряди\",\"Смена цвета\",\"Свечение глаз\",\"Ночной стиль\",\"Сменные голограммы на коже\"]},\"installedAt\":1781527474736},{\"itemId\":\"gen_aug_1_1781527474736\",\"name\":\"Подкожная броня + питание\",\"slot\":\"torso\",\"bloodTox\":5,\"blurb\":\"Торс · BT 5 · 0/60 Вт\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2},\"cyber\":{\"slot\":\"torso\",\"blueprint\":{\"slot\":\"torso\",\"name\":\"Подкожная броня + питание\",\"partIds\":[\"armor_subdermal\",\"power_cell_l\"],\"notes\":\"КБ/поглощение, ВЫН.\"},\"bloodTox\":5,\"powerDrawW\":0,\"powerWh\":60,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"КБ +1\",\"Поглощение 1 рубящего\"]},\"installedAt\":1781527474737}],\"bloodToxCurrent\":5,\"bloodToxLimit\":8,\"encumberedLb\":\"150\",\"heavilyEncumberedLb\":\"186\",\"maxCarryLb\":\"225\"}",
+      "notes": "Yuki Lin — торчок из Сан-Паулу. Деятельность: медицина. Класс: Doc. Бывший медик, сломался после войны.",
+      "createdAt": "2026-06-15T12:45:42.706+00:00",
+      "updatedAt": "2026-06-15T12:58:50.442+00:00"
+    },
+    {
+      "id": "09acda14-4683-43c2-9149-b42eb1d7a33a",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Nix Vega",
+      "classId": "daimyo",
+      "imageUrl": null,
+      "inventory": "[]",
+      "sheet": "{\"abilities\":{\"STR\":15,\"DEX\":10,\"CON\":10,\"INT\":13,\"TEC\":13,\"PEO\":14},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":12,\"hp\":12,\"ac\":10,\"wonlongs\":200,\"skillProficiencies\":[\"Athletics\",\"Intimidation\"],\"attacks\":[{\"name\":\"Katana\",\"atkBonus\":4,\"damage\":\"1d8+2 slashing\"}],\"height\":\"187 cm\",\"weight\":\"59 kg\",\"skin\":\"тёмная\",\"hair\":\"серебристые синтетические\",\"eyes\":\"карие\",\"culture\":\"Brazilian\",\"origin\":\"Сан-Паулу\",\"activity\":\"Криминал\",\"npcArchetype\":\"Бандит / якудза\",\"characterName\":\"Nix Vega\",\"age\":\"41\",\"career\":\"Взломщик\",\"yearsServed\":\"30\",\"streetInfluence\":\"70\",\"corporateInfluence\":\"60\",\"backstory\":\"Nix Vega — бандит / якудза из Сан-Паулу. Деятельность: криминал. Класс: Daimyo. Метка клана на шее.\",\"vice\":\"Combat stims\",\"dr\":\"1\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781528528620\",\"name\":\"Протез руки (базовый)\",\"slot\":\"arm\",\"bloodTox\":5,\"blurb\":\"Рука / кисть · BT 5 · 7/28 Вт\",\"c2185Mods\":{\"CON\":1,\"STR\":2,\"DEX\":-4},\"cyber\":{\"slot\":\"arm\",\"blueprint\":{\"slot\":\"arm\",\"name\":\"Протез руки (базовый)\",\"partIds\":[\"chassis_limb_std\",\"actuator_bulk_grip\",\"power_cell_s\"],\"notes\":\"ВЫН +1, СИЛ +2, ЛОВ −4 — грубая хватка.\"},\"bloodTox\":5,\"powerDrawW\":7,\"powerWh\":28,\"cpuMhz\":200,\"ramGb\":0.5,\"features\":[\"Нет тонкой моторики\"]},\"installedAt\":1781528528620},{\"itemId\":\"gen_aug_1_1781528528620\",\"name\":\"Неон-комплект\",\"slot\":\"cosmetic\",\"bloodTox\":0,\"blurb\":\"Косметика · BT 0 · 5/0 Вт\",\"c2185Mods\":{},\"cyber\":{\"slot\":\"cosmetic\",\"blueprint\":{\"slot\":\"cosmetic\",\"name\":\"Неон-комплект\",\"partIds\":[\"cosm_led_skin\",\"cosm_synth_hair\",\"cosm_eye_glow\",\"cosm_holo_tattoo\"],\"notes\":\"Косметика, BT 0 — для витрины риппердока.\"},\"bloodTox\":0,\"powerDrawW\":5,\"powerWh\":0,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"Световые узоры\",\"Реакция на звук\",\"Светящиеся пряди\",\"Смена цвета\",\"Свечение глаз\",\"Ночной стиль\",\"Сменные голограммы на коже\"]},\"installedAt\":1781528528621},{\"itemId\":\"gen_aug_2_1781528528620\",\"name\":\"Подкожная броня + питание\",\"slot\":\"torso\",\"bloodTox\":5,\"blurb\":\"Торс · BT 5 · 0/60 Вт\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2},\"cyber\":{\"slot\":\"torso\",\"blueprint\":{\"slot\":\"torso\",\"name\":\"Подкожная броня + питание\",\"partIds\":[\"armor_subdermal\",\"power_cell_l\"],\"notes\":\"КБ/поглощение, ВЫН.\"},\"bloodTox\":5,\"powerDrawW\":0,\"powerWh\":60,\"cpuMhz\":0,\"ramGb\":0,\"features\":[\"КБ +1\",\"Поглощение 1 рубящего\"]},\"installedAt\":1781528528622},{\"itemId\":\"gen_aug_3_1781528528620\",\"name\":\"Кибероптика + аудио\",\"slot\":\"head\",\"bloodTox\":5,\"blurb\":\"Голова · BT 5 · 9/20 Вт\",\"c2185Mods\":{\"INT\":2,\"PEO\":1},\"cyber\":{\"slot\":\"head\",\"blueprint\":{\"slot\":\"head\",\"name\":\"Кибероптика + аудио\",\"partIds\":[\"sensor_optics\",\"sensor_audio\",\"iface_mesh_radio\",\"power_cell_s\"],\"notes\":\"Восприятие и расследование.\"},\"bloodTox\":5,\"powerDrawW\":9,\"powerWh\":20,\"cpuMhz\":600,\"ramGb\":1.25,\"features\":[\"Ночное зрение\",\"Восприятие +2\",\"Подслушивание +2\",\"Связь с группой\",\"Присутствие +1\"]},\"installedAt\":1781528528623}],\"bloodToxCurrent\":15,\"bloodToxLimit\":10,\"encumberedLb\":\"150\",\"heavilyEncumberedLb\":\"186\",\"maxCarryLb\":\"225\"}",
+      "notes": "босс Серебряных Глаз",
+      "createdAt": "2026-06-15T13:02:52.810+00:00",
+      "updatedAt": "2026-06-15T13:56:07.188+00:00"
+    },
+    {
+      "id": "cc092de5-3f24-4ead-980a-9ae747b04af5",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Juno Vega",
+      "classId": "hacker",
+      "imageUrl": null,
+      "inventory": "[]",
+      "sheet": "{\"abilities\":{\"STR\":12,\"DEX\":13,\"CON\":13,\"INT\":15,\"TEC\":11,\"PEO\":17},\"level\":1,\"proficiencyBonus\":2,\"hpMax\":9,\"hp\":9,\"ac\":11,\"wonlongs\":100,\"classFeatures\":[\"Exploits — девять хакерских эксплойтов с 1 уровня\",\"9 Exploits (1 ур.)\",\"Специализация: Combat Hacker или Robomancer (3 ур.)\"],\"skillProficiencies\":[\"Computing\",\"Hacking\"],\"attacks\":[{\"name\":\"Mono-knife\",\"atkBonus\":3,\"damage\":\"1d4+1 piercing\"}],\"height\":\"181 cm (шасси)\",\"weight\":\"87 kg\",\"skin\":\"синтетическая оболочка\",\"hair\":\"отсутствует\",\"eyes\":\"оптика v3\",\"culture\":\"Machine\",\"origin\":\"Нео-Токио\",\"activity\":\"Улица / выживание\",\"npcArchetype\":\"Робот / андроид\",\"characterName\":\"Juno Vega\",\"age\":\"22 (корпус)\",\"career\":\"Курьер\",\"yearsServed\":\"2\",\"streetInfluence\":\"7\",\"corporateInfluence\":\"4\",\"backstory\":\"Juno Vega — робот / андроид из Нео-Токио. Деятельность: улица / выживание. Класс: Hacker. Память стёрта после инцидента.\",\"vice\":\"Firmware patches\",\"dr\":\"0\",\"xp\":0,\"deathSaveSuccesses\":0,\"deathSaveFailures\":0,\"augmentations\":[{\"itemId\":\"gen_aug_0_1781557623013\",\"name\":\"Рука + неон\",\"slot\":\"arm\",\"bloodTox\":5,\"blurb\":\"Рука / кисть · BT 5 · 8/30 Вт\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2,\"STR\":1},\"cyber\":{\"slot\":\"arm\",\"blueprint\":{\"slot\":\"arm\",\"name\":\"Рука + неон\",\"partIds\":[\"chassis_limb_heavy\",\"actuator_myomer\",\"power_cell_s\",\"cosm_led_skin\"],\"notes\":\"Корпус + миомеры + ячейка + LED — одна сборка в слот «рука».\"},\"bloodTox\":5,\"powerDrawW\":8,\"powerWh\":30,\"cpuMhz\":150,\"ramGb\":0.5,\"features\":[\"Поглощение 1 дробящего (конечность)\",\"+1 к проверкам СИЛ (конечность)\",\"Световые узоры\",\"Реакция на звук\"],\"effects\":[]},\"installedAt\":1781557623013},{\"itemId\":\"gen_aug_1_1781557623013\",\"name\":\"Нейролинк (нетраннер)\",\"slot\":\"neural\",\"bloodTox\":10,\"blurb\":\"Нейро / нейролинк · BT 10 · 22/68 Вт\",\"c2185Mods\":{\"TEC\":2,\"INT\":3,\"DEX\":1,\"CON\":1},\"cyber\":{\"slot\":\"neural\",\"blueprint\":{\"slot\":\"neural\",\"name\":\"Нейролинк (нетраннер)\",\"partIds\":[\"iface_neural_bus\",\"cpu_cortex_2\",\"mem_syn_4\",\"fw_reflex\",\"power_cell_l\"],\"notes\":\"ИНТ/ТЕХ, взлом — BT на пределе (10).\"},\"bloodTox\":10,\"powerDrawW\":22,\"powerWh\":68,\"cpuMhz\":2500,\"ramGb\":5.5,\"features\":[\"Прямой доступ в сеть\",\"Взлом +2\",\"Вычисления / взлом +1\",\"Инициатива +2\",\"Спасбросок Ловкости +1\",\"Сильно видно — не спрятать\"],\"effects\":[\"net_deep_scan\"]},\"installedAt\":1781557623014},{\"itemId\":\"gen_aug_2_1781557623013\",\"name\":\"УФ-оптика\",\"slot\":\"head\",\"bloodTox\":3,\"blurb\":\"Голова · BT 3 · 5/22 Вт\",\"c2185Mods\":{\"INT\":1},\"cyber\":{\"slot\":\"head\",\"blueprint\":{\"slot\":\"head\",\"name\":\"УФ-оптика\",\"partIds\":[\"chassis_eye\",\"sensor_uv\",\"power_cell_s\"],\"notes\":\"Глаз + УФ-сканер + батарея — видны УФ-метки на валюте и документах.\"},\"bloodTox\":3,\"powerDrawW\":5,\"powerWh\":22,\"cpuMhz\":300,\"ramGb\":0.5,\"features\":[\"База для оптики\",\"УФ-зрение\",\"Метки на ₩\"],\"effects\":[\"vision_uv\",\"currency_uv\"]},\"installedAt\":1781557623015}],\"bloodToxCurrent\":18,\"bloodToxLimit\":11,\"encumberedLb\":\"120\",\"heavilyEncumberedLb\":\"149\",\"maxCarryLb\":\"180\",\"notes\":\"Синтетик — уточните у мастера иммунитеты и ремонт.\"}",
+      "notes": "Juno Vega — робот / андроид из Нео-Токио. Деятельность: улица / выживание. Класс: Hacker. Память стёрта после инцидента.",
+      "createdAt": "2026-06-15T21:08:25.015+00:00",
+      "updatedAt": "2026-06-15T21:08:25.015+00:00"
+    }
+  ],
+  "cyberProducts": [
+    {
+      "id": "4bdaf797-7664-42c0-9e53-005251e5853c",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Подкожная броня + питание",
+      "slot": "torso",
+      "blueprint": "{\"slot\":\"torso\",\"name\":\"Подкожная броня + питание\",\"partIds\":[\"armor_subdermal\",\"power_cell_l\",\"cosm_corp_logo\"]}",
+      "build": "{\"name\":\"Подкожная броня + питание\",\"slot\":\"torso\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2,\"PEO\":1},\"bloodTox\":5,\"cpuMhz\":0,\"ramGb\":0,\"powerWh\":68,\"powerDrawW\":0,\"features\":[\"КБ +1\",\"Поглощение 1 рубящего\",\"Сильно видно — не спрятать\",\"Узнаваемость корп\",\"Соц. бонусы в сети корп\"],\"effects\":[],\"priceWonlongs\":4750,\"overload\":false,\"blocked\":false,\"canSave\":true,\"warnings\":[],\"totals\":{\"cpuMhz\":0,\"ramGb\":0,\"powerWh\":68,\"powerDrawW\":0},\"partLines\":[{\"partId\":\"armor_subdermal\",\"partName\":\"Подкожная броня\",\"powerWh\":0,\"powerDrawW\":0,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"power_cell_l\",\"partName\":\"Усиленный силовой блок (3)\",\"powerWh\":68,\"powerDrawW\":0,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"cosm_corp_logo\",\"partName\":\"Корпоративный брендинг\",\"powerWh\":0,\"powerDrawW\":0,\"cpuMhz\":0,\"ramGb\":0}]}",
+      "priceWonlongs": 4750,
+      "inShop": 0,
+      "vendorNpcId": null,
+      "createdAt": "2026-06-16T12:43:11.609+00:00",
+      "updatedAt": "2026-06-16T12:43:11.609+00:00"
+    },
+    {
+      "id": "a13573fe-8f5a-4d15-bd16-205a216af494",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Контрразведка (аудио+RF)",
+      "slot": "head",
+      "blueprint": "{\"slot\":\"head\",\"name\":\"Контрразведка (аудио+RF)\",\"partIds\":[\"sensor_audio\",\"chassis_eye\",\"cpu_cortex_5\",\"cosm_face_plate\",\"power_cell_m\",\"iface_mesh_radio\"]}",
+      "build": "{\"name\":\"Контрразведка (аудио+RF)\",\"slot\":\"head\",\"c2185Mods\":{\"INT\":4,\"TEC\":2,\"PEO\":2},\"bloodTox\":10,\"cpuMhz\":5400,\"ramGb\":1,\"powerWh\":42,\"powerDrawW\":26,\"features\":[\"Подслушивание +2\",\"База для оптики\",\"Риск ghosting +1\",\"Запугивание +1 (внешний вид)\",\"Имплант заметен со стороны\",\"Связь с группой\",\"Присутствие +1\",\"Риск ghosting: DC +2\"],\"effects\":[],\"priceWonlongs\":10875,\"overload\":false,\"blocked\":false,\"canSave\":true,\"warnings\":[\"Высокий Blood Tox (10) — риск ghosting и превышения лимита персонажа.\"],\"totals\":{\"cpuMhz\":5400,\"ramGb\":1,\"powerWh\":42,\"powerDrawW\":26},\"partLines\":[{\"partId\":\"sensor_audio\",\"partName\":\"Аудиоусилитель\",\"powerWh\":0,\"powerDrawW\":2,\"cpuMhz\":100,\"ramGb\":0.25},{\"partId\":\"chassis_eye\",\"partName\":\"Глазной chassis\",\"powerWh\":4,\"powerDrawW\":1,\"cpuMhz\":100,\"ramGb\":0.25},{\"partId\":\"cpu_cortex_5\",\"partName\":\"Кортекс CPU 5 ГГц\",\"powerWh\":0,\"powerDrawW\":18,\"cpuMhz\":5000,\"ramGb\":0},{\"partId\":\"cosm_face_plate\",\"partName\":\"Декоративная лицевая пластина\",\"powerWh\":0,\"powerDrawW\":1,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"power_cell_m\",\"partName\":\"Стандартная ячейка (2)\",\"powerWh\":38,\"powerDrawW\":0,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"iface_mesh_radio\",\"partName\":\"Mesh-радиомодуль\",\"powerWh\":0,\"powerDrawW\":4,\"cpuMhz\":200,\"ramGb\":0.5}]}",
+      "priceWonlongs": 10875,
+      "inShop": 0,
+      "vendorNpcId": null,
+      "createdAt": "2026-06-16T12:44:51.790+00:00",
+      "updatedAt": "2026-06-16T12:44:51.790+00:00"
+    },
+    {
+      "id": "5617e53f-5377-462d-acae-38892534ad14",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Рука + неон",
+      "slot": "arm",
+      "blueprint": "{\"slot\":\"arm\",\"name\":\"Рука + неон\",\"partIds\":[\"chassis_limb_heavy\",\"actuator_myomer\",\"power_cell_s\",\"cosm_led_skin\"]}",
+      "build": "{\"name\":\"Рука + неон\",\"slot\":\"arm\",\"c2185Mods\":{\"DEX\":-1,\"CON\":2,\"STR\":1},\"bloodTox\":5,\"cpuMhz\":150,\"ramGb\":0.5,\"powerWh\":32,\"powerDrawW\":8,\"features\":[\"Поглощение 1 дробящего (конечность)\",\"+1 к проверкам СИЛ (конечность)\",\"Световые узоры\",\"Реакция на звук\"],\"priceWonlongs\":3625,\"overload\":false,\"blocked\":false,\"canSave\":true,\"warnings\":[],\"totals\":{\"cpuMhz\":150,\"ramGb\":0.5,\"powerWh\":32,\"powerDrawW\":8},\"partLines\":[{\"partId\":\"chassis_limb_heavy\",\"partName\":\"Усиленный корпус конечности\",\"powerWh\":12,\"powerDrawW\":3,\"cpuMhz\":150,\"ramGb\":0.5},{\"partId\":\"actuator_myomer\",\"partName\":\"Миомерные приводы\",\"powerWh\":0,\"powerDrawW\":4,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"power_cell_s\",\"partName\":\"Топливная ячейка (малая)\",\"powerWh\":20,\"powerDrawW\":0,\"cpuMhz\":0,\"ramGb\":0},{\"partId\":\"cosm_led_skin\",\"partName\":\"LED-подсветка кожи\",\"powerWh\":0,\"powerDrawW\":1,\"cpuMhz\":0,\"ramGb\":0}]}",
+      "priceWonlongs": 3625,
+      "inShop": 1,
+      "vendorNpcId": null,
+      "createdAt": "2026-06-15T07:09:32.353+00:00",
+      "updatedAt": "2026-06-15T14:02:03.721+00:00"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "f6c612d3-eca9-44ea-a682-261f9b5944f0",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "catalogId": "thornton_galena",
+      "label": null,
+      "assignedUserId": "59495e14-28b8-4689-ac8e-5abbd47060a2",
+      "notes": null,
+      "createdAt": "2026-06-15T21:08:46.335+00:00"
+    }
+  ],
+  "iceScores": [
+    {
+      "id": "e6084e19-a36e-4f0e-9175-b916cc70710e",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "displayName": "Пешек",
+      "score": 0,
+      "exfilPct": 100,
+      "tracePct": 100,
+      "won": 0,
+      "createdAt": "2026-06-15T20:53:52.496+00:00"
+    },
+    {
+      "id": "42c70470-e39e-4d21-a258-fc754140135d",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "displayName": "Пешек",
+      "score": 45,
+      "exfilPct": 100,
+      "tracePct": 66,
+      "won": 1,
+      "createdAt": "2026-06-15T20:52:58.691+00:00"
+    }
+  ],
+  "scenarioNodes": [
+    {
+      "id": "32e48fcf-9254-4be2-a83d-d7892356e75f",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": null,
+      "title": "Основной сценарий цукпцку",
+      "body": "укпкф",
+      "sortOrder": 0,
+      "links": "{\"npcIds\":[\"09acda14-4683-43c2-9149-b42eb1d7a33a\",\"1e4f541b-d233-4671-85b9-dbd9e28e632f\",\"f7e50d84-16b2-4eaa-8e00-8d6dfaf3d290\"],\"catalogIds\":[],\"fileIds\":[\"2f7525e6-a8fc-42e8-a190-d0ad876e431d\",\"a8ed74ad-5c43-4237-9861-de4d391c9824\"]}",
+      "createdAt": "2026-06-15T20:21:12.385+00:00",
+      "updatedAt": "2026-06-15T20:21:37.072+00:00"
+    },
+    {
+      "id": "5ba00bbb-5b1f-493b-a294-6688bb41b33c",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": "07c6fad7-5b6b-4bd7-aee2-52403e67c90a",
+      "title": "встреться в баре Мрачная Жижа",
+      "body": "цукцк",
+      "sortOrder": 0,
+      "links": "{\"npcIds\":[\"09acda14-4683-43c2-9149-b42eb1d7a33a\"],\"catalogIds\":[\"g_chrome_hand\"],\"fileIds\":[\"0fac6c5c-9ae7-4e2e-bf54-894a35371de3\"],\"syncToLore\":true,\"lorePlaceId\":\"0c7c7cab-a04d-4f3b-9dac-cc68427e52b2\",\"placeTitle\":\"бар Мрачная Жижа\",\"mapMarkerId\":null,\"zoneKey\":\"santo_domingo_arroyo\",\"meetCheckpoint\":true}",
+      "createdAt": "2026-06-15T20:21:43.780+00:00",
+      "updatedAt": "2026-06-15T20:46:54.863+00:00"
+    },
+    {
+      "id": "d75d738d-b6e2-4333-b62f-6c6192df4970",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": "07c6fad7-5b6b-4bd7-aee2-52403e67c90a",
+      "title": "Новый квест",
+      "body": "",
+      "sortOrder": 0,
+      "links": "{}",
+      "createdAt": "2026-06-15T20:21:46.184+00:00",
+      "updatedAt": "2026-06-15T20:21:46.184+00:00"
+    },
+    {
+      "id": "088cd013-8266-4820-8e90-024478d5ebfa",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": "07c6fad7-5b6b-4bd7-aee2-52403e67c90a",
+      "title": "Новый квест",
+      "body": "",
+      "sortOrder": 0,
+      "links": "{}",
+      "createdAt": "2026-06-15T20:21:48.112+00:00",
+      "updatedAt": "2026-06-15T20:21:48.112+00:00"
+    },
+    {
+      "id": "7f64ec76-f674-415c-8b9f-2f79b89dabcb",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": "32e48fcf-9254-4be2-a83d-d7892356e75f",
+      "title": "Новый квест",
+      "body": "",
+      "sortOrder": 0,
+      "links": "{}",
+      "createdAt": "2026-06-15T20:21:39.532+00:00",
+      "updatedAt": "2026-06-15T20:21:39.532+00:00"
+    },
+    {
+      "id": "07c6fad7-5b6b-4bd7-aee2-52403e67c90a",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "parentId": "7f64ec76-f674-415c-8b9f-2f79b89dabcb",
+      "title": "Новый квест",
+      "body": "",
+      "sortOrder": 0,
+      "links": "{}",
+      "createdAt": "2026-06-15T20:21:43.329+00:00",
+      "updatedAt": "2026-06-15T20:21:43.329+00:00"
+    }
+  ],
+  "loreWorld": {
+    "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+    "body": "цукецук",
+    "updatedAt": "2026-06-15T20:47:13.815+00:00"
+  },
+  "loreEntries": [
+    {
+      "id": "cf878f62-fdc0-42d5-aa41-75d66942b752",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "title": "Общий лор",
+      "body": "цукецук",
+      "sortOrder": 0,
+      "createdAt": "2026-06-16T12:45:20.598+00:00",
+      "updatedAt": "2026-06-16T12:45:20.598+00:00"
+    }
+  ],
+  "factions": [
+    {
+      "id": "e7fe0138-137f-41ed-add7-bbfc464ce9f5",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "банда Серебряных Глаз",
+      "description": "опасные парни, банчат наркотой, все участники ставят имплант \"серебряные глаза\"",
+      "color": null,
+      "memberPlayerIds": "[]",
+      "memberNpcIds": "[\"f7e50d84-16b2-4eaa-8e00-8d6dfaf3d290\"]",
+      "createdAt": "2026-06-15T20:43:21.520+00:00",
+      "updatedAt": "2026-06-15T20:44:11.752+00:00"
+    },
+    {
+      "id": "7afbb9b3-0765-4bd8-91b3-78b1a0bd52f1",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "name": "Корпорация СборБанк",
+      "description": "банковские",
+      "color": null,
+      "memberPlayerIds": "[\"2586d23b-131b-4948-8db8-8d6fc7a6a16a\"]",
+      "memberNpcIds": "[\"09acda14-4683-43c2-9149-b42eb1d7a33a\"]",
+      "createdAt": "2026-06-15T20:44:12.981+00:00",
+      "updatedAt": "2026-06-15T20:45:01.253+00:00"
+    }
+  ],
+  "places": [
+    {
+      "id": "0c7c7cab-a04d-4f3b-9dac-cc68427e52b2",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "title": "бар Мрачная Жижа",
+      "body": "",
+      "zoneKey": "santo_domingo_arroyo",
+      "mapMarkerId": null,
+      "x": null,
+      "y": null,
+      "sourceScenarioNodeId": "5ba00bbb-5b1f-493b-a294-6688bb41b33c",
+      "createdAt": "2026-06-15T20:46:53.321+00:00",
+      "updatedAt": "2026-06-15T20:46:54.859+00:00"
+    }
+  ],
+  "markers": [],
+  "playerPositions": [
+    {
+      "id": "d8a319d1-59f9-49c4-8a29-33905875163a",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "zoneKey": "heywood_the_glen",
+      "x": 54,
+      "y": 99.5,
+      "vehicleId": null,
+      "vehicleOverload": 0,
+      "updatedAt": "2026-06-15T20:52:28.980+00:00"
+    }
+  ],
+  "hostAlerts": [
+    {
+      "id": "20450aa0-53f8-40ec-8af5-1838cac8d20c",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: старт → Шишиндом · пешком · ~0 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:51:48.421+00:00"
+    },
+    {
+      "id": "8549ac5c-0a78-46a9-8780-2be47d9263dc",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Шишиндом → Попенгаген · пешком · ~15 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:51:52.507+00:00"
+    },
+    {
+      "id": "5707128b-72f2-487b-b789-a6f7f10b117e",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Попенгаген → Маленькая Китайщина · пешком · ~14 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:51:56.619+00:00"
+    },
+    {
+      "id": "4668bc03-fbd4-4eba-9deb-3a197e694526",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Маленькая Китайщина → Кабуки · пешком · ~13 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:51:58.503+00:00"
+    },
+    {
+      "id": "1e96b511-3903-4055-b33e-ff8239ec556c",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Кабуки → Arasaka · пешком · ~13 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:52:04.937+00:00"
+    },
+    {
+      "id": "e8147ebf-2639-4c8e-8670-76619ac8549c",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Arasaka → Коствью · пешком · ~36 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:52:19.974+00:00"
+    },
+    {
+      "id": "f39b581e-853e-49d5-ba23-95a982aa0c4a",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "fromUserId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "kind": "travel",
+      "body": "Пешек: Коствью → Глен · пешком · ~53 мин",
+      "read": 0,
+      "createdAt": "2026-06-15T20:52:28.984+00:00"
+    }
+  ],
+  "vaultFiles": [
+    {
+      "id": "0fac6c5c-9ae7-4e2e-bf54-894a35371de3",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "title": "пкпк",
+      "body": "пкпкппк",
+      "protected": 0,
+      "gameId": null,
+      "difficulty": null,
+      "createdById": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "createdAt": "2026-06-15T00:18:56.558+00:00",
+      "passwordHash": null,
+      "iceRewardCode": null
+    },
+    {
+      "id": "1d5de015-0766-4ae0-b85f-86a603df3323",
+      "sessionId": "6366ae56-72f5-4294-846a-ef877e6733f3",
+      "title": "кеке",
+      "body": "вапвап",
+      "protected": 1,
+      "gameId": "mesh_jack",
+      "difficulty": "medium",
+      "createdById": "9deb0d44-2f63-4eb0-a21b-7c84c6c988bc",
+      "createdAt": "2026-06-15T08:32:24.808+00:00",
+      "passwordHash": null,
+      "iceRewardCode": null
+    }
+  ],
+  "fileUnlocks": [
+    {
+      "id": "6725539d-671c-49aa-90b2-436dd527feb1",
+      "fileId": "1d5de015-0766-4ae0-b85f-86a603df3323",
+      "userId": "c367d31a-8cbc-4e4a-be05-57429f94cfda",
+      "icePassedAt": null,
+      "unlockedAt": "2026-06-15T08:32:50.770+00:00"
+    }
+  ],
+  "combatants": [],
+  "scenarioProgress": null
+}

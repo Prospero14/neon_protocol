@@ -16,6 +16,8 @@ export type NriInventoryItem = {
   id: string;
   catalogId?: string;
   name: string;
+  /** Базовое имя каталога, если runtime-имя уже было подписано/изменено. */
+  baseName?: string;
   blurb?: string;
   kind?: 'gear' | 'cyberware';
   slot?: 'weapon' | 'armor' | 'accessory' | 'quick';
@@ -39,6 +41,12 @@ export type NriInventoryItem = {
   qty?: number;
   /** Теги каталога / runtime (например cyber:smartlink_jam). */
   tags?: string[];
+  /** Персональный предмет: не передаётся другим игрокам/НПС. */
+  transferLocked?: boolean;
+  /** Одноразовая подпись имени/владельца для документов и пропусков. */
+  inscribedName?: string;
+  /** После первой подписи имя менять нельзя. */
+  inscriptionLocked?: boolean;
 };
 
 export function parseNriInventory(raw: unknown): NriInventoryItem[] {

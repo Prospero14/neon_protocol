@@ -61,9 +61,13 @@ export function createApp(opts) {
             res.status(500).send('CRITICAL ERROR: Main index.html missing in dist/');
         }
     });
-    app.get(/.*/, (req, res) => {
-        if (req.path.startsWith('/neon_v1'))
-            return sendApiError(res, 404, 'API_NOT_FOUND', 'Маршрут не найден.');
+    // SPA fallback только для GET. API 404 — для всех методов (иначе PATCH даёт «Cannot PATCH»).
+    app.use((req, res, next) => {
+        if (!req.path.startsWith('/neon_v1'))
+            return next();
+        return sendApiError(res, 404, 'API_NOT_FOUND', `Маршрут не найден: ${req.method} ${req.path}`);
+    });
+    app.get(/.*/, (_req, res) => {
         if (fs.existsSync(indexPath)) {
             sendHtmlNoCache(res, indexPath);
         }

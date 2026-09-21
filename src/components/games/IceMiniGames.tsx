@@ -333,7 +333,7 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
   const cols = 5;
   const targetLen = params.sequenceLen;
   const bufferMax = params.tapTarget + 2;
-  const seed = Date.now();
+  const [seed] = useState(() => Date.now());
 
   const matrix = useMemo(() => generateBreachMatrix(rows, cols, seed), [rows, cols, seed]);
   const run = useMemo(() => generateBreachRun(matrix, targetLen, seed + 17), [matrix, targetLen, seed]);
@@ -435,9 +435,10 @@ export const DaemonUploadGame: React.FC<Props> = ({ params, onWin, onFail }) => 
   const ice = useIcePressure(params, onFail);
   const daemonCount = params.tapTarget;
   const seqLen = params.sequenceLen;
+  const [seed] = useState(() => Date.now());
   const daemons = useMemo(
-    () => generateDaemonSequences(daemonCount, seqLen, Date.now()),
-    [daemonCount, seqLen]
+    () => generateDaemonSequences(daemonCount, seqLen, seed),
+    [daemonCount, seqLen, seed]
   );
   const [daemonIdx, setDaemonIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
@@ -516,11 +517,12 @@ export const MeshJackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
   const nodeCount = params.meshNodes;
   const pathLen = params.sequenceLen;
+  const [seed] = useState(() => Date.now());
   const nodes = useMemo(
     () => Array.from({ length: nodeCount }, (_, i) => `MESH_${String.fromCharCode(65 + i)}`),
     [nodeCount]
   );
-  const path = useMemo(() => seqNoRepeat(pathLen, nodeCount, Date.now()), [pathLen, nodeCount]);
+  const path = useMemo(() => seqNoRepeat(pathLen, nodeCount, seed), [pathLen, nodeCount, seed]);
   const [phase, setPhase] = useState<'flash' | 'input'>('flash');
   const [flashIdx, setFlashIdx] = useState(-1);
   const [step, setStep] = useState(0);
@@ -897,28 +899,37 @@ const AUTH_WORDS: { word: string; hint: string }[] = [
   { word: 'root', hint: 'слишком очевидно' },
   { word: 'дека', hint: 'левое железо' },
   { word: 'ice', hint: 'холодный протокол' },
+  { word: 'net', hint: 'сеть без www' },
+  { word: 'run', hint: 'бег по кабелю' },
   { word: 'брут', hint: 'грубая сила' },
   { word: 'токен', hint: 'не JWT' },
   { word: 'взлом', hint: 'легально, честно' },
   { word: 'хакер', hint: 'классика' },
+  { word: 'порт', hint: 'не морской' },
+  { word: 'шифр', hint: 'не цезарь' },
   { word: 'пароль', hint: 'определённо не пароль' },
   { word: 'прокси', hint: 'не dodge' },
   { word: 'гибсон', hint: 'автор льда' },
   { word: 'daemon', hint: 'не linux init' },
   { word: 'packet', hint: 'нюхаешь?' },
+  { word: 'vector', hint: 'направление атаки' },
+  { word: 'kernel', hint: 'ядро без linux' },
   { word: 'матрица', hint: 'морфеус не одобрит' },
   { word: 'backdoor', hint: 'классика жанра' },
   { word: 'нейромант', hint: 'гибсон' },
   { word: 'нейролинк', hint: 'слот neural' },
+  { word: 'blackice', hint: 'смертельный лёд' },
+  { word: 'firewall', hint: 'стена из правил' },
 ];
 
 /** Auth Bypass — Wordle с подсказкой. */
 export const AuthBypassGame: React.FC<Props> = ({ params, onWin, onFail }) => {
+  const [seed] = useState(() => Date.now());
   const target = useMemo(() => {
     const pool = AUTH_WORDS.filter((w) => w.word.length === params.wordLength);
     const list = pool.length ? pool : AUTH_WORDS.filter((w) => w.word.length === 4);
-    return list[Date.now() % list.length]!;
-  }, [params.wordLength]);
+    return list[seed % list.length]!;
+  }, [params.wordLength, seed]);
 
   const [guesses, setGuesses] = useState<{ word: string; marks: LetterMark[] }[]>([]);
   const [input, setInput] = useState('');
@@ -1056,7 +1067,8 @@ export const PacketSniffGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 /** Hash Crack — подбор hex по позициям с автопрокруткой. */
 export const HashCrackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
-  const secret = useMemo(() => generateHexSecret(params.hashLen, Date.now()), [params.hashLen]);
+  const [seed] = useState(() => Date.now());
+  const secret = useMemo(() => generateHexSecret(params.hashLen, seed), [params.hashLen, seed]);
   const hashPanelRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLSpanElement>(null);
 
@@ -1084,7 +1096,7 @@ export const HashCrackGame: React.FC<Props> = ({ params, onWin, onFail }) => {
     }
   };
 
-  const choices = useMemo(() => hashCrackChoices(secret, pos, Date.now()), [secret, pos]);
+  const choices = useMemo(() => hashCrackChoices(secret, pos, seed + pos * 97), [secret, pos, seed]);
 
   return (
     <IceMiniShell variant="hash">

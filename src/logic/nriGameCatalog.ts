@@ -291,22 +291,6 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     },
   ),
   game(
-    'dead_drop',
-    'Dead Drop',
-    'Открой все пары ключей.',
-    'memory',
-    {
-      how: 'Поле закрытых ячеек. Открывай по две — если символы совпали, пара остаётся. Несовпадение закрывает обе через короткую паузу.',
-      win: 'Найти все пары (3–6 пар) до исчерпания ошибок.',
-      fail: 'Слишком много неверных пар — dead drop скомпрометирован.',
-    },
-    {
-      easy: { memoryPairs: 3, peekMs: 900, maxMistakes: 5 },
-      medium: { memoryPairs: 4, peekMs: 650, maxMistakes: 4 },
-      hard: { memoryPairs: 5, peekMs: 450, maxMistakes: 3 },
-    },
-  ),
-  game(
     'proxy_dodge',
     'Proxy Dodge',
     'Переключай канал от прокси-сканеров.',

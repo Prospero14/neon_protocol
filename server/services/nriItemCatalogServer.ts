@@ -32,6 +32,23 @@ export function getServerCatalogItem(id: string): CatalogItem | undefined {
   return loadCatalog().find((c) => c.id === id);
 }
 
+export function isPersonalServerCatalogItem(item: Pick<CatalogItem, 'tags'> | undefined | null): boolean {
+  return !!item?.tags?.includes('персональное');
+}
+
+export function canTransferServerItem(
+  item:
+    | (Partial<Pick<InvItem, 'catalogId' | 'tags' | 'transferLocked'>> & Pick<InvItem, 'id' | 'name'>)
+    | undefined
+    | null
+): boolean {
+  if (!item) return false;
+  if (item.transferLocked === true) return false;
+  if (Array.isArray(item.tags) && item.tags.includes('персональное')) return false;
+  const catalog = typeof item.catalogId === 'string' ? getServerCatalogItem(item.catalogId) : undefined;
+  return !isPersonalServerCatalogItem(catalog);
+}
+
 export function catalogToServerInventoryItem(catalogId: string): InvItem | null {
   const c = getServerCatalogItem(catalogId);
   if (!c) return null;
@@ -40,6 +57,7 @@ export function catalogToServerInventoryItem(catalogId: string): InvItem | null 
     id,
     catalogId: c.id,
     name: c.name,
+    baseName: c.name,
     blurb: c.blurb,
     kind: 'gear',
     slot: c.slot,
@@ -49,6 +67,8 @@ export function catalogToServerInventoryItem(catalogId: string): InvItem | null 
     attack: c.attack,
     priceWonlongs: c.priceWonlongs,
     tags: c.tags ? [...c.tags] : undefined,
+    transferLocked: isPersonalServerCatalogItem(c),
+    inscriptionLocked: false,
     qty: 1,
   };
 }

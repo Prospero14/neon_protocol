@@ -10,6 +10,7 @@ import { ensureNriLoreEntryTable } from './services/nriLoreSchema.js';
 import { ensureAllNriLoreDbColumns } from './services/nriSchemaBootstrap.js';
 import { createApp } from './createApp.js';
 import { ensureDatabaseDirectory, resolveDatabaseFilePath } from './databasePath.js';
+import { importIcebreakersSeed } from './seeds/importIcebreakers.js';
 dotenv.config();
 const PORT = Number(process.env.PORT) || 8080;
 const JWT_SECRET = process.env.JWT_SECRET || 'neon_secret_key_2026';
@@ -151,6 +152,12 @@ async function initDB() {
         console.log('[NEON_CORE] Database connected successfully.');
         await ensureNriSchemaSync();
         await seedAdmin();
+        try {
+            await importIcebreakersSeed(prisma);
+        }
+        catch (seedErr) {
+            console.error('[NEON_SEED] ICEBREAKERS import failed:', seedErr);
+        }
         isDbReady = true;
         console.log('[NEON_CORE] INIT_COMPLETE: SYSTEM_READY');
     }

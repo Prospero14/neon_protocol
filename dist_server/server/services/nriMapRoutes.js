@@ -1,6 +1,6 @@
 /** Карта стола — zones, markers */
 import { isNriMember } from './nriMemberDb.js';
-import { listMapZones, ensureMapZonesSeeded, patchMapZone, createMapSubZone, deleteMapSubZone } from './nriMapZones.js';
+import { listMapZones, ensureMapZonesSeeded, patchMapZone, createMapSubZone, createMapTopZone, deleteMapZone, regenerateDistrictTilesForParent, clearDistrictTiles, } from './nriMapZones.js';
 import { ensureSessionLorePlacesFromMap, syncLorePlacesFromZonePatch, ensureSessionFactionsFromCorpZones, } from './nriLoreTravel.js';
 import { ensureNriMapSchema, apiErrorHint } from './nriSchemaBootstrap.js';
 const mapLoreSyncAt = new Map();
@@ -109,13 +109,20 @@ export function mountNriMapRoutes(app, ctx) {
             return sendApiError(res, 500, 'NRI_MAP_ZONES_FAILED', hint || 'Не удалось загрузить карту.');
         }
     });
+    /** Underhive + metro + lamps — see mountNriUnderhiveMetroRoutes. */
     app.patch('/neon_v1/services/nri/:code/map/zones/:zoneKey', async (req, res) => {
         const auth = jwtAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
-        const zoneKey = req.params.zoneKey;
-        const { name, corpName, pois, megaDistrict, color, iconId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel } = req.body;
+        let zoneKey = String(req.params.zoneKey ?? '');
+        try {
+            zoneKey = decodeURIComponent(zoneKey);
+        }
+        catch {
+            /* keep raw */
+        }
+        const { name, corpName, pois, megaDistrict, color, iconId, artId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel, rotation, swapWithZoneKey, x, y, w, h, zoneType } = req.body;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -132,13 +139,24 @@ export function mountNriMapRoutes(app, ctx) {
                 megaDistrict,
                 color,
                 iconId,
+                artId,
                 placeType,
                 districtStyle,
                 populationBand,
                 densityLabel,
                 trafficLevel,
                 nightlifeLevel,
+                rotation,
+                swapWithZoneKey,
+                x,
+                y,
+                w,
+                h,
+                zoneType,
             });
+            if (zone && typeof zone === 'object' && 'error' in zone) {
+                return sendApiError(res, 400, 'NRI_ZONE_SWAP', 'Нельзя обменять эти клетки.');
+            }
             if (!zone)
                 return sendApiError(res, 404, 'NRI_ZONE_NOT_FOUND', 'Район не найден.');
             res.json({ zone });
@@ -153,12 +171,81 @@ export function mountNriMapRoutes(app, ctx) {
             return sendApiError(res, 500, 'NRI_ZONE_PATCH_FAILED', 'Не удалось обновить район.');
         }
     });
+    app.post('/neon_v1/services/nri/:code/map/zones/:zoneKey/clear', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        let zoneKey = String(req.params.zoneKey ?? '').trim();
+        try {
+            zoneKey = decodeURIComponent(zoneKey);
+        }
+        catch {
+            /* keep */
+        }
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Очистка только у мастера.');
+            }
+            await ensureMapZonesSeeded(prisma);
+            const result = await clearDistrictTiles(prisma, zoneKey);
+            if ('error' in result) {
+                return sendApiError(res, 400, 'NRI_DISTRICT_CLEAR', 'Укажите родительский район.');
+            }
+            const zones = await listMapZones(prisma, { parentZoneKey: zoneKey });
+            res.json({ ok: true, count: result.count, zones, view: { w: 240, h: 165 } });
+        }
+        catch (error) {
+            console.error('nri/map district clear:', error);
+            return sendApiError(res, 500, 'NRI_DISTRICT_CLEAR_FAILED', 'Не удалось очистить квартал.');
+        }
+    });
+    app.post('/neon_v1/services/nri/:code/map/zones/:zoneKey/regen', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        let zoneKey = String(req.params.zoneKey ?? '').trim();
+        try {
+            zoneKey = decodeURIComponent(zoneKey);
+        }
+        catch {
+            /* keep raw */
+        }
+        if (!zoneKey) {
+            return sendApiError(res, 400, 'NRI_ZONE_KEY', 'Укажите zoneKey района.');
+        }
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const me = await resolveUser(auth);
+            if (!(await requireHost(session, auth, me))) {
+                return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Перегенерация только у мастера.');
+            }
+            await ensureMapZonesSeeded(prisma);
+            const result = await regenerateDistrictTilesForParent(prisma, zoneKey);
+            if (!result.ok) {
+                return sendApiError(res, 400, 'NRI_DISTRICT_REGEN', result.reason);
+            }
+            const zones = await listMapZones(prisma, { parentZoneKey: zoneKey });
+            res.json({ ok: true, count: result.count, zones, view: { w: 240, h: 165 } });
+        }
+        catch (error) {
+            console.error('nri/map district regen:', error);
+            return sendApiError(res, 500, 'NRI_DISTRICT_REGEN_FAILED', 'Не удалось перегенерировать квартал.');
+        }
+    });
     app.post('/neon_v1/services/nri/:code/map/zones', async (req, res) => {
         const auth = jwtAuth(req);
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
-        const { parentZoneKey, name, zoneType, slug } = req.body;
+        const { parentZoneKey, name, zoneType, slug, x, y, w, h, artId, color, megaDistrict, } = req.body;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -167,34 +254,49 @@ export function mountNriMapRoutes(app, ctx) {
             if (!(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Создаёт только мастер.');
             }
-            if (typeof parentZoneKey !== 'string' || !parentZoneKey.trim()) {
-                return sendApiError(res, 400, 'NRI_ZONE_PARENT', 'Укажите parentZoneKey.');
-            }
             if (typeof name !== 'string' || !name.trim()) {
-                return sendApiError(res, 400, 'NRI_ZONE_NAME', 'Укажите название сабзоны.');
+                return sendApiError(res, 400, 'NRI_ZONE_NAME', 'Укажите название зоны.');
             }
             await ensureMapZonesSeeded(prisma);
-            const result = await createMapSubZone(prisma, {
-                parentZoneKey: parentZoneKey.trim(),
+            if (typeof parentZoneKey === 'string' && parentZoneKey.trim()) {
+                const result = await createMapSubZone(prisma, {
+                    parentZoneKey: parentZoneKey.trim(),
+                    name: name.trim(),
+                    zoneType,
+                    slug,
+                });
+                if ('error' in result) {
+                    const msg = result.error === 'PARENT_NOT_FOUND'
+                        ? 'Родительский район не найден.'
+                        : result.error === 'PARENT_NOT_DRILLABLE'
+                            ? 'В эту зону нельзя добавлять сабзоны.'
+                            : result.error === 'ZONE_EXISTS'
+                                ? 'Сабзона с таким ключом уже есть.'
+                                : 'Не удалось создать сабзону.';
+                    return sendApiError(res, 400, String(result.error), msg);
+                }
+                return res.status(201).json({ zone: result.zone });
+            }
+            const result = await createMapTopZone(prisma, {
                 name: name.trim(),
                 zoneType,
                 slug,
+                x,
+                y,
+                w,
+                h,
+                artId,
+                color,
+                megaDistrict,
             });
             if ('error' in result) {
-                const msg = result.error === 'PARENT_NOT_FOUND'
-                    ? 'Родительский район не найден.'
-                    : result.error === 'PARENT_NOT_DRILLABLE'
-                        ? 'В эту зону нельзя добавлять сабзоны.'
-                        : result.error === 'ZONE_EXISTS'
-                            ? 'Сабзона с таким ключом уже есть.'
-                            : 'Не удалось создать сабзону.';
-                return sendApiError(res, 400, String(result.error), msg);
+                return sendApiError(res, 400, String(result.error), result.error === 'NAME_REQUIRED' ? 'Укажите название района.' : 'Не удалось создать район.');
             }
             res.status(201).json({ zone: result.zone });
         }
         catch (error) {
             console.error('nri/map zone post:', error);
-            return sendApiError(res, 500, 'NRI_ZONE_CREATE_FAILED', 'Не удалось создать сабзону.');
+            return sendApiError(res, 500, 'NRI_ZONE_CREATE_FAILED', 'Не удалось создать зону.');
         }
     });
     app.delete('/neon_v1/services/nri/:code/map/zones/:zoneKey', async (req, res) => {
@@ -202,10 +304,21 @@ export function mountNriMapRoutes(app, ctx) {
         if (!auth)
             return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
         const code = String(req.params.code ?? '').trim().toUpperCase();
-        const zoneKey = String(req.params.zoneKey ?? '').trim();
+        let zoneKey = String(req.params.zoneKey ?? '').trim();
+        try {
+            zoneKey = decodeURIComponent(zoneKey);
+        }
+        catch {
+            /* keep raw */
+        }
         if (!zoneKey) {
             return sendApiError(res, 400, 'NRI_ZONE_KEY', 'Укажите zoneKey.');
         }
+        const confirmName = typeof req.body?.confirmName === 'string'
+            ? req.body.confirmName
+            : typeof req.query.confirmName === 'string'
+                ? req.query.confirmName
+                : undefined;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -214,18 +327,23 @@ export function mountNriMapRoutes(app, ctx) {
             if (!(await requireHost(session, auth, me))) {
                 return sendApiError(res, 403, 'NRI_HOST_ONLY', 'Удаляет только мастер.');
             }
-            const result = await deleteMapSubZone(prisma, zoneKey);
+            const result = await deleteMapZone(prisma, zoneKey, { confirmName });
             if ('error' in result) {
                 const msg = result.error === 'NOT_SUBZONE'
                     ? 'Можно удалять только сабзоны.'
-                    : 'Не удалось удалить.';
-                return sendApiError(res, 404, String(result.error), msg);
+                    : result.error === 'CONFIRM_NAME'
+                        ? 'Для удаления района введите его точное название (confirmName).'
+                        : result.error === 'NOT_FOUND'
+                            ? 'Зона не найдена.'
+                            : 'Не удалось удалить.';
+                const codeHttp = result.error === 'CONFIRM_NAME' ? 400 : 404;
+                return sendApiError(res, codeHttp, String(result.error), msg);
             }
-            res.json({ ok: true, reset: result.reset, zone: result.zone ?? undefined });
+            res.json({ ok: true, reset: result.reset, zone: 'zone' in result ? result.zone : undefined });
         }
         catch (error) {
             console.error('nri/map zone delete:', error);
-            return sendApiError(res, 500, 'NRI_ZONE_DELETE_FAILED', 'Не удалось удалить сабзону.');
+            return sendApiError(res, 500, 'NRI_ZONE_DELETE_FAILED', 'Не удалось удалить зону.');
         }
     });
     app.get('/neon_v1/services/nri/:code/map/markers', async (req, res) => {

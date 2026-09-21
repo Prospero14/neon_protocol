@@ -5,6 +5,7 @@ import { mountNriIceWalletRoutes } from './nriIceWalletRoutes.js';
 import { mountNriPlayerRoutes } from './nriPlayerRoutes.js';
 import { mountNriPresetRoutes } from './nriPresetRoutes.js';
 import { mountNriMapRoutes } from './nriMapRoutes.js';
+import { mountNriUnderhiveMetroRoutes } from './nriUnderhiveMetroRoutes.js';
 import { mountNriVaultRoutes } from './nriVaultRoutes.js';
 import { mountNriNpcRoutes } from './nriNpcRoutes.js';
 import { mountNriCyberRoutes } from './nriCyberRoutes.js';
@@ -36,6 +37,7 @@ export function mountNriService(app, deps) {
     mountNriPlayerRoutes(app, nriCtx);
     mountNriPresetRoutes(app, nriCtx);
     mountNriMapRoutes(app, nriCtx);
+    mountNriUnderhiveMetroRoutes(app, nriCtx);
     mountNriVaultRoutes(app, nriCtx);
     mountNriNpcRoutes(app, nriCtx);
     mountNriCyberRoutes(app, nriCtx);

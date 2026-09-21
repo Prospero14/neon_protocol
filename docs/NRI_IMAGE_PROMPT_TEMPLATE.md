@@ -2,20 +2,28 @@
 
 Шаблон под киберпанк-карту, тайлы квартала и UI-арт проекта. Подставляй переменные в квадратных скобках.
 
-**Пайплайн (генерация → доводка → Penpot → drop-in в игру):** [`NRI_TILE_ART_PIPELINE.md`](./NRI_TILE_ART_PIPELINE.md)
+**Пайплайн (генерация → доводка → Penpot → drop-in в игру):** [`NRI_TILE_ART_PIPELINE.md`](./NRI_TILE_ART_PIPELINE.md)  
+**Целевой вид района:** [`refs/nri-district-target-look.jpg`](./refs/nri-district-target-look.jpg) — изометрия, мокрый асфальт, неон, дождь, туман, единый street-set.
 
 ---
 
 ## Master prompt
 
 ```text
-Generate a captivating top-down isometric game-art asset for the cyberpunk tabletop RPG "Neon Protocol" (NRI). The image focuses on a [MAIN_SUBJECT] situated in [ENVIRONMENT_TYPE] under [WEATHER_CONDITION / TIME_OF_DAY]. Accent details include [DETAILS], casting soft neon glows onto wet asphalt and concrete. The camera is a clean isometric orthographic view, slightly elevated, looking down and to the side — perfect for a city-map or district-tile illustration: readable silhouette, no clutter, no UI chrome, no text overlays, no watermarks.
+Generate a captivating fixed isometric (~3/4 top-down) game-art asset for the cyberpunk tabletop RPG "Neon Protocol" (NRI), matching the look of a rainy neon street diorama (Shadowrun Returns / tactical RPG tile aesthetic). The image focuses on a [MAIN_SUBJECT] situated in [ENVIRONMENT_TYPE] under [WEATHER_CONDITION / TIME_OF_DAY]. Accent details include [DETAILS], casting soft neon glows onto wet reflective asphalt and concrete sidewalks. Camera is locked orthographic isometric, slightly elevated — perfect for a district map tile: readable silhouette, tileable edges, no UI chrome, no watermark.
 
-Lighting is soft ambient night-city fill with one hard key light (distant moon or tower floodlight) creating crisp geometric shadows. Neon signage, lanterns, and interior windows emit a subtle ethereal glow (cyan / magenta / amber) without bloom wash. Artistic style: stylized low-poly / flat-shaded game illustration — crisp edges, simplified facades, deliberate absence of photoreal textures — closer to Monument Valley / The Witness geometry, but with cyberpunk Neon City language: mega-blocks, corp towers, alleys, metro mouths, rain-slick streets.
+Lighting is dark night-city ambient with high-contrast practical lights: shop interiors warm amber, neon cyan/green/red accents, soft bloom only around emissives. Rain as fine diagonal streaks; light atmospheric fog/haze toward the far edge; wet pavement shows soft colored reflections (not photoreal puddle noise). Artistic style: painterly but precise game illustration — modular buildings, clear road markings, consistent grit (metal braces, pipes, corrugated sheets), one cohesive asset set — NOT flat low-poly Monument Valley, NOT photoreal.
 
-Rendered at pristine 4K, orthographic isometric projection, clean artifact-free geometry, sharp defined edges. Atmosphere: [EMOTIONAL_TONE]. Color palette curated for Neon Protocol: deep navy and charcoal asphalt, desaturated teal shadows, muted browns/rust, warm amber lantern light, electric cyan and magenta accents — harmonious, game-readable, not purple-gradient AI cliché. Every element (buildings, cars, trees, street furniture, rocks, pipes) is simplified geometric shapes suitable for map/tile art.
+Rendered at pristine 4K, orthographic isometric, clean tile crop. Atmosphere: [EMOTIONAL_TONE]. Color palette: deep charcoal/navy wet asphalt, desaturated concrete, muted rust/brown facades, warm amber interiors, electric cyan and saturated neon accents against dark shadows — harmonious, game-readable, no purple-gradient AI cliché. Every building, stall, curb, and road marking must feel like part of the same tileset.
 
-Negative constraints: no photoreal skin, no crowded crowd scenes, no illegible microscopic text, no watermark, no logo, no HUD, no distorted perspective, no muddy overbloom.
+Negative constraints: no photoreal skin, no crowded mobs, no illegible micro-text (abstract neon glyphs OK), no watermark, no HUD, no warped perspective, no muddy overbloom, no mixed art styles in one tile.
+```
+
+When generating with Cursor `GenerateImage`, pass the target look file as a reference:
+
+```text
+reference_image_paths: ["docs/refs/nri-district-target-look.jpg"]
+aspect_ratio: "1:1"
 ```
 
 ---
@@ -24,10 +32,10 @@ Negative constraints: no photoreal skin, no crowded crowd scenes, no illegible m
 
 | Переменная | Назначение | Примеры для NRI |
 |---|---|---|
-| `[MAIN_SUBJECT]` | Главный объект кадра | `corp HQ mega-block`, `2×2 neon plaza`, `chinatown restaurant strip`, `underhive metro station`, `street lantern cluster`, `slum shack row`, `police precinct tile`, `hospital wing`, `nightclub facade`, `parking lot slab` |
-| `[ENVIRONMENT_TYPE]` | Окружение / слой карты | `Neon City district grid`, `Watson alley block`, `corp-clean campus`, `industrial port zone`, `Pacifica cliff fringe`, `underhive tunnel cavern`, `highway overpass ring` |
-| `[WEATHER_CONDITION / TIME_OF_DAY]` | Погода / время | `rainy neon night`, `foggy underhive dusk`, `clear smoggy midnight`, `acid drizzle evening`, `dry electric night` |
-| `[DETAILS]` | Мелкие акценты | `geometric street lanterns with amber halos`, `holo-billboards as flat planes`, `metro entrance stairs`, `parked blocky cars`, `dumpsters and cable spools`, `pond with flat reflections`, `gunshop neon katakana slab` |
+| `[MAIN_SUBJECT]` | Главный объект кадра | `corp HQ mega-block`, `2×2 neon plaza`, `chinatown restaurant strip`, `underhive metro station`, `street lantern cluster`, `slum shack row`, `police precinct tile`, `hospital wing`, `nightclub facade`, `parking lot slab`, `wet asphalt road segment with dashed lane marks`, `box-junction waffle crossing` |
+| `[ENVIRONMENT_TYPE]` | Окружение / слой карты | `Neon City district grid`, `Watson alley block`, `corp-clean campus`, `industrial port zone`, `Pacifica cliff fringe`, `underhive tunnel cavern`, `highway overpass ring`, `rain-slick market street corner` |
+| `[WEATHER_CONDITION / TIME_OF_DAY]` | Погода / время | `rainy neon night with light fog`, `foggy underhive dusk`, `clear smoggy midnight`, `acid drizzle evening`, `dry electric night` |
+| `[DETAILS]` | Мелкие акценты | `geometric street lanterns with amber halos`, `holo-billboards as flat planes`, `metro entrance stairs`, `parked blocky cars`, `dumpsters and cable spools`, `pond with flat reflections`, `gunshop neon katakana slab`, `market stalls with warm awnings`, `wet curb reflections`, `crosswalk stripes` |
 | `[EMOTIONAL_TONE]` | Настроение | `tense but controlled`, `cozy illicit calm`, `corporate sterile menace`, `lonely underhive hush`, `vibrant street-night energy` |
 
 ---

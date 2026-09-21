@@ -1,6 +1,6 @@
 ---
 description: NRI map tile art pipeline — prompts, GenerateImage, Penpot, gallery drop-in
-globs: docs/NRI_*.md,public/map-tiles/**,shared/nri-map-art/**
+globs: docs/NRI_*.md,docs/refs/**,public/map-tiles/**,shared/nri-map-art/**
 alwaysApply: false
 ---
 
@@ -9,7 +9,8 @@ alwaysApply: false
 When the user asks to draw / generate / finish map tiles or district sprites:
 
 1. Follow `docs/NRI_TILE_ART_PIPELINE.md` end-to-end.
-2. Build prompts from `docs/NRI_IMAGE_PROMPT_TEMPLATE.md`.
-3. Prefer Cursor `GenerateImage` (1:1) for drafts; use PixelLab/other image MCP if configured.
-4. Final assets go to `public/map-tiles/` + entries in `shared/nri-map-art/*-gallery.json`.
-5. Never commit `tmp/` or `dev.db`. Wip drafts stay under `tmp/art-wip/`.
+2. Match **target look** `docs/refs/nri-district-target-look.jpg`: fixed isometric, wet asphalt roads, cohesive building set, neon practical lights, rain + fog atmosphere.
+3. Build prompts from `docs/NRI_IMAGE_PROMPT_TEMPLATE.md`; pass the target jpg as `reference_image_paths` when using GenerateImage.
+4. Prefer Cursor `GenerateImage` (1:1) for drafts; use PixelLab/other image MCP if configured.
+5. Final assets go to `public/map-tiles/` + entries in `shared/nri-map-art/*-gallery.json`.
+6. Never commit `tmp/` or `dev.db`. Wip drafts stay under `tmp/art-wip/`.

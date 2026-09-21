@@ -25,3 +25,9 @@ dist-ssr
 
 /src/generated/prisma
 .env
+
+# Local scratch / one-off edit scripts
+/tmp/
+tmp/
+_fix_ts.mjs
+_run_build.mjs

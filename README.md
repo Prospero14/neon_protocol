@@ -29,12 +29,17 @@ The project now uses **SQLite**, so you don't need to pay for a separate databas
 > [!NOTE]
 > **Data persistence**: На Amvera включён `persistenceMount: /data` — SQLite (`dev.db`) и прогресс **сохраняются между redeploy**. Локально БД лежит в корне проекта; для кастомного пути задайте `NEON_DATA_DIR` или `DATABASE_URL=file:…`.
 
-## 📚 Documentation
+## 📚 Documentation (SDD)
 
-- **[Product pitch](docs/PITCH.md)** — возможности сервиса для презентации проекта
-- **[Architecture & stack](docs/ARCHITECTURE.md)** — tools, subsystems, API, migration paths
-- **[SOLID audit](docs/SOLID_AUDIT.md)** — technical debt checklist
-- **[Coop cards](docs/COOP_CARD_DOCUMENTATION.md)**
+Канон: **[specs/README.md](specs/README.md)** · принципы: **[specs/constitution.md](specs/constitution.md)**
+
+- **[Pitch](specs/007-product-vision/pitch.md)** — возможности сервиса
+- **[Architecture & stack](specs/001-platform-core/plan.md)** — tools, subsystems, API
+- **[SOLID audit](specs/007-product-vision/debt.md)** — technical debt
+- **[Coop cards](specs/003-coop-mode/cards.md)** — каталог ролей и справочник
+- **[Ops / Dev Cookbook](specs/001-platform-core/ops.md)** — деплой и обслуживание
+
+Старые пути `docs/*` — stubs со ссылкой на `specs/`.
 
 ## 💻 Local Development
 

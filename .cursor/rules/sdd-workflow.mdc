@@ -1,0 +1,21 @@
+---
+description: Spec-Driven Development — канон документации в specs/
+alwaysApply: true
+---
+
+# SDD workflow
+
+Канон продуктовой документации: `specs/` ([specs/README.md](../../specs/README.md), [constitution.md](../../specs/constitution.md)).
+
+## MUST
+
+1. Продуктовые изменения (режимы, контракты, карта, арт-правила) начинай с обновления или создания `specs/NNN-*/spec.md` (и `tasks.md` при чеклисте).
+2. Новая крупная фича → новая папка `specs/NNN-slug/` со следующим свободным номером.
+3. Принципы save/sync, auth и стабильных id — только через [constitution](../../specs/constitution.md); не ослаблять в локальных спеках.
+4. Старые пути `docs/*.md` и `design/*.md` — stubs; правь канон в `specs/`.
+
+## MUST NOT
+
+1. Считать продуктовую задачу завершённой, если изменился код поведения, а соответствующая спека не обновлена.
+2. Дублировать длинные каноны обратно в `docs/` (только stub + ссылка).
+3. Игнорировать `specs/006-nri-tile-art/` / `005-nri-district-map/editor-wishes.md` при работе с тайлами (см. также `nri-tile-art` skill/rule).

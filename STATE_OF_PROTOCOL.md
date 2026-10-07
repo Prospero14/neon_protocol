@@ -17,16 +17,18 @@
 
 ## Документация и качество
 
-- `docs/BACKLOG.md` — актуальный бэклог задач
-- `docs/PITCH.md` — питч: возможности сервиса для презентации.
-- `docs/ARCHITECTURE.md` — стек, связи, миграция бэк/фронт.
-- `docs/SOLID_AUDIT.md` — технический долг и план рефакторинга.
+Канон SDD: `specs/README.md` · `specs/constitution.md`
+
+- `specs/007-product-vision/backlog.md` — сводный бэклог
+- `specs/007-product-vision/pitch.md` — питч
+- `specs/001-platform-core/plan.md` — стек и архитектура
+- `specs/007-product-vision/debt.md` — SOLID / долг
 - Тесты: `npm test` (логика + HTTP integration + catalog contracts).
 - Сборка: `npm run build` (Vite + client/server `tsc`).
 
 ## Известный долг
 
-- `nriService.ts`, `createApp.ts` (coop routes), `useGameState.ts` — крупные модули (см. SOLID_AUDIT).
+- `useGameState.ts` — крупный модуль (см. debt / 001 tasks); nriService/createApp уже разрезаны.
 - Coop online-list (heartbeat) — in-memory, не критично для матчей.
 - Мастерские статусы через PATCH листа — без серверной валидации condition id.
 

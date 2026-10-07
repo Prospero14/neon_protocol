@@ -280,7 +280,7 @@ const Documentation: React.FC<DocumentationProps> = ({
                   <code>sessionMode.ts</code> (<code>COOP_DECK_MIN_CARDS</code>, <code>COOP_DECK_MAX_CARDS</code>, <code>buildCoopProtocolDocCards</code>).
                 </p>
                 <p className="mono-text opacity-60" style={{ fontSize: 11, marginTop: 8 }}>
-                  Полный текст: <code>docs/COOP_CARD_DOCUMENTATION.md</code>
+                  Полный текст: <code>specs/003-coop-mode/cards.md</code>
                 </p>
               </section>
             </div>

@@ -1,6 +1,6 @@
 ---
 description: NRI map tile art pipeline — prompts, GenerateImage, Penpot, gallery drop-in
-globs: docs/NRI_*.md,docs/refs/**,public/map-tiles/**,shared/nri-map-art/**
+globs: specs/005-nri-district-map/**,specs/006-nri-tile-art/**,docs/NRI_*.md,docs/refs/**,public/map-tiles/**,shared/nri-map-art/**
 alwaysApply: false
 ---
 
@@ -8,9 +8,11 @@ alwaysApply: false
 
 When the user asks to draw / generate / finish map tiles or district sprites:
 
-1. Follow `docs/NRI_TILE_ART_PIPELINE.md` end-to-end.
-2. Match **target look** `docs/refs/nri-district-target-look.jpg`: fixed isometric, wet asphalt roads, cohesive building set, neon practical lights, rain + fog atmosphere.
-3. Build prompts from `docs/NRI_IMAGE_PROMPT_TEMPLATE.md`; pass the target jpg as `reference_image_paths` when using GenerateImage.
-4. Prefer Cursor `GenerateImage` (1:1) for drafts; use PixelLab/other image MCP if configured.
-5. Final assets go to `public/map-tiles/` + entries in `shared/nri-map-art/*-gallery.json`.
-6. Never commit `tmp/` or `dev.db`. Wip drafts stay under `tmp/art-wip/`.
+1. Read **`specs/005-nri-district-map/editor-wishes.md` first** (taste + editor UX + map↔art contracts + **how to draw**: GenerateImage / MCP / knockout).
+2. Also follow project skill `.cursor/skills/nri-tile-art/SKILL.md` when generating tiles.
+3. Follow `specs/006-nri-tile-art/plan.md` for file drop-in details.
+4. Target look: **orthogonal top on the map** (rotates 90° with cell); **¾ isometric iso** only in the cell inspect popup. Not 3/4 on the grid.
+5. Still **modular**: sidewalk/canyon around buildings; **roads stay procedural** (no lane paint in building PNG). Cool palette only — no warm tones; housing reads as panel massif; neon from below.
+6. Build prompts from wishes §8 + `specs/006-nri-tile-art/prompts.md` (wishes win on conflicts).
+7. Final assets → `public/map-tiles/` + `shared/nri-map-art/*-gallery.json` only if they pass the modularity checklist in the wishes doc.
+8. Never commit `tmp/` or `dev.db`. Wip drafts stay under `tmp/art-wip/`.

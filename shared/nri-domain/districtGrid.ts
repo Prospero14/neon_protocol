@@ -1,4 +1,4 @@
-/** Сетка квартала — типы клеток, стили, decay, соседи. См. docs/NRI_DISTRICT_GRID.md */
+/** Сетка квартала — типы клеток, стили, decay, соседи. См. specs/005-nri-district-map/spec.md */
 
 export const PLACE_TYPES = [
   'generic',

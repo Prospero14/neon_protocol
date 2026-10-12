@@ -20,6 +20,7 @@
 | [../006-nri-tile-art/refs/nri-house-panel-aerial-ref.png](../006-nri-tile-art/refs/nri-house-panel-aerial-ref.png) | Аэрофото панелек |
 | [../006-nri-tile-art/refs/nri-house-single-topdown-space-ref.png](../006-nri-tile-art/refs/nri-house-single-topdown-space-ref.png) | Одно здание сверху + кольцо |
 | [../006-nri-tile-art/refs/nri-cybermaps-block-mood-ref.png](../006-nri-tile-art/refs/nri-cybermaps-block-mood-ref.png) | Mood квартала |
+| [`docs/refs/nri-house-colorcor-detail-ref.jpg`](../../docs/refs/nri-house-colorcor-detail-ref.jpg) | **Целевой цветокор + детали крыши** (принято) |
 
 Код-якоря: `districtTileVisual.ts`, `districtTileSprites.ts`, `district-building-gallery.json`, `NriDistrictTile.tsx`, `NriCellInspectPopup.tsx`, `NriCityMapPanel.tsx`, `scripts/knockout-tile-matte.mjs`.
 
@@ -129,15 +130,19 @@
 - Не курорт, не summer beach, не абстрактный «пол с blob-светом».
 - Неон как усталый городской свет, не радуга-bloom поверх всего.
 
-### 2.2 Палитра
+### 2.2 Палитра / цветокор
+
+**Целевой кадр по цвету и деталям крыши:** [`nri-house-colorcor-detail-ref.jpg`](../../docs/refs/nri-house-colorcor-detail-ref.jpg) (v7-язык).
 
 | Можно | Нельзя |
 |---|---|
-| Charcoal, slate, dirty steel, cool gray | Тёплые тона: amber, sodium orange, sepia, brass glow |
-| Приглушённый magenta / холодный cyan как **акцент неона** | Синие/cyan **металлические крыши** как основной материал |
-| Холодный white/violet в щелях окон | Тёплый «уютный» свет витрин как заливка |
+| Глубокий charcoal / почти-чёрный корпус, высокая контрастность | Плоский серый «мыльный» кадр |
+| Крыша: плотный clutter (AC, цистерны, трубы, бельё, кабели) | Пустая гладкая крыша |
+| Окна: смесь тёплого yellow/orange и cool purple/blue | Один плоский оттенок на всех окнах |
+| Неон magenta/cyan у цоколя, мягкие ореолы (лёгкий smog) | Радуга-bloom на весь тайл / sodium streetlamp flood в PNG дома |
+| Приглушённый magenta / холодный cyan как **акцент** | Синие/cyan **металлические крыши** как основной материал |
 
-CSS на top-спрайтах: без sepia / warm hue-rotate / тяжёлого neon bloom, который разъедает стыки.
+CSS на top-спрайтах: без sepia / warm hue-rotate / тяжёлого neon bloom, который разъедает стыки. Дальнейшие итерации house — **матчить этот цветокор**, раскладку дорог/жизни брать отдельно (v6).
 
 ### 2.3 Жилой дом (`house`) — целевой силуэт
 
@@ -152,8 +157,8 @@ CSS на top-спрайтах: без sepia / warm hue-rotate / тяжёлого
 
 1. **Одна многоэтажка на клетку**, footprint **прямоугольник** (шире квадрата), дома при расстановке **ближе** друг к другу. Не жирная «подушка» на весь кадр и не тонкая башня в пустыне.
 2. **Между домами — дорога**, не пустой каньон в PNG; жизнь = habitable-штамп (§1.6).
-3. **Читаемая этажность**: фасадная полоска / пояса окон; окна и вывески дома — в PNG; **фонари улицы — нет**.
-4. Освещение фасада: разрозненные холодные окна + неон снизу на корпусе; уличный свет добавляют лампы поверх.
+3. **Карта = почти чистый zenith**: в первую очередь крыша сверху. **Не** показывать всю панель с десятками этажей окон — при расстановке в ряд перспектива/фасады «сходят с ума». Этажность и окна — в `*-iso.png` попапа. На top максимум тонкая тень/кромка крыши.
+4. Неон на top — слабо, с уровня улицы/кромки; уличный свет — лампами поверх.
 5. **Библиотека ~8–12** `artId` крыш при общем контракте края.
 
 Неудачные итерации (не повторять):
@@ -270,7 +275,7 @@ CSS на top-спрайтах: без sepia / warm hue-rotate / тяжёлого
 4. Shop/shack/restaurant — довести до того же контракта, что house (сейчас house в фокусе итераций).
 5. **Уличная жизнь**: **решено** — отдельный habitable-штамп на `road`/аллее; во дворах тише; фонари отдельно.
 6. Разные **формы footprint** (Г / секция) в 1×1 vs оставить форму на mega 2×1 / 2×2 кистях.
-7. Habitable: один штамп на клетку vs кисть 1×2 / 2×1 вдоль улицы; сколько вариантов в первой пачке (предложение: 3–4).
+7. Habitable: **не новый placeType**, а вайлдкард-штамп на `road`/аллее (поле вроде `lifeArtId` / overlay, по аналогии с `artId` у зданий). PlaceType остаётся дорогой → стыковка разметки жива. Галерея 3–4 штампа; кисть 1×1 или 1×2.
 
 ---
 
@@ -380,17 +385,24 @@ node scripts/knockout-tile-matte.mjs "<assets>/house-….png" public/map-tiles/d
 
 ---
 
-## 8. Краткая выжимка для промптов (copy-paste)
+## 8. Промпты
+
+**Канон street-block house (пилоты v18–v20):** полный master + стыковка дорог →  
+[`../006-nri-tile-art/prompts-house-street-block.md`](../006-nri-tile-art/prompts-house-street-block.md)
+
+Кратко:
 
 ```text
-Map cell TILE: orthographic zenith (or panel-slab top-down), modular, rotates 90°.
-Residential: tall panel roof mass; side canyons; neon/signs glow FROM BELOW (street level).
-Cool palette only (charcoal/slate/steel + muted magenta/cyan neon). NO warm amber/orange/sepia.
-NO asphalt road, NO yellow dashes, NO zebra in building PNG (roads are procedural).
-Neighbors must form a housing massif. Rooftop people-functions (AC, tanks, laundry, cables).
-Popup separately: ¾ iso cutout, same cool language, no street diorama.
-Mood: cyberpunk despair, Groundhog Day, dense lived-in city — not beach, not abstract floor.
+Map TILE 1:1, slight top-down (roof primary). Colorcor = nri-house-colorcor-detail-ref.
+Wide panel house (5–6 подъездов). NO streetlamps in PNG.
+ROADS ON ALL 4 EDGES, EACH 2 LANES to the frame edge — composable:
+  opposite tiles → south 2+2 dual carriageway;
+  side neighbors → through side avenues.
+NOT a closed U-loop around one house. High-tech low-life asphalt.
+Popup separately: ¾ iso. Mood: cyberpunk despair, Groundhog Day.
 ```
+
+Параллельно остаётся путь «чистый house PNG + procedural `road` + lifeArtId» (§1.6). Street-block PNG — пилот цельного кадра квартала.
 
 ---
 

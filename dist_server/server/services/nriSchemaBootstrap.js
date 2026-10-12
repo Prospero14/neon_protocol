@@ -230,6 +230,7 @@ export async function ensureNriMapSchema(prisma) {
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "linksTo" TEXT;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "rotation" INTEGER DEFAULT 0;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "artId" TEXT;`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriMapZone" ADD COLUMN "blurb" TEXT;`);
 }
 /** Полный bootstrap лора + карты (не бросает — логирует сбой шага). */
 export async function ensureAllNriLoreDbColumns(prisma) {

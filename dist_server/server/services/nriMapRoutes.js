@@ -122,7 +122,7 @@ export function mountNriMapRoutes(app, ctx) {
         catch {
             /* keep raw */
         }
-        const { name, corpName, pois, megaDistrict, color, iconId, artId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel, rotation, swapWithZoneKey, x, y, w, h, zoneType } = req.body;
+        const { name, corpName, pois, megaDistrict, color, iconId, artId, blurb, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel, rotation, swapWithZoneKey, x, y, w, h, zoneType } = req.body;
         try {
             const session = await resolveSession(code);
             if (!session)
@@ -140,6 +140,7 @@ export function mountNriMapRoutes(app, ctx) {
                 color,
                 iconId,
                 artId,
+                blurb,
                 placeType,
                 districtStyle,
                 populationBand,

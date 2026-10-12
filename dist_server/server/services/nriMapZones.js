@@ -96,6 +96,7 @@ export function serializeMapZone(z) {
         color: z.color ?? null,
         iconId: z.iconId ?? defaultZoneIconId(z.zoneType, z.zoneKey),
         artId: z.artId ?? null,
+        blurb: typeof z.blurb === 'string' && z.blurb.trim() ? z.blurb : null,
         parentZoneKey: z.parentZoneKey ?? null,
         placeType: z.placeType ?? null,
         districtStyle: z.districtStyle ?? null,
@@ -520,6 +521,13 @@ export async function patchMapZone(prisma, zoneKey, payload) {
                 ? {
                     artId: typeof payload.artId === 'string' && payload.artId.trim()
                         ? payload.artId.trim().slice(0, 80)
+                        : null,
+                }
+                : {}),
+            ...(payload.blurb !== undefined
+                ? {
+                    blurb: typeof payload.blurb === 'string' && payload.blurb.trim()
+                        ? payload.blurb.trim().slice(0, 4000)
                         : null,
                 }
                 : {}),

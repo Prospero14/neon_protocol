@@ -23,6 +23,10 @@ export type TileVisualProps = {
   crosswalkEdges: EdgeFlags;
   /** Внутренняя улочка с ларьками на стыке дом↔дом (половина на каждом тайле). */
   innerAlleyEdges: EdgeFlags;
+  /** Придомовой двор между жилыми клетками (не проезжая часть). */
+  residentialCourtyard: EdgeFlags;
+  /** Тротуар жилого дома к дороге. */
+  residentialSidewalk: EdgeFlags;
   /** Рисовать объём здания (не заливать всю клетку дорогой). */
   showBuilding: boolean;
   showFacade: boolean;
@@ -309,17 +313,17 @@ export function resolveTileVisual(input: {
   const animate: TileVisualProps['animate'] = [];
   const styleAccents: StyleAccent[] = [];
   const streetFront = streetFrontFor(neighbors);
-  const buildingGutter = buildingGutterFor(placeType, neighbors);
+  const buildingGutter =
+    placeType === 'house'
+      ? { n: false, s: false, e: false, w: false }
+      : buildingGutterFor(placeType, neighbors);
   const roadCurb = roadCurbFor(placeType, neighbors);
   const crosswalkEdges = crosswalkEdgesFor(placeType, neighbors, zoneKey);
-  const innerAlleyEdges = innerAlleyEdgesFor(
-    placeType,
-    neighbors,
-    zoneKey,
-    gridRow,
-    gridCol,
-    districtStyle
-  );
+  const innerAlleyEdges =
+    placeType === 'house'
+      ? { n: false, s: false, e: false, w: false }
+      : innerAlleyEdgesFor(placeType, neighbors, zoneKey, gridRow, gridCol, districtStyle);
+  const yard = residentialYardFor(placeType, neighbors);
 
   const patternClass = `nri-district-tile--${placeType} nri-district-tile--style-${districtStyle}`;
   const roadLinks = roadLinksFor(placeType, neighbors);
@@ -403,6 +407,8 @@ export function resolveTileVisual(input: {
     roadCurb,
     crosswalkEdges,
     innerAlleyEdges,
+    residentialCourtyard: yard.courtyard,
+    residentialSidewalk: yard.sidewalk,
     showBuilding,
     showFacade,
     facadeDir,
@@ -428,6 +434,37 @@ export function tileAnimationCost(visual: Pick<TileVisualProps, 'animate' | 'dec
 }
 
 /**
+ * Придомовая территория жилого дома:
+ * — к соседнему дому/трущобе: общий двор (половина полосы на каждом тайле);
+ * — к дороге: тротуар;
+ * без проезжей части / жёлтой разметки.
+ */
+export function residentialYardFor(
+  placeType: PlaceType,
+  neighbors: TileNeighbors
+): { courtyard: EdgeFlags; sidewalk: EdgeFlags } {
+  const none = { n: false, s: false, e: false, w: false };
+  if (placeType !== 'house' && placeType !== 'generic') {
+    return { courtyard: none, sidewalk: none };
+  }
+  const residential = (t?: PlaceType) => t === 'house' || t === 'shack' || t === 'generic';
+  return {
+    courtyard: {
+      n: residential(neighbors.n),
+      s: residential(neighbors.s),
+      e: residential(neighbors.e),
+      w: residential(neighbors.w),
+    },
+    sidewalk: {
+      n: touchesStreet(neighbors.n),
+      s: touchesStreet(neighbors.s),
+      e: touchesStreet(neighbors.e),
+      w: touchesStreet(neighbors.w),
+    },
+  };
+}
+
+/**
  * Внутренние улочки на стыке двух зданий (не дорога): обе клетки
  * детерминированно соглашаются по каноническому ребру → полосы складываются.
  */
@@ -441,19 +478,18 @@ export function innerAlleyEdgesFor(
 ): EdgeFlags {
   const none = { n: false, s: false, e: false, w: false };
   if (!BUILDING_TYPES.has(placeType) && placeType !== 'generic') return none;
-  // барак — свой спрайт на всю клетку; улочки только у «обычных» корпусов
-  if (placeType === 'shack') return none;
+  // Улочки между любыми корпусными клетками (включая shack) — квартал «дышит»
 
   const density =
     districtStyle === 'slum' || districtStyle === 'chinatown'
-      ? 42
+      ? 58
       : districtStyle === 'corp_clean'
-        ? 14
+        ? 22
         : districtStyle === 'industrial'
-          ? 22
-          : 32;
+          ? 38
+          : 52;
 
-  const building = (t?: PlaceType) => !!t && BUILDING_TYPES.has(t) && t !== 'shack';
+  const building = (t?: PlaceType) => !!t && (BUILDING_TYPES.has(t) || t === 'generic');
 
   const agreed = (edge: 'n' | 's' | 'e' | 'w'): boolean => {
     let or = row;

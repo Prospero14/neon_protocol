@@ -598,6 +598,117 @@ const NeonSignStrip: React.FC<{
   );
 };
 
+/** Придомовой двор / тротуар жилого дома — стыкуется с соседями (не проезжая часть). */
+const ResidentialYardEdge: React.FC<{
+  edge: Edge;
+  kind: 'courtyard' | 'sidewalk';
+  z: NriMapZone;
+  zoneKey: string;
+}> = ({ edge, kind, z, zoneKey }) => {
+  let h = 0;
+  for (let i = 0; i < zoneKey.length; i++) h = (h * 31 + zoneKey.charCodeAt(i)) | 0;
+  const seed = Math.abs(h) + (edge === 'e' ? 17 : edge === 'w' ? 31 : edge === 'n' ? 47 : 63);
+  const strip = kind === 'sidewalk' ? 0.14 : 0.13;
+  const cls = kind === 'sidewalk' ? 'nri-district-tile__sidewalk' : 'nri-district-tile__courtyard';
+
+  const band =
+    edge === 'e' ? (
+      <rect x={z.x + z.w * (1 - strip)} y={z.y} width={z.w * strip} height={z.h} className={cls} />
+    ) : edge === 'w' ? (
+      <rect x={z.x} y={z.y} width={z.w * strip} height={z.h} className={cls} />
+    ) : edge === 'n' ? (
+      <rect x={z.x} y={z.y} width={z.w} height={z.h * strip} className={cls} />
+    ) : (
+      <rect x={z.x} y={z.y + z.h * (1 - strip)} width={z.w} height={z.h * strip} className={cls} />
+    );
+
+  const along = (t: number) => {
+    if (edge === 'e' || edge === 'w') {
+      return {
+        x: edge === 'e' ? z.x + z.w * (1 - strip + 0.015) : z.x + z.w * 0.015,
+        y: z.y + z.h * t,
+        w: z.w * (strip - 0.03),
+        h: z.h * 0.1,
+      };
+    }
+    return {
+      x: z.x + z.w * t,
+      y: edge === 'n' ? z.y + z.h * 0.015 : z.y + z.h * (1 - strip + 0.015),
+      w: z.w * 0.12,
+      h: z.h * (strip - 0.03),
+    };
+  };
+
+  const props: Array<{ t: number; kind: 'bin' | 'vend' | 'bench' | 'kiosk' }> = [
+    { t: 0.12 + (seed % 5) * 0.03, kind: seed % 3 === 0 ? 'vend' : 'bin' },
+    { t: 0.42 + ((seed >> 2) % 4) * 0.04, kind: seed % 2 === 0 ? 'bench' : 'kiosk' },
+  ];
+  if (seed % 2 === 0) props.push({ t: 0.72 + ((seed >> 3) % 3) * 0.03, kind: 'bin' });
+
+  return (
+    <g className="nri-district-tile__yard-g" pointerEvents="none">
+      {band}
+      {props.map((p, i) => {
+        const b = along(p.t);
+        if (p.kind === 'bin') {
+          return (
+            <rect
+              key={i}
+              x={b.x + b.w * 0.15}
+              y={b.y + b.h * 0.1}
+              width={b.w * 0.55}
+              height={b.h * 0.75}
+              rx={0.03}
+              className="nri-district-tile__yard-bin"
+            />
+          );
+        }
+        if (p.kind === 'vend') {
+          return (
+            <g key={i}>
+              <rect x={b.x} y={b.y} width={b.w * 0.85} height={b.h} rx={0.04} className="nri-district-tile__yard-vend" />
+              <rect
+                x={b.x + b.w * 0.1}
+                y={b.y + b.h * 0.15}
+                width={b.w * 0.55}
+                height={b.h * 0.35}
+                className="nri-district-tile__yard-vend-glow"
+                rx={0.02}
+              />
+            </g>
+          );
+        }
+        if (p.kind === 'bench') {
+          return (
+            <rect
+              key={i}
+              x={b.x}
+              y={b.y + b.h * 0.35}
+              width={b.w * 1.1}
+              height={b.h * 0.35}
+              rx={0.02}
+              className="nri-district-tile__yard-bench"
+            />
+          );
+        }
+        return (
+          <g key={i}>
+            <rect x={b.x} y={b.y} width={b.w} height={b.h * 0.95} rx={0.04} className="nri-district-tile__yard-kiosk" />
+            <rect
+              x={b.x + b.w * 0.08}
+              y={b.y}
+              width={b.w * 0.84}
+              height={b.h * 0.28}
+              className="nri-district-tile__yard-kiosk-neon"
+              rx={0.02}
+            />
+          </g>
+        );
+      })}
+    </g>
+  );
+};
+
 /** Половина внутренней улочки + ларьки; с соседним тайлом складывается в проход. */
 const InnerAlleyEdge: React.FC<{
   edge: Edge;
@@ -792,7 +903,7 @@ function NriDistrictTileInner({
   /** Полная клетка — иначе крошечный inset + неон = каша. */
   const openSprite = !!spriteHref && !hideCellDecor;
   const hasSprite = openSprite;
-  /** Спрайт уже читается — микродекор только шумит на сетке. */
+  /** Мелкий шум глушим под PNG; улочки между соседями оставляем поверх. */
   const quietDecor = hasSprite;
 
   return (
@@ -807,7 +918,7 @@ function NriDistrictTileInner({
       onDoubleClick={onDoubleClick}
     >
       <clipPath id={cid}>
-        <rect x={z.x + 0.04} y={z.y + 0.04} width={z.w - 0.08} height={z.h - 0.08} rx={0.15} />
+        <rect x={z.x} y={z.y} width={z.w} height={z.h} rx={0.08} />
       </clipPath>
 
       <rect
@@ -836,7 +947,7 @@ function NriDistrictTileInner({
         pointerEvents="none"
         transform={rotTransform}
       >
-        {!hideCellDecor && visual.fillPatternId && (
+        {!hideCellDecor && visual.fillPatternId && !hasSprite && (
           <rect
             x={z.x}
             y={z.y}
@@ -847,12 +958,45 @@ function NriDistrictTileInner({
           />
         )}
 
+        {/* Top PNG заполняет клетку — pad не нужен (иначе «марка» по центру). */}
         {!hideCellDecor && visual.showBuilding && body && !hasSprite && (!packed || hasAlley) && (
           <BuildingPad z={z} body={body} />
         )}
 
+        {openSprite && (
+          <image
+            href={spriteHref!}
+            x={z.x}
+            y={z.y}
+            width={z.w}
+            height={z.h}
+            preserveAspectRatio="xMidYMid slice"
+            className="nri-district-tile__sprite nri-district-tile__sprite--open nri-district-tile__sprite--top"
+          />
+        )}
+
         {!hideCellDecor &&
-          !quietDecor &&
+          edgesFrom(visual.residentialCourtyard).map((edge) => (
+            <ResidentialYardEdge
+              key={`yard-c-${edge}`}
+              edge={edge}
+              kind="courtyard"
+              z={z}
+              zoneKey={raw.zoneKey}
+            />
+          ))}
+        {!hideCellDecor &&
+          edgesFrom(visual.residentialSidewalk).map((edge) => (
+            <ResidentialYardEdge
+              key={`yard-s-${edge}`}
+              edge={edge}
+              kind="sidewalk"
+              z={z}
+              zoneKey={raw.zoneKey}
+            />
+          ))}
+
+        {!hideCellDecor &&
           edgesFrom(visual.innerAlleyEdges).map((edge) => (
             <InnerAlleyEdge key={`alley-${edge}`} edge={edge} z={z} zoneKey={raw.zoneKey} />
           ))}
@@ -870,7 +1014,6 @@ function NriDistrictTileInner({
         )}
 
         {!hideCellDecor &&
-          !quietDecor &&
           visual.showBuilding &&
           edgesFrom(visual.buildingGutter).map((edge) => (
             <StreetEdge
@@ -885,18 +1028,6 @@ function NriDistrictTileInner({
               }
             />
           ))}
-
-        {openSprite && (
-          <image
-            href={spriteHref!}
-            x={z.x + z.w * 0.04}
-            y={z.y + z.h * 0.04}
-            width={z.w * 0.92}
-            height={z.h * 0.92}
-            preserveAspectRatio="xMidYMid meet"
-            className="nri-district-tile__sprite nri-district-tile__sprite--open"
-          />
-        )}
 
         {placeType === 'plaza' && !hideCellDecor && !quietDecor && (
           <PlazaCellArt z={{ x: z.x, y: z.y, w: z.w, h: z.h }} />

@@ -35,6 +35,7 @@ import {
   roadCornerFromLinks,
   roadCurbFor,
   roadLinksFor,
+  residentialYardFor,
   streetFrontFor,
 } from './districtTileVisual';
 
@@ -142,6 +143,14 @@ describe('districtTileVisual', () => {
     const inset = applyAlleyInsets({ x: 0.1, y: 0.1, w: 0.8, h: 0.8 }, { n: false, s: false, e: true, w: false });
     expect(inset.w).toBeLessThan(0.8);
     expect(inset.x).toBe(0.1);
+  });
+
+  it('residential yard: courtyard to house, sidewalk to road', () => {
+    const y = residentialYardFor('house', { e: 'house', w: 'road', n: 'shack' });
+    expect(y.courtyard.e).toBe(true);
+    expect(y.courtyard.n).toBe(true);
+    expect(y.sidewalk.w).toBe(true);
+    expect(y.sidewalk.e).toBe(false);
   });
 
   it('exit gap faces perimeter', () => {

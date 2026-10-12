@@ -48,6 +48,9 @@ export function createApp(opts) {
             if (filePath.endsWith('.html')) {
                 _res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
             }
+            else if (/map-tiles[/\\]/i.test(filePath)) {
+                _res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+            }
         },
     }));
     const indexPath = fs.existsSync(path.join(DIST, 'index.html'))

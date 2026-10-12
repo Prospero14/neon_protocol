@@ -25,6 +25,7 @@
 | 006 | [nri-tile-art](./006-nri-tile-art/) | Пайплайн тайлов, промпты, refs |
 | 007 | [product-vision](./007-product-vision/) | Pitch, roadmap, backlog, SOLID debt |
 | 008 | [external-content](./008-external-content/) | Внешний контент (Necrons WH40K) |
+| 009 | [nri-roleplay-pack](./009-nri-roleplay-pack/) | Сырьё ролевки NRI: сценарий, квесты, нейминги (пока inbox) |
 
 ## Связанное вне specs
 

@@ -2,6 +2,11 @@
 
 > Spec Kit · [plan.md](./plan.md) · канон вкуса важнее: [../005-nri-district-map/editor-wishes.md](../005-nri-district-map/editor-wishes.md)
 
+**Актуальный промпт street-block house (дороги 2 полосы, стык с соседями):**  
+→ [`prompts-house-street-block.md`](./prompts-house-street-block.md)
+
+Ниже — старый iso-шаблон (попап / legacy). Для map top house **не** использовать amber+iso из Master prompt без сверки с wishes.
+
 Шаблон под киберпанк-карту, тайлы квартала и UI-арт проекта. Подставляй переменные в квадратных скобках.
 
 **Пайплайн:** [plan.md](./plan.md)  

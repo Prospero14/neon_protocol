@@ -169,7 +169,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
     } catch {
       /* keep raw */
     }
-    const { name, corpName, pois, megaDistrict, color, iconId, artId, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel, rotation, swapWithZoneKey, x, y, w, h, zoneType } = req.body as {
+    const { name, corpName, pois, megaDistrict, color, iconId, artId, blurb, placeType, districtStyle, populationBand, densityLabel, trafficLevel, nightlifeLevel, rotation, swapWithZoneKey, x, y, w, h, zoneType } = req.body as {
       name?: string;
       corpName?: string | null;
       megaDistrict?: string;
@@ -177,6 +177,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
       color?: string | null;
       iconId?: string | null;
       artId?: string | null;
+      blurb?: string | null;
       placeType?: string;
       districtStyle?: string | null;
       populationBand?: string | null;
@@ -207,6 +208,7 @@ export function mountNriMapRoutes(app: Express, ctx: NriRouteContext): void {
         color,
         iconId,
         artId,
+        blurb,
         placeType,
         districtStyle,
         populationBand,

@@ -478,6 +478,8 @@ model NriMapZone {
   linksTo         Json?
   locked        Boolean  @default(false)
   pois      Json?
+  /** Описание клетки: NPC, предметы, квестовый текст для попапа. */
+  blurb     String?
   updatedAt DateTime @updatedAt
 }
 

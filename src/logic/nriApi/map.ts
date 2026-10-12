@@ -48,6 +48,8 @@ export type NriMapZone = {
   color: string | null;
   iconId?: string | null;
   artId?: string | null;
+  /** Описание клетки (NPC, предметы, квест) для попапа. */
+  blurb?: string | null;
   updatedAt: number;
   populationBand?: PopulationBand | null;
   densityLabel?: string | null;
@@ -193,6 +195,7 @@ export async function nriPatchMapZone(
     rotation?: number;
     swapWithZoneKey?: string;
     artId?: string | null;
+    blurb?: string | null;
     x?: number;
     y?: number;
     w?: number;

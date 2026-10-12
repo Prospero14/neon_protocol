@@ -68,6 +68,8 @@ export function createApp(opts: CreateAppOptions) {
       setHeaders: (_res, filePath) => {
         if (filePath.endsWith('.html')) {
           _res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        } else if (/map-tiles[/\\]/i.test(filePath)) {
+          _res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
         }
       },
     }),

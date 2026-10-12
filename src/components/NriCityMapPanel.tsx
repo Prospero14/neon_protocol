@@ -101,6 +101,7 @@ import {
   type MapPickerSelection,
 } from './NriMapObjectPicker';
 import { NriDistrictBrushPicker } from './NriDistrictBrushPicker';
+import { NriCellInspectPopup } from './NriCellInspectPopup';
 import { NriUnderhiveLayer } from './NriUnderhiveLayer';
 import { NriMapLampLayer } from './NriMapLampLayer';
 import {
@@ -303,7 +304,9 @@ export const NriCityMapPanel: React.FC<Props> = ({
   const [editMega, setEditMega] = useState('');
   const [editCorp, setEditCorp] = useState('');
   const [editPois, setEditPois] = useState('');
+  const [editBlurb, setEditBlurb] = useState('');
   const [editColor, setEditColor] = useState('#5a9ee6');
+  const [inspectZone, setInspectZone] = useState<NriMapZone | null>(null);
   const [editPlaceType, setEditPlaceType] = useState<PlaceType>('generic');
   const [editDistrictStyle, setEditDistrictStyle] = useState<DistrictStyle>('residential');
   const [colorUseDefault, setColorUseDefault] = useState(true);
@@ -891,6 +894,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
       setEditMega('');
       setEditCorp('');
       setEditPois('');
+      setEditBlurb('');
       setEditColor('#5a9ee6');
       setColorUseDefault(true);
       setEditPlaceType('generic');
@@ -902,6 +906,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
     setEditMega(zoneMega(focusZone) ?? '');
     setEditCorp(focusZone.corpName ?? '');
     setEditPois(focusZone.pois?.join(', ') ?? '');
+    setEditBlurb(focusZone.blurb ?? '');
     setColorUseDefault(!focusZone.color);
     setEditColor(zoneDisplayColor(focusZone));
     setEditPlaceType(normalizePlaceType(focusZone.placeType ?? 'generic'));
@@ -914,6 +919,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
     focusZone?.name,
     focusZone?.corpName,
     focusZone?.pois,
+    focusZone?.blurb,
     focusZone?.megaDistrict,
     focusZone?.color,
     focusZone?.zoneType,
@@ -1231,6 +1237,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
     if (districtParentKey) {
       if (selectedZoneKey === raw.zoneKey) {
         setSelectedZoneKey(null);
+        setInspectZone(null);
         return;
       }
       setSelectedZoneKey(raw.zoneKey);
@@ -1240,10 +1247,17 @@ export const NriCityMapPanel: React.FC<Props> = ({
 
     if (selectedZoneKey === raw.zoneKey) {
       clearZoneSelection();
+      setInspectZone(null);
       return;
     }
     zoomToZone(raw);
     setHoverZone(raw);
+  };
+
+  const openCellInspect = (raw: NriMapZone) => {
+    if (!districtParentKey || !isSubMapZoneKey(raw.zoneKey)) return;
+    if (megaSelectMode || lampPlaceMode || lampEraseMode) return;
+    setInspectZone(raw);
   };
 
   const clearTileDrag = () => {
@@ -1376,7 +1390,10 @@ export const NriCityMapPanel: React.FC<Props> = ({
         }
         // Выделение / без кисти постановки — только выбрать клетку
         if (isSelectBrush(activeBrush) || editTool === 'select') {
+          const wasSelected = selectedZoneKey === raw.zoneKey;
           applyZoneSelection(raw);
+          if (!wasSelected) openCellInspect(raw);
+          else setInspectZone(null);
           setSaveMsg('Клетка выбрана · колесо или «Поворот» — крутить');
           return;
         }
@@ -1398,7 +1415,10 @@ export const NriCityMapPanel: React.FC<Props> = ({
         return;
       }
     }
+    const wasSelected = selectedZoneKey === raw.zoneKey;
     applyZoneSelection(raw);
+    if (!wasSelected) openCellInspect(raw);
+    else setInspectZone(null);
   };
 
   const zoomToZone = (z: NriMapZone) => {
@@ -1846,6 +1866,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
       corpName?: string | null;
       megaDistrict?: string;
       pois?: string[];
+      blurb?: string | null;
       color?: string | null;
       placeType?: string;
       districtStyle?: string | null;
@@ -1857,6 +1878,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
       .split(',')
       .map((p) => p.trim())
       .filter(Boolean);
+    const blurb = editBlurb.trim();
     const curMega = zoneMega(focusZone);
 
     if (name && name !== focusZone.name) payload.name = name;
@@ -1866,6 +1888,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
     }
     const curPois = focusZone.pois ?? [];
     if (pois.join('\0') !== curPois.join('\0')) payload.pois = pois;
+    if (blurb !== (focusZone.blurb ?? '').trim()) payload.blurb = blurb || null;
     const nextColor = colorUseDefault ? null : editColor.trim().toLowerCase();
     const curColor = focusZone.color ?? null;
     if (nextColor !== curColor) payload.color = nextColor;
@@ -1896,6 +1919,8 @@ export const NriCityMapPanel: React.FC<Props> = ({
     if (payload.placeType) optimistic.placeType = payload.placeType;
     if (payload.districtStyle !== undefined) optimistic.districtStyle = payload.districtStyle;
     if (payload.color !== undefined) optimistic.color = payload.color;
+    if (payload.blurb !== undefined) optimistic.blurb = payload.blurb;
+    if (payload.pois) optimistic.pois = payload.pois;
     setZones((prev) => prev.map((z) => (z.zoneKey === optimistic.zoneKey ? optimistic : z)));
     const res = await nriPatchMapZone(authToken, inviteCode, focusZone.zoneKey, payload);
     mapRefreshPausedRef.current = false;
@@ -1906,6 +1931,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
       return;
     }
     setSaveMsg('Сохранено');
+    if (inspectZone?.zoneKey === res.zone.zoneKey) setInspectZone(res.zone);
     if (payload.megaDistrict || payload.districtStyle) {
       const data = await nriFetchMapZones(authToken, inviteCode);
       if (data.ok) {
@@ -1944,6 +1970,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
         .map((p) => p.trim())
         .filter(Boolean)
         .join('\0') !== (focusZone.pois ?? []).join('\0') ||
+      editBlurb.trim() !== (focusZone.blurb ?? '').trim() ||
       (colorUseDefault ? null : editColor.trim().toLowerCase()) !== (focusZone.color ?? null) ||
       (editMode &&
         isSubMapZoneKey(focusZone.zoneKey) &&
@@ -2232,7 +2259,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
                 type="button"
                 className={`nri-modal__submit ${editMode ? 'active' : ''}`}
                 disabled={mapFromFallback}
-                title="Режим редактирования карты"
+                title={editMode ? 'Выйти из редактора' : 'Режим редактирования карты'}
                 onClick={() => {
                   setEditMode((v) => {
                     if (v) {
@@ -2243,6 +2270,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
                       setBrushPickerOpen(false);
                       setBrushPreviewKeys([]);
                       clearTileDrag();
+                      setSaveMsg(null);
                       return false;
                     }
                     setEditTool('select');
@@ -2259,7 +2287,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
                   });
                 }}
               >
-                {editMode ? 'Редактор: ВКЛ' : 'Редактор'}
+                {editMode ? 'Выйти из редактора' : 'Редактор'}
               </button>
               {editMode && (
                 <>
@@ -2493,18 +2521,18 @@ export const NriCityMapPanel: React.FC<Props> = ({
           {districtParentKey
             ? editTool === 'swap'
               ? swapFromKey
-                ? 'Обмен: кликните вторую клетку (или перетащите).'
-                : 'Обмен: кликните первую клетку или перетащите клетку на другую.'
+                ? 'Обмен: кликните вторую клетку (или перетащите). Выход — кнопка «Выйти из редактора».'
+                : 'Обмен: кликните первую клетку или перетащите клетку на другую. Выход — «Выйти из редактора».'
               : activeBrush && !isSelectBrush(activeBrush)
-                ? `Кисть «${activeBrush.label}»${brushOrientation ? ` · ${brushOrientation}°` : ''}: клик = поставить · колесо = поворот кисти`
-                : 'Выделение: клик = выбрать · колесо = поворот клетки · «Кисти» — поставить объект'
+                ? `Кисть «${activeBrush.label}»${brushOrientation ? ` · ${brushOrientation}°` : ''}: клик = поставить · колесо = поворот кисти · выход — «Выйти из редактора»`
+                : 'Выделение: клик = выбрать · колесо = поворот · «Кисти» — объект · выход — «Выйти из редактора»'
             : editTool === 'swap'
               ? swapFromKey
-                ? 'Обмен геометрией: кликните второй район.'
-                : 'Обмен геометрией: кликните первый район или перетащите.'
+                ? 'Обмен геометрией: кликните второй район. Выход — «Выйти из редактора».'
+                : 'Обмен геометрией: кликните первый район или перетащите. Выход — «Выйти из редактора».'
               : pendingPlaceShape
-                ? `Форма «${pendingPlaceShape.label}»: клик по фону карты — создать район.`
-                : 'Откройте «Объект» — выберите форму, затем клик по фону.'}
+                ? `Форма «${pendingPlaceShape.label}»: клик по фону карты — создать район. Выход — «Выйти из редактора».`
+                : 'Откройте «Объект» — форма, затем клик по фону. Выход — «Выйти из редактора».'}
         </p>
       )}
 
@@ -2795,6 +2823,15 @@ export const NriCityMapPanel: React.FC<Props> = ({
                     placeholder="бар, рынок, засада…"
                   />
                 </label>
+                <label className="nri-city-map__zone-field mono-text nri-city-map__zone-field--wide">
+                  <span>Описание клетки</span>
+                  <textarea
+                    value={editBlurb}
+                    onChange={(e) => setEditBlurb(e.target.value)}
+                    rows={4}
+                    placeholder="NPC, предметы, квестовые зацепки…"
+                  />
+                </label>
                 {editMode && isSubMapZoneKey(focusZone.zoneKey) && (
                   <>
                     <label className="nri-city-map__zone-field mono-text">
@@ -2976,10 +3013,6 @@ export const NriCityMapPanel: React.FC<Props> = ({
               </div>
             )}
           </>
-        ) : mapLayer === 'city' ? (
-          <p className="mono-text nri-city-map__hover nri-city-map__hover--empty">
-            {districtParent ? 'Наведите на клетку или кликните, чтобы выбрать' : 'Наведите на район или кликните для карточки'}
-          </p>
         ) : null}
       </div>
 
@@ -3659,6 +3692,8 @@ export const NriCityMapPanel: React.FC<Props> = ({
         <li><span className="swatch highway" /> Магистрали</li>
         <li><span className="swatch tunnel" /> Корп-тоннели</li>
       </ul>
+
+      <NriCellInspectPopup zone={inspectZone} onClose={() => setInspectZone(null)} />
     </div>
   );
 };

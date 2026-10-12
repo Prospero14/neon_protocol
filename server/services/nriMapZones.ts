@@ -145,6 +145,7 @@ export function serializeMapZone(z: {
   color?: string | null;
   iconId?: string | null;
   artId?: string | null;
+  blurb?: string | null;
   parentZoneKey?: string | null;
   placeType?: string | null;
   districtStyle?: string | null;
@@ -180,6 +181,7 @@ export function serializeMapZone(z: {
     color: z.color ?? null,
     iconId: z.iconId ?? defaultZoneIconId(z.zoneType, z.zoneKey),
     artId: z.artId ?? null,
+    blurb: typeof z.blurb === 'string' && z.blurb.trim() ? z.blurb : null,
     parentZoneKey: z.parentZoneKey ?? null,
     placeType: z.placeType ?? null,
     districtStyle: z.districtStyle ?? null,
@@ -542,6 +544,7 @@ export async function patchMapZone(
     color?: string | null;
     iconId?: string | null;
     artId?: string | null;
+    blurb?: string | null;
     placeType?: string;
     districtStyle?: string | null;
     populationBand?: string | null;
@@ -662,6 +665,14 @@ export async function patchMapZone(
             artId:
               typeof payload.artId === 'string' && payload.artId.trim()
                 ? payload.artId.trim().slice(0, 80)
+                : null,
+          }
+        : {}),
+      ...(payload.blurb !== undefined
+        ? {
+            blurb:
+              typeof payload.blurb === 'string' && payload.blurb.trim()
+                ? payload.blurb.trim().slice(0, 4000)
                 : null,
           }
         : {}),

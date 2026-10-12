@@ -239,14 +239,16 @@ export function MergeMegaArt({
 }) {
   const pal = MERGE_PALETTE[placeType] ?? MERGE_PALETTE.park!;
   const { x, y, w, h } = span;
-  const pad = Math.min(w, h) * 0.02;
+  /** Almost flush to span so internal grid of cover cells cannot peek through. */
+  const pad = Math.min(w, h) * 0.008;
   const ix = x + pad;
   const iy = y + pad;
   const iw = w - pad * 2;
   const ih = h - pad * 2;
   return (
     <g className={`nri-district-merge-mega nri-district-merge-mega--${placeType}`} pointerEvents="none" aria-hidden>
-      <rect x={ix} y={iy} width={iw} height={ih} rx={0.15} fill={pal.fill} stroke={pal.stroke} strokeWidth={0.12} />
+      {/* Solid slab = one visual cell; only outer stroke. */}
+      <rect x={ix} y={iy} width={iw} height={ih} rx={0.12} fill={pal.fill} stroke={pal.stroke} strokeWidth={0.18} />
       {(placeType === 'road' || placeType === 'crossing') && (
         <>
           {/* Разметка дорог рисуется поклеточно в RoadTileArt — здесь только сплошной асфальт. */}
@@ -269,7 +271,23 @@ export function MergeMegaArt({
         </>
       )}
       {placeType === 'pond' && (
-        <ellipse cx={ix + iw * 0.5} cy={iy + ih * 0.5} rx={iw * 0.4} ry={ih * 0.34} fill={pal.accent} opacity={0.35} stroke={pal.stroke} strokeWidth={0.1} />
+        <>
+          <ellipse
+            cx={ix + iw * 0.5}
+            cy={iy + ih * 0.5}
+            rx={iw * 0.46}
+            ry={ih * 0.44}
+            fill={pal.accent}
+            opacity={0.55}
+          />
+          <ellipse
+            cx={ix + iw * 0.42}
+            cy={iy + ih * 0.42}
+            rx={iw * 0.18}
+            ry={ih * 0.12}
+            fill="rgba(180,230,255,0.22)"
+          />
+        </>
       )}
       {placeType === 'dump' && (
         <>

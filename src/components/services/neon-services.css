@@ -6055,10 +6055,22 @@
   stroke: rgba(180, 190, 220, 0.4);
 }
 
-/* Клетки блока 2×2 — только hit-area; картинка рисуется слоем поверх. */
+/* Mega footprint: hit-area only; art is one layer on the anchor span. */
+.nri-district-tile--mega-cell,
 .nri-district-tile--plaza-mega-cell {
-  fill: transparent;
-  stroke: none;
+  fill: transparent !important;
+  stroke: none !important;
+  stroke-width: 0 !important;
+  stroke-dasharray: none !important;
+}
+
+.nri-city-map__zone-g--tile:hover .nri-district-tile--mega-cell,
+.nri-city-map__zone-g--tile.focused .nri-district-tile--mega-cell,
+.nri-city-map__zone-g--tile:hover .nri-district-tile--plaza-mega-cell,
+.nri-city-map__zone-g--tile.focused .nri-district-tile--plaza-mega-cell {
+  stroke: none !important;
+  stroke-width: 0 !important;
+  filter: none !important;
 }
 
 .nri-district-tile__plaza-mega-pad {

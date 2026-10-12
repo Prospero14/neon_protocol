@@ -926,9 +926,11 @@ function NriDistrictTileInner({
         y={z.y}
         width={z.w}
         height={z.h}
-        className={`nri-district-tile ${visual.patternClass}${visual.edgeFade ? ' nri-district-tile--exit' : ''}${
-          hideCellDecor ? ' nri-district-tile--plaza-mega-cell' : ''
-        }`}
+        className={
+          hideCellDecor
+            ? 'nri-district-tile nri-district-tile--mega-cell'
+            : `nri-district-tile ${visual.patternClass}${visual.edgeFade ? ' nri-district-tile--exit' : ''}`
+        }
         rx={hideCellDecor ? 0 : visual.softBlend ? 0.35 : 0.15}
         stroke={hideCellDecor ? 'none' : undefined}
         strokeWidth={hideCellDecor ? 0 : undefined}

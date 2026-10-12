@@ -33,13 +33,20 @@ export const MEGA_MERGE_TYPES = [
 export type MegaMergeType = (typeof MEGA_MERGE_TYPES)[number];
 
 /**
- * Rect: 2x1 (wide), 1x2 (tall), 2x2, 3x3, 4x4, 6x6
+ * Rect: 2x1/1x2, 3x1/1x3, 3x2/2x3, 2x2, 3x3, 4x4, 6x6
  * corner_*: L-shape 2×2 missing one corner (3 cells); suffix = missing corner
  * cross: plus — center + N/E/S/W (5 cells)
+ *
+ * Mega = один объект на N клеток: anchor держит artId `mega:type:shape`,
+ * остальные клетки — `mega_cover:anchorKey` (не рисуются как отдельные здания).
  */
 export const MEGA_SHAPES = [
   '2x1',
   '1x2',
+  '3x1',
+  '1x3',
+  '3x2',
+  '2x3',
   '2x2',
   '3x3',
   '4x4',
@@ -81,6 +88,22 @@ export function shapeCellOffsets(shape: MegaShape): ReadonlyArray<readonly [numb
         [0, 0],
         [1, 0],
       ];
+    case '3x1':
+      return [
+        [0, 0],
+        [0, 1],
+        [0, 2],
+      ];
+    case '1x3':
+      return [
+        [0, 0],
+        [1, 0],
+        [2, 0],
+      ];
+    case '3x2':
+      return rectOffsets(2, 3);
+    case '2x3':
+      return rectOffsets(3, 2);
     case '2x2':
       return [
         [0, 0],
@@ -130,8 +153,13 @@ export function shapeCellOffsets(shape: MegaShape): ReadonlyArray<readonly [numb
 }
 
 function blockOffsets(n: number): Array<readonly [number, number]> {
+  return rectOffsets(n, n);
+}
+
+/** rows × cols occupied cells from origin (inclusive). */
+function rectOffsets(rows: number, cols: number): Array<readonly [number, number]> {
   const out: Array<readonly [number, number]> = [];
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) out.push([r, c]);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) out.push([r, c]);
   return out;
 }
 
@@ -141,6 +169,14 @@ export function shapeDims(shape: MegaShape): { rows: number; cols: number } {
       return { rows: 1, cols: 2 };
     case '1x2':
       return { rows: 2, cols: 1 };
+    case '3x1':
+      return { rows: 1, cols: 3 };
+    case '1x3':
+      return { rows: 3, cols: 1 };
+    case '3x2':
+      return { rows: 2, cols: 3 };
+    case '2x3':
+      return { rows: 3, cols: 2 };
     case '2x2':
     case 'corner_ne':
     case 'corner_nw':
@@ -201,6 +237,10 @@ export type ValidateMegaResult =
 function detectRectShape(h: number, w: number): MegaShape | null {
   if (h === 1 && w === 2) return '2x1';
   if (h === 2 && w === 1) return '1x2';
+  if (h === 1 && w === 3) return '3x1';
+  if (h === 3 && w === 1) return '1x3';
+  if (h === 2 && w === 3) return '3x2';
+  if (h === 3 && w === 2) return '2x3';
   if (h === 2 && w === 2) return '2x2';
   if (h === 3 && w === 3) return '3x3';
   if (h === 4 && w === 4) return '4x4';
@@ -354,7 +394,8 @@ export function validateMegaSelection(
 
   return {
     ok: false,
-    error: 'Формы: 2×1, 1×2, 2×2, 3×3, 4×4 (прямоугольник), уголок (3) или крест (5).',
+    error:
+      'Формы: 2×1, 1×2, 3×1, 1×3, 3×2, 2×3, 2×2, 3×3, 4×4, 6×6 (прямоугольник), уголок (3) или крест (5).',
   };
 }
 

@@ -6871,7 +6871,15 @@
 }
 
 .nri-district-brush-picker {
-  max-width: min(720px, 96vw);
+  max-width: min(760px, 96vw);
+}
+
+.nri-district-brush-picker__lead {
+  margin: 0;
+  padding: 0 12px 8px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  opacity: 0.75;
 }
 
 .nri-district-brush-picker__tabs {
@@ -6895,6 +6903,29 @@
   border-color: rgba(120, 220, 255, 0.85);
   background: rgba(40, 100, 140, 0.45);
   color: #fff;
+}
+
+.nri-district-brush-picker__grid {
+  align-items: stretch;
+}
+
+.nri-district-brush-picker__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 64px;
+  text-align: left;
+}
+
+.nri-district-brush-picker__glyph {
+  display: block;
+  flex-shrink: 0;
+}
+
+.nri-district-brush-picker__item-label {
+  font-size: 0.78rem;
+  line-height: 1.25;
 }
 
 .nri-district-brush-picker__hint {

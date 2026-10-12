@@ -123,6 +123,17 @@ alley | park | plaza | parking | metro | exit
 
 Пример: `watson_kabuki__3_5`
 
+### 2.4 Mega footprint (один объект на N клеток)
+
+Сетка квартала — много клеток (часто ~12×14). Объект (штаб 4×4, трущобы 1×2/2×2/3×2/1×3, рынок, свалка…) ставится кистью **целиком**:
+
+| Роль | `artId` | Рендер |
+|------|---------|--------|
+| anchor (угол footprint) | `mega:{placeType}:{shape}` | один SVG/арт на весь bbox |
+| cover (остальные) | `mega_cover:{anchorZoneKey}` | без отдельного здания |
+
+Формы: `2x1`, `1x2`, `3x1`, `1x3`, `3x2`, `2x3`, `2x2`, `3x3`, `4x4`, `6x6`, уголки, крест. Типы — `MEGA_MERGE_TYPES` в `districtMegaMerge.ts`. UI: «Заполнение клеток» (`NriDistrictBrushPicker`).
+
 ---
 
 ## 3. API

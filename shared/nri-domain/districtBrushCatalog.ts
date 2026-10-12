@@ -53,6 +53,8 @@ export const DISTRICT_BRUSH_SECTIONS: DistrictBrushSection[] = [
   { id: 'tools', label: 'Инструменты', shapes: ['1x1'], mode: 'tool' },
   { id: '1x1', label: '1×1', shapes: ['1x1'], mode: 'tile' },
   { id: '2x1', label: '2×1 / 1×2', shapes: ['2x1', '1x2'], mode: 'tile' },
+  { id: '3x1', label: '3×1 / 1×3', shapes: ['3x1', '1x3'], mode: 'tile' },
+  { id: '3x2', label: '3×2 / 2×3', shapes: ['3x2', '2x3'], mode: 'tile' },
   { id: '2x2', label: '2×2', shapes: ['2x2'], mode: 'tile' },
   { id: '3x3', label: '3×3', shapes: ['3x3'], mode: 'tile' },
   { id: '4x4', label: '4×4', shapes: ['4x4'], mode: 'tile' },
@@ -84,6 +86,10 @@ export const BRUSH_SHAPE_LABELS: Record<string, string> = {
   '1x1': '1×1',
   '2x1': '2×1',
   '1x2': '1×2',
+  '3x1': '3×1',
+  '1x3': '1×3',
+  '3x2': '3×2',
+  '2x3': '2×3',
   '2x2': '2×2',
   '3x3': '3×3',
   '4x4': '4×4',
@@ -227,13 +233,17 @@ const CORNER_CYCLE: DistrictBrushShape[] = [
   'corner_sw',
 ];
 
-/** Поворот формы кисти на 90° (2×1↔1×2, уголки по кругу). Квадраты без изменений. */
+/** Поворот формы кисти на 90° (прямоугольники swap, уголки по кругу). Квадраты без изменений. */
 export function rotateDistrictBrushShape(
   shape: DistrictBrushShape,
   dir: 1 | -1
 ): DistrictBrushShape {
   if (shape === '2x1') return '1x2';
   if (shape === '1x2') return '2x1';
+  if (shape === '3x1') return '1x3';
+  if (shape === '1x3') return '3x1';
+  if (shape === '3x2') return '2x3';
+  if (shape === '2x3') return '3x2';
   const ci = CORNER_CYCLE.indexOf(shape);
   if (ci >= 0) {
     const next = (ci + dir + CORNER_CYCLE.length) % CORNER_CYCLE.length;
@@ -257,7 +267,15 @@ export function withRotatedDistrictBrush(
 }
 
 export function districtBrushRotatesShape(shape: DistrictBrushShape): boolean {
-  return shape === '2x1' || shape === '1x2' || CORNER_CYCLE.includes(shape);
+  return (
+    shape === '2x1' ||
+    shape === '1x2' ||
+    shape === '3x1' ||
+    shape === '1x3' ||
+    shape === '3x2' ||
+    shape === '2x3' ||
+    CORNER_CYCLE.includes(shape)
+  );
 }
 
 /** @deprecated use districtBrushRotatesShape — колесо крутит любую кисть */

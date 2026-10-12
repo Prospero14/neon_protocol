@@ -2299,7 +2299,8 @@ export const NriCityMapPanel: React.FC<Props> = ({
                         title="Каталог кистей по размерам"
                         onClick={() => setBrushPickerOpen(true)}
                       >
-                        <Shapes size={14} /> {activeBrush ? activeBrush.label : 'Кисти'}
+                        <Shapes size={14} />{' '}
+                        {activeBrush && !isSelectBrush(activeBrush) ? activeBrush.label : 'Заполнение'}
                       </button>
                       <button
                         type="button"

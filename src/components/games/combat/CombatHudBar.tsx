@@ -32,12 +32,14 @@ const CombatHudBar: React.FC<CombatHudBarProps> = ({
 }) => {
   void _playerProgress;
   void _aiProgress;
-  const hudPrimaryLine =
+  const hudPrimaryRaw =
     !isPlayerTurn && nextIntentName
       ? `NEXT: ${nextIntentName}`
       : lastAiActionName
         ? `LAST: ${lastAiActionName}`
         : lastLog || '> idle';
+  const hudPrimaryLine =
+    hudPrimaryRaw.length > 48 ? `${hudPrimaryRaw.slice(0, 47)}…` : hudPrimaryRaw;
   const phaseIdx = Math.max(0, phaseOrder.indexOf(currentPhase));
   const stressColor = stress > 70 ? '#ff4060' : stress > 40 ? '#ffaa00' : '#a855f7';
 
@@ -91,7 +93,7 @@ const CombatHudBar: React.FC<CombatHudBarProps> = ({
       <div className="chb-spacer" />
 
       {/* Последняя строка боя: NEXT при ходе ИИ, иначе LAST или сырой лог */}
-      <div className="chb-log-flash" title={lastLog || hudPrimaryLine}>
+      <div className="chb-log-flash" title={lastLog || hudPrimaryRaw}>
         <Terminal size={14} color="#5ad4ff" />
         <span className="chb-log-text chb-log-primary">{hudPrimaryLine}</span>
       </div>

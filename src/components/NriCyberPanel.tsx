@@ -17,7 +17,6 @@ import {
   type NriRosterPlayer,
 } from '../logic/nriApi';
 import {
-  ASSEMBLY_LABELS,
   buildCyberImplant,
   bloodToxLimitFromCon,
   C2185_ABILITY_LABELS,
@@ -87,6 +86,7 @@ export const NriCyberPanel: React.FC<Props> = ({
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [grantProduct, setGrantProduct] = useState<NriCyberProduct | null>(null);
   const [grantTarget, setGrantTarget] = useState<GrantTarget | null>(null);
+  const [expandedPartIds, setExpandedPartIds] = useState<string[]>([]);
 
   const bloodToxLimit = bloodToxLimitFromCon(conScore);
 
@@ -133,6 +133,10 @@ export const NriCyberPanel: React.FC<Props> = ({
 
   const togglePart = (id: string) => {
     setPartIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const togglePartDetails = (id: string) => {
+    setExpandedPartIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const loadPreset = (p: CyberBlueprint) => {
@@ -301,13 +305,13 @@ export const NriCyberPanel: React.FC<Props> = ({
 
   return (
     <div className="nri-cyber">
-      <header className="nri-chars__head">
+      <header className="nri-chars__head nri-cyber__head">
         <h3 className="mono-text">Киберимпланты</h3>
-        <p className="mono-text opacity-70">
-          Одна сборка = один имплант в слот тела. Детали суммируют CPU, RAM, батарею и расход.
+        <p className="mono-text opacity-70 nri-cyber__head-sub">
+          Слот тела · сумма деталей · BT / питание
         </p>
         <button type="button" className="nri-lobby__copy" onClick={() => setShowRules((v) => !v)}>
-          <BookOpen size={14} /> {showRules ? 'Скрыть правила' : 'Ограничения и правила'}
+          <BookOpen size={14} /> {showRules ? 'Скрыть правила' : 'Правила'}
         </button>
       </header>
 
@@ -326,20 +330,29 @@ export const NriCyberPanel: React.FC<Props> = ({
         </div>
       )}
 
-      <label className="nri-modal__field nri-cyber__con-field">
-        <span>ВЫН персонажа (для лимита Blood Tox)</span>
-        <input
-          type="number"
-          min={3}
-          max={20}
-          value={conScore}
-          onChange={(e) => setConScore(Number(e.target.value) || 10)}
-        />
-        <span className="mono-text opacity-70">
-          Лимит BT на листе: <strong>{bloodToxLimit}</strong> (10 + мод ВЫН). Эта сборка: {build.bloodTox} BT
-          {btOverLimit && ' — превышает лимит при установке одного импланта!'}
-        </span>
-      </label>
+      <div className="nri-cyber__bt-meter" aria-label="Blood Tox">
+        <div className="nri-cyber__bt-meter-head">
+          <label className="nri-cyber__con-inline">
+            <span>ВЫН</span>
+            <input
+              type="number"
+              min={3}
+              max={20}
+              value={conScore}
+              onChange={(e) => setConScore(Number(e.target.value) || 10)}
+            />
+          </label>
+          <span className={`nri-cyber__bt-readout mono-text ${btOverLimit ? 'warn' : ''}`}>
+            BT {build.bloodTox}/{bloodToxLimit}
+          </span>
+        </div>
+        <div className="nri-cyber__bt-track" title="Blood Tox сборки vs лимит листа">
+          <div
+            className={`nri-cyber__bt-fill ${btOverLimit ? 'over' : build.bloodTox > bloodToxLimit * 0.7 ? 'hot' : ''}`}
+            style={{ width: `${Math.min(100, (build.bloodTox / Math.max(1, bloodToxLimit)) * 100)}%` }}
+          />
+        </div>
+      </div>
 
       <nav className="nri-cyber__subtabs">
         <button type="button" className={sub === 'build' ? 'active' : ''} onClick={() => setSub('build')}>
@@ -384,94 +397,114 @@ export const NriCyberPanel: React.FC<Props> = ({
           </div>
 
           <p className="mono-text opacity-60 nri-cyber__parts-legend">
-            У каждой детали: описание, BT, статы, расход/батарея, цена. Ячейки питания дают общую батарею сборки.
+            Чипы — всегда. Описание — по «ещё».
           </p>
 
           {groupedParts.map((group) => (
             <div key={group.kind} className="nri-cyber__parts">
               <h4 className="mono-text">{group.label}</h4>
               <ul className="nri-cyber__part-list">
-                {group.parts.map((p) => (
+                {group.parts.map((p) => {
+                  const open = expandedPartIds.includes(p.id);
+                  return (
                   <li key={p.id}>
-                    <label className={`nri-cyber__part ${partIds.includes(p.id) ? 'selected' : ''}`}>
-                      <input type="checkbox" checked={partIds.includes(p.id)} onChange={() => togglePart(p.id)} />
+                    <div className={`nri-cyber__part ${partIds.includes(p.id) ? 'selected' : ''}`}>
+                      <label className="nri-cyber__part-check">
+                        <input type="checkbox" checked={partIds.includes(p.id)} onChange={() => togglePart(p.id)} />
+                      </label>
                       <div className="nri-cyber__part-body">
-                        <strong className="nri-cyber__part-name">{p.name}</strong>
-                        <p className="nri-cyber__part-blurb mono-text">{p.blurb}</p>
+                        <div className="nri-cyber__part-topline">
+                          <strong className="nri-cyber__part-name">{p.name}</strong>
+                          <button
+                            type="button"
+                            className="nri-cyber__part-more"
+                            onClick={() => togglePartDetails(p.id)}
+                            aria-expanded={open}
+                          >
+                            {open ? 'свернуть' : 'ещё'}
+                          </button>
+                        </div>
                         <div className="nri-cyber__part-meta">
                           {formatCyberPartMeta(p).map((row) => (
-                            <span key={row.label} className="nri-cyber__part-tag" title={row.label}>
-                              <span className="nri-cyber__part-tag-label">{row.label}</span>
-                              <span className="nri-cyber__part-tag-val">{row.value}</span>
+                            <span key={row.label} className="nri-cyber__chip" title={row.label}>
+                              <span className="nri-cyber__chip-k">{row.label}</span>
+                              <span className="nri-cyber__chip-v">{row.value}</span>
                             </span>
                           ))}
                         </div>
-                        {p.features.length > 0 && (
-                          <p className="nri-cyber__part-fx mono-text opacity-70">{p.features.join(' · ')}</p>
-                        )}
-                        {p.effects && p.effects.length > 0 && (
-                          <p className="nri-cyber__part-fx nri-cyber__part-fx--hooks mono-text">
-                            Hooks:{' '}
-                            {p.effects
-                              .map((id) => CYBER_EFFECT_META[id]?.label ?? id)
-                              .join(' · ')}
-                          </p>
+                        {open && (
+                          <div className="nri-cyber__part-study">
+                            <p className="nri-cyber__part-blurb mono-text">{p.blurb}</p>
+                            {p.features.length > 0 && (
+                              <p className="nri-cyber__part-fx mono-text opacity-70">{p.features.join(' · ')}</p>
+                            )}
+                            {p.effects && p.effects.length > 0 && (
+                              <p className="nri-cyber__part-fx nri-cyber__part-fx--hooks mono-text">
+                                Hooks:{' '}
+                                {p.effects
+                                  .map((id) => CYBER_EFFECT_META[id]?.label ?? id)
+                                  .join(' · ')}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </label>
+                    </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           ))}
 
-          <div className="nri-cyber__tuning">
-            <h4 className="mono-text">
-              <Zap size={14} /> Сводка сборки (сумма деталей)
-            </h4>
-            <p className="mono-text opacity-60 nri-cyber__tuning-hint">
-              Батарея = сумма ячеек питания. Расход = сумма всех модулей. Слайдеров нет — только то, что выбрано.
-            </p>
-            {(['cpuMhz', 'ramGb', 'powerWh', 'powerDrawW'] as const).map((key) => (
-              <div key={key} className="nri-cyber__assembly-row">
-                <span>{ASSEMBLY_LABELS[key]}</span>
-                <strong className="mono-text">{build.totals[key]}</strong>
-              </div>
-            ))}
-            {build.partLines.length > 0 && (
-              <ul className="nri-cyber__assembly-parts mono-text opacity-70">
-                {build.partLines.map((line) => (
-                  <li key={line.partId}>
-                    {line.partName}
-                    {line.powerWh > 0 && ` · +${line.powerWh} Вт·ч`}
-                    {line.powerDrawW > 0 && ` · ${line.powerDrawW} Вт`}
-                    {line.cpuMhz > 0 && ` · ${line.cpuMhz} МГц`}
-                    {line.ramGb > 0 && ` · ${line.ramGb} ГБ`}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
           <div className={`nri-cyber__preview ${build.overload || build.blocked ? 'overload' : ''}`}>
-            <h4 className="mono-text">Итог</h4>
-            <p className="mono-text">{[modLine, acLine].filter(Boolean).join(' · ') || '— без модов характеристик'}</p>
-            <p className="mono-text opacity-70">
-              Blood Tox {build.bloodTox} · CPU {build.cpuMhz} МГц · RAM {build.ramGb} ГБ · расход {build.powerDrawW}{' '}
-              Вт / батарея {build.powerWh} Вт·ч · ₩{build.priceWonlongs}
-            </p>
+            <h4 className="mono-text">
+              <Zap size={14} /> Итог
+            </h4>
+            <div className="nri-cyber__chip-row">
+              <span className={`nri-cyber__chip ${btOverLimit ? 'warn' : ''}`}>
+                <span className="nri-cyber__chip-k">BT</span>
+                <span className="nri-cyber__chip-v">
+                  {build.bloodTox}/{bloodToxLimit}
+                </span>
+              </span>
+              <span className="nri-cyber__chip">
+                <span className="nri-cyber__chip-k">CPU</span>
+                <span className="nri-cyber__chip-v">{build.cpuMhz}</span>
+              </span>
+              <span className="nri-cyber__chip">
+                <span className="nri-cyber__chip-k">RAM</span>
+                <span className="nri-cyber__chip-v">{build.ramGb}</span>
+              </span>
+              <span className={`nri-cyber__chip ${build.overload ? 'warn' : ''}`}>
+                <span className="nri-cyber__chip-k">Вт</span>
+                <span className="nri-cyber__chip-v">
+                  {build.powerDrawW}/{build.powerWh}
+                </span>
+              </span>
+              <span className="nri-cyber__chip">
+                <span className="nri-cyber__chip-k">₩</span>
+                <span className="nri-cyber__chip-v">{build.priceWonlongs}</span>
+              </span>
+              {acLine ? (
+                <span className="nri-cyber__chip">
+                  <span className="nri-cyber__chip-k">КБ</span>
+                  <span className="nri-cyber__chip-v">+{build.acBonus}</span>
+                </span>
+              ) : null}
+            </div>
+            {modLine ? <p className="mono-text nri-cyber__mod-line">{modLine}</p> : null}
             {build.overload && (
-              <p className="nri-lobby__err mono-text">Перегруз: расход превышает ёмкость (или нет ячейки).</p>
+              <p className="nri-lobby__err mono-text">Перегруз питания</p>
             )}
             {build.effects.length > 0 && (
-              <ul className="nri-cyber__features nri-cyber__features--hooks">
+              <div className="nri-cyber__chip-row nri-cyber__chip-row--fx">
                 {build.effects.map((id) => (
-                  <li key={id}>
-                    <strong>{CYBER_EFFECT_META[id]?.label ?? id}</strong>
-                    {CYBER_EFFECT_META[id] ? ` — ${CYBER_EFFECT_META[id].blurb}` : null}
-                  </li>
+                  <span key={id} className="nri-cyber__chip" title={CYBER_EFFECT_META[id]?.blurb}>
+                    <span className="nri-cyber__chip-v">{CYBER_EFFECT_META[id]?.label ?? id}</span>
+                  </span>
                 ))}
-              </ul>
+              </div>
             )}
             {build.features.length > 0 && (
               <ul className="nri-cyber__features">

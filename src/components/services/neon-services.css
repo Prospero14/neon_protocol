@@ -4570,13 +4570,73 @@
   margin-bottom: 12px;
 }
 
+.nri-cyber__head-sub {
+  margin: 4px 0 8px;
+  font-size: 0.75rem;
+}
+
+.nri-cyber__bt-meter {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 200, 255, 0.22);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.nri-cyber__bt-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.nri-cyber__con-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.nri-cyber__con-inline input[type='number'] {
+  width: 3.2rem;
+}
+
+.nri-cyber__bt-readout {
+  font-size: 0.85rem;
+}
+
+.nri-cyber__bt-readout.warn {
+  color: #ff8a9a;
+}
+
+.nri-cyber__bt-track {
+  height: 8px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.nri-cyber__bt-fill {
+  height: 100%;
+  background: rgba(0, 220, 200, 0.65);
+  transition: width 0.15s ease-out;
+}
+
+.nri-cyber__bt-fill.hot {
+  background: rgba(255, 180, 60, 0.75);
+}
+
+.nri-cyber__bt-fill.over {
+  background: rgba(255, 70, 90, 0.8);
+}
+
 .nri-cyber__parts-legend {
   margin: 0 0 8px;
   font-size: 0.72rem;
 }
 
 .nri-cyber__parts {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .nri-cyber__part-list {
@@ -4585,15 +4645,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .nri-cyber__part {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  cursor: pointer;
-  padding: 10px;
+  padding: 10px 12px;
   border: 1px solid rgba(200, 140, 255, 0.15);
   background: rgba(0, 0, 0, 0.15);
 }
@@ -4603,9 +4662,14 @@
   background: rgba(0, 50, 50, 0.2);
 }
 
-.nri-cyber__part input[type='checkbox'] {
-  margin-top: 4px;
+.nri-cyber__part-check {
+  margin-top: 2px;
   flex-shrink: 0;
+  cursor: pointer;
+}
+
+.nri-cyber__part input[type='checkbox'] {
+  margin: 0;
 }
 
 .nri-cyber__part-body {
@@ -4613,7 +4677,14 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+.nri-cyber__part-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .nri-cyber__part-name {
@@ -4621,17 +4692,89 @@
   font-size: 0.9rem;
 }
 
+.nri-cyber__part-more {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(150, 220, 255, 0.85);
+  font: inherit;
+  font-size: 0.72rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .nri-cyber__part-blurb {
   margin: 0;
   font-size: 0.78rem;
-  line-height: 1.35;
+  line-height: 1.4;
   opacity: 0.85;
 }
 
-.nri-cyber__part-meta {
+.nri-cyber__part-study {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nri-cyber__part-meta,
+.nri-cyber__chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.nri-cyber__chip-row {
+  margin: 8px 0 4px;
+}
+
+.nri-cyber__chip-row--fx {
+  margin-top: 6px;
+}
+
+.nri-cyber__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.nri-cyber__chip.warn {
+  border-color: rgba(255, 90, 110, 0.55);
+  color: #ffb0ba;
+}
+
+.nri-cyber__chip-k {
+  opacity: 0.55;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.62rem;
+}
+
+.nri-cyber__chip-v {
+  font-weight: 600;
+  color: #9ef;
+}
+
+.nri-cyber__chip.warn .nri-cyber__chip-v {
+  color: #ffb0ba;
+}
+
+.nri-cyber__mod-line {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.nri-cyber__part-fx {
+  margin: 0;
+  font-size: 0.72rem;
 }
 
 .nri-cyber__part-tag {
@@ -4655,11 +4798,6 @@
 .nri-cyber__part-tag-val {
   font-weight: 600;
   color: #9ef;
-}
-
-.nri-cyber__part-fx {
-  margin: 0;
-  font-size: 0.72rem;
 }
 
 .nri-cyber__tuning {
@@ -6378,20 +6516,64 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   width: min(380px, 92vw);
   max-height: 84vh;
   overflow: auto;
   margin: 0;
   padding: 16px 18px 14px;
   border: 1px solid rgba(0, 220, 255, 0.35);
-  background: linear-gradient(165deg, #121820 0%, #0a0e14 100%);
-  box-shadow: 0 0 28px rgba(0, 200, 255, 0.12);
+  background: #0c1218;
   border-radius: 8px;
   color: inherit;
   text-align: left;
-  cursor: pointer;
   font: inherit;
+}
+.nri-cell-inspect__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.45);
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.nri-cell-inspect__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.nri-cell-inspect__chip {
+  display: inline-flex;
+  padding: 2px 8px;
+  border: 1px solid rgba(0, 220, 255, 0.35);
+  background: rgba(0, 40, 50, 0.35);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nri-cell-inspect__chip--muted {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0.8;
+}
+.nri-cell-inspect__more {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(150, 220, 255, 0.9);
+  font: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .nri-cell-inspect__art {
   width: 100%;
@@ -6407,21 +6589,17 @@
   justify-content: center;
   opacity: 0.55;
 }
-.nri-cell-inspect__kind {
-  margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 .nri-cell-inspect__title {
-  margin: 2px 0 0;
+  margin: 0;
   font-size: 1.05rem;
 }
 .nri-cell-inspect__body {
   margin-top: 8px;
   white-space: pre-wrap;
   line-height: 1.45;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  max-height: 9rem;
+  overflow: auto;
 }
 .nri-cell-inspect__pois {
   margin: 8px 0 0;

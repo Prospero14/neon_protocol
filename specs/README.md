@@ -26,6 +26,7 @@
 | 007 | [product-vision](./007-product-vision/) | Pitch, roadmap, backlog, SOLID debt |
 | 008 | [external-content](./008-external-content/) | Внешний контент (Necrons WH40K) |
 | 009 | [nri-roleplay-pack](./009-nri-roleplay-pack/) | Сырьё ролевки NRI: сценарий, квесты, нейминги (пока inbox) |
+| 010 | [nri-ui-comfort](./010-nri-ui-comfort/) | Разгрузка текста: чипы, progressive disclosure, game-like scan |
 
 ## Связанное вне specs
 

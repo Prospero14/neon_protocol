@@ -71,4 +71,15 @@ describe('nriItemConsume', () => {
     if (!s2.ok) return;
     expect(s2.sheet.activeConditions?.some((c) => c.id === 'intoxicated')).toBe(true);
   });
+
+  it('sets wall-clock expiresAt on alcohol and depletes stack to empty', () => {
+    const before = Date.now();
+    const result = tryUseInventoryItem(sheet(), [{ ...synthohol(), qty: 1 }], 'inv_1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.inventory).toHaveLength(0);
+    const cond = result.sheet.activeConditions?.find((c) => c.id === 'intoxicated_mild');
+    expect(cond?.expiresAt).toBeGreaterThan(before);
+    expect(cond?.roundsLeft).toBe(10);
+  });
 });

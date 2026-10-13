@@ -3,7 +3,15 @@ import { isAdminUsername } from './auth.js';
 import { parseNriJsonField, serializeNriPreset } from './nriSessionHelpers.js';
 import { rejectIfInvalidSheetConditions } from './sheetConditionGate.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
-import { nriPresetCreateSchema, nriPresetPatchSchema } from '../../shared/api-schemas/nri.js';
+import { NRI_PORTRAIT_URL_MAX, nriPresetCreateSchema, nriPresetPatchSchema, } from '../../shared/api-schemas/nri.js';
+function normalizePortraitUrl(raw) {
+    if (typeof raw !== 'string')
+        return null;
+    const t = raw.trim();
+    if (!t)
+        return null;
+    return t.slice(0, NRI_PORTRAIT_URL_MAX);
+}
 export function mountNriPresetRoutes(app, ctx) {
     const { prisma, jwtAuth, sendApiError, resolveUser, resolveSession, requireHost } = ctx;
     app.get('/neon_v1/services/nri/:code/presets', async (req, res) => {
@@ -72,7 +80,7 @@ export function mountNriPresetRoutes(app, ctx) {
                     classId: classId.trim(),
                     inventory: (Array.isArray(inventory) ? inventory : []),
                     sheet: parsedPresetSheet ?? undefined,
-                    portraitUrl: typeof portraitUrl === 'string' && portraitUrl.trim() ? portraitUrl.trim().slice(0, 2000) : null,
+                    portraitUrl: normalizePortraitUrl(portraitUrl),
                     sortOrder: typeof sortOrder === 'number' ? sortOrder : 0,
                     publishedToPlayers: publishedToPlayers !== false,
                 },
@@ -124,13 +132,7 @@ export function mountNriPresetRoutes(app, ctx) {
                     ...(typeof classId === 'string' && classId.trim() ? { classId: classId.trim() } : {}),
                     ...(inventory !== undefined ? { inventory: (Array.isArray(inventory) ? inventory : []) } : {}),
                     ...(sheet !== undefined ? { sheet: nextSheet } : {}),
-                    ...(portraitUrl !== undefined
-                        ? {
-                            portraitUrl: typeof portraitUrl === 'string' && portraitUrl.trim()
-                                ? portraitUrl.trim().slice(0, 2000)
-                                : null,
-                        }
-                        : {}),
+                    ...(portraitUrl !== undefined ? { portraitUrl: normalizePortraitUrl(portraitUrl) } : {}),
                     ...(typeof sortOrder === 'number' ? { sortOrder } : {}),
                     ...(typeof publishedToPlayers === 'boolean' ? { publishedToPlayers } : {}),
                 },

@@ -46,57 +46,57 @@ function sheetFor(classId: NriClassId): NriSheetData {
 
 export const NRI_CLASS_SEEDS: ClassSeedPreset[] = [
   {
-    label: 'Daimyo — лидер отряда',
+    label: 'Даймё',
     classId: 'daimyo',
     sheet: sheetFor('daimyo'),
     inventory: [
-      { id: 'w_katana', name: 'Katana (melee)', qty: 1 },
-      { id: 'a_medium', name: 'Medium armor vest', qty: 1 },
+      { id: 'w_katana', name: 'Катана', qty: 1 },
+      { id: 'a_medium', name: 'Средний бронежилет', qty: 1 },
     ],
   },
   {
-    label: 'Doc — полевой медик',
+    label: 'Док',
     classId: 'doc',
     sheet: sheetFor('doc'),
     inventory: [
-      { id: 'g_medkit', name: 'MediStim kit', qty: 2 },
-      { id: 'a_light', name: 'Light armor + helmet', qty: 1 },
+      { id: 'g_medkit', name: 'Набор MediStim', qty: 2 },
+      { id: 'a_light', name: 'Лёгкая броня и шлем', qty: 1 },
     ],
   },
   {
-    label: 'Enforcer — наёмник',
+    label: 'Наёмник',
     classId: 'merc',
     sheet: sheetFor('merc'),
     inventory: [
-      { id: 'w_smg', name: 'SMG + 2 mags', qty: 1 },
-      { id: 'a_light', name: 'Light armor', qty: 1 },
+      { id: 'w_smg', name: 'ПП + 2 магазина', qty: 1 },
+      { id: 'a_light', name: 'Лёгкая броня', qty: 1 },
     ],
   },
   {
-    label: 'Hacker — netrunner',
+    label: 'Хакер',
     classId: 'hacker',
     sheet: sheetFor('hacker'),
     inventory: [
-      { id: 'd_deck', name: 'Cyberdeck (basic)', qty: 1 },
-      { id: 'g_interface', name: 'Interface plugs', qty: 1 },
+      { id: 'd_deck', name: 'Кибердека (базовая)', qty: 1 },
+      { id: 'g_interface', name: 'Интерфейс-джеки', qty: 1 },
     ],
   },
   {
-    label: 'Investigator — детектив',
+    label: 'Детектив',
     classId: 'detective',
     sheet: sheetFor('detective'),
     inventory: [
-      { id: 'w_pistol', name: 'Pistol + silencer', qty: 1 },
-      { id: 'g_binoc', name: 'Optics binoculars', qty: 1 },
+      { id: 'w_pistol', name: 'Пистолет с глушителем', qty: 1 },
+      { id: 'g_binoc', name: 'Оптический бинокль', qty: 1 },
     ],
   },
   {
-    label: 'Scoundrel — фиксер',
+    label: 'Пройдоха',
     classId: 'fixer',
     sheet: sheetFor('fixer'),
     inventory: [
-      { id: 'w_knife', name: 'Mono-knife', qty: 1 },
-      { id: 'g_lockpick', name: 'Lockpick set', qty: 1 },
+      { id: 'w_knife', name: 'Мононож', qty: 1 },
+      { id: 'g_lockpick', name: 'Отмычки', qty: 1 },
     ],
   },
 ];

@@ -1,11 +1,24 @@
-/** Карьеры по классу и сектору: корпоративный / частный / государственный / уличный / подпольный. */
+/** Карьеры по классу и сектору + фильтр по годам / влиянию / фракции / происхождению. */
 
 import type { NriClassId } from './nriClasses';
-import type { NriActivityId, NriNpcArchetypeId } from './nriCharacterGen';
+import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
 
 export type CareerSector = 'corp' | 'private' | 'state' | 'street' | 'underground';
 
 type CareerDef = { title: string; sectors: CareerSector[] };
+
+export type CareerRollParams = {
+  classId: NriClassId;
+  activityId: NriActivityId;
+  archetypeId?: NriNpcArchetypeId;
+  originId?: NriOriginId;
+  /** kind / name / displayName фракции — для секторального уклона */
+  factionKind?: string;
+  factionName?: string;
+  yearsServed?: number;
+  streetInfluence?: number;
+  corporateInfluence?: number;
+};
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
 
@@ -167,33 +180,162 @@ const ARCHETYPE_SECTOR_BIAS: Partial<Record<NriNpcArchetypeId, Partial<Record<Ca
   merchant: { private: 2, street: 1 },
 };
 
+const ORIGIN_SECTOR_BIAS: Partial<Record<NriOriginId, Partial<Record<CareerSector, number>>>> = {
+  neo_tokyo: { underground: 2, corp: 1, street: 1 },
+  hong_kong: { underground: 2, private: 1 },
+  los_angeles: { private: 2, street: 1, corp: 1 },
+  london: { state: 1, corp: 1, private: 1 },
+  moscow: { street: 2, state: 1, underground: 1 },
+  sao_paulo: { street: 2, underground: 1 },
+  offworld: { corp: 2, private: 1 },
+};
+
+export type CareerReqs = { minYears: number; minStreet: number; minCorp: number };
+
+/** Порог «ранга» по названию — капитан банды не с 1 годом службы. */
+export function careerRequirements(title: string, sectors: CareerSector[]): CareerReqs {
+  const t = title.toLowerCase();
+  const streetish = sectors.some((s) => s === 'street' || s === 'underground');
+  const corpish = sectors.some((s) => s === 'corp' || s === 'state');
+
+  if (/стажёр|резервист|бывший коп на побегушках|лаборант/.test(t)) {
+    return { minYears: 0, minStreet: 0, minCorp: 0 };
+  }
+  if (
+    /капитан|глава|смотрящ|военачальник|командир|начальник|руководитель|лидер|основатель|куратор корпоратив/.test(
+      t
+    )
+  ) {
+    return {
+      minYears: 6,
+      minStreet: streetish ? 5 : 2,
+      minCorp: corpish ? 5 : streetish ? 0 : 3,
+    };
+  }
+  if (/старший|ветеран|инструктор|офицер|инспектор|менеджер|аудитор|агент корпоратив|смотря/.test(t)) {
+    return {
+      minYears: 3,
+      minStreet: streetish ? 3 : 1,
+      minCorp: corpish ? 3 : 1,
+    };
+  }
+  if (/коллектор|конвой|телохранитель|охранник|боец|сыщик|детектив|нетраннер|фиксер|посредник/.test(t)) {
+    return { minYears: 1, minStreet: streetish ? 1 : 0, minCorp: corpish ? 1 : 0 };
+  }
+  return { minYears: 1, minStreet: 0, minCorp: 0 };
+}
+
+export function parseCareerStat(raw: string | number | undefined | null): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return Math.max(0, Math.floor(raw));
+  const m = String(raw ?? '').match(/\d+/);
+  return m ? Math.max(0, parseInt(m[0]!, 10)) : 0;
+}
+
+export function factionSectorBias(kind?: string, name?: string): Partial<Record<CareerSector, number>> {
+  const blob = `${kind ?? ''} ${name ?? ''}`.toLowerCase();
+  if (!blob.trim()) return {};
+  if (/corp|корпорац|arasaka|militech|kang|mega|biotech|zaibatsu/.test(blob)) {
+    return { corp: 5, private: 1 };
+  }
+  if (/gang|банд|якудз|триад|синдикат|mafia|мафи|underground|клан|тифф|tyger/.test(blob)) {
+    return { underground: 5, street: 2 };
+  }
+  if (/cop|полиц|ncpd|воен|militia|state|мэр|правител|арми|swat/.test(blob)) {
+    return { state: 5, corp: 1 };
+  }
+  if (/fixer|market|торг|nomad|караван|медиа|media|студи/.test(blob)) {
+    return { private: 3, street: 2 };
+  }
+  return { private: 1 };
+}
+
 function sectorWeight(
   sector: CareerSector,
-  activityId: NriActivityId,
-  archetypeId?: NriNpcArchetypeId
+  params: CareerRollParams
 ): number {
   let w = 1;
-  w += ACTIVITY_SECTOR_BIAS[activityId]?.[sector] ?? 0;
-  if (archetypeId) w += ARCHETYPE_SECTOR_BIAS[archetypeId]?.[sector] ?? 0;
+  w += ACTIVITY_SECTOR_BIAS[params.activityId]?.[sector] ?? 0;
+  if (params.archetypeId) w += ARCHETYPE_SECTOR_BIAS[params.archetypeId]?.[sector] ?? 0;
+  if (params.originId) w += ORIGIN_SECTOR_BIAS[params.originId]?.[sector] ?? 0;
+  const fb = factionSectorBias(params.factionKind, params.factionName);
+  w += fb[sector] ?? 0;
   return w;
 }
 
-/** Случайная карьера с учётом класса, деятельности и архетипа. */
-export function rollCareer(params: {
-  classId: NriClassId;
-  activityId: NriActivityId;
-  archetypeId?: NriNpcArchetypeId;
-}): string {
-  const pool = CAREERS_BY_CLASS[params.classId] ?? CAREERS_BY_CLASS.merc;
-  const weighted: CareerDef[] = [];
-  for (const career of pool) {
-    const w = career.sectors.reduce(
-      (sum, sector) => sum + sectorWeight(sector, params.activityId, params.archetypeId),
-      0
-    );
-    for (let i = 0; i < w; i++) weighted.push(career);
+function meetsReqs(reqs: CareerReqs, params: CareerRollParams, strict: boolean): boolean {
+  const years = parseCareerStat(params.yearsServed);
+  const street = parseCareerStat(params.streetInfluence);
+  const corp = parseCareerStat(params.corporateInfluence);
+  if (strict) {
+    return years >= reqs.minYears && street >= reqs.minStreet && corp >= reqs.minCorp;
   }
-  return pick(weighted.length ? weighted : pool).title;
+  // мягкий режим: только годы + половина влияния
+  return (
+    years >= Math.max(0, Math.floor(reqs.minYears * 0.5)) &&
+    street >= Math.max(0, Math.floor(reqs.minStreet * 0.5)) &&
+    corp >= Math.max(0, Math.floor(reqs.minCorp * 0.5))
+  );
+}
+
+export function careerEligible(
+  title: string,
+  sectors: CareerSector[],
+  stats: Pick<CareerRollParams, 'yearsServed' | 'streetInfluence' | 'corporateInfluence'>
+): boolean {
+  return meetsReqs(careerRequirements(title, sectors), stats as CareerRollParams, true);
+}
+
+function decorateWithFaction(title: string, factionName?: string): string {
+  const name = factionName?.trim();
+  if (!name) return title;
+  if (title.includes(name)) return title;
+  // короткая привязка к фракции, без «капитан банды X» если уже капитан
+  if (/синдикат|клан|триад|NCPD|Arasaka|корп/i.test(title)) return title;
+  return `${title} («${name}»)`;
+}
+
+/** Случайная карьера с учётом класса, среды, фракции и «ранга» (годы/влияние). */
+export function rollCareer(params: CareerRollParams): string {
+  const pool = CAREERS_BY_CLASS[params.classId] ?? CAREERS_BY_CLASS.merc;
+  const yearsKnown = params.yearsServed != null && String(params.yearsServed).trim() !== '';
+  const influenceKnown =
+    (params.streetInfluence != null && String(params.streetInfluence).trim() !== '') ||
+    (params.corporateInfluence != null && String(params.corporateInfluence).trim() !== '');
+
+  const weightCareer = (career: CareerDef): number =>
+    career.sectors.reduce((sum, sector) => sum + sectorWeight(sector, params), 0);
+
+  const buildWeighted = (list: CareerDef[]): CareerDef[] => {
+    const weighted: CareerDef[] = [];
+    for (const career of list) {
+      const w = Math.max(1, weightCareer(career));
+      for (let i = 0; i < w; i++) weighted.push(career);
+    }
+    return weighted;
+  };
+
+  let candidates = pool;
+  if (yearsKnown || influenceKnown) {
+    const strict = pool.filter((c) =>
+      meetsReqs(careerRequirements(c.title, c.sectors), params, true)
+    );
+    if (strict.length) {
+      candidates = strict;
+    } else {
+      const soft = pool.filter((c) =>
+        meetsReqs(careerRequirements(c.title, c.sectors), params, false)
+      );
+      candidates = soft.length ? soft : pool.filter((c) => {
+        const r = careerRequirements(c.title, c.sectors);
+        return r.minYears <= 2;
+      });
+      if (!candidates.length) candidates = pool;
+    }
+  }
+
+  const weighted = buildWeighted(candidates);
+  const picked = pick(weighted.length ? weighted : candidates);
+  return decorateWithFaction(picked.title, params.factionName);
 }
 
 export function careersForClass(classId: NriClassId): readonly string[] {
@@ -201,8 +343,9 @@ export function careersForClass(classId: NriClassId): readonly string[] {
 }
 
 export function careerSectorHint(career: string): CareerSector | null {
+  const bare = career.replace(/\s*\(«[^»]+»\)\s*$/u, '').trim();
   for (const list of Object.values(CAREERS_BY_CLASS)) {
-    const hit = list.find((c) => c.title === career);
+    const hit = list.find((c) => c.title === bare || c.title === career);
     if (hit) return hit.sectors[0] ?? null;
   }
   return null;

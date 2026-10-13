@@ -1230,8 +1230,8 @@ export const CYBER_PARTS: CyberPartDef[] = [
   },
   {
     id: 'actuator_clinic_hand',
-    name: 'Клиническая кисть',
-    blurb: 'Мед-протез: уколы, швы, аккуратный захват — сцена полевой медицины.',
+    name: 'Медпротез кисти',
+    blurb: 'Полевой медпротез: уколы, швы, аккуратный захват — сцена полевой медицины.',
     kind: 'actuator',
     slots: ['arm'],
     c2185Mods: { DEX: 1 },
@@ -1360,8 +1360,8 @@ export const CYBER_PARTS: CyberPartDef[] = [
   },
   {
     id: 'sensor_scent_flare',
-    name: 'Химмаркер (scent-flare)',
-    blurb: 'Пшикает маркер — scent-mask больше не держит след.',
+    name: 'Химмаркер',
+    blurb: 'Пшикает метку: глушение запаха срывается — собаки и нюх-дроны снова берут след.',
     kind: 'sensor',
     slots: ['external', 'arm', 'head'],
     c2185Mods: {},
@@ -1370,7 +1370,7 @@ export const CYBER_PARTS: CyberPartDef[] = [
     ramGb: 0,
     powerWh: 0,
     powerDrawW: 1,
-    features: ['Срывает глушение запаха'],
+    features: ['Контрмера: срывает глушение запаха (не стирает след)'],
     effects: ['scent_flare'],
     costBase: 550,
   },
@@ -1587,7 +1587,7 @@ export const CYBER_BLUEPRINT_PRESETS: CyberBlueprint[] = [
   },
   {
     slot: 'arm',
-    name: 'Дипломат-кисть',
+    name: 'Набор «Дипломат»',
     partIds: ['chassis_limb_std', 'actuator_clinic_hand', 'fw_lie_pulse', 'power_cell_s'],
     notes: 'Переговоры + пульс лжи касанием.',
   },
@@ -1852,7 +1852,7 @@ export function buildCyberImplant(blueprint: CyberBlueprint): CyberBuildResult {
     bloodTox += p.bloodTox;
     price += p.costBase;
     acBonus += partAcBonus(p);
-    p.features.forEach((f) => features.add(f));
+    (p.features ?? []).forEach((f) => features.add(f));
     p.effects?.forEach((e) => effects.add(e));
   }
 

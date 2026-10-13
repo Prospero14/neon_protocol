@@ -26,6 +26,7 @@ export function applyConditionStack(existing, incoming) {
         const next = conditionFromDef(def.escalateTo, {
             source: incoming.source,
             rounds: incoming.roundsLeft,
+            // minutes: use escalate target's defaultMinutes via conditionFromDef
         });
         return [...existing.filter((c) => c.id !== incoming.id && c.id !== def.escalateTo), next];
     }

@@ -18,6 +18,19 @@ export const nriPlayerPatchSchema = z.object({
 export const nriPlayerNotesSchema = z.object({
     notes: z.string().max(50000),
 });
+export const nriFieldDossierSchema = z.object({
+    id: z.string().trim().min(1).max(64).optional(),
+    name: z.string().max(500).optional(),
+    affiliation: z.string().max(500).optional(),
+    importance: z.string().max(500).optional(),
+    belongings: z.string().max(500).optional(),
+    marks: z.string().max(500).optional(),
+    notes: z.string().max(4000).optional(),
+    updatedAt: z.number().optional(),
+});
+export const nriFieldDossiersPutSchema = z.object({
+    dossiers: z.array(nriFieldDossierSchema).max(80),
+});
 export const nriItemGrantSchema = z.object({
     catalogId: z.string().trim().min(1, 'Укажите catalogId.'),
     qty: z.number().int().positive().optional(),
@@ -53,12 +66,20 @@ export const nriWonlongsGrantSchema = z.object({
     fromNpcId: z.string().trim().optional(),
     memo: z.string().max(500).optional(),
 });
+/** http(s) URL или data:image… после клиентского canvas (загрузка). */
+export const NRI_PORTRAIT_URL_MAX = 350_000;
+const nriPortraitUrlField = z
+    .string()
+    .trim()
+    .max(NRI_PORTRAIT_URL_MAX, 'Портрет слишком большой — сожмите фото или вставьте короткий URL.')
+    .nullable()
+    .optional();
 export const nriPresetCreateSchema = z.object({
     label: z.string().trim().min(1, 'Укажите название пресета.').max(60),
     classId: z.string().trim().min(1, 'Выберите класс.').max(64),
     inventory: z.array(z.unknown()).optional(),
     sheet: z.unknown().optional(),
-    portraitUrl: z.string().trim().max(2000).nullable().optional(),
+    portraitUrl: nriPortraitUrlField,
     sortOrder: z.number().int().optional(),
     publishedToPlayers: z.boolean().optional(),
 });
@@ -67,7 +88,7 @@ export const nriPresetPatchSchema = z.object({
     classId: z.string().trim().min(1).max(64).optional(),
     inventory: z.array(z.unknown()).optional(),
     sheet: z.unknown().optional(),
-    portraitUrl: z.string().trim().max(2000).nullable().optional(),
+    portraitUrl: nriPortraitUrlField,
     sortOrder: z.number().int().optional(),
     publishedToPlayers: z.boolean().optional(),
 });

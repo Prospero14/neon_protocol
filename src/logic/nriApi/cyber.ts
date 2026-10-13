@@ -25,6 +25,8 @@ type CyberGrantResult =
   | {
       ok: true;
       installed?: boolean;
+      /** Почему не установили — предмет всё равно в инвентаре. */
+      installNote?: string;
       needsHoloTattooPick?: boolean;
       inventory?: NriInventoryItem[];
       sheet?: unknown;
@@ -104,6 +106,7 @@ export async function nriGrantCyberProduct(
   return {
     ok: true,
     installed: !!data.installed,
+    installNote: typeof data.installNote === 'string' ? data.installNote : undefined,
     needsHoloTattooPick: !!data.needsHoloTattooPick,
     inventory: Array.isArray(data.inventory) ? (data.inventory as NriInventoryItem[]) : undefined,
     sheet: data.sheet,
@@ -127,7 +130,12 @@ export async function nriGrantCyberProductToNpc(
   );
   const data = await parseJson(res);
   if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось выдать имплант НПС') };
-  return { ok: true, installed: !!data.installed, needsHoloTattooPick: !!data.needsHoloTattooPick };
+  return {
+    ok: true,
+    installed: !!data.installed,
+    installNote: typeof data.installNote === 'string' ? data.installNote : undefined,
+    needsHoloTattooPick: !!data.needsHoloTattooPick,
+  };
 }
 
 export async function nriInstallCyberItem(
@@ -150,6 +158,30 @@ export async function nriInstallCyberItem(
     ok: true,
     installed: true,
     needsHoloTattooPick: !!data.needsHoloTattooPick,
+    inventory: Array.isArray(data.inventory) ? (data.inventory as NriInventoryItem[]) : undefined,
+    sheet: data.sheet,
+  };
+}
+
+export async function nriUninstallCyberItem(
+  token: string,
+  code: string,
+  targetUserId: string,
+  itemId: string
+): Promise<CyberGrantResult> {
+  const res = await fetch(
+    `/neon_v1/services/nri/${encodeURIComponent(code)}/players/${encodeURIComponent(targetUserId)}/cyber/uninstall`,
+    {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify({ itemId }),
+    }
+  );
+  const data = await parseJson(res);
+  if (!res.ok) return { ok: false, error: parseApiError(data, 'Не удалось снять имплант') };
+  return {
+    ok: true,
+    installed: false,
     inventory: Array.isArray(data.inventory) ? (data.inventory as NriInventoryItem[]) : undefined,
     sheet: data.sheet,
   };

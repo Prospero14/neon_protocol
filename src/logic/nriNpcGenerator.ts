@@ -62,6 +62,19 @@ export type NriSheetData = {
   /** Ожидает выбора голо-тату после установки импланта. */
   pendingHoloTattoo?: boolean;
   holoTattooChosen?: boolean;
+  /** Копящийся шрам киберпсихоза (0…5) после энкаунтеров. */
+  psychosisScarLevel?: number;
+  /** История эпизодов психоза. */
+  psychosisHistory?: import('../../shared/nri-domain/psychosisLogic').PsychosisEvent[];
+  /** Стресс ≥ порога эпизода — ждёт звонка мастера. */
+  psychosisPending?: boolean;
+  /** Активный психоз-энкаунтер (живой чат / «звонок»). */
+  psychosisEncounter?: import('../../shared/nri-domain/psychosisLogic').PsychosisEncounter | null;
+  /**
+   * Лист зафиксирован после создания/сейва.
+   * true → запрет авто-перегенерации при просмотре/поллинге.
+   */
+  sheetFinalized?: boolean;
 };
 
 export function abilityModifier(score: number): number {
@@ -116,9 +129,21 @@ export function buildSheetForClass(classId: NriClassId, abilities = rollAbilityS
   );
 }
 
+export function coerceNriSheetRaw(raw: unknown): unknown {
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  return raw;
+}
+
 export function parseNriSheet(raw: unknown): NriSheetData | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const o = raw as NriSheetData;
+  const coerced = coerceNriSheetRaw(raw);
+  if (!coerced || typeof coerced !== 'object') return null;
+  const o = coerced as NriSheetData;
   if (!o.abilities || typeof o.abilities !== 'object') return null;
   return o;
 }

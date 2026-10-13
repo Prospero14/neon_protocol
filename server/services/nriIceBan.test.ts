@@ -49,18 +49,18 @@ describe('applyIceRunResult — streak и ban', () => {
     expect(ban.hardwareBanned).toBe(false);
   });
 
-  it(`${ICE_FAIL_STREAK_LIMIT} проигрыша подряд → hardware ban`, () => {
+  it(`${ICE_FAIL_STREAK_LIMIT} проигрыша подряд → counter-hack, не сразу ban`, () => {
     let sheet: unknown = {};
+    let started = false;
     for (let i = 0; i < ICE_FAIL_STREAK_LIMIT; i++) {
-      const r = applyIceRunResult(sheet, false);
+      const r = applyIceRunResult(sheet, false, { userId: 'u1', displayName: 'Runner' });
       sheet = r.sheet;
-      if (i < ICE_FAIL_STREAK_LIMIT - 1) {
-        expect(r.ban.hardwareBanned).toBe(false);
-      }
+      expect(r.ban.hardwareBanned).toBe(false);
+      if (r.counterHackStarted) started = true;
     }
-    const final = readIceBan(sheet);
-    expect(final.hardwareBanned).toBe(true);
-    expect(final.consecutiveFails).toBe(ICE_FAIL_STREAK_LIMIT);
+    expect(started).toBe(true);
+    expect(readIceBan(sheet).consecutiveFails).toBe(ICE_FAIL_STREAK_LIMIT);
+    expect((sheet as { iceCounterHack?: { active?: boolean } }).iceCounterHack?.active).toBe(true);
   });
 });
 

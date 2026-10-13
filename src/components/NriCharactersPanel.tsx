@@ -7,6 +7,7 @@ import {
   applyMetaToSheet,
   applyLevelProgressToSheet,
   ensureCompleteSheet,
+  finalizeCharacterSheet,
   sheetToMetaDraft,
   type CharacterMetaDraft,
 } from '../logic/nriCharacterGen';
@@ -20,8 +21,10 @@ type Props = {
 };
 
 function sheetForEdit(raw: unknown, classId: string, displayName: string): NriSheetData {
-  const completed = ensureCompleteSheet(raw, classId as NriClassId, displayName);
-  return parseNriSheet(completed) ?? completed;
+  // Существующий лист — только parse. ensureComplete только если листа нет вовсе.
+  const parsed = parseNriSheet(raw);
+  if (parsed) return parsed;
+  return ensureCompleteSheet(null, classId as NriClassId, displayName);
 }
 
 export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
@@ -49,9 +52,11 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
 
   useEffect(() => {
     refresh();
+    // Пока мастер правит лист — не дёргаем полл, иначе UI «прыгает».
+    if (editId) return;
     const t = setInterval(refresh, 5000);
     return () => clearInterval(t);
-  }, [refresh]);
+  }, [refresh, editId]);
 
   const startEdit = (p: NriRosterPlayer) => {
     const sheet = sheetForEdit(p.sheet, p.classId, p.displayName);
@@ -77,7 +82,7 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
     );
     const res = await nriPatchPlayer(authToken, inviteCode, editId, {
       displayName: editDisplayName.trim() || editMeta.characterName || p.displayName,
-      sheet: merged,
+      sheet: finalizeCharacterSheet(merged),
     });
     setBusy(false);
     if (!res.ok) {
@@ -192,6 +197,7 @@ export const NriCharactersPanel: React.FC<Props> = ({ inviteCode }) => {
                       portraitUrl: p.portraitUrl,
                     }}
                     accountUsername={p.username}
+                    gmView
                   />
                 </div>
               )}

@@ -150,7 +150,7 @@ export const NriVaultTab: React.FC<Props> = ({
   };
 
   return (
-    <div className="nri-vault">
+    <div className="nri-vault nri-deck-module">
       <h3 className="mono-text">Файлохранилище</h3>
       <p className="mono-text opacity-70">
         Создайте файл — он появится в списке. Отправляйте в общий чат или в личку участнику.

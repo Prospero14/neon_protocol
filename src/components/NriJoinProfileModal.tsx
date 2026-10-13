@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Eye } from 'lucide-react';
 import { getNriClass, type NriClassId } from '../logic/nriClasses';
-import { ensureCompleteSheet } from '../logic/nriCharacterGen';
+import {
+  ensureCompleteSheet,
+  finalizeCharacterSheet,
+  isPlayableSheet,
+} from '../logic/nriCharacterGen';
+import { parseAugmentedSheet } from '../logic/nriCyberInstall';
 import { nriFetchPresets, type NriPresetCharacter } from '../logic/nriApi';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
@@ -57,11 +62,13 @@ export const NriJoinProfileModal: React.FC<Props> = ({
   const previewProfile: NriPlayerProfile | null = useMemo(() => {
     if (!picked) return null;
     const name = displayName.trim() || picked.label;
-    const completed = ensureCompleteSheet(picked.sheet, picked.classId as NriClassId, name);
+    const completed = isPlayableSheet(picked.sheet)
+      ? (parseAugmentedSheet(picked.sheet) ?? picked.sheet)
+      : ensureCompleteSheet(picked.sheet, picked.classId as NriClassId, name);
     return {
       displayName: name,
       classId: picked.classId,
-      sheet: { ...completed, characterName: name },
+      sheet: { ...(completed as object), characterName: name },
       inventory: picked.inventory ?? [],
       portraitUrl: picked.portraitUrl,
     };
@@ -176,7 +183,9 @@ export const NriJoinProfileModal: React.FC<Props> = ({
               onClick={() =>
                 onSubmit(displayName.trim(), {
                   presetId: picked.id,
-                  sheet: previewProfile?.sheet,
+                  sheet: previewProfile?.sheet
+                    ? finalizeCharacterSheet(previewProfile.sheet as Record<string, unknown>)
+                    : undefined,
                 })
               }
             >

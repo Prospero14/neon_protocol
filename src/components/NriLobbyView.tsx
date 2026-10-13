@@ -33,6 +33,7 @@ import { NriIceRunPanel } from './NriIceRunPanel';
 import { NriJoinProfileModal } from './NriJoinProfileModal';
 import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriPeopleHub, type PeopleSection } from './NriPeopleHub';
+import { NriPlayerCharactersHub } from './NriPlayerCharactersHub';
 import { NriVaultTab, type VaultRecipient } from './NriVaultTab';
 import { NriRulesPanel } from './NriRulesPanel';
 import { NriCyberPanel } from './NriCyberPanel';
@@ -46,6 +47,10 @@ import { NriPersonalDossierPanel } from './NriPersonalDossierPanel';
 import { NriAchievementToast } from './NriAchievementToast';
 import { NriMasterToolsHub } from './NriMasterToolsHub';
 import { NriTattooPickModal } from './NriTattooPickModal';
+import { NriPsychosisCallBanner } from './NriPsychosisCallBanner';
+import { NriIceCounterHackPopup } from './NriIceCounterHackPopup';
+import { NriDmCallPopup } from './NriDmCallPopup';
+import { readNriLobbySkin, writeNriLobbySkin, type NriLobbySkinId } from '../logic/nriLobbySkin';
 
 import type { NriAchievementUnlock } from '../logic/nriApi';
 import { parseNriSheet } from '../logic/nriNpcGenerator';
@@ -73,6 +78,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [showSheet, setShowSheet] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [lobbySkin, setLobbySkin] = useState<NriLobbySkinId>(() => readNriLobbySkin());
   const [speakAsNpc, setSpeakAsNpc] = useState<{
     id: string;
     name: string;
@@ -86,7 +92,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
   const [walletInfo, setWalletInfo] = useState<NriWalletInfo | null>(null);
   const [antispamBusy, setAntispamBusy] = useState(false);
   const [achToast, setAchToast] = useState<NriAchievementUnlock[]>([]);
-  const [peopleSection, setPeopleSection] = useState<PeopleSection>('chars');
+  const [peopleSection, setPeopleSection] = useState<PeopleSection>('presets');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshInFlightRef = useRef(false);
   const refreshRef = useRef<() => Promise<void>>(async () => {});
@@ -411,15 +417,28 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
     );
   }
 
+  const peerCount = members.length;
+  const windowTitle = `${session?.title ?? 'Стол…'} — neon_protocol`;
+
+  const setSkin = (id: NriLobbySkinId) => {
+    setLobbySkin(id);
+    writeNriLobbySkin(id);
+  };
+
   return (
-    <div className="nri-lobby">
-      <header className="nri-lobby__head">
-        <div>
-          <div className="nri-lobby__kicker">NEON_PROTOCOL // НРИ</div>
+    <div className={`nri-lobby nri-lobby--${lobbySkin}`} data-nri-skin={lobbySkin}>
+      <header className="nri-lobby__titlebar">
+        <div className="nri-lobby__traffic" aria-hidden="true">
+          <i className="nri-lobby__dot nri-lobby__dot--close" />
+          <i className="nri-lobby__dot nri-lobby__dot--min" />
+          <i className="nri-lobby__dot nri-lobby__dot--max" />
+        </div>
+        <div className="nri-lobby__win-title" title={windowTitle}>
+          <span className="nri-lobby__kicker">neon_protocol // deck</span>
           <h1 className="nri-lobby__title">{session?.title ?? 'Стол…'}</h1>
           <p className="mono-text nri-lobby__meta">
-            Мастер: {session?.hostUsername ?? '—'} · код {inviteCode}
-            {profile && ` · вы: ${profile.displayName}`}
+            host {session?.hostUsername ?? '—'} · {inviteCode}
+            {profile && ` · you ${profile.displayName}`}
           </p>
         </div>
         <div className="nri-lobby__head-actions">
@@ -428,7 +447,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
           </button>
           {profile && (
             <button type="button" className="nri-lobby__copy" onClick={() => setShowSheet(true)}>
-              <User size={14} /> Лист персонажа
+              <User size={14} /> Лист
             </button>
           )}
           <NriLobbySessionMenu
@@ -439,11 +458,11 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onCloseTable={() => void closeTable()}
             onLogout={() => logout()}
             copied={copied}
+            lobbySkin={lobbySkin}
+            onLobbySkinChange={setSkin}
           />
         </div>
       </header>
-
-      <div className="nri-lobby__stripe" aria-hidden="true" />
 
       {!session && (
         <div className="nri-lobby__boot">
@@ -469,29 +488,12 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         </div>
       )}
 
-      <div className="nri-lobby__members">
-        <Users size={14} />
-        <span className="mono-text">
-          {members.map((m) => {
-            const label = m.displayName ? `${m.displayName} (@${m.username})` : m.username;
-            return `${m.isHost ? '★' : ''}${label}`;
-          }).join(' · ')}
-          {session?.spamBotEnabled && (
-            <>
-              {members.length > 0 ? ' · ' : ''}
-              <span className="nri-lobby__spam-bot">📢 @{SPAM_BOT_USERNAME}</span>
-            </>
-          )}
-          {!members.length && !session?.spamBotEnabled && 'ожидание игроков…'}
-        </span>
-      </div>
-
-      <nav className="neon-services-tabs nri-lobby__tabs">
+      <nav className="neon-services-tabs nri-lobby__tabs nri-lobby__menubar" aria-label="Каналы стола">
         <button type="button" className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')}>
-          ЧАТ СТОЛА
+          <MessageSquare size={14} /> ЧАТ
         </button>
         <button type="button" className={tab === 'ice' ? 'active' : ''} onClick={() => setTab('ice')}>
-          <Skull size={14} /> ICE RUN
+          <Skull size={14} /> ICE
         </button>
         {session && (
           <button type="button" className={tab === 'map' ? 'active' : ''} onClick={() => setTab('map')}>
@@ -500,26 +502,26 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
         {(profile || session?.isHost) && (
           <button type="button" className={tab === 'wallet' ? 'active' : ''} onClick={() => setTab('wallet')}>
-            <Coins size={14} /> КОШЕЛЁК
+            <Coins size={14} /> ₩
           </button>
         )}
         {(profile || session?.isHost) && (
           <button type="button" className={tab === 'inventory' ? 'active' : ''} onClick={() => setTab('inventory')}>
-            <Package size={14} /> ИНВЕНТАРЬ
+            <Package size={14} /> ЛУТ
           </button>
         )}
         {(session?.isHost || session?.isAdmin) && (
           <button type="button" className={tab === 'vault' ? 'active' : ''} onClick={() => setTab('vault')}>
-            <FileArchive size={14} /> ФАЙЛОХРАНИЛИЩЕ
+            <FileArchive size={14} /> ФАЙЛЫ
           </button>
         )}
-        {(session?.isHost || session?.isAdmin) && (
+        {((session?.isHost || session?.isAdmin) || (profile && !session?.isHost)) && (
           <button
             type="button"
             className={tab === 'people' ? 'active' : ''}
             onClick={() => setTab('people')}
           >
-            <UserCircle size={14} /> ПЕРСОНАЖИ
+            <UserCircle size={14} /> ЛЮДИ
           </button>
         )}
         {(session?.isHost || session?.isAdmin) && (
@@ -529,12 +531,12 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
         {(session?.isHost || session?.isAdmin) && (
           <button type="button" className={tab === 'scenario' ? 'active' : ''} onClick={() => setTab('scenario')}>
-            <ScrollText size={14} /> СЦЕНАРИЙ
+            <ScrollText size={14} /> СЦЕН
           </button>
         )}
         {session && (
           <button type="button" className={tab === 'transport' ? 'active' : ''} onClick={() => setTab('transport')}>
-            <Car size={14} /> ТРАНСПОРТ
+            <Car size={14} /> ТРАНС
           </button>
         )}
         {(session?.isHost || session?.isAdmin) && (
@@ -544,17 +546,55 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         )}
         {profile && !session?.isHost && (
           <button type="button" className={tab === 'dossier' ? 'active' : ''} onClick={() => setTab('dossier')}>
-            <FolderOpen size={14} /> ЛИЧНОЕ ДЕЛО
+            <FolderOpen size={14} /> ДЕЛО
           </button>
         )}
         {profile && !session?.isHost && (
           <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
-            <StickyNote size={14} /> ЗАМЕТКИ
+            <StickyNote size={14} /> NOTES
           </button>
         )}
       </nav>
 
+      <div className="nri-lobby__telemetry" aria-label="Состав стола">
+        <Users size={16} className="nri-lobby__telemetry-icon" aria-hidden />
+        <div className="nri-lobby__telemetry-scroll">
+          {members.map((m) => {
+            const label = m.displayName?.trim() || m.username;
+            return (
+              <span
+                key={m.userId}
+                className={`nri-lobby__chip${m.isHost ? ' nri-lobby__chip--host' : ''}`}
+                title={m.displayName ? `${m.displayName} (@${m.username})` : `@${m.username}`}
+              >
+                {m.isHost ? '★ ' : ''}
+                {label}
+              </span>
+            );
+          })}
+          {session?.spamBotEnabled && (
+            <span className="nri-lobby__chip nri-lobby__chip--alert nri-lobby__spam-bot">
+              @{SPAM_BOT_USERNAME}
+            </span>
+          )}
+          {session?.liveDialogEnabled && (
+            <span className="nri-lobby__chip nri-lobby__chip--ok">LIVE</span>
+          )}
+          {!members.length && !session?.spamBotEnabled && (
+            <span className="nri-lobby__chip nri-lobby__chip--muted">ожидание игроков…</span>
+          )}
+        </div>
+      </div>
+
       <div className="nri-lobby__body">
+        {profile && !session?.isHost && (
+          <NriPsychosisCallBanner profile={profile} onOpenChat={() => setTab('chat')} />
+        )}
+        <NriIceCounterHackPopup
+          inviteCode={inviteCode}
+          isHost={!!(session?.isHost || session?.isAdmin)}
+        />
+        <div className="nri-lobby__stage" aria-live="polite">
         {tab === 'chat' && !session?.chatRoomId && (
           <div className="nri-lobby__boot nri-lobby__boot--inline">
             {sessionBooting ? (
@@ -620,6 +660,7 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         {tab === 'ice' && (
           <NriIceRunPanel
             inviteCode={inviteCode}
+            isHost={!!(session?.isHost || session?.isAdmin)}
             onOpenInventory={() => setTab('inventory')}
             onNewAchievements={handleNewAchievements}
           />
@@ -691,6 +732,14 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onOpenChat={() => setTab('chat')}
           />
         )}
+        {tab === 'people' && profile && !session?.isHost && !(session?.isAdmin) && (
+          <NriPlayerCharactersHub
+            inviteCode={inviteCode}
+            profile={profile}
+            accountUsername={user?.username}
+            onProfileUpdate={setProfile}
+          />
+        )}
         {tab === 'cyber' && (session?.isHost || session?.isAdmin) && (
           <NriCyberPanel
             inviteCode={inviteCode}
@@ -736,7 +785,22 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
             onNotesUpdate={(privateNotes) => setProfile({ ...profile, privateNotes })}
           />
         )}
+        </div>
       </div>
+
+      <footer className="nri-lobby__statusbar" aria-label="Статус сессии">
+        <span className="nri-lobby__status-item">utf-8</span>
+        <span className="nri-lobby__status-item">
+          {sessionBooting ? 'connecting…' : session ? 'live' : 'offline'}
+        </span>
+        <span className="nri-lobby__status-item">{peerCount} peers</span>
+        <span className="nri-lobby__status-item nri-lobby__status-item--grow">
+          tab {tab}
+          {session?.spamBotEnabled ? ' · spam on' : ''}
+          {session?.liveDialogEnabled ? ' · dialog live' : ''}
+        </span>
+        <span className="nri-lobby__status-item">{inviteCode}</span>
+      </footer>
 
       {session && err && <p className="nri-lobby__err mono-text">{err}</p>}
       {showRules && <NriRulesPanel onClose={() => setShowRules(false)} />}
@@ -752,6 +816,26 @@ export const NriLobbyView: React.FC<Props> = ({ inviteCode, onLeave, onIceReward
         />
       )}
       <NriAchievementToast unlocks={achToast} onDismiss={() => setAchToast([])} />
+      <NriDmCallPopup
+        nriInviteCode={inviteCode}
+        tableRoomId={session?.chatRoomId}
+        dmRecipients={vaultRecipients.filter((r) => r.userId !== user?.id)}
+        isTableHost={!!session?.isHost}
+        hostLabel={user?.username ? `@${user.username} (мастер)` : 'Мастер'}
+        vaultFiles={session?.isHost || session?.isAdmin ? vaultFiles : []}
+        speakAsNpc={speakAsNpc}
+        onSpeakAsNpcChange={session?.isHost ? setSpeakAsNpc : undefined}
+        npcSpeakers={tableNpcs.map((n) => ({
+          id: n.id,
+          name: n.name,
+          imageUrl: n.imageUrl,
+          archetype: parseNriSheet(n.sheet)?.npcArchetype,
+        }))}
+        nriProfile={profile ?? null}
+        tableNpcs={tableNpcs}
+        tableRoster={roster}
+        onNriProfileUpdate={(p) => setProfile(p)}
+      />
     </div>
   );
 };

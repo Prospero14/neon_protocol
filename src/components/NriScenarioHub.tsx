@@ -10,7 +10,7 @@ export const NriScenarioHub: React.FC<Props> = ({ inviteCode }) => {
   const [tab, setTab] = useState<HubTab>('scenario');
 
   return (
-    <div className="nri-scenario-hub">
+    <div className="nri-scenario-hub nri-deck-module">
       <nav className="nri-people-subtabs nri-scenario-hub__tabs">
         <button
           type="button"
@@ -27,8 +27,10 @@ export const NriScenarioHub: React.FC<Props> = ({ inviteCode }) => {
           Лор
         </button>
       </nav>
-      {tab === 'scenario' && <NriScenarioPanel inviteCode={inviteCode} />}
-      {tab === 'lore' && <NriLorePanel inviteCode={inviteCode} />}
+      <div className="nri-scenario-hub__body">
+        {tab === 'scenario' && <NriScenarioPanel inviteCode={inviteCode} />}
+        {tab === 'lore' && <NriLorePanel inviteCode={inviteCode} />}
+      </div>
     </div>
   );
 };

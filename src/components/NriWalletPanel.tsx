@@ -157,11 +157,11 @@ export const NriWalletPanel: React.FC<Props> = ({
     balance >= wallet.antispamPrice;
 
   return (
-    <div className="nri-wallet">
+    <div className="nri-wallet nri-deck-module">
       <header className="nri-wallet__head">
         <Coins size={18} />
         <div>
-          <h2 className="nri-wallet__title">Wonlongs (₩)</h2>
+          <h2 className="nri-wallet__title nri-deck-sheet__title">Wonlongs (₩)</h2>
           <p className="mono-text nri-wallet__balance">
             Баланс: <strong>₩{balance}</strong>
             {wallet && (

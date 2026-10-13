@@ -2,12 +2,20 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Dices, Save, Trash2, User } from 'lucide-react';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
-import { nriCreateNpc, nriDeleteNpc, nriFetchLore, nriFetchNpcs, type NriNpc } from '../logic/nriApi';
+import {
+  nriCreateCombatant,
+  nriCreateNpc,
+  nriDeleteNpc,
+  nriFetchLore,
+  nriFetchNpcs,
+  type NriNpc,
+} from '../logic/nriApi';
 import type { NriFaction } from '../logic/nriLore';
 import { NRI_CLASSES, type NriClassId } from '../logic/nriClasses';
 import {
   applyMetaToSheet,
   buildFullCharacter,
+  finalizeCharacterSheet,
   NRI_ACTIVITIES,
   NRI_NPC_ARCHETYPES,
   NRI_ORIGINS,
@@ -17,6 +25,7 @@ import {
   type NriOriginId,
 } from '../logic/nriCharacterGen';
 import { rollNpcName, parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
+import type { NriInventoryItem } from '../logic/nriInventory';
 import { rollNpcTattoos, type FactionRef } from '../../shared/nri-domain/tattoos';
 import { NriCharacterMetaForm } from './NriCharacterMetaForm';
 import { NriCharacterSheet } from './NriCharacterSheet';
@@ -66,9 +75,11 @@ export const NriNpcsPanel: React.FC<Props> = ({
   const [factions, setFactions] = useState<NriFaction[]>([]);
   const [notes, setNotes] = useState('');
   const [sheet, setSheet] = useState<NriSheetData | null>(null);
+  const [draftInventory, setDraftInventory] = useState<NriInventoryItem[]>([]);
   const [meta, setMeta] = useState<CharacterMetaDraft>({ originId: 'neo_tokyo', activityId: 'street', level: 1 });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [okMsg, setOkMsg] = useState<string | null>(null);
   const [sheetPreviewId, setSheetPreviewId] = useState<string | null>(null);
 
   const refreshFactions = useCallback(async () => {
@@ -123,33 +134,44 @@ export const NriNpcsPanel: React.FC<Props> = ({
       setErr(skillErr);
       return;
     }
+    const useOrigin = meta.originId ?? originId;
+    const useActivity = meta.activityId ?? activityId;
     const built = buildFullCharacter({
       classId,
-      originId,
-      activityId,
+      originId: useOrigin,
+      activityId: useActivity,
       archetypeId,
-      characterName: name.trim() || undefined,
+      characterName: name.trim() || meta.characterName?.trim() || undefined,
       nickname: meta.nickname,
+      level: meta.level,
+      career: meta.career,
+      age: meta.age,
+      yearsServed: meta.yearsServed,
+      streetInfluence: meta.streetInfluence,
+      corporateInfluence: meta.corporateInfluence,
       skillProficiencies: pickedSkills,
     });
     const pickedFactionId = factionId || undefined;
     const tattoos = rollNpcTattoos(
       {
-        originId,
-        activityId,
+        originId: useOrigin,
+        activityId: useActivity,
         archetypeId,
         factionId: pickedFactionId,
         augmentations: built.sheet.augmentations,
       },
       factionRefs
     );
+    setOriginId(useOrigin);
+    setActivityId(useActivity);
     setSheet({
       ...built.sheet,
       tattoos,
       factionId: pickedFactionId,
       disposition: Number.isFinite(Number(disposition)) ? Number(disposition) : 0,
     });
-    setMeta({ ...built.meta, npcArchetypeId: archetypeId });
+    setDraftInventory(Array.isArray(built.inventory) ? built.inventory : []);
+    setMeta({ ...built.meta, npcArchetypeId: archetypeId, factionId: pickedFactionId ?? null });
     if (!name.trim()) setName(built.meta.characterName);
     setErr(null);
   };
@@ -189,11 +211,13 @@ export const NriNpcsPanel: React.FC<Props> = ({
     }
     setBusy(true);
     setErr(null);
+    setOkMsg(null);
     const created = await nriCreateNpc(authToken, inviteCode, {
       name: npcName,
       classId,
       imageUrl: imageUrl.trim() || undefined,
-      sheet: finalSheet,
+      inventory: draftInventory,
+      sheet: finalizeCharacterSheet(finalSheet),
       notes: mergeNpcNotes(factionLabel, notes.trim() || finalSheet.backstory || ''),
     });
     setBusy(false);
@@ -206,7 +230,36 @@ export const NriNpcsPanel: React.FC<Props> = ({
     setFactionId('');
     setNotes('');
     setSheet(null);
+    setDraftInventory([]);
+    setNpcs((prev) => [created.npc, ...prev.filter((x) => x.id !== created.npc.id)]);
+    setOkMsg(`НПС «${created.npc.name}» сохранён — смотрите вкладку «НПС».`);
     await refresh();
+  };
+
+  const promoteNpcToCombatant = async (npcId: string) => {
+    if (!authToken) return;
+    const n = npcs.find((x) => x.id === npcId);
+    if (!n) return;
+    setBusy(true);
+    setErr(null);
+    setOkMsg(null);
+    const res = await nriCreateCombatant(authToken, inviteCode, {
+      name: n.name,
+      classId: n.classId ?? undefined,
+      archetypeId: 'gang',
+      threatTier: 'street',
+      imageUrl: n.imageUrl ?? undefined,
+      inventory: Array.isArray(n.inventory) ? n.inventory : [],
+      sheet: n.sheet ?? undefined,
+      notes: n.notes ? `Из НПС. ${n.notes}` : 'Из НПС',
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setOkMsg(`«${n.name}» скопирован в боевики (схема боя).`);
+    window.dispatchEvent(new CustomEvent('neon:combatants-changed'));
   };
 
   const remove = async (id: string) => {
@@ -223,7 +276,8 @@ export const NriNpcsPanel: React.FC<Props> = ({
       <header className="nri-chars__head">
         <h3 className="mono-text">НПС стола</h3>
         <p className="mono-text opacity-70">
-          Список неигровых персонажей. Выберите — пишите в чат от их имени.
+          Список неигровых персонажей. Выберите — пишите в чат от их имени. Новых — во вкладке{' '}
+          <strong>Генерация → НПС</strong>.
         </p>
       </header>
       )}
@@ -257,7 +311,14 @@ export const NriNpcsPanel: React.FC<Props> = ({
         <div className="nri-meta-form__row">
           <label className="nri-modal__field">
             <span>Происхождение</span>
-            <select value={originId} onChange={(e) => setOriginId(e.target.value as NriOriginId)}>
+            <select
+              value={originId}
+              onChange={(e) => {
+                const next = e.target.value as NriOriginId;
+                setOriginId(next);
+                setMeta((m) => ({ ...m, originId: next }));
+              }}
+            >
               {NRI_ORIGINS.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
@@ -267,7 +328,14 @@ export const NriNpcsPanel: React.FC<Props> = ({
           </label>
           <label className="nri-modal__field">
             <span>Деятельность</span>
-            <select value={activityId} onChange={(e) => setActivityId(e.target.value as NriActivityId)}>
+            <select
+              value={activityId}
+              onChange={(e) => {
+                const next = e.target.value as NriActivityId;
+                setActivityId(next);
+                setMeta((m) => ({ ...m, activityId: next }));
+              }}
+            >
               {NRI_ACTIVITIES.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.label}
@@ -352,10 +420,14 @@ export const NriNpcsPanel: React.FC<Props> = ({
             <h4 className="mono-text">Проверьте чарник перед сохранением</h4>
             <NriCharacterMetaForm
               classId={classId}
-              meta={{ ...meta, originId, activityId, npcArchetypeId: archetypeId }}
+              meta={{ ...meta, originId, activityId, npcArchetypeId: archetypeId, factionId: factionId || null }}
               sheet={sheet}
+              factions={factions}
               onChange={(m) => {
                 setMeta(m);
+                if (m.originId) setOriginId(m.originId);
+                if (m.activityId) setActivityId(m.activityId);
+                if (m.factionId !== undefined) setFactionId(m.factionId ?? '');
                 setSheet(applyMetaToSheet(sheet, m));
               }}
             />
@@ -375,8 +447,11 @@ export const NriNpcsPanel: React.FC<Props> = ({
       </div>
       )}
       {err && <p className="nri-lobby__err mono-text">{err}</p>}
+      {okMsg && <p className="mono-text nri-scenario__checkpoint-ok">{okMsg}</p>}
 
       {(mode === 'full' || mode === 'list') && (
+      <>
+        <div className="nri-combatants__list-head mono-text">Сохранённые НПС ({npcs.length})</div>
       <ul className="nri-npcs__list">
         {npcs.map((n) => {
           const selected = selectedNpcId === n.id;
@@ -422,6 +497,15 @@ export const NriNpcsPanel: React.FC<Props> = ({
               >
                 Лист
               </button>
+              <button
+                type="button"
+                className="nri-lobby__copy"
+                disabled={busy}
+                onClick={() => void promoteNpcToCombatant(n.id)}
+                title="Скопировать в боевики для схемы боя"
+              >
+                → Боевик
+              </button>
               <button type="button" className="nri-lobby__close" onClick={() => remove(n.id)}>
                 <Trash2 size={14} />
               </button>
@@ -429,8 +513,13 @@ export const NriNpcsPanel: React.FC<Props> = ({
             </li>
           );
         })}
-        {npcs.length === 0 && <p className="mono-text opacity-50">НПС пока нет — сгенерируйте во вкладке «Генерация».</p>}
+        {npcs.length === 0 && (
+          <p className="mono-text opacity-50">
+            НПС пока нет — соберите во вкладке «Генерация» → НПС.
+          </p>
+        )}
       </ul>
+      </>
       )}
 
       {sheetPreviewId === 'draft' && sheet && (
@@ -439,10 +528,11 @@ export const NriNpcsPanel: React.FC<Props> = ({
           profile={{
             displayName: meta.characterName ?? name,
             classId,
-            inventory: [],
+            inventory: draftInventory,
             sheet: applyMetaToSheet(sheet, meta),
             portraitUrl: imageUrl || null,
           }}
+          gmView
           onClose={() => setSheetPreviewId(null)}
         />
       )}
@@ -460,6 +550,7 @@ export const NriNpcsPanel: React.FC<Props> = ({
               sheet: n.sheet,
               portraitUrl: n.imageUrl,
             }}
+            gmView
             onClose={() => setSheetPreviewId(null)}
           />
         );

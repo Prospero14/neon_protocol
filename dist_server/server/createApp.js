@@ -14,7 +14,8 @@ export function createApp(opts) {
     const { prisma, jwtSecret, getIsDbReady, port, databaseUrl, isAmvera } = opts;
     const app = express();
     app.use(cors());
-    app.use(express.json());
+    // Портреты пресетов — data:image JPEG после canvas (~сотни KB).
+    app.use(express.json({ limit: '1mb' }));
     mountCoopRoutes(app, { prisma, jwtSecret, sendApiError });
     mountAuthRoutes(app, { prisma, jwtSecret, sendApiError });
     app.get('/neon_v1/health', (_req, res) => {

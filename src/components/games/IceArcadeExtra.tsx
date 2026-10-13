@@ -23,7 +23,7 @@ import { useIcePressure } from './useIcePressure';
 
 type Props = {
   params: IceGameParams;
-  onWin: () => void;
+  onWin: (meta?: { qualityPct: number; tracePct: number }) => void;
   onFail: () => void;
 };
 
@@ -36,7 +36,7 @@ function pipeGlyph(kind: PipeCell['kind'], rot: number): string {
   return ['└', '┌', '┐', '┘'][rot % 4]!;
 }
 
-/** Circuit Splice — поверни пайпы, проведи сигнал ENTRY → CORE. */
+/** Circuit Splice — восстановление auth-канала (пайпы) ENTRY → CORE. */
 export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const ice = useIcePressure(params, onFail);
   const cols = Math.max(4, Math.min(6, params.meshNodes || 4));
@@ -45,6 +45,21 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
   const initial = useMemo(() => generateCircuitGrid(cols, rows, seed), [cols, rows, seed]);
   const [grid, setGrid] = useState(initial.grid);
   const [done, setDone] = useState(false);
+  // Locked tiles: can't rotate (harder on medium+)
+  const locked = useMemo(() => {
+    const set = new Set<number>();
+    if (params.traceSpeed < 0.7) return set;
+    const count = params.traceSpeed >= 1.2 ? 3 : 1;
+    let s = seed;
+    while (set.size < count) {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      const idx = s % (cols * rows);
+      const x = idx % cols;
+      // Don't lock entry/core columns
+      if (x > 0 && x < cols - 1) set.add(idx);
+    }
+    return set;
+  }, [cols, rows, seed, params.traceSpeed]);
 
   const powered = useMemo(
     () => circuitPoweredIndices(grid, cols, rows, initial.entryRow),
@@ -55,23 +70,25 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
     ice.setPaused(ice.locked || done);
   }, [ice.locked, done, ice.setPaused]);
 
-  // На hard ICE иногда сдвигает случайную плитку.
+  // Medium+: ICE jitter; hard чаще.
   useEffect(() => {
-    if (params.traceSpeed < 1.2 || done || ice.locked) return;
+    if (params.traceSpeed < 0.85 || done || ice.locked) return;
     const iv = window.setInterval(() => {
       setGrid((prev) => {
         const next = [...prev];
-        const idx = Math.floor(Math.random() * next.length);
-        next[idx] = rotatePipe(next[idx]!);
+        let idx = Math.floor(Math.random() * next.length);
+        let guard = 0;
+        while (locked.has(idx) && guard++ < 20) idx = Math.floor(Math.random() * next.length);
+        if (!locked.has(idx)) next[idx] = rotatePipe(next[idx]!);
         return next;
       });
-      ice.spikeTrace(4, 'ICE: circuit jitter · tile desync');
-    }, Math.max(4200, params.peekMs * 6));
+      ice.spikeTrace(params.traceSpeed >= 1.2 ? 6 : 3, 'ICE: conduit jitter · retune splice');
+    }, Math.max(2800, params.peekMs * (params.traceSpeed >= 1.2 ? 4 : 6)));
     return () => window.clearInterval(iv);
-  }, [params.traceSpeed, params.peekMs, done, ice.locked, ice.spikeTrace]);
+  }, [params.traceSpeed, params.peekMs, done, ice.locked, ice.spikeTrace, locked]);
 
   const rotateAt = (idx: number) => {
-    if (done || ice.locked) return;
+    if (done || ice.locked || locked.has(idx)) return;
     setGrid((prev) => {
       const next = [...prev];
       next[idx] = rotatePipe(next[idx]!);
@@ -80,7 +97,10 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
         queueMicrotask(() => {
           setDone(true);
           ice.rewardTrace(12);
-          onWin();
+          onWin({
+            qualityPct: Math.max(15, Math.round(100 - ice.trace * 0.7)),
+            tracePct: Math.round(ice.trace),
+          });
         });
       }
       return next;
@@ -98,7 +118,8 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
         maxMistakes={params.maxMistakes}
       />
       <IceMiniHint pulse={!done}>
-        Крути пайпы · сигнал ENTRY → CORE {done ? '· LINK UP' : ''}
+        AUTH_CONDUIT_RESTORE · восстанавливаем канал к vault. Подсказка пароля: «провод к CORE».
+        Крути пайпы IN → CORE{locked.size ? ` · ${locked.size} сегм. locked` : ''}
       </IceMiniHint>
       <div
         className="ice-mini__circuit"
@@ -110,13 +131,14 @@ export const CircuitSpliceGame: React.FC<Props> = ({ params, onWin, onFail }) =>
           const isEntry = x === 0 && y === initial.entryRow;
           const isCore = x === cols - 1 && y === initial.coreRow;
           const lit = powered.has(idx);
+          const isLocked = locked.has(idx);
           return (
             <button
               key={idx}
               type="button"
-              className={`ice-mini__pipe ${lit ? 'ice-mini__pipe--lit' : ''} ${isEntry ? 'ice-mini__pipe--entry' : ''} ${isCore ? 'ice-mini__pipe--core' : ''}`}
+              className={`ice-mini__pipe ${lit ? 'ice-mini__pipe--lit' : ''} ${isEntry ? 'ice-mini__pipe--entry' : ''} ${isCore ? 'ice-mini__pipe--core' : ''} ${isLocked ? 'ice-mini__pipe--locked' : ''}`}
               onClick={() => rotateAt(idx)}
-              disabled={done || ice.locked}
+              disabled={done || ice.locked || isLocked}
               aria-label={`pipe ${cell.kind} rot ${cell.rot}`}
             >
               <span className="ice-mini__pipe-glyph">{pipeGlyph(cell.kind, cell.rot)}</span>
@@ -259,7 +281,10 @@ export const NodeCaptureGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       }
       if (node.isCore) {
         setDone(true);
-        onWin();
+        onWin({
+          qualityPct: Math.max(15, Math.round(100 - ice.trace * 0.7)),
+          tracePct: Math.round(ice.trace),
+        });
         return;
       }
       // Нет хода к незахваченным соседям и CORE не взят — soft-lock check.
@@ -282,9 +307,16 @@ export const NodeCaptureGame: React.FC<Props> = ({ params, onWin, onFail }) => {
         mistakes={ice.mistakes}
         maxMistakes={params.maxMistakes}
       />
-      <IceMiniHint>
-        Захватывай смежные узлы · дойди до CORE · honeypot жжёт TRACE
+      <IceMiniHint pulse={!done}>
+        Сегмент corp-сети: стартуешь с ENTRY. Кликай только подсвеченные (смежные) узлы.
+        Цель — CORE. Число на узле = цена probes. HONEYPOT дёшев, но жжёт TRACE.
       </IceMiniHint>
+      <ul className="ice-mini__capture-legend mono-text">
+        <li><span className="ice-mini__capture-swatch ice-mini__capture-swatch--entry" /> ENTRY — старт</li>
+        <li><span className="ice-mini__capture-swatch ice-mini__capture-swatch--reach" /> доступен</li>
+        <li><span className="ice-mini__capture-swatch ice-mini__capture-swatch--honey" /> honeypot</li>
+        <li><span className="ice-mini__capture-swatch ice-mini__capture-swatch--core" /> CORE — цель</li>
+      </ul>
       <div className="ice-mini__capture">
         <svg className="ice-mini__capture-edges" viewBox="0 0 100 100" aria-hidden>
           {graph.edges.map(([a, b]) => {
@@ -314,15 +346,22 @@ export const NodeCaptureGame: React.FC<Props> = ({ params, onWin, onFail }) => {
               style={{ left: `${n.x}%`, top: `${n.y}%` }}
               disabled={done || ice.locked || owned || n.isEntry}
               onClick={() => tryCapture(n.id)}
+              title={
+                n.isCore
+                  ? 'CORE — победа'
+                  : n.honeypot
+                    ? `Honeypot · ${n.cost} probes · жжёт TRACE`
+                    : `${n.label} · ${n.cost} probes`
+              }
             >
-              <span className="ice-mini__capture-label">{n.label}</span>
+              <span className="ice-mini__capture-label">{n.isCore ? 'CORE' : n.isEntry ? 'IN' : n.label}</span>
               {!n.isEntry && <span className="ice-mini__capture-cost">{n.cost}p</span>}
             </button>
           );
         })}
       </div>
       <IceMiniFooter>
-        Probes {probes} · captured {captured.size}/{graph.nodes.length}
+        Probes {probes} · captured {captured.size}/{graph.nodes.length} · WIN = клик CORE
       </IceMiniFooter>
     </IceMiniShell>
   );

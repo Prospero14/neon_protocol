@@ -100,6 +100,8 @@ model NriPlayer {
   portraitUrl String?
   presetId    String?
   privateNotes String @default("")
+  /** Личные полевые досье игрока (JSON-массив карточек без статов). */
+  fieldDossiers Json @default("[]")
   achievementState Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

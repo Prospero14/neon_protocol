@@ -1,10 +1,13 @@
-import React from 'react';
-import { ScrollText, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { ScrollText, Skull, Users, UserCircle } from 'lucide-react';
 import { NriCharactersPanel } from './NriCharactersPanel';
 import { NriPresetsPanel } from './NriPresetsPanel';
 import { NriNpcsPanel } from './NriNpcsPanel';
+import { NriCombatantsPanel } from './NriCombatantsPanel';
 
-export type PeopleSection = 'chars' | 'npcs' | 'players';
+export type PeopleSection = 'chars' | 'presets' | 'npcs' | 'combatants';
+
+type GenKind = 'players' | 'npcs' | 'combatants';
 
 type Props = {
   inviteCode: string;
@@ -16,9 +19,16 @@ type Props = {
 };
 
 const SECTIONS: { id: PeopleSection; label: string; icon: React.ReactNode }[] = [
+  { id: 'presets', label: 'Генерация', icon: <UserCircle size={13} /> },
   { id: 'chars', label: 'Чарники', icon: <ScrollText size={13} /> },
   { id: 'npcs', label: 'НПС', icon: <Users size={13} /> },
-  { id: 'players', label: 'Игроки', icon: <Users size={13} /> },
+  { id: 'combatants', label: 'Боевики', icon: <Skull size={13} /> },
+];
+
+const GEN_KINDS: { id: GenKind; label: string }[] = [
+  { id: 'players', label: 'Игроки' },
+  { id: 'npcs', label: 'НПС' },
+  { id: 'combatants', label: 'Боевики' },
 ];
 
 export const NriPeopleHub: React.FC<Props> = ({
@@ -28,38 +38,78 @@ export const NriPeopleHub: React.FC<Props> = ({
   selectedNpcId,
   onSelectNpc,
   onOpenChat,
-}) => (
-  <div className="nri-people-hub">
-    <nav className="nri-people-subtabs" aria-label="Раздел персонажей">
-      {SECTIONS.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          className={section === s.id ? 'active' : ''}
-          onClick={() => onSectionChange(s.id)}
-        >
-          {s.icon}
-          {s.label}
-        </button>
-      ))}
-    </nav>
+}) => {
+  const [genKind, setGenKind] = useState<GenKind>('players');
 
-    <p className="mono-text nri-people-hub__hint opacity-60">
-      Генерация, боевики и схема боя — во вкладке <strong>МАСТЕР</strong>.
-    </p>
+  return (
+    <div className="nri-people-hub nri-deck-module">
+      <nav className="nri-people-subtabs" aria-label="Раздел персонажей">
+        {SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={section === s.id ? 'active' : ''}
+            onClick={() => onSectionChange(s.id)}
+          >
+            {s.icon}
+            {s.label}
+          </button>
+        ))}
+      </nav>
 
-    <div className="nri-people-hub__body">
-      {section === 'chars' && <NriCharactersPanel inviteCode={inviteCode} />}
-      {section === 'npcs' && (
-        <NriNpcsPanel
-          inviteCode={inviteCode}
-          mode="list"
-          selectedNpcId={selectedNpcId}
-          onSelectNpc={onSelectNpc}
-          onOpenChat={onOpenChat}
-        />
+      <p className="mono-text nri-people-hub__hint opacity-60">
+        {section === 'presets' &&
+          'Здесь собираете листы: игроки, НПС и боевики. Сохранённые — во вкладках «НПС» / «Боевики» / «Чарники».'}
+        {section === 'chars' && 'Игроки за столом — листы без генерации.'}
+        {section === 'npcs' &&
+          'Список НПС стола. Новых создавайте во вкладке «Генерация» → НПС.'}
+        {section === 'combatants' &&
+          'Список боевиков для схемы боя. Новых — во вкладке «Генерация» → Боевики.'}
+      </p>
+
+      {section === 'presets' && (
+        <nav className="nri-people-subtabs nri-people-subtabs--nested" aria-label="Что генерировать">
+          {GEN_KINDS.map((g) => (
+            <button
+              key={g.id}
+              type="button"
+              className={genKind === g.id ? 'active' : ''}
+              onClick={() => setGenKind(g.id)}
+            >
+              {g.label}
+            </button>
+          ))}
+        </nav>
       )}
-      {section === 'players' && <NriPresetsPanel inviteCode={inviteCode} mode="players" />}
+
+      <div className="nri-people-hub__body">
+        {section === 'presets' && genKind === 'players' && (
+          <NriPresetsPanel inviteCode={inviteCode} mode="full" />
+        )}
+        {section === 'presets' && genKind === 'npcs' && (
+          <NriNpcsPanel
+            inviteCode={inviteCode}
+            mode="gen"
+            selectedNpcId={selectedNpcId}
+            onSelectNpc={onSelectNpc}
+            onOpenChat={onOpenChat}
+          />
+        )}
+        {section === 'presets' && genKind === 'combatants' && (
+          <NriCombatantsPanel inviteCode={inviteCode} mode="gen" />
+        )}
+        {section === 'chars' && <NriCharactersPanel inviteCode={inviteCode} />}
+        {section === 'npcs' && (
+          <NriNpcsPanel
+            inviteCode={inviteCode}
+            mode="list"
+            selectedNpcId={selectedNpcId}
+            onSelectNpc={onSelectNpc}
+            onOpenChat={onOpenChat}
+          />
+        )}
+        {section === 'combatants' && <NriCombatantsPanel inviteCode={inviteCode} mode="list" />}
+      </div>
     </div>
-  </div>
-);
+  );
+};

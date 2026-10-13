@@ -27,7 +27,15 @@ import {
 import { enrichSheetCombat } from './nriSheetCombat';
 import { generateRichBackstory } from './nriBackstories';
 import { rollCareer } from './nriCareers';
+import {
+  generatePocketLoot,
+  mergePocketLoot,
+  type FlavorChrome,
+} from './nriCharacterFlavor';
 import { generateRichClothing } from './nriClothing';
+import { NRI_CLASS_SEEDS } from './nriClassSeeds';
+import type { NriInventoryItem } from './nriInventory';
+import { catalogToInventoryItem } from './nriItemCatalog';
 import { formatCharacterDisplayName, rollCharacterName, rollNickname } from './nriNames';
 import { rollViceD100 } from './nriVices100';
 import { defaultSkillsForClass } from './nriSkillPick';
@@ -230,15 +238,21 @@ const SKIN_BY_ORIGIN: Record<NriOriginId, string[]> = {
   offworld: ['бледная от рециркуляции', 'сероватая', 'синтетическая', 'обожжённая радиацией'],
 };
 
+/** Культура на листе — по-русски и в связке с местом рождения. */
 const CULTURE_BY_ORIGIN: Record<NriOriginId, string> = {
-  neo_tokyo: 'Japanese',
-  hong_kong: 'Cantonese',
-  los_angeles: 'American',
-  london: 'British',
-  moscow: 'Russian',
-  sao_paulo: 'Brazilian',
-  offworld: 'Colonial',
+  neo_tokyo: 'японская',
+  hong_kong: 'кантонская',
+  los_angeles: 'американская',
+  london: 'британская',
+  moscow: 'русская',
+  sao_paulo: 'бразильская',
+  offworld: 'колониальная',
 };
+
+export function cultureForOrigin(originId: NriOriginId, isRobot?: boolean): string {
+  if (isRobot) return 'синтет';
+  return CULTURE_BY_ORIGIN[originId] ?? 'смешанная';
+}
 
 const HAIR_OPTIONS = [
   'чёрные',
@@ -276,11 +290,23 @@ const ARCH_AUG_SLOTS: Record<NriNpcArchetypeId, string[]> = {
   mercenary: ['arm'],
 };
 
-function pickBlueprint(slot: string, archetypeId?: NriNpcArchetypeId): CyberBlueprint | undefined {
+function pickBlueprint(
+  slot: string,
+  archetypeId?: NriNpcArchetypeId,
+  classId?: NriClassId
+): CyberBlueprint | undefined {
   const candidates = CYBER_BLUEPRINT_PRESETS.filter((p) => p.slot === slot);
   if (!candidates.length) return undefined;
-  if (slot === 'arm' && (archetypeId === 'gang' || archetypeId === 'mercenary')) {
-    return candidates.find((c) => c.name.includes('базовый')) ?? candidates[0];
+  // Наёмник / банда — рука с встроенным пистолетом (иначе «пистолетный» комплект не попадает в лист)
+  if (
+    slot === 'arm' &&
+    (classId === 'merc' || archetypeId === 'gang' || archetypeId === 'mercenary')
+  ) {
+    return (
+      candidates.find((c) => /пистолет/i.test(c.name)) ??
+      candidates.find((c) => c.name.includes('базовый')) ??
+      candidates[0]
+    );
   }
   if (slot === 'arm' && archetypeId === 'robot') {
     return candidates.find((c) => c.name.includes('неон')) ?? candidates[0];
@@ -311,7 +337,7 @@ function generateAugmentations(
 
   const addSlot = (slot: string, arch?: NriNpcArchetypeId) => {
     if (slots.has(slot)) return;
-    const bp = pickBlueprint(slot, arch ?? archetypeId);
+    const bp = pickBlueprint(slot, arch ?? archetypeId, classId);
     if (bp) {
       slots.add(slot);
       blueprints.push(bp);
@@ -348,7 +374,7 @@ function generateBio(
       skin: 'синтетическая оболочка',
       hair: rng.pick(['отсутствует', 'синтетические волокна', 'LED-полосы'] as const),
       eyes: 'оптика v3',
-      culture: 'Machine',
+      culture: cultureForOrigin(originId, true),
     };
   }
   const h = 160 + rng.int(0, 34);
@@ -359,7 +385,7 @@ function generateBio(
     skin: rng.pick(SKIN_BY_ORIGIN[originId] ?? SKIN_BY_ORIGIN.neo_tokyo),
     hair: rng.pick(HAIR_OPTIONS),
     eyes: rng.pick(EYE_OPTIONS),
-    culture: CULTURE_BY_ORIGIN[originId] ?? 'Mixed',
+    culture: cultureForOrigin(originId),
   };
 }
 
@@ -384,8 +410,27 @@ function proficiencyForLevel(level: number): number {
 
 function sheetNeedsGeneration(sheet: AugmentedSheet | null): boolean {
   if (!sheet) return true;
-  if (!sheet.abilities) return true;
+  if (!sheet.abilities || typeof sheet.abilities !== 'object') return true;
+  if (typeof sheet.abilities.STR !== 'number') return true;
   return false;
+}
+
+export function isSheetFinalized(raw: unknown): boolean {
+  const sheet = parseAugmentedSheet(raw);
+  return !!sheet?.sheetFinalized;
+}
+
+/** Есть боевые статы — это уже игровой/сохранённый лист, не черновик генератора. */
+export function isPlayableSheet(raw: unknown): boolean {
+  const sheet = parseAugmentedSheet(raw);
+  return !!sheet && typeof sheet.abilities?.STR === 'number';
+}
+
+/** Зафиксировать лист после создания/сейва — дальше без автогенерации. */
+export function finalizeCharacterSheet<T extends Record<string, unknown> | NriSheetData | AugmentedSheet>(
+  sheet: T
+): T & { sheetFinalized: true } {
+  return { ...sheet, sheetFinalized: true as const };
 }
 
 /** Дозаполняет пропуски без перегенерации уже сохранённых полей (стабильный seed). */
@@ -401,7 +446,7 @@ function fillMissingSheetFields(
   const arch = NRI_NPC_ARCHETYPES.find((a) => a.id === archetypeId);
   const bioNeeded = !sheet.height || !sheet.weight || !sheet.skin || !sheet.hair || !sheet.eyes || !sheet.culture;
   const bio = bioNeeded ? generateBio(originId, archetypeId, arch?.isRobot, rng) : null;
-  const augmentations = sheet.augmentations ?? [];
+  const augmentations = Array.isArray(sheet.augmentations) ? sheet.augmentations : [];
   const bloodToxCurrent =
     sheet.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const enc =
@@ -418,7 +463,9 @@ function fillMissingSheetFields(
     skin: sheet.skin ?? bio?.skin,
     hair: sheet.hair ?? bio?.hair,
     eyes: sheet.eyes ?? bio?.eyes,
-    culture: sheet.culture ?? bio?.culture,
+    // не оставляем «Japanese» при origin «Москва»
+    culture: cultureForOrigin(originId, arch?.isRobot),
+    originId: sheet.originId ?? originId,
     vice: sheet.vice ?? generateVice(archetypeId, rng),
     augmentations,
     bloodToxCurrent,
@@ -427,23 +474,37 @@ function fillMissingSheetFields(
   };
 }
 
+/**
+ * Черновик (создание): можно дозаполнить пропуски стабильным seed.
+ * После `sheetFinalized` — только чтение, без buildFullCharacter / рандома.
+ */
 export function ensureCompleteSheet(
   raw: unknown,
   classId: NriClassId,
   displayName?: string
 ): AugmentedSheet {
   const parsed = parseAugmentedSheet(raw);
+
+  if (parsed?.sheetFinalized || (parsed && isPlayableSheet(parsed))) {
+    // Игровой лист — без buildFullCharacter / Math.random.
+    return {
+      ...parsed,
+      augmentations: Array.isArray(parsed.augmentations) ? parsed.augmentations : [],
+    };
+  }
+
   if (parsed && !sheetNeedsGeneration(parsed)) {
     return fillMissingSheetFields(parsed, classId, displayName);
   }
 
+  // Полная генерация — только для пустого черновика генератора.
   const built = buildFullCharacter({
     classId,
     originId: 'neo_tokyo',
     activityId: activityForClass(classId),
     archetypeId: archetypeForClass(classId),
     characterName: displayName ?? parsed?.characterName,
-    rollStats: !parsed?.abilities,
+    rollStats: !parsed?.abilities || typeof parsed.abilities.STR !== 'number',
   });
 
   if (!parsed) return { ...built.sheet, augmentations: built.sheet.augmentations ?? [] };
@@ -452,11 +513,12 @@ export function ensureCompleteSheet(
     {
       ...built.sheet,
       ...parsed,
-      abilities: parsed.abilities ?? built.sheet.abilities,
+      abilities: parsed.abilities?.STR != null ? parsed.abilities : built.sheet.abilities,
       hp: parsed.hp ?? built.sheet.hp,
       hpMax: parsed.hpMax ?? built.sheet.hpMax,
       ac: parsed.ac ?? built.sheet.ac,
       augmentations: parsed.augmentations?.length ? parsed.augmentations : (built.sheet.augmentations ?? []),
+      sheetFinalized: false,
     },
     classId,
     displayName
@@ -547,7 +609,31 @@ export type FullCharacterBuild = {
     npcArchetypeId?: NriNpcArchetypeId;
     nickname?: string;
   };
+  /** Сидовое оружие/броня класса + карманная мелочь. */
+  inventory: NriInventoryItem[];
 };
+
+function classSeedInventory(classId: NriClassId): NriInventoryItem[] {
+  const seed = NRI_CLASS_SEEDS.find((s) => s.classId === classId);
+  if (!seed || !Array.isArray(seed.inventory)) return [];
+  const out: NriInventoryItem[] = [];
+  for (const row of seed.inventory) {
+    const fromCat = catalogToInventoryItem(row.id);
+    if (fromCat) {
+      out.push({ ...fromCat, qty: row.qty ?? 1, equipped: fromCat.slot === 'weapon' || fromCat.slot === 'armor' });
+      continue;
+    }
+    out.push({
+      id: `${row.id}_${Math.random().toString(36).slice(2, 7)}`,
+      catalogId: row.id,
+      name: row.name,
+      kind: 'gear',
+      qty: row.qty ?? 1,
+      tags: ['старт'],
+    });
+  }
+  return out;
+}
 
 export function buildFullCharacter(params: {
   classId: NriClassId;
@@ -557,6 +643,12 @@ export function buildFullCharacter(params: {
   characterName?: string;
   nickname?: string;
   level?: number;
+  /** Заполненные до генерации поля — идут в бэкстори/одежду. */
+  career?: string;
+  age?: string;
+  yearsServed?: string;
+  streetInfluence?: string;
+  corporateInfluence?: string;
   rollStats?: boolean;
   skillProficiencies?: string[];
 }): FullCharacterBuild {
@@ -570,29 +662,21 @@ export function buildFullCharacter(params: {
     rollNickname({ activityId: params.activityId, classId: params.classId, archetypeId: params.archetypeId });
   const displayName = formatCharacterDisplayName(name, nickname);
   const influence = rollInfluence(params.activityId);
-  const career = rollCareer({
-    classId: params.classId,
-    activityId: params.activityId,
-    archetypeId: params.archetypeId,
-  });
-  const age = params.archetypeId ? rollAge(params.archetypeId) : rollAge('civilian');
-  const yearsServed = rollYears(params.activityId);
-  const backstory = generateRichBackstory({
-    name,
-    nickname,
-    originId: params.originId,
-    activityId: params.activityId,
-    archetypeId: params.archetypeId,
-    classId: params.classId,
-    career,
-  });
-  const clothing = generateRichClothing({
-    originId: params.originId,
-    activityId: params.activityId,
-    archetypeId: params.archetypeId,
-    classId: params.classId,
-    career,
-  });
+  const age = params.age?.trim() || (params.archetypeId ? rollAge(params.archetypeId) : rollAge('civilian'));
+  const yearsServed = params.yearsServed?.trim() || rollYears(params.activityId);
+  const streetInfluence = params.streetInfluence?.trim() || influence.street;
+  const corporateInfluence = params.corporateInfluence?.trim() || influence.corp;
+  const career =
+    params.career?.trim() ||
+    rollCareer({
+      classId: params.classId,
+      activityId: params.activityId,
+      archetypeId: params.archetypeId,
+      originId: params.originId,
+      yearsServed: Number(yearsServed) || 0,
+      streetInfluence: Number(streetInfluence) || 0,
+      corporateInfluence: Number(corporateInfluence) || 0,
+    });
   const bio = generateBio(params.originId, params.archetypeId, arch?.isRobot);
   const augmentations = generateAugmentations(params.archetypeId, params.classId);
   const bloodToxCurrent = augmentations.reduce((s, a) => s + a.bloodTox, 0);
@@ -605,6 +689,19 @@ export function buildFullCharacter(params: {
     ? params.skillProficiencies
     : defaultSkillsForClass(params.classId);
 
+  const chrome: FlavorChrome[] = augmentations.map((a) => ({ name: a.name, slot: a.slot }));
+  const gearInv = classSeedInventory(params.classId);
+  const pockets = generatePocketLoot({
+    originId: params.originId,
+    activityId: params.activityId,
+    classId: params.classId,
+    archetypeId: params.archetypeId,
+    career,
+    chrome,
+  });
+  const inventory = mergePocketLoot(gearInv, pockets);
+
+  // Черновик листа без бэкстори — чтобы вытащить атаки класса
   let sheet: NriSheetData = enrichSheetCombat(
     {
       ...base,
@@ -621,10 +718,8 @@ export function buildFullCharacter(params: {
       age,
       career,
       yearsServed,
-      streetInfluence: influence.street,
-      corporateInfluence: influence.corp,
-      backstory,
-      clothing,
+      streetInfluence,
+      corporateInfluence,
       vice,
       dr,
       xp: 0,
@@ -640,6 +735,28 @@ export function buildFullCharacter(params: {
     },
     params.classId
   );
+
+  const weapons = [
+    ...(sheet.attacks ?? []).map((a) => a.name).filter(Boolean),
+    ...gearInv.filter((i) => i.slot === 'weapon' || i.attack).map((i) => i.name),
+  ].filter((n, i, arr) => arr.indexOf(n) === i);
+
+  const flavor = {
+    name,
+    nickname,
+    originId: params.originId,
+    activityId: params.activityId,
+    archetypeId: params.archetypeId,
+    classId: params.classId,
+    career,
+    vice,
+    chrome,
+    weapons,
+    pocketNames: pockets.map((p) => p.name),
+  };
+  const backstory = generateRichBackstory(flavor);
+  const clothing = generateRichClothing(flavor);
+  sheet = { ...sheet, backstory, clothing };
 
   if (arch?.isRobot) {
     sheet.abilities.CON = Math.max(sheet.abilities.CON, 12);
@@ -657,11 +774,12 @@ export function buildFullCharacter(params: {
       age,
       career,
       yearsServed,
-      streetInfluence: influence.street,
-      corporateInfluence: influence.corp,
+      streetInfluence,
+      corporateInfluence,
       backstory,
       clothing,
     },
+    inventory,
   };
 }
 
@@ -692,18 +810,29 @@ export function enrichClassSeed(
 }
 
 export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft): NriSheetData {
-  const origin = meta.originId ? originLabel(meta.originId) : sheet.origin;
-  const activity = meta.activityId ? activityLabel(meta.activityId) : sheet.activity;
+  const originId = meta.originId ?? (sheet.originId as NriOriginId | undefined) ?? resolveOriginId(sheet.origin);
+  const activityId =
+    meta.activityId ?? (sheet.activityId as NriActivityId | undefined) ?? undefined;
+  const origin = meta.originId ? originLabel(meta.originId) : sheet.origin ?? originLabel(originId);
+  const activity = meta.activityId
+    ? activityLabel(meta.activityId)
+    : sheet.activity ?? (activityId ? activityLabel(activityId) : sheet.activity);
   const arch = meta.npcArchetypeId ? archetypeLabel(meta.npcArchetypeId) : sheet.npcArchetype;
   const level = meta.level ?? sheet.level;
+  const isRobot = /робот|андроид|синтет/i.test(arch ?? '') || sheet.culture === 'синтет' || sheet.culture === 'Machine';
+  // Культура всегда следует за местом рождения (не «Japanese» при Москве).
+  const culture = cultureForOrigin(originId, isRobot);
   return {
     ...sheet,
     level,
     characterName: meta.characterName ?? sheet.characterName,
     nickname: meta.nickname ?? sheet.nickname,
     origin,
+    originId,
     activity,
+    activityId: activityId ?? sheet.activityId,
     npcArchetype: arch,
+    culture,
     age: meta.age ?? sheet.age,
     career: meta.career ?? sheet.career,
     yearsServed: meta.yearsServed ?? sheet.yearsServed,
@@ -717,11 +846,19 @@ export function applyMetaToSheet(sheet: NriSheetData, meta: CharacterMetaDraft):
 }
 
 export function sheetToMetaDraft(sheet: NriSheetData | null | undefined, fallbackName?: string): CharacterMetaDraft {
+  const originId =
+    (sheet?.originId as NriOriginId | undefined) ??
+    (sheet?.origin ? resolveOriginId(sheet.origin) : undefined);
+  const activityId =
+    (sheet?.activityId as NriActivityId | undefined) ??
+    (sheet?.activity
+      ? (NRI_ACTIVITIES.find((a) => a.label === sheet.activity)?.id as NriActivityId | undefined)
+      : undefined);
   return {
     characterName: sheet?.characterName ?? fallbackName,
     nickname: sheet?.nickname,
-    originId: sheet?.originId as NriOriginId | undefined,
-    activityId: sheet?.activityId as NriActivityId | undefined,
+    originId,
+    activityId,
     level: sheet?.level ?? 1,
     age: sheet?.age,
     career: sheet?.career,

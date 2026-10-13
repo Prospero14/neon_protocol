@@ -52,12 +52,12 @@ type WeaponDef = {
 };
 
 const CLASS_WEAPONS: Record<NriClassId, WeaponDef[]> = {
-  daimyo: [{ name: 'Katana', ability: 'STR', damageDice: '1d8', damageType: 'slashing', melee: true }],
-  doc: [{ name: 'Shock baton', ability: 'STR', damageDice: '1d4', damageType: 'blunt', melee: true }],
-  merc: [{ name: 'SMG', ability: 'DEX', damageDice: '2d6', damageType: 'ballistic', melee: false }],
-  hacker: [{ name: 'Mono-knife', ability: 'DEX', damageDice: '1d4', damageType: 'piercing', melee: true }],
-  detective: [{ name: 'Pistol', ability: 'DEX', damageDice: '2d4', damageType: 'ballistic', melee: false }],
-  fixer: [{ name: 'Mono-knife', ability: 'DEX', damageDice: '1d4', damageType: 'piercing', melee: true }],
+  daimyo: [{ name: 'Катана', ability: 'STR', damageDice: '1d8', damageType: 'slashing', melee: true }],
+  doc: [{ name: 'Шокер-дубинка', ability: 'STR', damageDice: '1d4', damageType: 'blunt', melee: true }],
+  merc: [{ name: 'ПП', ability: 'DEX', damageDice: '2d6', damageType: 'ballistic', melee: false }],
+  hacker: [{ name: 'Мононож', ability: 'DEX', damageDice: '1d4', damageType: 'piercing', melee: true }],
+  detective: [{ name: 'Пистолет', ability: 'DEX', damageDice: '2d4', damageType: 'ballistic', melee: false }],
+  fixer: [{ name: 'Мононож', ability: 'DEX', damageDice: '1d4', damageType: 'piercing', melee: true }],
 };
 
 export function formatSignedMod(n: number): string {
@@ -135,7 +135,7 @@ function attacksFromAugmentations(
         note = 'смартлинк глушится целью';
       }
       out.push({
-        name: aug.name,
+        name: part?.name?.trim() || aug.name,
         atkBonus,
         damage: parsed.melee
           ? `${parsed.dice}${formatSignedMod(abMod)} ${parsed.type}`

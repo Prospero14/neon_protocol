@@ -8,29 +8,38 @@ import {
 } from '../logic/nriCarbon2185';
 import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory';
 import { abilityModifier, parseNriSheet } from '../logic/nriNpcGenerator';
-import { ensureCompleteSheet, classFeaturesForLevel, computeHpMaxForLevel } from '../logic/nriCharacterGen';
+import { classFeaturesForLevel, computeHpMaxForLevel } from '../logic/nriCharacterGen';
 import { readWonlongs } from '../logic/nriWallet';
 import { parseAugmentedSheet, getBloodToxLimit, applyAugmentationsToSheet } from '../logic/nriCyberInstall';
 import { formatSignedMod, getSheetCombatView } from '../logic/nriSheetCombat';
 import { abilityLabelRu, skillLabelRu } from '../logic/nriSkillLabels';
 import { applyEquippedToSheet, attacksFromEquippedGear } from '../logic/nriItemEquip';
-import { applyConditionsToSheet } from '../logic/nriConditions';
+import { applyConditionsToSheet, formatConditionDuration } from '../logic/nriConditions';
+import {
+  applyPsychosisScarMods,
+  computePsychosis,
+  psychosisTierLabel,
+  PSYCHOSIS_THRESHOLDS,
+} from '../logic/nriPsychosis';
 import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
 import {
   collectActiveCyberEffects,
   CYBER_EFFECT_META,
   hasCyberEffect,
 } from '../logic/nriCyberEffects';
-import { buildCyberCombatProfile } from '../logic/nriCyberCombat';
+import { buildCyberCombatProfile, weaponPartsFromAug } from '../logic/nriCyberCombat';
 import { encumbranceLabel, inventoryCarriedLb, maxCarryLbFromSheet } from '../logic/nriEncumbrance';
 import { sheetAutoFillSummary } from '../logic/nriSheetStatus';
 import { parseSheetTattoos } from '../../shared/nri-domain/tattoos';
 import type { NriPlayerProfile } from '../logic/nriApi';
+import { NriCharacterPortraitCard } from './NriCharacterPortraitCard';
 
 type Props = {
   profile: NriPlayerProfile;
   accountUsername?: string;
   compact?: boolean;
+  /** Киберпсихоз + разбор кибер-эффектов — только мастерский просмотр листа. */
+  gmView?: boolean;
 };
 
 const blank = '—';
@@ -42,27 +51,45 @@ const Field: React.FC<{ label: string; value?: string; wide?: boolean }> = ({ la
   </div>
 );
 
-export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUsername, compact }) => {
+export const NriCharacterSheetContent: React.FC<Props> = ({
+  profile,
+  accountUsername,
+  compact,
+  gmView = false,
+}) => {
   const cls = getNriClass(profile.classId);
   const tpl = getC2185ClassTemplate(profile.classId);
   const inventory: NriInventoryItem[] = parseNriInventory(profile.inventory);
-  const completed = useMemo(
-    () => ensureCompleteSheet(profile.sheet, profile.classId as NriClassId, profile.displayName),
-    [profile.sheet, profile.classId, profile.displayName]
-  );
+  // Только чтение: никогда не ensureComplete на просмотре — иначе полл ростра
+  // пересобирает лист Math.random на каждом тике.
+  const completed = useMemo(() => {
+    if (profile.sheet == null || profile.sheet === '') return null;
+    return (
+      parseAugmentedSheet(profile.sheet) ??
+      parseNriSheet(profile.sheet) ??
+      (typeof profile.sheet === 'object' ? (profile.sheet as ReturnType<typeof parseNriSheet>) : null)
+    );
+  }, [profile.sheet]);
   const sheet = parseNriSheet(completed);
   const conditionedSheet = sheet ? applyConditionsToSheet(sheet) : null;
+  const scarredSheet = conditionedSheet ? applyPsychosisScarMods(conditionedSheet) : null;
   const augSheet = parseAugmentedSheet(completed);
   const augmentations = augSheet?.augmentations ?? [];
   const sheetWithAug =
-    conditionedSheet && augmentations.length > 0
-      ? applyAugmentationsToSheet(conditionedSheet, augmentations)
-      : conditionedSheet;
+    scarredSheet && augmentations.length > 0
+      ? applyAugmentationsToSheet(scarredSheet, augmentations)
+      : scarredSheet;
   const effectiveSheet = sheetWithAug ? applyEquippedToSheet(sheetWithAug, inventory) : null;
   const activeConditions = conditionedSheet?.activeConditions ?? [];
   const tattoos = parseSheetTattoos(augSheet?.tattoos ?? sheet?.tattoos);
   const bloodToxCurrent = augSheet?.bloodToxCurrent ?? augmentations.reduce((s, a) => s + a.bloodTox, 0);
   const bloodToxLimit = getBloodToxLimit(augSheet);
+  const psychosis = computePsychosis({
+    ...(sheet ?? {}),
+    bloodToxCurrent,
+    bloodToxLimit,
+    activeConditions: sheet?.activeConditions,
+  });
   const combat = effectiveSheet
     ? getSheetCombatView(effectiveSheet, profile.classId as NriClassId, augmentations, inventory)
     : null;
@@ -133,30 +160,34 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
 
   return (
     <div className="nri-sheet-content nri-c2185-sheet">
-      <header className="nri-c2185-sheet__head">
-        {profile.portraitUrl && (
-          <img src={profile.portraitUrl} alt="" className="nri-c2185-sheet__portrait" />
-        )}
-        <span className="nri-c2185-sheet__brand">CARBON 2185 · CHARACTER SHEET</span>
-        <p className="nri-c2185-sheet__note mono-text">
-          {sheetAutoFillSummary(profile.sheet, profile.classId as NriClassId)}
-        </p>
-      </header>
-
-      <div className="nri-c2185-grid nri-c2185-grid--meta">
-        <Field label="CHARACTER NAME" value={sheet?.characterName ?? profile.displayName} wide />
-        <Field label="PLAYER NAME" value={accountUsername ? `@${accountUsername}` : undefined} />
-        <Field
-          label="CLASS & LEVEL"
-          value={tpl ? `${tpl.carbonName} · ${sheet?.level ?? 1}` : cls?.name}
+      <div className="nri-c2185-sheet__passport">
+        <NriCharacterPortraitCard
+          classId={profile.classId}
+          characterName={sheet?.characterName ?? profile.displayName}
+          portraitUrl={profile.portraitUrl}
+          compact
         />
-        <Field label="ORIGIN" value={sheet?.origin} />
-        <Field label="EXPERIENCE POINTS" value={sheet?.xp != null ? String(sheet.xp) : '0'} />
-        <Field label="AGE" value={sheet?.age} />
-        <Field label="CAREER" value={sheet?.career ?? sheet?.activity} />
-        <Field label="YEARS SERVED" value={sheet?.yearsServed} />
-        <Field label="STREET INFLUENCE" value={sheet?.streetInfluence} />
-        <Field label="CORPORATE INFLUENCE" value={sheet?.corporateInfluence} />
+        <div className="nri-c2185-sheet__head-text">
+          <span className="nri-c2185-sheet__brand">CARBON 2185 · CHARACTER SHEET</span>
+          <p className="nri-c2185-sheet__note mono-text">
+            {sheetAutoFillSummary(profile.sheet, profile.classId as NriClassId)}
+          </p>
+        </div>
+        <div className="nri-c2185-grid nri-c2185-grid--meta nri-c2185-sheet__flow">
+          <Field label="CHARACTER NAME" value={sheet?.characterName ?? profile.displayName} wide />
+          <Field label="PLAYER NAME" value={accountUsername ? `@${accountUsername}` : undefined} />
+          <Field
+            label="CLASS & LEVEL"
+            value={tpl ? `${tpl.carbonName} · ${sheet?.level ?? 1}` : cls?.name}
+          />
+          <Field label="ORIGIN" value={sheet?.origin} />
+          <Field label="EXPERIENCE POINTS" value={sheet?.xp != null ? String(sheet.xp) : '0'} />
+          <Field label="AGE" value={sheet?.age} />
+          <Field label="CAREER" value={sheet?.career ?? sheet?.activity} />
+          <Field label="YEARS SERVED" value={sheet?.yearsServed} />
+          <Field label="STREET INFLUENCE" value={sheet?.streetInfluence} />
+          <Field label="CORPORATE INFLUENCE" value={sheet?.corporateInfluence} />
+        </div>
       </div>
 
       <div className="nri-c2185-grid nri-c2185-grid--stats">
@@ -198,6 +229,14 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           label="CURRENT BLOOD TOX"
           value={augmentations.length > 0 || bloodToxCurrent > 0 ? String(bloodToxCurrent) : '0'}
         />
+        {gmView && (
+          <Field
+            label="PSYCHOSIS"
+            value={`${psychosis.total} · ${psychosisTierLabel(psychosis.tier)}${
+              psychosis.scarLevel > 0 ? ` · шрам ${psychosis.scarLevel}` : ''
+            }${psychosis.pending ? ' · ЭПИЗОД' : ''}`}
+          />
+        )}
         <Field label="ПОРОК" value={sheet?.vice} />
         <Field
           label="WONLONGS"
@@ -330,16 +369,20 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
           <p className="mono-text opacity-50">Нет установленных имплантов.</p>
         ) : (
           <ul className="nri-sheet-inventory__list">
-            {augmentations.map((a) => (
+            {augmentations.map((a) => {
+              const weapons = weaponPartsFromAug(a);
+              return (
               <li key={a.itemId}>
                 <strong>{a.name}</strong>
                 <span className="mono-text opacity-70">
                   {' '}
                   · {CYBER_SLOT_LABELS[a.slot as CyberSlot] ?? a.slot} · BT {a.bloodTox}
+                  {weapons.length > 0 ? ` · ${weapons.map((w) => w.name).join(', ')}` : ''}
                 </span>
                 {a.blurb && <span className="mono-text opacity-60"> — {a.blurb}</span>}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>
@@ -362,26 +405,66 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         </section>
       )}
 
+      {gmView && (
+        <section className="nri-c2185-block nri-c2185-block--psychosis">
+          <h4 className="nri-c2185-block__title">КИБЕРПСИХОЗ</h4>
+          <p className="mono-text opacity-50" style={{ marginBottom: 6 }}>
+            Видно только мастеру
+          </p>
+          <div className={`nri-psychosis-bar nri-psychosis-bar--sheet is-${psychosis.tier}`}>
+            <div
+              className="nri-psychosis-bar__fill"
+              style={{
+                width: `${Math.min(100, Math.round((psychosis.total / Math.max(100, PSYCHOSIS_THRESHOLDS.episode)) * 100))}%`,
+              }}
+            />
+          </div>
+          <p className="mono-text opacity-70">
+            хром {psychosis.fromChrome}
+            {psychosis.fromOverage ? ` · перегруз +${psychosis.fromOverage}` : ''}
+            {psychosis.fromConditions > 0 ? ` · статусы +${psychosis.fromConditions}` : ''}
+            {psychosis.fromRelief > 0 ? ` · купирование −${psychosis.fromRelief}` : ''}
+            {psychosis.fromScars ? ` · шрамы +${psychosis.fromScars}` : ''}
+            {' · '}
+            эпизод с {PSYCHOSIS_THRESHOLDS.episode}
+          </p>
+          {psychosis.history.length > 0 && (
+            <ul className="nri-c2185-trait-list">
+              {[...psychosis.history].reverse().slice(0, 5).map((e) => (
+                <li key={e.id}>
+                  <strong>Эпизод → шрам {e.scarAfter}</strong>
+                  <span className="opacity-70"> · PS {e.stressAtTrigger}</span>
+                  {e.notes && <span className="opacity-60"> — {e.notes}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       {activeConditions.length > 0 && (
         <section className="nri-c2185-block nri-c2185-block--conditions">
           <h4 className="nri-c2185-block__title">СТАТУСЫ / CONDITIONS</h4>
           <ul className="nri-c2185-trait-list nri-condition-list">
-            {activeConditions.map((c) => (
-              <li key={`${c.id}-${c.appliedAt}`}>
-                <strong>{c.label}</strong>
-                {c.roundsLeft != null && <span className="opacity-70"> · {c.roundsLeft} р.</span>}
-                {c.notes && <span className="opacity-60"> — {c.notes}</span>}
-              </li>
-            ))}
+            {activeConditions.map((c) => {
+              const dur = formatConditionDuration(c);
+              return (
+                <li key={`${c.id}-${c.appliedAt}`}>
+                  <strong>{c.label}</strong>
+                  {dur ? <span className="opacity-70"> · {dur}</span> : null}
+                  {c.notes && <span className="opacity-60"> — {c.notes}</span>}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
 
-      {cyberEffects.length > 0 && (
+      {gmView && cyberEffects.length > 0 && (
         <section className="nri-c2185-block">
-          <h4 className="nri-c2185-block__title">CYBER HOOKS / EFFECTS</h4>
-          <p className="mono-text opacity-60" style={{ marginBottom: 8 }}>
-            Сюжетные и боевые крючки с установленных имплантов (мастер).
+          <h4 className="nri-c2185-block__title">КИБЕР-ЭФФЕКТЫ</h4>
+          <p className="mono-text opacity-50" style={{ marginBottom: 8 }}>
+            Видно только мастеру — крючки и контрмеры для сцен.
           </p>
           <ul className="nri-c2185-trait-list">
             {cyberEffects.map((fx) => {
@@ -403,7 +486,7 @@ export const NriCharacterSheetContent: React.FC<Props> = ({ profile, accountUser
         <Field label="SKIN" value={sheet?.skin} />
         <Field label="HAIR" value={sheet?.hair} />
         <Field label="EYES" value={sheet?.eyes} />
-        <Field label="CULTURE" value={sheet?.culture} />
+        <Field label="КУЛЬТУРА" value={sheet?.culture} />
       </div>
 
       <section className="nri-c2185-block">

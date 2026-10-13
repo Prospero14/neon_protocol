@@ -105,6 +105,28 @@ async function ensureNriLoreDbColumnsRaw(prisma: PrismaClient): Promise<void> {
   await addSqliteColumn(prisma, `ALTER TABLE "NriIceScore" ADD COLUMN "gameId" TEXT NOT NULL DEFAULT 'gibson_ice';`);
   await addSqliteColumn(prisma, `ALTER TABLE "NriIceScore" ADD COLUMN "difficulty" TEXT NOT NULL DEFAULT 'medium';`);
   await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "achievementState" JSON;`);
+  await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "fieldDossiers" JSON NOT NULL DEFAULT '[]';`);
+  await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "privateNotes" TEXT NOT NULL DEFAULT '';`);
+}
+
+/**
+ * Пустой TEXT вместо JSON (`""`) ломает Prisma findMany: Unexpected end of JSON input.
+ * Чиним fieldDossiers / inventory / achievementState на старых строках.
+ */
+export async function repairNriPlayerJsonColumns(prisma: PrismaClient): Promise<void> {
+  const fixes = [
+    `UPDATE "NriPlayer" SET "fieldDossiers" = '[]' WHERE "fieldDossiers" IS NULL OR TRIM(CAST("fieldDossiers" AS TEXT)) = '';`,
+    `UPDATE "NriPlayer" SET "inventory" = '[]' WHERE "inventory" IS NULL OR TRIM(CAST("inventory" AS TEXT)) = '';`,
+    `UPDATE "NriPlayer" SET "achievementState" = NULL WHERE TRIM(CAST("achievementState" AS TEXT)) = '';`,
+    `UPDATE "NriPlayer" SET "privateNotes" = '' WHERE "privateNotes" IS NULL;`,
+  ];
+  for (const sql of fixes) {
+    try {
+      await prisma.$executeRawUnsafe(sql);
+    } catch {
+      /* column may not exist yet */
+    }
+  }
 }
 
 /** Починка NULL/пустых JSON-полей — иначе Prisma findMany падает на старых строках. */
@@ -265,6 +287,7 @@ export async function ensureAllNriLoreDbColumns(prisma: PrismaClient): Promise<v
     { name: 'NriLoreEntry table', run: () => ensureNriLoreEntryTable(prisma) },
     { name: 'lore columns', run: () => ensureNriLoreDbColumnsRaw(prisma) },
     { name: 'faction json repair', run: () => repairNriFactionJsonColumns(prisma) },
+    { name: 'player json repair', run: () => repairNriPlayerJsonColumns(prisma) },
   ];
   for (const step of steps) {
     try {

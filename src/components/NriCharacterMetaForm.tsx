@@ -8,7 +8,7 @@ import {
   type NriActivityId,
   type NriOriginId,
 } from '../logic/nriCharacterGen';
-import { rollCareer } from '../logic/nriCareers';
+import { parseCareerStat, rollCareer } from '../logic/nriCareers';
 import { generateRichBackstory } from '../logic/nriBackstories';
 import { generateRichClothing } from '../logic/nriClothing';
 import { rollCharacterName, rollNickname } from '../logic/nriNames';
@@ -40,36 +40,72 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
   const originId = meta.originId ?? 'neo_tokyo';
   const activityId = meta.activityId ?? 'street';
 
-  const rollBackstory = () => {
-    if (!classId) return;
-    const arch = meta.npcArchetypeId ?? archetypeForClass(classId);
-    const name = (meta.characterName ?? sheet?.characterName ?? '').trim() || 'Без имени';
-    const career =
-      (meta.career ?? sheet?.career)?.trim() ||
-      rollCareer({ classId, activityId, archetypeId: arch });
-    const text = generateRichBackstory({
-      name,
+  const flavorFromSheet = () => {
+    const arch = meta.npcArchetypeId ?? (classId ? archetypeForClass(classId) : undefined);
+    const augs = Array.isArray(sheet?.augmentations) ? sheet!.augmentations! : [];
+    const chrome = augs.map((a) => ({
+      name: typeof a?.name === 'string' ? a.name : 'имплант',
+      slot: typeof a?.slot === 'string' ? a.slot : undefined,
+    }));
+    const weapons = (sheet?.attacks ?? [])
+      .map((a) => a.name)
+      .filter((n): n is string => typeof n === 'string' && n.trim().length > 0);
+    return {
+      name: (meta.characterName ?? sheet?.characterName ?? '').trim() || 'Без имени',
       nickname: meta.nickname ?? sheet?.nickname,
       originId,
       activityId,
       archetypeId: arch,
-      classId,
+      classId: classId!,
+      career: (meta.career ?? sheet?.career)?.trim(),
+      vice: sheet?.vice,
+      factionLabel: undefined as string | undefined,
+      chrome,
+      weapons,
+    };
+  };
+
+  const faction = factions.find((f) => f.id === (meta.factionId ?? sheet?.factionId));
+
+  const careerRollParams = () => {
+    const arch = meta.npcArchetypeId ?? (classId ? archetypeForClass(classId) : undefined);
+    return {
+      classId: classId!,
+      activityId,
+      archetypeId: arch,
+      originId,
+      factionKind: faction?.kind,
+      factionName: faction?.displayName || faction?.name,
+      yearsServed: parseCareerStat(meta.yearsServed ?? sheet?.yearsServed),
+      streetInfluence: parseCareerStat(meta.streetInfluence ?? sheet?.streetInfluence),
+      corporateInfluence: parseCareerStat(meta.corporateInfluence ?? sheet?.corporateInfluence),
+    };
+  };
+
+  const rollCareerField = () => {
+    if (!classId) return;
+    set('career', rollCareer(careerRollParams()));
+  };
+
+  const rollBackstory = () => {
+    if (!classId) return;
+    const career =
+      (meta.career ?? sheet?.career)?.trim() || rollCareer(careerRollParams());
+    const text = generateRichBackstory({
+      ...flavorFromSheet(),
       career,
+      factionLabel: faction?.displayName || faction?.name,
     });
-    set('backstory', text);
-    if (!meta.career?.trim() && !sheet?.career?.trim()) {
-      set('career', career);
-    }
+    onChange({
+      ...meta,
+      backstory: text,
+      ...(!meta.career?.trim() && !sheet?.career?.trim() ? { career } : {}),
+    });
   };
 
   const rollClothing = () => {
     if (!classId) return;
-    const text = generateRichClothing({
-      originId,
-      activityId,
-      archetypeId: meta.npcArchetypeId ?? archetypeForClass(classId),
-      classId,
-    });
+    const text = generateRichClothing(flavorFromSheet());
     set('clothing', text);
   };
 
@@ -81,7 +117,7 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
           <input
             value={meta.characterName ?? ''}
             onChange={(e) => set('characterName', e.target.value)}
-            placeholder="Yuki Sato"
+            placeholder="Юки Сато"
           />
         </span>
         <button
@@ -170,9 +206,24 @@ export const NriCharacterMetaForm: React.FC<Props> = ({
           ))}
         </select>
       </label>
-      <label className="nri-modal__field">
-        <span>Карьера (текст)</span>
-        <input value={meta.career ?? sheet?.career ?? ''} onChange={(e) => set('career', e.target.value)} />
+      <label className="nri-meta-form__field-row">
+        <span className="nri-modal__field nri-meta-form__grow">
+          <span>Карьера</span>
+          <input
+            value={meta.career ?? sheet?.career ?? ''}
+            onChange={(e) => set('career', e.target.value)}
+            placeholder="Связана с фракцией, годами и влиянием"
+          />
+        </span>
+        <button
+          type="button"
+          className="nri-lobby__copy"
+          title="Случайная карьера с учётом фракции, происхождения, лет службы и влияния"
+          disabled={!classId}
+          onClick={rollCareerField}
+        >
+          <Dices size={14} />
+        </button>
       </label>
       <div className="nri-meta-form__row">
         <label className="nri-modal__field">

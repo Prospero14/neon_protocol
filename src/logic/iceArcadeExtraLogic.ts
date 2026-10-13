@@ -310,27 +310,60 @@ export type CaptureGraph = {
   probes: number;
 };
 
-/** Связный граф: ENTRY → … → CORE, с honeypot-ловушками. */
+function captureBfsDist(edges: Array<[number, number]>, from: number, to: number, n: number): number {
+  const adj: number[][] = Array.from({ length: n }, () => []);
+  for (const [a, b] of edges) {
+    adj[a]!.push(b);
+    adj[b]!.push(a);
+  }
+  const dist = Array(n).fill(-1);
+  dist[from] = 0;
+  const q = [from];
+  for (let qi = 0; qi < q.length; qi++) {
+    const cur = q[qi]!;
+    if (cur === to) return dist[cur]!;
+    for (const nb of adj[cur]!) {
+      if (dist[nb]! >= 0) continue;
+      dist[nb] = dist[cur]! + 1;
+      q.push(nb);
+    }
+  }
+  return -1;
+}
+
+/**
+ * Связный граф: ENTRY → … → CORE.
+ * MUST: CORE не смежен с ENTRY (мин. путь ≥ 2), ровно один CORE-лейбл.
+ */
 export function generateCaptureGraph(
   nodeCount: number,
   probeBudget: number,
   seed: number
 ): CaptureGraph {
-  const n = Math.max(5, Math.min(9, nodeCount));
+  const n = Math.max(6, Math.min(9, nodeCount));
   const rand = rng(seed);
-  const labels = ['ENTRY', 'DMZ', 'API', 'CACHE', 'AUTH', 'DB', 'CORE', 'HONEYPOT', 'RELAY', 'OPS'];
+  const midLabels = ['DMZ', 'API', 'CACHE', 'AUTH', 'DB', 'RELAY', 'OPS', 'PROXY', 'GRID'];
+  const entryId = 0;
+  const coreId = Math.floor(n / 2); // напротив ENTRY на круге, не сосед по индексу
+
   const nodes: CaptureNode[] = [];
   for (let i = 0; i < n; i++) {
     const angle = (Math.PI * 2 * i) / n - Math.PI / 2;
-    const isEntry = i === 0;
-    const isCore = i === n - 1;
+    const isEntry = i === entryId;
+    const isCore = i === coreId;
     const honeypot = !isEntry && !isCore && rand() < 0.22;
     nodes.push({
       id: i,
-      label: isEntry ? 'ENTRY' : isCore ? 'CORE' : honeypot ? 'HONEYPOT' : labels[1 + (i % (labels.length - 2))]!,
+      label: isEntry ? 'ENTRY' : isCore ? 'CORE' : honeypot ? 'HONEYPOT' : midLabels[i % midLabels.length]!,
       x: 50 + Math.cos(angle) * 38,
       y: 50 + Math.sin(angle) * 38,
-      cost: isEntry ? 0 : honeypot ? 1 + Math.floor(rand() * 2) : 1 + Math.floor(rand() * 3),
+      cost: isEntry
+        ? 0
+        : isCore
+          ? 3 + Math.floor(rand() * 2) // CORE дорогой
+          : honeypot
+            ? 1 + Math.floor(rand() * 2)
+            : 1 + Math.floor(rand() * 3),
       honeypot,
       isEntry,
       isCore,
@@ -340,33 +373,66 @@ export function generateCaptureGraph(
   const edges: Array<[number, number]> = [];
   const addEdge = (a: number, b: number) => {
     if (a === b) return;
+    // Никогда ENTRY↔CORE напрямую.
+    if ((a === entryId && b === coreId) || (a === coreId && b === entryId)) return;
     const lo = Math.min(a, b);
     const hi = Math.max(a, b);
     if (!edges.some(([x, y]) => x === lo && y === hi)) edges.push([lo, hi]);
   };
 
-  // Кольцо + хорды для связности и выбора пути.
-  for (let i = 0; i < n; i++) addEdge(i, (i + 1) % n);
-  for (let k = 0; k < Math.floor(n / 2); k++) {
+  // Открытая цепь по кругу БЕЗ замыкания entry—последний, если это создаёт короткий путь:
+  // строим путь entry → соседи → … → core с двух сторон.
+  for (let i = 0; i < n - 1; i++) addEdge(i, i + 1);
+  // НЕ addEdge(n-1, 0) — это как раз замыкало ENTRY к последнему; core в середине, но
+  // кольцо 0—(n-1) не соединяет entry-core напрямую. Всё же не замыкаем кольцо,
+  // чтобы не плодить лишние короткие маршруты; добавим безопасные хорды.
+
+  // Гарантированный путь длины ≥ 2: entry → midA → core и entry → midB → … → core
+  const left = (coreId - 1 + n) % n;
+  const right = (coreId + 1) % n;
+  addEdge(entryId, left === entryId ? right : 1);
+  addEdge(left, coreId);
+  addEdge(right, coreId);
+  if (n > 6) addEdge(entryId, 2);
+
+  // Случайные хорды без ENTRY↔CORE и без укорачивания до 1.
+  for (let k = 0; k < n; k++) {
     const a = Math.floor(rand() * n);
     const b = Math.floor(rand() * n);
+    if (a === entryId && b === coreId) continue;
+    if (b === entryId && a === coreId) continue;
     addEdge(a, b);
   }
-  addEdge(0, Math.floor(n / 2));
-  addEdge(Math.floor(n / 3), n - 1);
+
+  // Если вдруг dist < 2 — выкидываем рёбра entry-core (уже нельзя) и добавим буферный узел-ребро.
+  let dist = captureBfsDist(edges, entryId, coreId, n);
+  if (dist < 2) {
+    // Удалить любые прямые (на всякий) и связать через 1.
+    const filtered = edges.filter(
+      ([a, b]) => !((a === entryId && b === coreId) || (a === coreId && b === entryId)),
+    );
+    edges.length = 0;
+    edges.push(...filtered);
+    const bridge = [...Array(n).keys()].find((i) => i !== entryId && i !== coreId) ?? 1;
+    addEdge(entryId, bridge);
+    addEdge(bridge, coreId);
+    dist = captureBfsDist(edges, entryId, coreId, n);
+  }
+  // Если путь слишком короткий (2) на hard-сиде — ок; на любом тире запрещён только dist===1.
 
   const minPathCost = (() => {
-    // Грубая оценка: сумма минимальных non-honeypot costs вдоль кольца.
     let sum = 0;
-    for (let i = 1; i < n; i++) sum += nodes[i]!.honeypot ? 0 : nodes[i]!.cost;
-    return Math.max(4, Math.floor(sum * 0.45));
+    for (const node of nodes) {
+      if (!node.isEntry) sum += node.cost;
+    }
+    return Math.max(6, Math.floor(sum * 0.4));
   })();
 
   return {
     nodes,
     edges,
-    entryId: 0,
-    coreId: n - 1,
+    entryId,
+    coreId,
     probes: Math.max(probeBudget, minPathCost + 2),
   };
 }
@@ -390,6 +456,8 @@ export function canCaptureNode(
   const node = graph.nodes.find((n) => n.id === targetId);
   if (!node) return { ok: false, reason: 'not_adjacent' };
   if (node.isEntry) return { ok: false, reason: 'entry' };
+  // Safety: CORE только после захвата хотя бы одного промежуточного узла.
+  if (node.isCore && captured.size < 2) return { ok: false, reason: 'not_adjacent' };
   const adj = captureNeighbors(graph, targetId).some((id) => captured.has(id));
   if (!adj) return { ok: false, reason: 'not_adjacent' };
   if (probesLeft < node.cost) return { ok: false, reason: 'no_probes' };

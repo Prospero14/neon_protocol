@@ -1,6 +1,6 @@
 /** Киберимпланты — catalog, grant, install */
 import { isAdminUsername } from './auth.js';
-import { tryInstallCyberItem } from './nriCyberInstall.js';
+import { tryInstallCyberItem, tryUninstallCyberItem } from './nriCyberInstall.js';
 import { maybeAutoClearIceBan } from './nriIceBan.js';
 import { parseNriJsonField } from './nriSessionHelpers.js';
 function cyberGrantItem(product) {
@@ -202,14 +202,18 @@ export function mountNriCyberRoutes(app, ctx) {
             let nextSheet = player.sheet;
             let nextInv = inv;
             let installed = false;
+            let installNote;
             if (install === true) {
                 const result = tryInstallCyberItem(player.sheet, inv, item.id);
-                if (!result.ok) {
-                    return sendApiError(res, 400, 'NRI_CYBER_INSTALL_FAILED', result.reason);
+                if (result.ok) {
+                    nextSheet = result.sheet;
+                    nextInv = result.inventory;
+                    installed = true;
                 }
-                nextSheet = result.sheet;
-                nextInv = result.inventory;
-                installed = true;
+                else {
+                    // Слот занят / BT — всё равно оставляем в инвентаре, иначе «пистолет пропал»
+                    installNote = result.reason;
+                }
             }
             await prisma.nriPlayer.update({
                 where: { id: player.id },
@@ -225,6 +229,7 @@ export function mountNriCyberRoutes(app, ctx) {
                 ok: true,
                 item,
                 installed,
+                installNote,
                 needsHoloTattooPick: installed ? needsHoloTattooPick : false,
                 inventory: nextInv,
                 sheet: nextSheet,
@@ -270,14 +275,17 @@ export function mountNriCyberRoutes(app, ctx) {
             let nextSheet = npc.sheet;
             let nextInv = inv;
             let installed = false;
+            let installNote;
             if (install === true) {
                 const result = tryInstallCyberItem(npc.sheet, inv, item.id);
-                if (!result.ok) {
-                    return sendApiError(res, 400, 'NRI_CYBER_INSTALL_FAILED', result.reason);
+                if (result.ok) {
+                    nextSheet = result.sheet;
+                    nextInv = result.inventory;
+                    installed = true;
                 }
-                nextSheet = result.sheet;
-                nextInv = result.inventory;
-                installed = true;
+                else {
+                    installNote = result.reason;
+                }
             }
             await prisma.nriNpc.update({
                 where: { id: npc.id },
@@ -286,7 +294,7 @@ export function mountNriCyberRoutes(app, ctx) {
                     sheet: nextSheet ?? undefined,
                 },
             });
-            res.json({ ok: true, item, installed });
+            res.json({ ok: true, item, installed, installNote });
         }
         catch (error) {
             console.error('nri/cyber grant-npc:', error);
@@ -346,6 +354,48 @@ export function mountNriCyberRoutes(app, ctx) {
         catch (error) {
             console.error('nri/cyber install:', error);
             return sendApiError(res, 500, 'NRI_CYBER_INSTALL_ERR', 'Не удалось установить имплант.');
+        }
+    });
+    app.post('/neon_v1/services/nri/:code/players/:userId/cyber/uninstall', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const targetUserId = req.params.userId;
+        const { itemId } = req.body;
+        if (typeof itemId !== 'string' || !itemId.trim()) {
+            return sendApiError(res, 400, 'NRI_ITEM_ID', 'Укажите itemId установленного импланта.');
+        }
+        try {
+            const session = await resolveSession(code);
+            if (!session || session.status !== 'open') {
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+            }
+            const me = await resolveUser(auth);
+            const isHost = session.hostUserId === auth.userId;
+            const platformAdmin = me ? isAdminUsername(me.username) : false;
+            const isSelf = auth.userId === targetUserId;
+            if (!isHost && !platformAdmin && !isSelf) {
+                return sendApiError(res, 403, 'NRI_CYBER_UNINSTALL_FORBIDDEN', 'Снятие делает мастер или владелец.');
+            }
+            const player = await prisma.nriPlayer.findUnique({
+                where: { sessionId_userId: { sessionId: session.id, userId: targetUserId } },
+            });
+            if (!player)
+                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Игрок не найден.');
+            const result = tryUninstallCyberItem(player.sheet, player.inventory, itemId.trim());
+            if (!result.ok) {
+                return sendApiError(res, 400, 'NRI_CYBER_UNINSTALL_FAILED', result.reason);
+            }
+            await prisma.nriPlayer.update({
+                where: { id: player.id },
+                data: { sheet: result.sheet, inventory: result.inventory },
+            });
+            res.json({ ok: true, inventory: result.inventory, sheet: result.sheet });
+        }
+        catch (error) {
+            console.error('nri/cyber uninstall:', error);
+            return sendApiError(res, 500, 'NRI_CYBER_UNINSTALL_ERR', 'Не удалось снять имплант.');
         }
     });
 }

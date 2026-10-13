@@ -108,6 +108,34 @@ export type NriIcePlayStatus = {
   clearanceVia?: 'neural' | 'deck';
   tableAllBanned: boolean;
   failsUntilBan: number;
+  counterHackActive?: boolean;
+};
+
+export type NriIceCounterHackPayload = {
+  active: boolean;
+  isHost?: boolean;
+  canPlay?: boolean;
+  targetName?: string;
+  sirenMessage?: string | null;
+  decksBricked?: boolean;
+  counterHack: {
+    active: boolean;
+    startedAt: number;
+    endsAt: number;
+    stageIndex: number;
+    picked: string[];
+    stageMistakes: number;
+    enemyProgress: number;
+    resolved?: 'won' | 'lost' | null;
+    sirenMessage?: string | null;
+  } | null;
+  stage: {
+    id: string;
+    title: string;
+    hint: string;
+    need: number;
+    commands: Array<{ id: string; label: string }>;
+  } | null;
 };
 
 export async function nriFetchIceStatus(token: string, code: string): Promise<NriIcePlayStatus | null> {
@@ -124,7 +152,12 @@ export async function nriReportIceResult(
   code: string,
   won: boolean
 ): Promise<
-  | { ok: true; status: NriIcePlayStatus; newAchievements?: import('./players.js').NriAchievementUnlock[] }
+  | {
+      ok: true;
+      status: NriIcePlayStatus;
+      newAchievements?: import('./players.js').NriAchievementUnlock[];
+      counterHackStarted?: boolean;
+    }
   | { ok: false; error: string }
 > {
   const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/result`, {
@@ -140,6 +173,43 @@ export async function nriReportIceResult(
     ok: true,
     status: data.status as NriIcePlayStatus,
     newAchievements: Array.isArray(data.newAchievements) ? data.newAchievements : undefined,
+    counterHackStarted: data.counterHackStarted === true,
+  };
+}
+
+export async function nriFetchIceCounterHack(
+  token: string,
+  code: string,
+): Promise<NriIceCounterHackPayload | null> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/counterhack`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) return null;
+  return data as NriIceCounterHackPayload;
+}
+
+export async function nriPickIceCounterHack(
+  token: string,
+  code: string,
+  commandId: string,
+): Promise<
+  | { ok: true; sirenMessage?: string | null; decksBricked?: boolean }
+  | { ok: false; error: string }
+> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/ice/counterhack/pick`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ commandId }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) {
+    return { ok: false, error: parseApiError(data, 'Команда отклонена') };
+  }
+  return {
+    ok: true,
+    sirenMessage: typeof data.sirenMessage === 'string' ? data.sirenMessage : null,
+    decksBricked: data.decksBricked === true,
   };
 }
 

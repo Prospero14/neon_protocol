@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import type { ChatMessage } from '../logic/chatApi';
 import type { NriNpc } from '../logic/nriApi';
 import { resolveNpcPortraitUrl } from '../../shared/nri-domain/npcPortrait';
@@ -6,6 +7,8 @@ import { resolveNpcPortraitUrl } from '../../shared/nri-domain/npcPortrait';
 type Props = {
   message: ChatMessage | null;
   variant?: 'full' | 'mini';
+  /** Мастер видит то же окно, что игроки — без «Далее», только скрыть. */
+  preview?: boolean;
   interference?: boolean;
   onNext: () => void;
   tableNpcs?: Pick<NriNpc, 'id' | 'imageUrl' | 'sheet'>[];
@@ -21,15 +24,17 @@ function portraitForMessage(
   return resolveNpcPortraitUrl(npc);
 }
 
-/** Попап реплики НПС: полный у игроков, мини-превью у мастера. */
+/** Попап реплики НПС (portal поверх лобби). Игроки — Далее; мастер — превью. */
 export const NriLiveDialogPopup: React.FC<Props> = ({
   message,
   variant = 'full',
+  preview = false,
   interference = false,
   onNext,
   tableNpcs,
 }) => {
   if (!message?.isNpc) return null;
+  if (typeof document === 'undefined') return null;
   const name = message.npcName ?? 'NPC';
   const typeLabel = message.npcArchetype;
   const portrait = portraitForMessage(message, tableNpcs);
@@ -47,7 +52,9 @@ export const NriLiveDialogPopup: React.FC<Props> = ({
         )}
       </div>
       <div className={`nri-live-dialog__bubble ${isMini ? 'nri-live-dialog__bubble--mini' : ''}`}>
-        {isMini && <span className="nri-live-dialog__mini-label mono-text">Превью у игроков</span>}
+        {(isMini || preview) && (
+          <span className="nri-live-dialog__mini-label mono-text">Превью у игроков</span>
+        )}
         <span className="nri-live-dialog__name">{name}</span>
         {typeLabel ? <span className="nri-live-dialog__type mono-text">{typeLabel}</span> : null}
         {interference ? (
@@ -59,27 +66,34 @@ export const NriLiveDialogPopup: React.FC<Props> = ({
         ) : (
           <p className="nri-live-dialog__text">{message.text}</p>
         )}
-        {!isMini && (
+        {(isMini && preview) || !isMini ? (
           <button type="button" className="nri-live-dialog__next mono-text" onClick={onNext}>
-            Далее ▶
+            {preview ? 'Скрыть превью' : 'Далее ▶'}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
 
   if (isMini) {
-    return (
+    return createPortal(
       <div className="nri-live-dialog nri-live-dialog--mini" aria-label={`Превью: ${name}`}>
         {body}
-      </div>
+      </div>,
+      document.body
     );
   }
 
-  return (
+  return createPortal(
     <div className="nri-live-dialog" role="dialog" aria-modal="true" aria-label={`Реплика: ${name}`}>
-      <div className="nri-live-dialog__backdrop" />
+      <button
+        type="button"
+        className="nri-live-dialog__backdrop"
+        aria-label={preview ? 'Скрыть превью' : 'Закрыть'}
+        onClick={preview ? onNext : undefined}
+      />
       <div className="nri-live-dialog__frame-wrap">{body}</div>
-    </div>
+    </div>,
+    document.body
   );
 };

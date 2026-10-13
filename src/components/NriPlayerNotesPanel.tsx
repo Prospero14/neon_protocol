@@ -51,7 +51,7 @@ export const NriPlayerNotesPanel: React.FC<Props> = ({ inviteCode, profile, onNo
   );
 
   return (
-    <div className="nri-notes">
+    <div className="nri-notes nri-deck-module">
       <header className="nri-chars__head">
         <h3 className="mono-text">Заметки</h3>
         <p className="mono-text opacity-70">

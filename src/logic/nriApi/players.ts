@@ -2,7 +2,11 @@
 
 import type { NriInventoryItem } from '../nriInventory';
 import type { NriAchievementDef } from '../../../shared/nri-domain/achievements';
+import type { NriFieldDossier } from '../../../shared/nri-domain/fieldDossiers';
+import { sanitizeFieldDossiers } from '../../../shared/nri-domain/fieldDossiers';
 import { nriAuthHeaders, nriParseJson, nriSafeFetch, parseNriApiError } from './http.js';
+
+export type { NriFieldDossier };
 
 export type NriPlayerDossier = {
   characterName: string;
@@ -38,6 +42,7 @@ export type NriPlayerProfile = {
   portraitUrl?: string | null;
   presetId?: string | null;
   privateNotes?: string;
+  fieldDossiers?: NriFieldDossier[];
   dossier?: NriPlayerDossier;
   achievements?: NriPlayerAchievements;
 };
@@ -221,5 +226,25 @@ export async function nriSavePlayerNotes(
   return {
     ok: true,
     privateNotes: typeof data.privateNotes === 'string' ? data.privateNotes : notes,
+  };
+}
+
+export async function nriSaveFieldDossiers(
+  token: string,
+  code: string,
+  dossiers: NriFieldDossier[],
+): Promise<{ ok: true; fieldDossiers: NriFieldDossier[] } | { ok: false; error: string }> {
+  const res = await fetch(`/neon_v1/services/nri/${encodeURIComponent(code)}/player/field-dossiers`, {
+    method: 'PUT',
+    headers: nriAuthHeaders(token),
+    body: JSON.stringify({ dossiers }),
+  });
+  const data = await nriParseJson(res);
+  if (!res.ok) {
+    return { ok: false, error: parseNriApiError(data, 'Не удалось сохранить досье') };
+  }
+  return {
+    ok: true,
+    fieldDossiers: sanitizeFieldDossiers(data.fieldDossiers),
   };
 }

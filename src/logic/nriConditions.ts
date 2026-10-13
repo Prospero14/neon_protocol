@@ -33,16 +33,27 @@ export {
   pruneExpiredConditions,
 };
 
+/** Glance-line for status chips / sheet (rounds + wall-clock). */
+export function formatConditionDuration(cond: SheetCondition, now = Date.now()): string {
+  const parts: string[] = [];
+  if (cond.roundsLeft != null) parts.push(`${cond.roundsLeft} р.`);
+  if (cond.expiresAt) {
+    const ms = cond.expiresAt - now;
+    if (ms <= 0) parts.push('истёк');
+    else {
+      const mins = Math.max(1, Math.ceil(ms / 60_000));
+      parts.push(mins >= 60 ? `~${Math.ceil(mins / 60)} ч` : `~${mins} мин`);
+    }
+  }
+  return parts.join(' · ');
+}
+
 export function formatConditionChatLine(who: string, cond: SheetCondition, action: 'apply' | 'remove'): string {
   const icon = action === 'apply' ? '⚠️' : '✅';
-  const dur =
-    cond.roundsLeft != null
-      ? ` · ~${cond.roundsLeft} раунд(ов)`
-      : cond.expiresAt
-        ? ` · до ${new Date(cond.expiresAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`
-        : '';
+  const dur = formatConditionDuration(cond);
+  const durSuffix = dur ? ` · ${dur}` : '';
   return action === 'apply'
-    ? `${icon} Статус · ${who}: ${cond.label}${dur}${cond.source ? ` (${cond.source})` : ''}`
+    ? `${icon} Статус · ${who}: ${cond.label}${durSuffix}${cond.source ? ` (${cond.source})` : ''}`
     : `${icon} Статус снят · ${who}: ${cond.label}`;
 }
 

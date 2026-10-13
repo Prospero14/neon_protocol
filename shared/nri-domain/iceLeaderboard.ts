@@ -5,17 +5,19 @@ export const NRI_ICE_GAME_IDS = [
   'port_sweep',
   'vuln_scan',
   'trace_rush',
-  'buffer_flood',
-  'hash_crack',
-  'packet_sniff',
+  'opcode_forge',
+  'keyspace_prune',
+  'handshake_drill',
   'auth_bypass',
   'log_wipe',
-  'mesh_jack',
+  'dead_sector',
   'proxy_dodge',
-  'signal_lock',
+  'noise_floor',
   'circuit_splice',
   'likeness_vault',
   'node_capture',
+  'cipher_rings',
+  'bit_sweep',
 ] as const;
 
 export type NriIceGameId = (typeof NRI_ICE_GAME_IDS)[number];
@@ -28,15 +30,34 @@ export function isNriIceGameId(id: string): id is NriIceGameId {
 
 export type IceDifficulty = 'easy' | 'medium' | 'hard';
 
-/** Очки аркады за победу (не Gibson — там bits за exfil). */
+/**
+ * База очков за победу по тиру.
+ * Hard заметно дороже easy, чтобы фарм лёгкого не перекрывал рекорды.
+ */
 export const ICE_ARCADE_WIN_SCORE: Record<IceDifficulty, number> = {
-  easy: 100,
-  medium: 250,
-  hard: 500,
+  easy: 120,
+  medium: 320,
+  hard: 700,
 };
 
 export function arcadeIceWinScore(difficulty: IceDifficulty): number {
   return ICE_ARCADE_WIN_SCORE[difficulty];
+}
+
+/**
+ * Очки аркады с учётом качества забега (реиграбельность рейтинга).
+ * qualityPct 0..100 → score от base до ~2×base.
+ * Поражение → 0.
+ */
+export function arcadeIceScore(
+  difficulty: IceDifficulty,
+  won: boolean,
+  qualityPct = 55,
+): number {
+  if (!won) return 0;
+  const base = ICE_ARCADE_WIN_SCORE[difficulty];
+  const q = Math.max(0, Math.min(100, qualityPct));
+  return Math.round(base + base * (q / 100));
 }
 
 export type IceLeaderboardEntry = {

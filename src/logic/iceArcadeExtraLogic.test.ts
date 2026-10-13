@@ -80,14 +80,23 @@ describe('Node Capture', () => {
     const g = generateCaptureGraph(6, 8, 7);
     expect(g.nodes[g.entryId]!.isEntry).toBe(true);
     expect(g.nodes[g.coreId]!.isCore).toBe(true);
-    expect(g.edges.length).toBeGreaterThan(g.nodes.length - 1);
+    expect(g.edges.length).toBeGreaterThanOrEqual(g.nodes.length - 1);
+  });
+
+  it('CORE is never adjacent to ENTRY (no instant win)', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const g = generateCaptureGraph(6 + (seed % 3), 12, seed * 17 + 3);
+      const captured = new Set([g.entryId]);
+      expect(canCaptureNode(g, captured, g.coreId, 99).ok).toBe(false);
+      expect(g.nodes.filter((n) => n.isCore)).toHaveLength(1);
+      expect(g.nodes.filter((n) => n.label === 'CORE')).toHaveLength(1);
+    }
   });
 
   it('can only capture adjacent unowned nodes with probes', () => {
     const g = generateCaptureGraph(6, 10, 99);
     const captured = new Set([g.entryId]);
     const far = g.nodes.find((n) => !n.isEntry && !canCaptureNode(g, captured, n.id, 99).ok);
-    // At least entry-adjacent exists
     const reach = g.nodes.filter((n) => canCaptureNode(g, captured, n.id, 99).ok);
     expect(reach.length).toBeGreaterThan(0);
     if (far) {

@@ -207,7 +207,7 @@
   {
     "id": "g_cyberdeck",
     "name": "Кибердека (базовая)",
-    "blurb": "Дека для хакинга — не оружие, но без неё ICE не взять.",
+    "blurb": "Дека для хакинга — без неё ICE-аркада и netrun недоступны. Можно передать другому игроку. В магазинах / грант мастера.",
     "category": "gear",
     "slot": "accessory",
     "c2185Mods": {
@@ -216,13 +216,49 @@
     "priceWonlongs": 900,
     "tags": [
       "тех",
-      "хакинг"
+      "хакинг",
+      "deck"
+    ]
+  },
+  {
+    "id": "g_cyberdeck_mid",
+    "name": "Кибердека (рабочая)",
+    "blurb": "Усиленный интерфейс и охлаждение — стабильнее под TRACE. Можно передать.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "TEC": 2,
+      "INT": 1
+    },
+    "priceWonlongs": 1800,
+    "tags": [
+      "тех",
+      "хакинг",
+      "deck"
+    ]
+  },
+  {
+    "id": "g_cyberdeck_pro",
+    "name": "Кибердека (mil-spec)",
+    "blurb": "Военный класс: глушилки, резервный шифр, быстрый rekey. Можно передать.",
+    "category": "gear",
+    "slot": "accessory",
+    "c2185Mods": {
+      "TEC": 3,
+      "INT": 2
+    },
+    "priceWonlongs": 4200,
+    "tags": [
+      "тех",
+      "хакинг",
+      "deck",
+      "mil"
     ]
   },
   {
     "id": "g_left_deck",
-    "name": "Кибер-дека",
-    "blurb": "Левая дека с незасвеченным железом.",
+    "name": "Кибер-дека (левая)",
+    "blurb": "Незасвеченное железо — снимает hardware ban после встречного взлома. Можно передать.",
     "category": "gear",
     "slot": "accessory",
     "c2185Mods": {
@@ -233,6 +269,7 @@
     "tags": [
       "тех",
       "хакинг",
+      "deck",
       "ice-clearance"
     ]
   },
@@ -971,12 +1008,37 @@
   {
     "id": "cons_bandage",
     "name": "Бинты",
-    "blurb": "Бинты — стабилизация 1d4 HP (действие).",
+    "blurb": "Бинты — HP + снятие кровотечения/боли (чуть снижает психоз).",
     "category": "consumable",
     "slot": "quick",
     "priceWonlongs": 25,
     "tags": [
       "медицина"
+    ]
+  },
+  {
+    "id": "cons_painkillers",
+    "name": "Анальгетики (стрит)",
+    "blurb": "Обезболивающее: снимает боль, даёт анальгезию — психоз отступает, пока действует.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 40,
+    "tags": [
+      "медицина",
+      "психоз"
+    ]
+  },
+  {
+    "id": "cons_lukolite",
+    "name": "Lukolite (1 доза)",
+    "blurb": "Корп-буфер BT: −1 Blood Tox и временный щит против киберпсихоза.",
+    "category": "consumable",
+    "slot": "quick",
+    "priceWonlongs": 1000,
+    "tags": [
+      "медицина",
+      "психоз",
+      "корп"
     ]
   },
   {

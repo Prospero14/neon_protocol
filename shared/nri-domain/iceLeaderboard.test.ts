@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arcadeIceScore,
   arcadeIceWinScore,
   buildAllIceLeaderboards,
   buildIceLeaderboardForGame,
@@ -71,7 +72,7 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
       {
         userId: 'late',
         displayName: 'Late',
-        gameId: 'hash_crack',
+        gameId: 'keyspace_prune',
         difficulty: 'medium',
         score: 100,
         exfilPct: 100,
@@ -81,7 +82,7 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
       {
         userId: 'early',
         displayName: 'Early',
-        gameId: 'hash_crack',
+        gameId: 'keyspace_prune',
         difficulty: 'medium',
         score: 100,
         exfilPct: 100,
@@ -89,7 +90,7 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
         createdAt: new Date(1000),
       },
     ];
-    const lb = buildIceLeaderboardForGame(rows, 'hash_crack');
+    const lb = buildIceLeaderboardForGame(rows, 'keyspace_prune');
     expect(lb[0]?.userId).toBe('early');
     expect(lb[1]?.userId).toBe('late');
   });
@@ -156,7 +157,7 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
       {
         userId: '',
         displayName: 'Ghost',
-        gameId: 'mesh_jack',
+        gameId: 'dead_sector',
         difficulty: 'easy',
         score: 10,
         exfilPct: 0,
@@ -166,7 +167,7 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
       {
         userId: '',
         displayName: 'Ghost2',
-        gameId: 'mesh_jack',
+        gameId: 'dead_sector',
         difficulty: 'easy',
         score: 20,
         exfilPct: 0,
@@ -174,8 +175,8 @@ describe('buildIceLeaderboardForGame — edge cases', () => {
         createdAt: new Date(2),
       },
     ];
-    expect(() => buildIceLeaderboardForGame(rows, 'mesh_jack')).not.toThrow();
-    expect(buildIceLeaderboardForGame(rows, 'mesh_jack')).toHaveLength(1);
+    expect(() => buildIceLeaderboardForGame(rows, 'dead_sector')).not.toThrow();
+    expect(buildIceLeaderboardForGame(rows, 'dead_sector')).toHaveLength(1);
   });
 });
 
@@ -189,13 +190,24 @@ describe('buildAllIceLeaderboards — catalog coverage', () => {
   });
 });
 
-describe('arcadeIceWinScore', () => {
+describe('arcadeIceWinScore / arcadeIceScore', () => {
   it('returns finite positive scores for all difficulties', () => {
     for (const d of ['easy', 'medium', 'hard'] as const) {
       const s = arcadeIceWinScore(d);
       expect(Number.isFinite(s)).toBe(true);
       expect(s).toBeGreaterThan(0);
     }
+  });
+
+  it('hard base is much higher than easy', () => {
+    expect(arcadeIceWinScore('hard')).toBeGreaterThan(arcadeIceWinScore('easy') * 4);
+  });
+
+  it('quality raises score; loss is zero', () => {
+    expect(arcadeIceScore('medium', false)).toBe(0);
+    expect(arcadeIceScore('medium', true, 100)).toBeGreaterThan(
+      arcadeIceScore('medium', true, 10),
+    );
   });
 });
 

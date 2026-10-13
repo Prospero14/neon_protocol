@@ -1,4 +1,4 @@
-/** Каталог icebreaker-мини-игр для защищённых файлов (16 × 3 сложности). */
+/** Каталог icebreaker-мини-игр для защищённых файлов (17 × 3 сложности). */
 
 export type IceDifficulty = 'easy' | 'medium' | 'hard';
 export type IceEngine =
@@ -6,18 +6,19 @@ export type IceEngine =
   | 'sequence'
   | 'scan'
   | 'breach'
-  | 'daemon'
-  | 'mesh'
-  | 'memory'
-  | 'dodge'
-  | 'logwipe'
+  | 'stack'
+  | 'constraint'
+  | 'handshake'
   | 'wordle'
-  | 'sniff'
-  | 'hash'
-  | 'signallock'
+  | 'logwipe'
+  | 'toggle'
+  | 'dodge'
+  | 'balance'
   | 'circuit'
   | 'likeness'
-  | 'capture';
+  | 'capture'
+  | 'rings'
+  | 'mines';
 
 export type IceGameParams = {
   sequenceLen: number;
@@ -35,7 +36,7 @@ export type IceGameParams = {
   meshNodes: number;
   flashMs: number;
   peekMs: number;
-  /** Ширина зелёной зоны Signal Lock, % полосы. */
+  /** Ширина зелёной зоны Noise Floor / legacy Signal Lock, % полосы. */
   signalZonePct: number;
 };
 
@@ -50,6 +51,8 @@ export type IceGameDef = {
   title: string;
   blurb: string;
   guide: IceGameGuide;
+  /** Краткие отличия тиров — для UI карточки. */
+  diffHints: Record<IceDifficulty, string>;
   engine: IceEngine;
   difficulties: Record<IceDifficulty, { label: string; params: IceGameParams }>;
 };
@@ -77,7 +80,6 @@ const BASE: Record<IceDifficulty, IceGameParams> = {
     sequenceLen: 4,
     scanRounds: 4,
     tapTarget: 5,
-    /** Active play ~50–70s before TRACE lock without mistakes. */
     traceSpeed: 0.85,
     memoryPairs: 4,
     maxMistakes: 4,
@@ -96,7 +98,6 @@ const BASE: Record<IceDifficulty, IceGameParams> = {
     sequenceLen: 6,
     scanRounds: 5,
     tapTarget: 6,
-    /** Hard but passable: ~35–45s active if clean; mistakes still punish. */
     traceSpeed: 1.35,
     memoryPairs: 5,
     maxMistakes: 3,
@@ -119,7 +120,8 @@ function game(
   blurb: string,
   engine: IceEngine,
   guide: IceGameGuide,
-  scale: Partial<Record<IceDifficulty, Partial<IceGameParams>>> = {}
+  diffHints: Record<IceDifficulty, string>,
+  scale: Partial<Record<IceDifficulty, Partial<IceGameParams>>> = {},
 ): IceGameDef {
   const diffs = (['easy', 'medium', 'hard'] as IceDifficulty[]).reduce(
     (acc, d) => {
@@ -129,9 +131,9 @@ function game(
       };
       return acc;
     },
-    {} as IceGameDef['difficulties']
+    {} as IceGameDef['difficulties'],
   );
-  return { id, title, blurb, guide, engine, difficulties: diffs };
+  return { id, title, blurb, guide, diffHints, engine, difficulties: diffs };
 }
 
 export const NRI_GAME_CATALOG: IceGameDef[] = [
@@ -142,8 +144,13 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'gibson',
     {
       how: 'Проходи три фазы взлома: сканирование ICE, подбор ключа и вынос данных. На каждой фазе выбирай действия — ошибки и медлительность копят trace.',
-      win: 'Успешно завершить exfil с минимальным trace — чем чище забег, тем выше score в рейтинге стола.',
-      fail: 'Trace доходит до 100%, провал фазы или hardware ban после серии неудачных забегов на столе.',
+      win: 'Успешно завершить exfil — чем чище забег (меньше trace), тем выше score.',
+      fail: 'Trace 100%, провал фазы или hardware ban после серии неудач на столе.',
+    },
+    {
+      easy: 'медленный TRACE · прощает ошибки',
+      medium: 'давление TRACE · меньше запаса',
+      hard: 'агрессивный TRACE · узкое окно на фазу',
     },
   ),
   game(
@@ -152,14 +159,19 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Запомни портовый маршрут — ICE следит за аномалиями.',
     'sequence',
     {
-      how: 'Порты мигают по очереди — запомни маршрут. Раунды чередуют ECHO (повтор), REVERSE (ввод с конца) и NOISE (ложный блик — игнорируй). Набор портов меняется каждый раунд. Ошибка — всплеск TRACE.',
-      win: 'Пройти все раунды с допустимым числом аномалий до заполнения TRACE.',
+      how: 'Порты мигают по очереди — запомни маршрут. Раунды чередуют ECHO (повтор), REVERSE (ввод с конца) и NOISE (ложный блик — игнорируй).',
+      win: 'Пройти все раунды до TRACE 100% и в лимите аномалий.',
       fail: 'TRACE 100% или лимит аномалий — ICE локализовал netrunner.',
     },
     {
-      easy: { sequenceLen: 3, scanRounds: 2, flashMs: 680, maxMistakes: 4, traceSpeed: 0.55 },
+      easy: '3 порта · 2 раунда · flash 0.68с · 4 ошибки',
+      medium: '4 порта · 3 раунда · flash 0.48с · 3 ошибки',
+      hard: '5 портов · 4 раунда · flash 0.36с · 3 ошибки + быстрый TRACE',
+    },
+    {
+      easy: { sequenceLen: 3, scanRounds: 2, flashMs: 680, maxMistakes: 4, traceSpeed: 0.5 },
       medium: { sequenceLen: 4, scanRounds: 3, flashMs: 480, maxMistakes: 3, traceSpeed: 0.95 },
-      hard: { sequenceLen: 5, scanRounds: 4, flashMs: 360, maxMistakes: 3, traceSpeed: 1.35 },
+      hard: { sequenceLen: 5, scanRounds: 4, flashMs: 320, maxMistakes: 2, traceSpeed: 1.45 },
     },
   ),
   game(
@@ -168,126 +180,166 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Поймай открытый слот до закрытия — ICE адаптируется.',
     'scan',
     {
-      how: 'Слоты firewall циклически открываются и закрываются. Только OPEN уязвим — кликни вовремя. Иногда мигает BAIT (honeypot) — не кликай. Промах или опоздание — countermeasure и рост TRACE.',
-      win: 'Успешно пройти все волны sweep до исчерпания TRACE.',
-      fail: 'TRACE max или слишком много промахов под давлением ICE.',
+      how: 'Слоты firewall циклически OPEN/CLOSED. Кликай только OPEN. BAIT (honeypot) — не трогай.',
+      win: 'Пройти все волны sweep до TRACE max.',
+      fail: 'TRACE 100% или слишком много промахов / кликов по BAIT.',
     },
     {
-      easy: { scanRounds: 4, flashMs: 1150, maxMistakes: 4, traceSpeed: 0.7 },
-      medium: { scanRounds: 5, flashMs: 820, maxMistakes: 3, traceSpeed: 1.1 },
-      hard: { scanRounds: 6, flashMs: 560, maxMistakes: 3, traceSpeed: 1.55 },
+      easy: '4 волны · окно ~1.2с · 4 ошибки',
+      medium: '5 волн · окно ~0.8с · 3 ошибки',
+      hard: '7 волн · окно ~0.5с · 2 ошибки',
+    },
+    {
+      easy: { scanRounds: 4, flashMs: 1200, maxMistakes: 4, traceSpeed: 0.65 },
+      medium: { scanRounds: 5, flashMs: 800, maxMistakes: 3, traceSpeed: 1.1 },
+      hard: { scanRounds: 7, flashMs: 500, maxMistakes: 2, traceSpeed: 1.6 },
     },
   ),
   game(
     'trace_rush',
     'Breach Matrix',
-    'Матрица hex-кодов: чередуй строку и столбец как в Breach Protocol.',
+    'Матрица hex: чередуй строку и столбец (Breach Protocol).',
     'breach',
     {
-      how: 'Слева — матрица кодов. Справа — целевая последовательность. Первый код только из верхней строки, дальше чередуй ось: столбец → строка → столбец. Буфер ограничен. Таймер TRACE тикает с первого клика.',
-      win: 'Собрать всю целевую последовательность до заполнения TRACE.',
-      fail: 'Неверный код, исчерпан буфер или TRACE 100%.',
+      how: 'Слева матрица, справа цель. Первый код — верхняя строка, дальше чередуй ось столбец↔строка. Буфер ограничен.',
+      win: 'Собрать всю целевую последовательность до TRACE 100%.',
+      fail: 'Неверный код, буфер полный или TRACE 100%.',
     },
     {
-      easy: { tapTarget: 4, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.55 },
+      easy: 'цель 4 · буфер щедрый · медленный TRACE',
+      medium: 'цель 5 · буфер туже',
+      hard: 'цель 7 · узкий буфер · быстрый TRACE',
+    },
+    {
+      easy: { tapTarget: 4, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.5 },
       medium: { tapTarget: 5, sequenceLen: 5, maxMistakes: 3, traceSpeed: 0.95 },
-      hard: { tapTarget: 6, sequenceLen: 6, maxMistakes: 3, traceSpeed: 1.45 },
+      hard: { tapTarget: 6, sequenceLen: 7, maxMistakes: 2, traceSpeed: 1.5 },
     },
   ),
   game(
-    'buffer_flood',
-    'Daemon Upload',
-    'Загрузи daemons по hex-последовательности под давлением ICE.',
-    'daemon',
+    'opcode_forge',
+    'Opcode Forge',
+    'Собери payload из opcodes в точном порядке.',
+    'stack',
     {
-      how: 'Три daemon-цели с hex-цепочками. В потоке кодов выбирай следующий нужный символ. Неверный код — countermeasure. Поток ускоряется каждый daemon.',
-      win: 'Загрузить все daemons до TRACE 100%.',
-      fail: 'TRACE max или критическая серия ошибок.',
+      how: 'На экране цель (маскируется по мере сборки) и пул чипов. Кликай следующий opcode. Ошибка — countermeasure, чип не тратится зря только если верный.',
+      win: 'Собрать всю цепочку до TRACE 100%.',
+      fail: 'TRACE max или лимит аномалий — stack corrupt, сессия сброшена.',
     },
     {
-      easy: { tapTarget: 3, sequenceLen: 3, peekMs: 2400, maxMistakes: 4, traceSpeed: 0.6 },
-      medium: { tapTarget: 3, sequenceLen: 4, peekMs: 1800, maxMistakes: 3, traceSpeed: 1.0 },
-      hard: { tapTarget: 4, sequenceLen: 4, peekMs: 1300, maxMistakes: 3, traceSpeed: 1.5 },
-    },
-  ),
-  game(
-    'hash_crack',
-    'Hash Crack',
-    'Восстанови hex-хэш по одной цифре.',
-    'hash',
-    {
-      how: 'На каждой позиции хэша выбирай hex-цифру. Правильная закрепляется. Ошибка — всплеск TRACE и countermeasure, не мгновенный game over.',
-      win: 'Собрать весь хэш до TRACE 100%.',
-      fail: 'TRACE max — brute-force прерван ICE.',
+      easy: 'цепочка 3 · мало decoy · 4 ошибки',
+      medium: 'цепочка 5 · +decoy · 3 ошибки',
+      hard: 'цепочка 7 · много decoy · 2 ошибки · быстрый TRACE',
     },
     {
-      easy: { hashLen: 4, maxMistakes: 4, traceSpeed: 0.55 },
-      medium: { hashLen: 6, maxMistakes: 3, traceSpeed: 0.95 },
-      hard: { hashLen: 8, maxMistakes: 3, traceSpeed: 1.4 },
+      easy: { sequenceLen: 3, tapTarget: 3, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { sequenceLen: 5, tapTarget: 4, maxMistakes: 3, traceSpeed: 1.0 },
+      hard: { sequenceLen: 7, tapTarget: 6, maxMistakes: 2, traceSpeed: 1.5 },
     },
   ),
   game(
-    'packet_sniff',
-    'Packet Sniff',
-    'Поймай пакет с нужной CRC.',
-    'sniff',
+    'keyspace_prune',
+    'Keyspace Prune',
+    'Mastermind по hex: exact / present без цветов Wordle.',
+    'constraint',
     {
-      how: 'Пакеты пролетают в потоке — перехвати тот, у которого CRC совпадает с целью. Промах — ICE countermeasure.',
-      win: 'Перехватить все целевые пакеты до TRACE 100%.',
-      fail: 'TRACE max или критические ошибки перехвата.',
+      how: 'Вводи hex-кандидат длины N. Ответ: сколько цифр на месте (exact) и сколько есть, но не там (present). Не путать с Auth Bypass и Likeness.',
+      win: 'Угадать секрет за отведённые попытки до TRACE 100%.',
+      fail: 'Попытки кончились или TRACE max — keyspace sealed.',
+    },
+    {
+      easy: 'длина 3 · 10 попыток',
+      medium: 'длина 4 · 8 попыток',
+      hard: 'длина 5 · 6 попыток · быстрый TRACE',
+    },
+    {
+      easy: { hashLen: 3, wordleAttempts: 10, maxMistakes: 5, traceSpeed: 0.45 },
+      medium: { hashLen: 4, wordleAttempts: 8, maxMistakes: 4, traceSpeed: 0.9 },
+      hard: { hashLen: 5, wordleAttempts: 6, maxMistakes: 3, traceSpeed: 1.35 },
+    },
+  ),
+  game(
+    'handshake_drill',
+    'Handshake Drill',
+    'Выбери верные ответы протокола шаг за шагом.',
+    'handshake',
+    {
+      how: 'Каждый шаг — запрос peer/ICE и 3–4 ответа. Только один корректен для netrunner-сценария. Ошибка копит TRACE.',
+      win: 'Пройти все шаги handshake до TRACE 100%.',
+      fail: 'TRACE max или лимит ошибок протокола.',
+    },
+    {
+      easy: '3 шага · 4 ошибки · медленный TRACE',
+      medium: '5 шагов · 3 ошибки',
+      hard: '7 шагов · 2 ошибки · быстрый TRACE',
     },
     {
       easy: { sniffRounds: 3, maxMistakes: 4, traceSpeed: 0.55 },
-      medium: { sniffRounds: 4, maxMistakes: 3, traceSpeed: 0.95 },
-      hard: { sniffRounds: 6, maxMistakes: 3, traceSpeed: 1.4 },
+      medium: { sniffRounds: 5, maxMistakes: 3, traceSpeed: 1.0 },
+      hard: { sniffRounds: 7, maxMistakes: 2, traceSpeed: 1.45 },
     },
   ),
   game(
     'auth_bypass',
     'Auth Bypass',
-    'Подбери пароль как в Wordle.',
+    'Подбери пароль как в Wordle (цвета букв).',
     'wordle',
     {
-      how: 'Есть текстовая подсказка и длина пароля. Вводи слово — цвет букв покажет: на месте, есть в слове, или нет.',
-      win: 'Угадать пароль за отведённые попытки (7–12).',
-      fail: 'Попытки закончились — auth gate закрыт, сессия сброшена.',
+      how: 'Подсказка + длина. Цвета: на месте / есть в слове / нет. Это не Likeness и не Keyspace.',
+      win: 'Угадать пароль за отведённые попытки.',
+      fail: 'Попытки закончились — auth gate закрыт.',
+    },
+    {
+      easy: '4 буквы · 12 попыток',
+      medium: '5 букв · 9 попыток',
+      hard: '6 букв · 6 попыток',
     },
     {
       easy: { wordLength: 4, wordleAttempts: 12, maxMistakes: 5 },
-      medium: { wordLength: 5, wordleAttempts: 10, maxMistakes: 4 },
-      hard: { wordLength: 6, wordleAttempts: 8, maxMistakes: 3 },
+      medium: { wordLength: 5, wordleAttempts: 9, maxMistakes: 4 },
+      hard: { wordLength: 6, wordleAttempts: 6, maxMistakes: 3 },
     },
   ),
   game(
     'log_wipe',
     'Log Wipe',
-    'Сотри красные строки аудита.',
+    'Сотри только красные строки аудита.',
     'logwipe',
     {
-      how: 'В поток логов падают строки. Кликай только по красным (AUDIT, SIEM, ICE…) — они исчезают. Белые системные строки не трогай.',
-      win: 'Стереть нужное число threat-строк до истечения таймера (14–30 с).',
-      fail: 'Время вышло, клик по белому логу или пропуск красной строки (она «убегает» и считается ошибкой).',
+      how: 'Кликай красные (AUDIT/SIEM/ICE). Белые системные не трогай. Пропуск уехавшей красной — ошибка.',
+      win: 'Стереть нужное число threat-строк до таймера.',
+      fail: 'Время вышло, клик по белому или пропуск красной.',
     },
     {
-      easy: { logDurationSec: 32, sniffRounds: 2, maxMistakes: 4, traceSpeed: 0.4 },
-      medium: { logDurationSec: 26, sniffRounds: 3, maxMistakes: 3, traceSpeed: 0.8 },
-      hard: { logDurationSec: 20, sniffRounds: 4, maxMistakes: 2, traceSpeed: 1.2 },
+      easy: '32с · 2 волны threat · 4 ошибки',
+      medium: '24с · 3 волны · 3 ошибки',
+      hard: '16с · 5 волн · 2 ошибки',
+    },
+    {
+      easy: { logDurationSec: 32, sniffRounds: 2, maxMistakes: 4, traceSpeed: 0.35 },
+      medium: { logDurationSec: 24, sniffRounds: 3, maxMistakes: 3, traceSpeed: 0.85 },
+      hard: { logDurationSec: 16, sniffRounds: 5, maxMistakes: 2, traceSpeed: 1.3 },
     },
   ),
   game(
-    'mesh_jack',
-    'Mesh Jack',
-    'Запомни маршрут по узлам mesh.',
-    'mesh',
+    'dead_sector',
+    'Dead Sector',
+    'Lights Out: погаси все сектора ICE.',
+    'toggle',
     {
-      how: 'Узлы MESH_A, MESH_B… подсвечиваются по очереди. После показа повтори тот же маршрут кликами.',
-      win: 'Пройти весь маршрут (3–7 узлов) с допустимым числом ошибок.',
-      fail: 'Ошибка в пути сбрасывает прогресс и копит TRACE; лимит ошибок или TRACE 100% — провал.',
+      how: 'Клик переключает клетку и соседей (крест). Цель — все OFF. Паттерн всегда решаем (seed от кликов по пустой сетке).',
+      win: 'Все сектора OFF до TRACE 100%.',
+      fail: 'TRACE 100% — corp NOC перебил wipe.',
     },
     {
-      easy: { meshNodes: 4, sequenceLen: 3, flashMs: 700, maxMistakes: 3, traceSpeed: 0.55 },
-      medium: { meshNodes: 5, sequenceLen: 5, flashMs: 480, maxMistakes: 3, traceSpeed: 0.95 },
-      hard: { meshNodes: 6, sequenceLen: 6, flashMs: 360, maxMistakes: 2, traceSpeed: 1.4 },
+      easy: 'сетка 3×3 · медленный TRACE',
+      medium: '4×4 · средний TRACE',
+      hard: '5×5 · быстрый TRACE · 2 ошибки запаса',
+    },
+    {
+      easy: { meshNodes: 3, sequenceLen: 3, maxMistakes: 5, traceSpeed: 0.45 },
+      medium: { meshNodes: 4, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.9 },
+      hard: { meshNodes: 5, sequenceLen: 5, maxMistakes: 2, traceSpeed: 1.4 },
     },
   ),
   game(
@@ -296,30 +348,40 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Переключай канал от прокси-сканеров.',
     'dodge',
     {
-      how: 'Три полосы. Метки SCAN падают сверху. Стрелками ← → переставляй ◉ в свободную полосу. Доживи до конца волн.',
-      win: 'Пережить все волны (6–18) без превышения лимита попаданий.',
-      fail: 'SCAN наехал на тебя слишком много раз — прокси выдал IP ICE.',
+      how: 'Три полосы. SCAN падает сверху. ← → уводи ◉. Доживи до конца волн.',
+      win: 'Пережить все волны без превышения лимита попаданий.',
+      fail: 'Слишком много попаданий SCAN — IP слит ICE.',
     },
     {
-      easy: { dodgeWaves: 6, traceSpeed: 0.65, maxMistakes: 3 },
-      medium: { dodgeWaves: 10, traceSpeed: 1.0, maxMistakes: 3 },
-      hard: { dodgeWaves: 14, traceSpeed: 1.35, maxMistakes: 2 },
+      easy: '6 волн · 3 попадания',
+      medium: '11 волн · 3 попадания · быстрее',
+      hard: '16 волн · 2 попадания · агрессивный TRACE',
+    },
+    {
+      easy: { dodgeWaves: 6, traceSpeed: 0.6, maxMistakes: 3 },
+      medium: { dodgeWaves: 11, traceSpeed: 1.05, maxMistakes: 3 },
+      hard: { dodgeWaves: 16, traceSpeed: 1.45, maxMistakes: 2 },
     },
   ),
   game(
-    'signal_lock',
-    'Signal Lock',
-    'Поймай фазу сигнала кнопкой SYNC.',
-    'signallock',
+    'noise_floor',
+    'Noise Floor',
+    'Два слайдера: удержи SNR в lock-зоне.',
+    'balance',
     {
-      how: 'Розовый луч бегает по полосе. Зелёная зона — окно захвата. Жми SYNC, когда луч внутри зоны. После успеха зона смещается, канал меняется.',
-      win: 'Сделать 3–5 успешных SYNC подряд.',
-      fail: 'Промах по SYNC или TRACE до 100% — carrier засёк netrunner.',
+      how: 'GAIN и FILTER двигают SNR. Когда полоса зелёная — копится hold. На hard carrier дрейфует.',
+      win: 'Удержать lock нужное число секунд до TRACE 100%.',
+      fail: 'TRACE 100% — carrier засёк netrunner.',
     },
     {
-      easy: { sniffRounds: 3, signalZonePct: 26, traceSpeed: 0.65, maxMistakes: 3, flashMs: 1400 },
-      medium: { sniffRounds: 4, signalZonePct: 18, traceSpeed: 0.95, maxMistakes: 3, flashMs: 1100 },
-      hard: { sniffRounds: 5, signalZonePct: 14, traceSpeed: 1.25, maxMistakes: 2, flashMs: 900 },
+      easy: 'hold 3с · широкая зона · без drift',
+      medium: 'hold 5с · уже зона',
+      hard: 'hold 7с · узкая зона · drift цели',
+    },
+    {
+      easy: { sniffRounds: 3, signalZonePct: 28, maxMistakes: 4, traceSpeed: 0.55, peekMs: 1400 },
+      medium: { sniffRounds: 5, signalZonePct: 18, maxMistakes: 3, traceSpeed: 1.0, peekMs: 1100 },
+      hard: { sniffRounds: 7, signalZonePct: 12, maxMistakes: 2, traceSpeed: 1.4, peekMs: 800 },
     },
   ),
   game(
@@ -328,30 +390,40 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Собери канал пайпами — ENTRY → CORE.',
     'circuit',
     {
-      how: 'Кликай плитки, чтобы крутить пайпы. Зелёные клетки уже под током от ENTRY. Нужно довести сигнал до CORE справа. На сложном ICE иногда сдвигает случайную плитку.',
-      win: 'CORE запитан — канал смонтирован до заполнения TRACE.',
+      how: 'Кликай плитки, крути пайпы. Зелёные под током от ENTRY. Доведи сигнал до CORE. На hard ICE дёргает плитки.',
+      win: 'CORE запитан до TRACE 100%.',
       fail: 'TRACE 100% — corp NOC перебил splice.',
     },
     {
-      easy: { meshNodes: 4, sequenceLen: 3, maxMistakes: 5, traceSpeed: 0.5, peekMs: 900 },
-      medium: { meshNodes: 5, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.9, peekMs: 700 },
-      hard: { meshNodes: 6, sequenceLen: 4, maxMistakes: 3, traceSpeed: 1.35, peekMs: 550 },
+      easy: 'auth conduit · 4×3 · без lock-плиток',
+      medium: 'locked сегменты + jitter',
+      hard: 'больше locked · частый jitter · быстрый TRACE',
+    },
+    {
+      easy: { meshNodes: 4, sequenceLen: 3, maxMistakes: 5, traceSpeed: 0.45, peekMs: 900 },
+      medium: { meshNodes: 5, sequenceLen: 4, maxMistakes: 4, traceSpeed: 0.95, peekMs: 650 },
+      hard: { meshNodes: 6, sequenceLen: 5, maxMistakes: 2, traceSpeed: 1.45, peekMs: 480 },
     },
   ),
   game(
     'likeness_vault',
     'Likeness Vault',
-    'Угадай пароль по LIKENESS — как старый vault-terminal.',
+    'Угадай пароль по LIKENESS (не Wordle-цвета).',
     'likeness',
     {
-      how: 'На экране список кандидатов одной длины. Кликни слово: если не пароль, получишь LIKENESS (сколько букв стоят на тех же местах). Несовместимые слова гаснут. Не путать с цветным Wordle.',
+      how: 'Список кандидатов. Клик: LIKENESS = сколько букв на тех же местах. Несовместимые гаснут.',
       win: 'Угадать секрет до исчерпания попыток и TRACE.',
       fail: 'Попытки кончились или TRACE max — vault sealed.',
     },
     {
-      easy: { wordLength: 4, wordleAttempts: 8, scanRounds: 2, maxMistakes: 5, traceSpeed: 0.45 },
+      easy: '4 буквы · 8 попыток',
+      medium: '5 букв · 6 попыток',
+      hard: '6 букв · 4 попытки · быстрый TRACE',
+    },
+    {
+      easy: { wordLength: 4, wordleAttempts: 8, scanRounds: 2, maxMistakes: 5, traceSpeed: 0.4 },
       medium: { wordLength: 5, wordleAttempts: 6, scanRounds: 3, maxMistakes: 4, traceSpeed: 0.85 },
-      hard: { wordLength: 6, wordleAttempts: 5, scanRounds: 4, maxMistakes: 3, traceSpeed: 1.25 },
+      hard: { wordLength: 6, wordleAttempts: 4, scanRounds: 4, maxMistakes: 2, traceSpeed: 1.3 },
     },
   ),
   game(
@@ -360,14 +432,61 @@ export const NRI_GAME_CATALOG: IceGameDef[] = [
     'Захвати сеть probes — дойди до CORE.',
     'capture',
     {
-      how: 'Стартуешь с ENTRY. Кликай только смежные узлы — каждый стоит probes. HONEYPOT дешёвый, но жжёт TRACE. Нужен маршрут до CORE, пока probes и TRACE позволяют.',
+      how: 'Старт с ENTRY. Кликай смежные узлы за probes. HONEYPOT дёшев, но жжёт TRACE. Дойди до CORE.',
       win: 'Захватить CORE.',
-      fail: 'Нет ходов / probes / TRACE 100% — сегмент отрезан ICE.',
+      fail: 'Нет ходов / probes / TRACE 100%.',
     },
     {
-      easy: { meshNodes: 4, tapTarget: 4, maxMistakes: 4, traceSpeed: 0.5 },
-      medium: { meshNodes: 5, tapTarget: 5, maxMistakes: 3, traceSpeed: 0.9 },
-      hard: { meshNodes: 6, tapTarget: 6, maxMistakes: 3, traceSpeed: 1.35 },
+      easy: 'граф 4 · запас probes',
+      medium: 'граф 5 · туже бюджет',
+      hard: 'граф 6 · мало probes · быстрый TRACE',
+    },
+    {
+      easy: { meshNodes: 4, tapTarget: 4, maxMistakes: 4, traceSpeed: 0.45 },
+      medium: { meshNodes: 5, tapTarget: 5, maxMistakes: 3, traceSpeed: 0.95 },
+      hard: { meshNodes: 6, tapTarget: 6, maxMistakes: 2, traceSpeed: 1.4 },
+    },
+  ),
+  game(
+    'cipher_rings',
+    'Cipher Rings',
+    'Концентрический dial: совмести KEY с глифом под маркером ▲.',
+    'rings',
+    {
+      how: 'Крути активное (внешнее→внутреннее) кольцо. KEY показывает нужный глиф — сравни с тем, что под ▲ сверху. Ответ на кольце не подсвечен. LOCK по порядку. Hard: scramble.',
+      win: 'Залочить все кольца до TRACE 100%.',
+      fail: 'TRACE 100% / неверный LOCK — corp cipher lockout.',
+    },
+    {
+      easy: '3 кольца · lock по порядку · медленный TRACE',
+      medium: '4 кольца · больше глифов',
+      hard: '5 колец · scramble unlocked · быстрый TRACE',
+    },
+    {
+      easy: { tapTarget: 2, sequenceLen: 5, maxMistakes: 4, traceSpeed: 0.55 },
+      medium: { tapTarget: 3, sequenceLen: 7, maxMistakes: 3, traceSpeed: 1.0 },
+      hard: { tapTarget: 4, sequenceLen: 8, maxMistakes: 2, traceSpeed: 1.45 },
+    },
+  ),
+  game(
+    'bit_sweep',
+    'Bit Sweep',
+    'Minesweeper по сегментам ICE: открой safe-биты, не нарвись на мину.',
+    'mines',
+    {
+      how: 'Клик открывает бит. Число = сколько соседних ICE-мин. FLAG / ПКМ помечает мину. Не путать с Dead Sector (toggle) — здесь нет переключения соседей.',
+      win: 'Все безопасные клетки открыты до TRACE 100%.',
+      fail: 'Клик по мине или TRACE 100%.',
+    },
+    {
+      easy: '5×5 · 5 мин · медленный TRACE',
+      medium: '6×6 · 9 мин',
+      hard: '7×7 · 14 мин · быстрый TRACE',
+    },
+    {
+      easy: { meshNodes: 5, sequenceLen: 5, tapTarget: 5, maxMistakes: 4, traceSpeed: 0.45 },
+      medium: { meshNodes: 6, sequenceLen: 6, tapTarget: 9, maxMistakes: 3, traceSpeed: 0.9 },
+      hard: { meshNodes: 7, sequenceLen: 7, tapTarget: 14, maxMistakes: 2, traceSpeed: 1.4 },
     },
   ),
 ];

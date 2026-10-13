@@ -1,6 +1,7 @@
 /** Кошелёk, ICE, wonlongs */
 import { antispamPrice, isSpamPaused, readWonlongs, writeWonlongs } from './nriWallet.js';
-import { applyIceRunResult, buildIcePlayStatus, maybeAutoClearIceBan, readIceBan } from './nriIceBan.js';
+import { applyHardwareBan, applyIceRunResult, buildIcePlayStatus, clearIceBan, maybeAutoClearIceBan, readIceBan, } from './nriIceBan.js';
+import { applyCounterCommandPick, brickDecksInInventory, buildCounterStage, enemyProgressFromTime, inventoryHasDeck, isCounterHackExpired, readCounterHack, SIREN_MESSAGE, writeCounterHack, } from '../../shared/nri-domain/iceCounterHack.js';
 import { processPlayerAchievements } from './nriAchievementService.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
 import { nriIceResultSchema, nriIceScoreSchema, nriWonlongsGrantSchema, nriWonlongsTransferSchema, } from '../../shared/api-schemas/nri.js';
@@ -186,16 +187,39 @@ export function mountNriIceWalletRoutes(app, ctx) {
             if (!player) {
                 return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
             }
-            const { sheet: nextSheet } = applyIceRunResult(player.sheet, won);
+            const isHost = session.hostUserId === auth.userId;
+            if (!isHost && !inventoryHasDeck(player.inventory)) {
+                return sendApiError(res, 400, 'NRI_NO_DECK', 'Нужна кибердека в инвентаре.');
+            }
+            const applied = applyIceRunResult(player.sheet, won, {
+                userId: auth.userId,
+                displayName: player.displayName,
+            });
             const banBefore = readIceBan(player.sheet);
-            const { sheet, status } = await iceStatusForPlayer(session.id, nextSheet, player.inventory);
+            const { sheet, status } = await iceStatusForPlayer(session.id, applied.sheet, player.inventory);
             await prisma.nriPlayer.update({
                 where: { id: player.id },
                 data: { sheet: sheet },
             });
+            if (applied.counterHackStarted) {
+                await prisma.nriHostAlert.create({
+                    data: {
+                        sessionId: session.id,
+                        fromUserId: auth.userId,
+                        kind: 'ice_counterhack',
+                        body: `Встречный взлом: ${player.displayName} перехвачен после серии провалов ICE. Таймер пошёл — защитите деку.`,
+                    },
+                });
+            }
             const banAfter = readIceBan(sheet);
             const newAchievements = await processPlayerAchievements(prisma, player.id, !banBefore.hardwareBanned && banAfter.hardwareBanned ? [{ type: 'ice_hardware_ban' }] : []);
-            res.json({ ok: true, status, newAchievements });
+            res.json({
+                ok: true,
+                status,
+                newAchievements,
+                counterHackStarted: applied.counterHackStarted,
+                counterHack: readCounterHack(sheet),
+            });
         }
         catch (error) {
             console.error('nri/ice result:', error);
@@ -466,6 +490,170 @@ export function mountNriIceWalletRoutes(app, ctx) {
         catch (error) {
             console.error('nri/wonlongs grant:', error);
             return sendApiError(res, 500, 'NRI_GRANT_FAILED', 'Не удалось выдать деньги.');
+        }
+    });
+    app.get('/neon_v1/services/nri/:code/ice/counterhack', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        try {
+            const session = await resolveSession(code);
+            if (!session)
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден.');
+            const isHost = session.hostUserId === auth.userId;
+            const players = await prisma.nriPlayer.findMany({ where: { sessionId: session.id } });
+            const mine = players.find((p) => p.userId === auth.userId);
+            const active = players
+                .map((p) => ({ player: p, ch: readCounterHack(p.sheet) }))
+                .find((x) => x.ch?.active) ?? null;
+            if (!active?.ch) {
+                return res.json({ active: false, isHost, counterHack: null, stage: null });
+            }
+            const ch = {
+                ...active.ch,
+                enemyProgress: enemyProgressFromTime(active.ch),
+            };
+            const stage = buildCounterStage(ch.stageIndex, ch.startedAt);
+            const canPlay = mine?.userId === active.player.userId;
+            let payloadCh = ch;
+            if (isCounterHackExpired(ch)) {
+                payloadCh = {
+                    ...ch,
+                    active: false,
+                    resolved: 'lost',
+                    enemyProgress: 100,
+                    sirenMessage: SIREN_MESSAGE,
+                };
+                const sheet = applyHardwareBan(writeCounterHack(active.player.sheet, payloadCh));
+                const inventory = brickDecksInInventory(active.player.inventory);
+                await prisma.nriPlayer.update({
+                    where: { id: active.player.id },
+                    data: { sheet: sheet, inventory },
+                });
+                await prisma.nriHostAlert.create({
+                    data: {
+                        sessionId: session.id,
+                        fromUserId: active.player.userId,
+                        kind: 'ice_counterhack_lost',
+                        body: `${active.player.displayName}: дека выжжена (таймер). ${SIREN_MESSAGE}`,
+                    },
+                });
+                return res.json({
+                    active: false,
+                    isHost,
+                    canPlay: false,
+                    targetName: payloadCh.targetName ?? active.player.displayName,
+                    counterHack: payloadCh,
+                    stage: null,
+                    sirenMessage: SIREN_MESSAGE,
+                    decksBricked: true,
+                });
+            }
+            res.json({
+                active: true,
+                isHost,
+                canPlay,
+                targetName: payloadCh.targetName ?? active.player.displayName,
+                counterHack: payloadCh,
+                stage: {
+                    id: stage.id,
+                    title: stage.title,
+                    hint: stage.hint,
+                    need: stage.need,
+                    commands: stage.commands.map((c) => ({ id: c.id, label: c.label })),
+                },
+            });
+        }
+        catch (error) {
+            console.error('nri/ice counterhack get:', error);
+            return sendApiError(res, 500, 'NRI_COUNTERHACK_FAILED', 'Не удалось загрузить встречный взлом.');
+        }
+    });
+    app.post('/neon_v1/services/nri/:code/ice/counterhack/pick', async (req, res) => {
+        const auth = jwtAuth(req);
+        if (!auth)
+            return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+        const code = String(req.params.code ?? '').trim().toUpperCase();
+        const commandId = typeof req.body?.commandId === 'string' ? req.body.commandId.trim() : '';
+        if (!commandId)
+            return sendApiError(res, 400, 'NRI_CMD', 'Нужна команда.');
+        try {
+            const session = await resolveSession(code);
+            if (!session || session.status !== 'open') {
+                return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+            }
+            const player = await prisma.nriPlayer.findUnique({
+                where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+            });
+            if (!player)
+                return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
+            let ch = readCounterHack(player.sheet);
+            if (!ch?.active) {
+                return sendApiError(res, 400, 'NRI_NO_COUNTERHACK', 'Встречный взлом не активен.');
+            }
+            ch = { ...ch, enemyProgress: enemyProgressFromTime(ch) };
+            if (isCounterHackExpired(ch)) {
+                ch = {
+                    ...ch,
+                    active: false,
+                    resolved: 'lost',
+                    enemyProgress: 100,
+                    sirenMessage: SIREN_MESSAGE,
+                };
+            }
+            else {
+                const stage = buildCounterStage(ch.stageIndex, ch.startedAt);
+                const pick = applyCounterCommandPick(ch, stage, commandId);
+                ch = pick.state;
+            }
+            let inventory = Array.isArray(player.inventory)
+                ? player.inventory
+                : [];
+            let sheet = writeCounterHack(player.sheet, ch);
+            if (ch.resolved === 'lost') {
+                inventory = brickDecksInInventory(player.inventory);
+                sheet = applyHardwareBan(writeCounterHack(player.sheet, ch));
+            }
+            else if (ch.resolved === 'won') {
+                sheet = clearIceBan(writeCounterHack(player.sheet, ch));
+            }
+            await prisma.nriPlayer.update({
+                where: { id: player.id },
+                data: { sheet: sheet, inventory },
+            });
+            if (ch.resolved === 'lost') {
+                await prisma.nriHostAlert.create({
+                    data: {
+                        sessionId: session.id,
+                        fromUserId: auth.userId,
+                        kind: 'ice_counterhack_lost',
+                        body: `${player.displayName}: дека выжжена. ${SIREN_MESSAGE}`,
+                    },
+                });
+            }
+            const stage = ch.active && !ch.resolved
+                ? buildCounterStage(ch.stageIndex, ch.startedAt)
+                : null;
+            res.json({
+                ok: true,
+                counterHack: ch,
+                sirenMessage: ch.sirenMessage,
+                decksBricked: ch.resolved === 'lost',
+                stage: stage
+                    ? {
+                        id: stage.id,
+                        title: stage.title,
+                        hint: stage.hint,
+                        need: stage.need,
+                        commands: stage.commands.map((c) => ({ id: c.id, label: c.label })),
+                    }
+                    : null,
+            });
+        }
+        catch (error) {
+            console.error('nri/ice counterhack pick:', error);
+            return sendApiError(res, 500, 'NRI_COUNTERHACK_PICK', 'Не удалось обработать команду.');
         }
     });
 }

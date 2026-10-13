@@ -8,6 +8,7 @@ import {
   nriToggleEquip,
   nriUseItem,
   nriInstallCyberItem,
+  nriUninstallCyberItem,
   type NriNpc,
   type NriPlayerProfile,
   type NriRosterPlayer,
@@ -16,6 +17,8 @@ import { parseNriInventory, type NriInventoryItem } from '../logic/nriInventory'
 import { canEquipItem } from '../logic/nriItemEquip';
 import { getConsumeEffect } from '../logic/nriConsumeEffects';
 import { getCatalogItem } from '../logic/nriItemCatalog';
+import { parseAugmentedSheet } from '../logic/nriCyberInstall';
+import { CYBER_SLOT_LABELS, type CyberSlot } from '../logic/nriCyberware';
 import {
   canInscribeInventoryItem,
   canTransferInventoryItem,
@@ -31,6 +34,8 @@ import { readNeonAuthToken } from '../logic/authTokenStorage';
 import { useAuth } from '../logic/AuthContext';
 import { formatSignedMod } from '../logic/nriSheetCombat';
 import { CYBER_EFFECT_META } from '../logic/nriCyberEffects';
+import { applyConditionsToSheet, formatConditionDuration } from '../logic/nriConditions';
+import { parseNriSheet } from '../logic/nriNpcGenerator';
 import { NriCatalogItemPreview } from './NriSelectionPreview';
 
 type Props = {
@@ -42,30 +47,48 @@ type Props = {
   onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
 
-function itemModsLine(item: NriInventoryItem): string {
-  const parts: string[] = [];
+type ModChip = { k: string; v: string };
+
+function itemModChips(item: NriInventoryItem): ModChip[] {
+  const chips: ModChip[] = [];
   if (item.c2185Mods) {
     for (const [k, v] of Object.entries(item.c2185Mods)) {
-      if (typeof v === 'number') parts.push(`${k} ${formatSignedMod(v)}`);
+      if (typeof v === 'number') chips.push({ k, v: formatSignedMod(v) });
     }
   }
-  if (typeof item.acBonus === 'number' && item.acBonus !== 0) parts.push(`AC +${item.acBonus}`);
-  if (item.attack) parts.push(`${item.attack.damageDice} ${item.attack.damageType}`);
+  if (typeof item.acBonus === 'number' && item.acBonus !== 0) {
+    chips.push({ k: 'AC', v: `+${item.acBonus}` });
+  }
+  if (item.attack) chips.push({ k: 'DMG', v: `${item.attack.damageDice}` });
   if (item.tags?.length) {
     for (const t of item.tags) {
       if (!t.startsWith('cyber:')) continue;
       const id = t.slice(6) as keyof typeof CYBER_EFFECT_META;
       const meta = CYBER_EFFECT_META[id];
-      parts.push(meta?.label ?? id);
+      chips.push({ k: 'FX', v: meta?.label ?? id });
     }
   }
   if (item.kind === 'cyberware' && item.cyber?.effects?.length) {
     for (const id of item.cyber.effects) {
       const meta = CYBER_EFFECT_META[id as keyof typeof CYBER_EFFECT_META];
-      if (meta) parts.push(meta.label);
+      if (meta) chips.push({ k: 'FX', v: meta.label });
     }
   }
-  return parts.join(' · ') || 'без боевых бонусов';
+  return chips;
+}
+
+function catalogGlanceChips(c: CatalogItem): ModChip[] {
+  const chips: ModChip[] = [
+    { k: 'CAT', v: ITEM_CATEGORY_LABELS[c.category] ?? c.category },
+  ];
+  if (c.priceWonlongs != null) chips.push({ k: '₩', v: String(c.priceWonlongs) });
+  if (c.c2185Mods) {
+    for (const [k, v] of Object.entries(c.c2185Mods)) {
+      if (typeof v === 'number') chips.push({ k, v: formatSignedMod(v) });
+    }
+  }
+  if (typeof c.acBonus === 'number' && c.acBonus !== 0) chips.push({ k: 'AC', v: `+${c.acBonus}` });
+  return chips;
 }
 
 export const NriInventoryPanel: React.FC<Props> = ({
@@ -82,6 +105,7 @@ export const NriInventoryPanel: React.FC<Props> = ({
   const [category, setCategory] = useState<ItemCategory | 'all'>('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [grantTarget, setGrantTarget] = useState('');
   const [grantFromNpc, setGrantFromNpc] = useState('');
   const [grantToNpc, setGrantToNpc] = useState('');
@@ -94,6 +118,17 @@ export const NriInventoryPanel: React.FC<Props> = ({
     () => searchCatalog(search, category).filter((c) => !isMasterGrantOnly(c)),
     [search, category]
   );
+
+  const activeConditions = useMemo(() => {
+    const sheet = parseNriSheet(profile.sheet);
+    if (!sheet) return [];
+    return applyConditionsToSheet(sheet).activeConditions ?? [];
+  }, [profile.sheet]);
+
+  const installedAugs = useMemo(() => {
+    const aug = parseAugmentedSheet(profile.sheet);
+    return aug?.augmentations ?? [];
+  }, [profile.sheet]);
 
   React.useEffect(() => {
     if (!catalog.some((c) => c.id === catalogPick) && catalog[0]) {
@@ -140,6 +175,24 @@ export const NriInventoryPanel: React.FC<Props> = ({
     setBusy(item.id);
     setErr(null);
     const res = await nriInstallCyberItem(authToken, inviteCode, user.id, item.id);
+    setBusy(null);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    onProfileUpdate({
+      ...profile,
+      ...(res.inventory ? { inventory: res.inventory } : {}),
+      ...(res.sheet !== undefined ? { sheet: res.sheet } : {}),
+    });
+  };
+
+  const uninstallCyber = async (itemId: string) => {
+    if (!authToken || !user?.id) return;
+    if (!window.confirm('Снять имплант? Blood Tox и психоз пересчитаются.')) return;
+    setBusy(itemId);
+    setErr(null);
+    const res = await nriUninstallCyberItem(authToken, inviteCode, user.id, itemId);
     setBusy(null);
     if (!res.ok) {
       setErr(res.error);
@@ -215,88 +268,163 @@ export const NriInventoryPanel: React.FC<Props> = ({
     return <Package size={14} />;
   };
 
-  const catalogOptions = (items: CatalogItem[]) =>
-    items.map((c) => (
-      <option key={c.id} value={c.id}>
-        {c.name} — ₩{c.priceWonlongs ?? '?'}
-      </option>
-    ));
-
   return (
-    <div className="nri-inventory">
+    <div className="nri-inventory nri-deck-module">
       <header className="nri-inventory__head">
         <Package size={18} />
         <div>
-          <h2 className="nri-inventory__title">Инвентарь</h2>
+          <h2 className="nri-inventory__title nri-deck-sheet__title">Инвентарь</h2>
           <p className="mono-text opacity-70">
-            {profile.displayName} · экипировка даёт бонусы только пока предмет «надет»
+            Чипы — всегда. Описание — по «ещё». Экип влияет на лист, пока надет.
           </p>
         </div>
       </header>
 
       {err && <p className="nri-vault__err mono-text">{err}</p>}
 
+      {activeConditions.length > 0 && (
+        <section className="nri-inventory__status" aria-label="Активные статусы">
+          <span className="nri-inventory__status-label mono-text">Статусы</span>
+          <div className="nri-cyber__chip-row">
+            {activeConditions.map((c) => {
+              const dur = formatConditionDuration(c);
+              return (
+                <span
+                  key={`${c.id}-${c.appliedAt}`}
+                  className="nri-cyber__chip warn"
+                  title={c.notes ?? c.label}
+                >
+                  <span className="nri-cyber__chip-k">{c.label}</span>
+                  {dur ? <span className="nri-cyber__chip-v">{dur}</span> : null}
+                </span>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {installedAugs.length > 0 && (
+        <section className="nri-inventory__status nri-inventory__status--chrome" aria-label="Установленный хром">
+          <span className="nri-inventory__status-label mono-text">Хром (снятие ↓ психоз)</span>
+          <ul className="nri-inventory__aug-list">
+            {installedAugs.map((a) => (
+              <li key={a.itemId}>
+                <span>
+                  {a.name} · {CYBER_SLOT_LABELS[a.slot as CyberSlot] ?? a.slot} · BT {a.bloodTox}
+                </span>
+                <button
+                  type="button"
+                  className="nri-inventory__more"
+                  disabled={busy === a.itemId || !user?.id}
+                  onClick={() => void uninstallCyber(a.itemId)}
+                >
+                  отключить
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <ul className="nri-inventory__list">
-        {inventory.map((item) => (
-          <li key={item.id} className={`nri-inventory__item ${item.equipped ? 'equipped' : ''}`}>
-            <div className="nri-inventory__item-icon">{slotIcon(item)}</div>
-            <div className="nri-inventory__item-body">
-              <strong>
-                {item.name}
-                {item.qty && item.qty > 1 ? ` ×${item.qty}` : ''}
-                {item.equipped && <span className="nri-inventory__badge">ЭКИП</span>}
-                {!canTransferInventoryItem(item) && <span className="nri-inventory__badge">ПЕРСОН.</span>}
-              </strong>
-              <p className="mono-text opacity-70">{item.blurb}</p>
-              {item.inscribedName && <p className="mono-text opacity-60">Вписано имя: {item.inscribedName}</p>}
-              <p className="mono-text nri-inventory__mods">{itemModsLine(item)}</p>
-            </div>
-            {canEquipItem(item) && (
-              <button
-                type="button"
-                className={`nri-inventory__equip ${item.equipped ? 'active' : ''}`}
-                disabled={busy === item.id}
-                onClick={() => toggleEquip(item.id)}
-              >
-                <Zap size={14} />
-                {item.equipped ? 'Снять' : 'Надеть'}
-              </button>
-            )}
-            {canUseItem(item) && (
-              <button
-                type="button"
-                className="nri-inventory__equip"
-                disabled={busy === item.id}
-                onClick={() => useItem(item)}
-              >
-                <Zap size={14} />
-                Использовать
-              </button>
-            )}
-            {canInstallCyber(item) && (
-              <button
-                type="button"
-                className="nri-inventory__equip"
-                disabled={busy === item.id || !user?.id}
-                onClick={() => installCyber(item)}
-              >
-                <Zap size={14} />
-                Установить
-              </button>
-            )}
-            {canInscribeInventoryItem(item) && (
-              <button
-                type="button"
-                className="nri-inventory__equip"
-                disabled={busy === item.id}
-                onClick={() => void inscribeItem(item)}
-              >
-                <Zap size={14} />
-                Вписать имя
-              </button>
-            )}
-          </li>
-        ))}
+        {inventory.map((item) => {
+          const chips = itemModChips(item);
+          const open = !!expanded[item.id];
+          const cat = item.catalogId ? getCatalogItem(item.catalogId) : undefined;
+          return (
+            <li key={item.id} className={`nri-inventory__item ${item.equipped ? 'equipped' : ''}`}>
+              <div className="nri-inventory__item-icon">{slotIcon(item)}</div>
+              <div className="nri-inventory__item-body">
+                <div className="nri-inventory__item-title-row">
+                  <strong>
+                    {item.name}
+                    {item.qty && item.qty > 1 ? ` ×${item.qty}` : ''}
+                  </strong>
+                  {item.equipped && <span className="nri-inventory__badge">ЭКИП</span>}
+                  {!canTransferInventoryItem(item) && (
+                    <span className="nri-inventory__badge">ПЕРСОН.</span>
+                  )}
+                  {cat && (
+                    <span className="nri-inventory__badge nri-inventory__badge--muted">
+                      {ITEM_CATEGORY_LABELS[cat.category] ?? cat.category}
+                    </span>
+                  )}
+                  {item.blurb && (
+                    <button
+                      type="button"
+                      className="nri-inventory__more"
+                      onClick={() => setExpanded((e) => ({ ...e, [item.id]: !open }))}
+                    >
+                      {open ? 'свернуть' : 'ещё'}
+                    </button>
+                  )}
+                </div>
+                {chips.length > 0 ? (
+                  <div className="nri-cyber__chip-row">
+                    {chips.map((row, i) => (
+                      <span key={`${row.k}-${row.v}-${i}`} className="nri-cyber__chip" title={row.k}>
+                        <span className="nri-cyber__chip-k">{row.k}</span>
+                        <span className="nri-cyber__chip-v">{row.v}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mono-text opacity-50 nri-inventory__mods">без боевых бонусов</p>
+                )}
+                {open && item.blurb && <p className="mono-text opacity-70">{item.blurb}</p>}
+                {item.inscribedName && (
+                  <p className="mono-text opacity-60">Вписано: {item.inscribedName}</p>
+                )}
+              </div>
+              <div className="nri-inventory__actions">
+                {canEquipItem(item) && (
+                  <button
+                    type="button"
+                    className={`nri-inventory__equip ${item.equipped ? 'active' : ''}`}
+                    disabled={busy === item.id}
+                    onClick={() => toggleEquip(item.id)}
+                  >
+                    <Zap size={14} />
+                    {item.equipped ? 'Снять' : 'Надеть'}
+                  </button>
+                )}
+                {canUseItem(item) && (
+                  <button
+                    type="button"
+                    className="nri-inventory__equip"
+                    disabled={busy === item.id}
+                    onClick={() => useItem(item)}
+                  >
+                    <Zap size={14} />
+                    Использовать
+                  </button>
+                )}
+                {canInstallCyber(item) && (
+                  <button
+                    type="button"
+                    className="nri-inventory__equip"
+                    disabled={busy === item.id || !user?.id}
+                    onClick={() => installCyber(item)}
+                  >
+                    <Zap size={14} />
+                    Установить
+                  </button>
+                )}
+                {canInscribeInventoryItem(item) && (
+                  <button
+                    type="button"
+                    className="nri-inventory__equip"
+                    disabled={busy === item.id}
+                    onClick={() => void inscribeItem(item)}
+                  >
+                    <Zap size={14} />
+                    Вписать имя
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
         {inventory.length === 0 && (
           <li className="mono-text opacity-50 nri-inventory__empty">Пусто — мастер выдаст лут с каталога.</li>
         )}
@@ -309,10 +437,12 @@ export const NriInventoryPanel: React.FC<Props> = ({
             Предмет уходит в личку игроку. Сюжетные вещи с тегом «мастер» — во вкладке «Инвентарь мастера».
           </p>
 
-          <div className="nri-inventory__category-tabs">
+          <div className="nri-people-subtabs nri-inventory__category-tabs" role="tablist" aria-label="Категории каталога">
             <button
               type="button"
-              className={`nri-people-subtabs__btn ${category === 'all' ? 'active' : ''}`}
+              role="tab"
+              aria-selected={category === 'all'}
+              className={category === 'all' ? 'active' : ''}
               onClick={() => setCategory('all')}
             >
               Все
@@ -321,7 +451,9 @@ export const NriInventoryPanel: React.FC<Props> = ({
               <button
                 key={cat}
                 type="button"
-                className={`nri-people-subtabs__btn ${category === cat ? 'active' : ''}`}
+                role="tab"
+                aria-selected={category === cat}
+                className={category === cat ? 'active' : ''}
                 onClick={() => setCategory(cat)}
               >
                 {ITEM_CATEGORY_LABELS[cat]}
@@ -363,28 +495,45 @@ export const NriInventoryPanel: React.FC<Props> = ({
                 placeholder="Поиск в каталоге…"
               />
             </label>
-            <select
-              className="nri-inventory__catalog-select"
-              value={catalogPick}
-              onChange={(e) => setCatalogPick(e.target.value)}
-            >
-              {category === 'all'
-                ? ITEM_CATEGORY_ORDER.map((cat) => {
-                    const items = catalog.filter((c) => c.category === cat);
-                    if (!items.length) return null;
-                    return (
-                      <optgroup key={cat} label={ITEM_CATEGORY_LABELS[cat]}>
-                        {catalogOptions(items)}
-                      </optgroup>
-                    );
-                  })
-                : catalogOptions(catalog)}
-            </select>
+          </div>
+
+          <div className="nri-inventory__catalog-grid" role="listbox" aria-label="Каталог">
+            {catalog.slice(0, 48).map((c) => {
+              const chips = catalogGlanceChips(c);
+              const selected = catalogPick === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={`nri-inventory__catalog-card ${selected ? 'is-selected' : ''}`}
+                  onClick={() => setCatalogPick(c.id)}
+                  title={c.blurb}
+                >
+                  <span className="nri-inventory__catalog-card-name">{c.name}</span>
+                  <div className="nri-cyber__chip-row">
+                    {chips.slice(0, 4).map((row, i) => (
+                      <span key={`${row.k}-${i}`} className="nri-cyber__chip">
+                        <span className="nri-cyber__chip-k">{row.k}</span>
+                        <span className="nri-cyber__chip-v">{row.v}</span>
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+            {catalog.length === 0 && (
+              <p className="mono-text opacity-50">Ничего не найдено.</p>
+            )}
+          </div>
+
+          <div className="nri-inventory__grant-row">
             <NriCatalogItemPreview catalogId={catalogPick} />
             <button
               type="button"
               className="nri-vault__send-btn"
-              disabled={busy === 'grant' || !grantTarget}
+              disabled={busy === 'grant' || !grantTarget || !catalogPick}
               onClick={grantToPlayer}
             >
               Выдать игроку

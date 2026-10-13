@@ -5,7 +5,9 @@ import type { ConditionId } from './nriConditions';
 
 export type ConsumeEffectSpec = {
   conditions?: ConditionId[];
+  removeConditions?: ConditionId[];
   conditionRounds?: number;
+  conditionMinutes?: number;
   hpHeal?: number;
   hpDamage?: number;
   bloodToxDelta?: number;

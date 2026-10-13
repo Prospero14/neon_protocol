@@ -79,7 +79,7 @@ export const NriPersonalDossierPanel: React.FC<Props> = ({
   );
 
   return (
-    <div className="nri-dossier">
+    <div className="nri-dossier nri-deck-module">
       <header className="nri-chars__head">
         <h3 className="mono-text">Личное дело</h3>
         <p className="mono-text opacity-70">

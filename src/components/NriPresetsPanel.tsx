@@ -21,6 +21,8 @@ import {
   archetypeForClass,
   buildFullCharacter,
   ensureCompleteSheet,
+  finalizeCharacterSheet,
+  isPlayableSheet,
   sheetHpForLevel,
   sheetToMetaDraft,
   type CharacterMetaDraft,
@@ -30,6 +32,7 @@ import { blueprintToInventoryItem, type CyberBlueprint } from '../logic/nriCyber
 import { parseNriSheet, type NriSheetData } from '../logic/nriNpcGenerator';
 import type { NriInventoryItem } from '../logic/nriInventory';
 import { NriCharacterMetaForm } from './NriCharacterMetaForm';
+import { NriCharacterPortraitCard } from './NriCharacterPortraitCard';
 import { NriCharacterSheetContent } from './NriCharacterSheetContent';
 import { NriCharacterSheet } from './NriCharacterSheet';
 import { NriSkillPickField } from './NriSkillPickField';
@@ -50,8 +53,11 @@ type PendingPreset = {
 
 function cyberProductToItem(p: NriCyberProduct): NriInventoryItem | null {
   const bp = p.blueprint as CyberBlueprint | null;
-  if (!bp?.partIds) return null;
-  const item = blueprintToInventoryItem(bp) as NriInventoryItem;
+  if (!bp || !Array.isArray(bp.partIds)) return null;
+  const item = blueprintToInventoryItem({
+    ...bp,
+    partIds: bp.partIds.filter((id): id is string => typeof id === 'string'),
+  }) as NriInventoryItem;
   return { ...item, id: `cyber_preset_${p.id}` };
 }
 
@@ -104,7 +110,10 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   };
 
   const startEdit = (p: NriPresetCharacter) => {
-    const completed = ensureCompleteSheet(p.sheet, p.classId as NriClassId, p.label);
+    const completed =
+      isPlayableSheet(p.sheet)
+        ? (parseNriSheet(p.sheet) as NriSheetData)
+        : ensureCompleteSheet(p.sheet, p.classId as NriClassId, p.label);
     const sheet = parseNriSheet(completed) ?? completed;
     setEditId(p.id);
     setEditLabel(p.label);
@@ -133,14 +142,14 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     setErr(null);
     const patched = await nriPatchPreset(authToken, inviteCode, editId, {
       label: editLabel.trim(),
-      sheet: {
+      sheet: finalizeCharacterSheet({
         ...applyLevelProgressToSheet(
           applyMetaToSheet(baseSheet, editMeta),
           presetClass,
           editMeta.level ?? baseSheet.level
         ),
         skillProficiencies: editSkills,
-      },
+      }),
     });
     setBusy(false);
     if (!patched.ok) {
@@ -156,13 +165,22 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     cid: NriClassId,
     origin: NriOriginId,
     activity: CharacterMetaDraft['activityId'],
-    skills: string[]
+    skills: string[],
+    keep?: Partial<CharacterMetaDraft> & { label?: string; portraitUrl?: string; publishedToPlayers?: boolean }
   ): PendingPreset => {
     const built = buildFullCharacter({
       classId: cid,
       originId: origin ?? 'neo_tokyo',
       activityId: activity ?? 'street',
-      archetypeId: archetypeForClass(cid),
+      archetypeId: keep?.npcArchetypeId ?? archetypeForClass(cid),
+      characterName: keep?.characterName?.trim() || undefined,
+      nickname: keep?.nickname,
+      level: keep?.level ?? 1,
+      career: keep?.career,
+      age: keep?.age,
+      yearsServed: keep?.yearsServed,
+      streetInfluence: keep?.streetInfluence,
+      corporateInfluence: keep?.corporateInfluence,
       skillProficiencies: filterSkillsToClassPool(cid, skills).length
         ? filterSkillsToClassPool(cid, skills)
         : defaultSkillsForClass(cid),
@@ -175,13 +193,17 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     const clsName = NRI_CLASSES.find((c) => c.id === cid)?.name ?? cid;
     return {
       key: `gen-${Date.now()}`,
-      label: seed?.label ?? `${clsName} — ${built.meta.characterName}`,
+      label: keep?.label?.trim() || seed?.label || `${clsName} — ${built.meta.characterName}`,
       classId: cid,
       sheet,
-      inventory: seed && Array.isArray(seed.inventory) ? [...seed.inventory] : [],
-      meta: { ...built.meta, level: 1 },
-      portraitUrl: '',
-      publishedToPlayers: true,
+      inventory: Array.isArray(built.inventory) ? built.inventory : [],
+      meta: {
+        ...built.meta,
+        level: keep?.level ?? 1,
+        factionId: keep?.factionId ?? null,
+      },
+      portraitUrl: keep?.portraitUrl ?? '',
+      publishedToPlayers: keep?.publishedToPlayers ?? true,
     };
   };
 
@@ -199,7 +221,13 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
         pendingPreset.classId,
         pendingPreset.meta.originId ?? 'neo_tokyo',
         pendingPreset.meta.activityId ?? 'street',
-        pendingPreset.sheet.skillProficiencies ?? defaultSkillsForClass(pendingPreset.classId)
+        pendingPreset.sheet.skillProficiencies ?? defaultSkillsForClass(pendingPreset.classId),
+        {
+          ...pendingPreset.meta,
+          label: pendingPreset.label,
+          portraitUrl: pendingPreset.portraitUrl,
+          publishedToPlayers: pendingPreset.publishedToPlayers,
+        }
       )
     );
   };
@@ -214,14 +242,14 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
     }
     setBusy(true);
     setErr(null);
-    const finalSheet = {
+    const finalSheet = finalizeCharacterSheet({
       ...applyLevelProgressToSheet(
         applyMetaToSheet(pendingPreset.sheet, pendingPreset.meta),
         pendingPreset.classId,
         pendingPreset.meta.level ?? pendingPreset.sheet.level
       ),
       skillProficiencies: skills,
-    };
+    });
     const res = await nriCreatePreset(authToken, inviteCode, {
       label: pendingPreset.label.trim(),
       classId: pendingPreset.classId,
@@ -246,18 +274,18 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   const switchPendingClass = (cid: NriClassId) => {
     setPendingPreset((prev) => {
       if (!prev) return prev;
-      const next = buildPendingPreset(
+      return buildPendingPreset(
         cid,
         prev.meta.originId ?? 'neo_tokyo',
         prev.meta.activityId ?? 'street',
         defaultSkillsForClass(cid),
+        {
+          ...prev.meta,
+          label: prev.label,
+          portraitUrl: prev.portraitUrl,
+          publishedToPlayers: prev.publishedToPlayers,
+        }
       );
-      return {
-        ...next,
-        label: prev.label,
-        portraitUrl: prev.portraitUrl,
-        publishedToPlayers: prev.publishedToPlayers,
-      };
     });
   };
 
@@ -268,13 +296,13 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
   return (
     <div className="nri-presets">
       {showGen && (
-      <header className="nri-chars__head">
-        <h3 className="mono-text">Персонажи для игроков</h3>
-        <p className="mono-text opacity-70">
+      <header className="nri-chars__head nri-deck-sheet__head-block">
+        <h3 className="nri-deck-sheet__title">Персонажи для игроков</h3>
+        <p className="mono-text opacity-70 nri-deck-module__hint">
           Черновики видны только мастеру. Опубликуйте — игрок выберет чарник и введёт имя при входе.
         </p>
-        <button type="button" className="nri-modal__submit" disabled={busy || !!pendingPreset} onClick={startWizard}>
-          <Plus size={14} /> Сгенерировать персонажа (редактировать → сохранить)
+        <button type="button" className="nri-modal__submit nri-deck-cta" disabled={busy || !!pendingPreset} onClick={startWizard}>
+          <Plus size={14} /> Сгенерировать персонажа
         </button>
       </header>
       )}
@@ -291,6 +319,13 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
       {showGen && pendingPreset && (
         <div className="nri-presets__wizard">
           <h4 className="mono-text">Новый персонаж: {pendingPreset.label}</h4>
+          <NriCharacterPortraitCard
+            classId={pendingPreset.classId}
+            characterName={pendingPreset.meta.characterName ?? pendingPreset.label}
+            portraitUrl={pendingPreset.portraitUrl || null}
+            editable
+            onPortraitChange={(url) => updatePending({ portraitUrl: url ?? '' })}
+          />
           <div className="nri-class-grid nri-class-grid--compact">
             {NRI_CLASSES.map((c) => (
               <button
@@ -331,13 +366,6 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
               )
             }
           />
-          <label className="nri-modal__field">
-            <span>Портрет (URL)</span>
-            <input
-              value={pendingPreset.portraitUrl}
-              onChange={(e) => updatePending({ portraitUrl: e.target.value })}
-            />
-          </label>
           {cyberDrafts.length > 0 && (
             <div className="nri-presets__cyber-pick">
               <span className="mono-text">Импланты из черновиков:</span>
@@ -382,6 +410,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
               sheet: applyMetaToSheet(pendingPreset.sheet, pendingPreset.meta),
               portraitUrl: pendingPreset.portraitUrl || null,
             }}
+            gmView
           />
           <div className="nri-presets__actions">
             <button type="button" className="nri-lobby__copy" disabled={busy} onClick={rerollPending}>
@@ -488,6 +517,7 @@ export const NriPresetsPanel: React.FC<Props> = ({ inviteCode, mode = 'full' }) 
             sheet: preview.sheet,
             portraitUrl: preview.portraitUrl,
           }}
+          gmView
           onClose={() => setPreviewId(null)}
         />
       )}

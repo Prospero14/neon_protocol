@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, FileText, Megaphone, Send, MessageSquare, Shield, Users } from 'lucide-react';
+import { Bot, FileText, Megaphone, Send, MessageSquare, Shield, Smile, Users } from 'lucide-react';
+import { CHAT_GLYPH_TABS, type ChatGlyphTabId } from '../../logic/nriChatGlyphs';
+import { requestOpenDm } from '../../logic/nriPsychosis';
 import { useAuth } from '../../logic/AuthContext';
 import { readNeonAuthToken } from '../../logic/authTokenStorage';
 import {
@@ -36,6 +38,7 @@ import { LoreCardPopup } from '../LoreCardPopup';
 import { parseItemTransferPayload, nriItemStatsLine } from '../../logic/nriItemDisplay';
 import { SPAM_BOT_LABEL, SPAM_BOT_USERNAME, spamMessageVariant } from '../../logic/spamBotMeta';
 import { NriFilePopup } from '../NriFilePopup';
+import { inventoryHasDeck } from '../../../shared/nri-domain/iceCounterHack';
 import { NriDmItemTransfer } from '../NriDmItemTransfer';
 import { NriHostAlertsStrip } from '../NriHostAlertsStrip';
 import { NriCharacterSheet } from '../NriCharacterSheet';
@@ -80,6 +83,8 @@ type Props = {
   liveDialogEndedAt?: number | null;
   onLiveDialogToggle?: (enabled: boolean) => void;
   onEndLiveDialog?: () => void;
+  /** Сразу открыть личку с этим userId (попап звонка). */
+  initialDmUserId?: string;
 };
 
 function ItemTransferMessage({
@@ -267,6 +272,7 @@ export const NeonChatPanel: React.FC<Props> = ({
   liveDialogEndedAt = null,
   onLiveDialogToggle,
   onEndLiveDialog,
+  initialDmUserId,
 }) => {
   const { token, user } = useAuth();
   const [rooms, setRooms] = useState<ChatRoomSummary[]>([]);
@@ -274,6 +280,8 @@ export const NeonChatPanel: React.FC<Props> = ({
   const [tableChannel, setTableChannel] = useState<TableChannel>('table');
   const [activeDmUserId, setActiveDmUserId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [glyphOpen, setGlyphOpen] = useState(false);
+  const [glyphTab, setGlyphTab] = useState<ChatGlyphTabId>('neon');
   const [participants, setParticipants] = useState<ChatParticipant[]>([]);
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [input, setInput] = useState('');
@@ -297,6 +305,7 @@ export const NeonChatPanel: React.FC<Props> = ({
   const [revealedNpcIds, setRevealedNpcIds] = useState<Set<string>>(() => new Set());
   const [liveDialogMsg, setLiveDialogMsg] = useState<ChatMessage | null>(null);
   const [liveDialogInterference, setLiveDialogInterference] = useState(false);
+  const [hostPreviewDismissedId, setHostPreviewDismissedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (liveDialogEnabled) {
@@ -304,6 +313,7 @@ export const NeonChatPanel: React.FC<Props> = ({
       setRevealedNpcIds(new Set());
       setLiveDialogMsg(null);
       setLiveDialogInterference(false);
+      setHostPreviewDismissedId(null);
     }
   }, [liveDialogEnabled]);
 
@@ -384,13 +394,24 @@ export const NeonChatPanel: React.FC<Props> = ({
     setLiveDialogInterference(true);
   }, [liveDialogMsg, isTableHost, messages, liveDialogEndedAt, revealedNpcIds]);
 
+  /** Мастер: последнее НПС-сообщение стола (не режем по since — иначе превью «пустое» после включения). */
   const hostPreviewMsg = useMemo(() => {
     if (!liveDialogEnabled || liveDialogEndedAt != null || !isTableHost || tableChannel !== 'table') {
       return null;
     }
-    const queue = npcLiveDialogQueue(messages, liveDialogSinceRef.current);
-    return queue.length ? queue[queue.length - 1]! : null;
-  }, [messages, liveDialogEnabled, liveDialogEndedAt, isTableHost, tableChannel]);
+    const npcMsgs = messages.filter((m) => m.isNpc).sort((a, b) => a.ts - b.ts);
+    const latest = npcMsgs.length ? npcMsgs[npcMsgs.length - 1]! : null;
+    if (!latest) return null;
+    if (hostPreviewDismissedId === latest.id) return null;
+    return latest;
+  }, [
+    messages,
+    liveDialogEnabled,
+    liveDialogEndedAt,
+    isTableHost,
+    tableChannel,
+    hostPreviewDismissedId,
+  ]);
 
   const authToken = readNeonAuthToken() ?? token;
   const canSendFiles = vaultFiles.length > 0;
@@ -604,6 +625,43 @@ export const NeonChatPanel: React.FC<Props> = ({
     setActiveRoomId(room.id);
     await refreshRooms();
   };
+
+  useEffect(() => {
+    const onOpenDm = (ev: Event) => {
+      const detail = (ev as CustomEvent<{ userId?: string; popup?: boolean }>).detail;
+      const userId = detail?.userId;
+      /* popup:true обслуживает NriDmCallPopup — не дублируем во вкладке */
+      if (!userId || !authToken || detail?.popup !== false) return;
+      void (async () => {
+        const room = await chatOpenDm(authToken, userId);
+        if (!room) return;
+        setShowDmList(false);
+        setTableChannel('dm');
+        setActiveDmUserId(userId);
+        setActiveRoomId(room.id);
+        await refreshRooms();
+      })();
+    };
+    window.addEventListener('neon:open-dm', onOpenDm);
+    return () => window.removeEventListener('neon:open-dm', onOpenDm);
+  }, [authToken, refreshRooms]);
+
+  useEffect(() => {
+    if (!initialDmUserId || !authToken) return;
+    let cancelled = false;
+    void (async () => {
+      const room = await chatOpenDm(authToken, initialDmUserId);
+      if (cancelled || !room) return;
+      setShowDmList(false);
+      setTableChannel('dm');
+      setActiveDmUserId(initialDmUserId);
+      setActiveRoomId(room.id);
+      await refreshRooms();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialDmUserId, authToken, refreshRooms]);
 
   const switchToTable = () => {
     setTableChannel('table');
@@ -934,13 +992,24 @@ export const NeonChatPanel: React.FC<Props> = ({
             <span className="neon-chat-speaker-select__label">Кому</span>
             <select
               className="neon-chat-npc-dm-select"
-              value={composeToUserId ?? ''}
-              onChange={(e) => setComposeToUserId(e.target.value || null)}
+              value=""
+              onChange={(e) => {
+                const uid = e.target.value;
+                if (!uid) {
+                  setComposeToUserId(null);
+                  return;
+                }
+                const label =
+                  effectiveDmRecipients.find((r) => r.userId === uid)?.label ?? uid;
+                /* Попап лички — без смены вкладки «Чат» / «ЛИЧКА» */
+                requestOpenDm(uid, { label, popup: true });
+                setComposeToUserId(null);
+              }}
             >
               <option value="">Стол (все)</option>
               {effectiveDmRecipients.map((r) => (
                 <option key={r.userId} value={r.userId}>
-                  {r.label}
+                  {r.label} · личка
                 </option>
               ))}
             </select>
@@ -995,6 +1064,11 @@ export const NeonChatPanel: React.FC<Props> = ({
           ✕ Завершить диалог
         </button>
       )}
+      {isTableHost && liveDialogEnabled && tableChannel === 'table' && (
+        <p className="mono-text neon-chat-live-dialog-hint">
+          Личка игроку — через «Кому» (откроется попап). Живой диалог ловит НПС только на «Стол (все)».
+        </p>
+      )}
       {canSendFiles && (
         <button
           type="button"
@@ -1005,6 +1079,16 @@ export const NeonChatPanel: React.FC<Props> = ({
           <FileText size={18} />
         </button>
       )}
+      <button
+        type="button"
+        className={`neon-chat-glyph-toggle ${glyphOpen ? 'active' : ''}`}
+        onClick={() => setGlyphOpen((v) => !v)}
+        aria-label="Неон и иероглифы"
+        aria-expanded={glyphOpen}
+        title="Неон / иероглифы"
+      >
+        <Smile size={18} />
+      </button>
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}
@@ -1015,6 +1099,35 @@ export const NeonChatPanel: React.FC<Props> = ({
       <button type="button" onClick={send} aria-label="Отправить">
         <Send size={18} />
       </button>
+      {glyphOpen && (
+        <div className="neon-chat-glyphs" role="dialog" aria-label="Глифы">
+          <div className="neon-chat-glyphs__tabs">
+            {CHAT_GLYPH_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={glyphTab === tab.id ? 'active' : ''}
+                onClick={() => setGlyphTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="neon-chat-glyphs__grid">
+            {(CHAT_GLYPH_TABS.find((t) => t.id === glyphTab)?.chars ?? []).map((ch) => (
+              <button
+                key={`${glyphTab}-${ch}`}
+                type="button"
+                className="neon-chat-glyphs__char"
+                onClick={() => setInput((prev) => (prev.length + ch.length <= 500 ? prev + ch : prev))}
+                title={ch}
+              >
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1176,20 +1289,20 @@ export const NeonChatPanel: React.FC<Props> = ({
             {dmTransferBar}
             {isTableHost && tableChannel === 'table' && (
               <div className="neon-chat-history-bar mono-text">
-                <label>
-                  <span className="opacity-70">Архив чата</span>
-                  <input
-                    type="date"
-                    value={historyDay}
-                    onChange={(e) => setHistoryDay(e.target.value)}
-                  />
-                </label>
-                <button type="button" className="nri-lobby__copy" onClick={() => void restoreChatForDay()}>
-                  Восстановить за дату
+                <span className="neon-chat-history-bar__label">Архив</span>
+                <input
+                  type="date"
+                  className="neon-chat-history-bar__date"
+                  value={historyDay}
+                  onChange={(e) => setHistoryDay(e.target.value)}
+                  aria-label="Дата архива"
+                />
+                <button type="button" className="nri-lobby__copy neon-chat-history-bar__btn" onClick={() => void restoreChatForDay()}>
+                  За дату
                 </button>
                 {historyMode && (
-                  <button type="button" className="nri-lobby__copy" onClick={returnToLiveChat}>
-                    К текущему чату
+                  <button type="button" className="nri-lobby__copy neon-chat-history-bar__btn" onClick={returnToLiveChat}>
+                    Live
                   </button>
                 )}
               </div>
@@ -1266,6 +1379,7 @@ export const NeonChatPanel: React.FC<Props> = ({
         <NriCharacterSheet
           title={speakerNpcProfile.displayName}
           profile={speakerNpcProfile}
+          gmView={!!isTableHost}
           onClose={() => setShowSpeakerSheet(false)}
         />
       )}
@@ -1275,6 +1389,7 @@ export const NeonChatPanel: React.FC<Props> = ({
           fileId={openFileId}
           fileTitle={openFileMeta?.title}
           fileProtected={openFileMeta?.protected}
+          hasDeck={!!isTableHost || inventoryHasDeck(nriProfile?.inventory)}
           onClose={() => {
             setOpenFileId(null);
             setOpenFileMeta(null);
@@ -1293,7 +1408,8 @@ export const NeonChatPanel: React.FC<Props> = ({
         <NriLiveDialogPopup
           message={hostPreviewMsg}
           variant="mini"
-          onNext={() => {}}
+          preview
+          onNext={() => setHostPreviewDismissedId(hostPreviewMsg.id)}
           tableNpcs={tableNpcs}
         />
       )}

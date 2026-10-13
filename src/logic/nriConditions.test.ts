@@ -56,4 +56,20 @@ describe('nriConditions', () => {
     expect(mods.DEX).toBe(-2); // mild -1 + exhausted_2 DEX -1
     expect(mods.STR).toBe(-1);
   });
+
+  it('alcohol defaultMinutes sets expiresAt; prune restores DEX on sheet', () => {
+    const mild = conditionFromDef('intoxicated_mild');
+    expect(mild.expiresAt).toBeGreaterThan(Date.now());
+    const live = applyConditionsToSheet({
+      ...baseSheet(),
+      activeConditions: [mild],
+    });
+    expect(live.abilities.DEX).toBe(13);
+    const expired = applyConditionsToSheet({
+      ...baseSheet(),
+      activeConditions: [{ ...mild, expiresAt: Date.now() - 1 }],
+    });
+    expect(expired.activeConditions).toHaveLength(0);
+    expect(expired.abilities.DEX).toBe(14);
+  });
 });

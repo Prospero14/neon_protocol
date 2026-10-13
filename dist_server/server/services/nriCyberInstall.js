@@ -1,5 +1,6 @@
 /** Серверная установка киберимплантов (зеркало src/logic/nriCyberInstall.ts). */
 import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos.js';
+import { syncPsychosisFlags } from '../../shared/nri-domain/psychosisLogic.js';
 const FUNCTIONAL_SLOTS = ['arm', 'leg', 'head', 'torso', 'internal', 'neural', 'external', 'sensor'];
 function abilityMod(score) {
     if (score <= 7)
@@ -96,7 +97,32 @@ export function tryInstallCyberItem(sheetRaw, inventoryRaw, itemId) {
         bloodToxCurrent: nextBt,
         bloodToxLimit: limit,
     };
-    const newSheet = markPendingHoloTattooAfterInstall(installedSheet, item);
+    const newSheet = syncPsychosisFlags(markPendingHoloTattooAfterInstall(installedSheet, item));
+    return { ok: true, sheet: newSheet, inventory };
+}
+export function tryUninstallCyberItem(sheetRaw, inventoryRaw, itemId) {
+    const sheet = parseSheet(sheetRaw);
+    const installed = sheet.augmentations ?? [];
+    const aug = installed.find((a) => a.itemId === itemId);
+    if (!aug)
+        return { ok: false, reason: 'Имплант не установлен.' };
+    const inventory = Array.isArray(inventoryRaw) ? [...inventoryRaw] : [];
+    inventory.push({
+        id: aug.itemId,
+        name: aug.name,
+        kind: 'cyberware',
+        blurb: aug.blurb,
+        acBonus: aug.acBonus,
+        c2185Mods: aug.c2185Mods,
+        cyber: aug.cyber,
+        qty: 1,
+    });
+    const newAug = installed.filter((a) => a.itemId !== itemId);
+    const newSheet = syncPsychosisFlags({
+        ...sheet,
+        augmentations: newAug,
+        bloodToxCurrent: newAug.reduce((s, a) => s + (a.bloodTox ?? 0), 0),
+    });
     return { ok: true, sheet: newSheet, inventory };
 }
 //# sourceMappingURL=nriCyberInstall.js.map

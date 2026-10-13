@@ -2094,7 +2094,7 @@ export const NriCityMapPanel: React.FC<Props> = ({
 
 
   return (
-    <div className="nri-city-map">
+    <div className="nri-city-map nri-deck-module">
       <header className="nri-city-map__head">
         <MapPin size={18} />
         <div>

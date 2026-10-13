@@ -30,7 +30,7 @@ import { useIcePressure } from './useIcePressure';
 
 type Props = {
   params: IceGameParams;
-  onWin: () => void;
+  onWin: (meta?: { qualityPct: number; tracePct: number }) => void;
   onFail: () => void;
 };
 
@@ -384,8 +384,14 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
         maxMistakes={params.maxMistakes}
       />
       <IceMiniHint pulse={!started}>
-        {started ? 'Чередуй строку ↔ столбец · собери TARGET' : 'Первый код — только верхняя строка'}
+        {started
+          ? `Нужен код ${run.target[step] ?? '??'} · двигайся только по ${step % 2 === 1 ? 'СТОЛБЦУ' : 'СТРОКЕ'} от последней клетки`
+          : 'Не угадывай вслепую: справа TARGET. Первый клик — только верхняя строка, дальше чередуй ось.'}
       </IceMiniHint>
+      <p className="mono-text ice-mini__breach-axis">
+        AXIS :: {!started || step === 0 ? 'ROW 0 (top)' : step % 2 === 1 ? 'COLUMN' : 'ROW'} · next{' '}
+        {run.target[step] ?? '—'}
+      </p>
       <div className="ice-mini__breach-layout">
         <div className="ice-mini__breach-matrix">
           {matrix.map((row, r) => (
@@ -393,11 +399,12 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
               {row.map((code, c) => {
                 const allowed = breachPickAllowed(r, c, step, lastPick);
                 const picked = lastPick?.row === r && lastPick.col === c;
+                const isNext = allowed && code === run.target[step];
                 return (
                   <button
                     key={`${r}-${c}`}
                     type="button"
-                    className={`ice-mini__breach-cell ${allowed ? 'ice-mini__breach-cell--ok' : ''} ${picked ? 'ice-mini__breach-cell--picked' : ''}`}
+                    className={`ice-mini__breach-cell ${allowed ? 'ice-mini__breach-cell--ok' : ''} ${picked ? 'ice-mini__breach-cell--picked' : ''} ${isNext ? 'ice-mini__breach-cell--hint' : ''}`}
                     disabled={!allowed}
                     onClick={() => pick(r, c)}
                   >
@@ -409,7 +416,7 @@ export const BreachMatrixGame: React.FC<Props> = ({ params, onWin, onFail }) => 
           ))}
         </div>
         <div className="ice-mini__breach-side">
-          <span className="mono-text ice-mini__breach-label">TARGET</span>
+          <span className="mono-text ice-mini__breach-label">TARGET (собери по порядку)</span>
           <ul className="ice-mini__breach-target mono-text">
             {run.target.map((code, i) => (
               <li key={i} className={i < step ? 'done' : i === step ? 'active' : ''}>
@@ -816,22 +823,26 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
       const texts = threat
         ? ['AUDIT_HOOK :: corp trace', 'SIEM_ALERT :: exfil sig', 'CORP_SEC :: node ping', 'ICE_PROBE :: active']
         : ['kernel: ok', 'sshd: session open', 'cron: daily', 'nginx: 200 GET /'];
-      setLines((prev) => [
-        ...prev.slice(-7),
-        { id: idRef.current++, text: texts[Math.floor(Math.random() * texts.length)], threat },
-      ]);
+      setLines((prev) => {
+        const next = [
+          ...prev,
+          { id: idRef.current++, text: texts[Math.floor(Math.random() * texts.length)]!, threat },
+        ];
+        // Держим окно стабильным: старые уходят сверху, без «обрезания» снизу.
+        return next.slice(-6);
+      });
     }, Math.max(500, 1100 - params.traceSpeed * 150));
     return () => clearInterval(spawnIv);
   }, [params.traceSpeed]);
 
   useEffect(() => {
-    // Age-out: only the oldest line can escape as a miss — not random 15%/tick.
+    // Age-out threat: если красная слишком долго сверху списка — miss.
     const fallIv = setInterval(() => {
       if (doneRef.current) return;
       setLines((prev) => {
         if (prev.length === 0) return prev;
         const aged = prev[0]!;
-        if (aged.threat && prev.length >= 6) {
+        if (aged.threat && prev.length >= 5) {
           setMistakes((m) => {
             const nm = m + 1;
             if (nm > params.maxMistakes) settleFail();
@@ -839,9 +850,9 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
           });
           return prev.slice(1);
         }
-        return prev.length > 8 ? prev.slice(1) : prev;
+        return prev;
       });
-    }, 1100);
+    }, 1400);
     return () => clearInterval(fallIv);
   }, [params.maxMistakes, settleFail]);
 
@@ -896,62 +907,78 @@ export const LogWipeGame: React.FC<Props> = ({ params, onWin, onFail }) => {
 };
 
 const AUTH_WORDS: { word: string; hint: string }[] = [
-  { word: 'root', hint: 'слишком очевидно' },
-  { word: 'дека', hint: 'левое железо' },
-  { word: 'ice', hint: 'холодный протокол' },
-  { word: 'net', hint: 'сеть без www' },
-  { word: 'run', hint: 'бег по кабелю' },
-  { word: 'брут', hint: 'грубая сила' },
-  { word: 'токен', hint: 'не JWT' },
-  { word: 'взлом', hint: 'легально, честно' },
-  { word: 'хакер', hint: 'классика' },
-  { word: 'порт', hint: 'не морской' },
-  { word: 'шифр', hint: 'не цезарь' },
-  { word: 'пароль', hint: 'определённо не пароль' },
-  { word: 'прокси', hint: 'не dodge' },
-  { word: 'гибсон', hint: 'автор льда' },
-  { word: 'daemon', hint: 'не linux init' },
-  { word: 'packet', hint: 'нюхаешь?' },
-  { word: 'vector', hint: 'направление атаки' },
-  { word: 'kernel', hint: 'ядро без linux' },
-  { word: 'матрица', hint: 'морфеус не одобрит' },
-  { word: 'backdoor', hint: 'классика жанра' },
-  { word: 'нейромант', hint: 'гибсон' },
-  { word: 'нейролинк', hint: 'слот neural' },
-  { word: 'blackice', hint: 'смертельный лёд' },
-  { word: 'firewall', hint: 'стена из правил' },
+  { word: 'root', hint: 'суперюзер *nix' },
+  { word: 'sudo', hint: 'временные права админа' },
+  { word: 'rmrf', hint: 'опасная команда удаления' },
+  { word: 'hack', hint: 'классика жанра · 4' },
+  { word: 'deck', hint: 'кибердека netrunner' },
+  { word: 'chip', hint: 'нейрочип / имплант-слот' },
+  { word: 'nova', hint: 'вспышка в матрице' },
+  { word: 'ghost', hint: 'невидимый в сети' },
+  { word: 'proxy', hint: 'промежуточный узел' },
+  { word: 'trace', hint: 'то, от чего бежишь' },
+  { word: 'breach', hint: 'протокол взлома CP' },
+  { word: 'vector', hint: 'вектор атаки' },
+  { word: 'kernel', hint: 'ядро ОС' },
+  { word: 'daemon', hint: 'фоновый процесс' },
+  { word: 'packet', hint: 'кусок сетевого трафика' },
+  { word: 'implant', hint: 'кибернетический имплант' },
+  { word: 'backdoor', hint: 'тайный вход в систему' },
+  { word: 'firewall', hint: 'стена из правил фильтрации' },
+  { word: 'cyberdeck', hint: 'дека для джека в сеть' },
+  { word: 'blackice', hint: 'смертельный ICE' },
+  { word: 'netrunner', hint: 'тот, кто лезет в матрицу' },
 ];
 
-/** Auth Bypass — Wordle с подсказкой. */
+/** Auth Bypass — Wordle с тематической подсказкой и цветами. */
 export const AuthBypassGame: React.FC<Props> = ({ params, onWin, onFail }) => {
   const [seed] = useState(() => Date.now());
   const target = useMemo(() => {
     const pool = AUTH_WORDS.filter((w) => w.word.length === params.wordLength);
-    const list = pool.length ? pool : AUTH_WORDS.filter((w) => w.word.length === 4);
+    const list = pool.length ? pool : AUTH_WORDS.filter((w) => w.word.length === 5);
     return list[seed % list.length]!;
   }, [params.wordLength, seed]);
 
   const [guesses, setGuesses] = useState<{ word: string; marks: LetterMark[] }[]>([]);
   const [input, setInput] = useState('');
+  const [done, setDone] = useState(false);
   const attemptsLeft = params.wordleAttempts - guesses.length;
 
   const submit = () => {
-    const g = input.trim().toLowerCase();
+    if (done) return;
+    const g = input.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     if (g.length !== target.word.length) return;
     const marks = scoreGuess(target.word, g);
     const next = [...guesses, { word: g, marks }];
     setGuesses(next);
     setInput('');
-    if (g === target.word.toLowerCase()) onWin();
-    else if (next.length >= params.wordleAttempts) onFail();
+    if (g === target.word.toLowerCase()) {
+      setDone(true);
+      const leftover = params.wordleAttempts - next.length;
+      const qualityPct = Math.max(
+        20,
+        Math.min(100, Math.round(40 + (leftover / params.wordleAttempts) * 60)),
+      );
+      onWin({ qualityPct, tracePct: 100 - qualityPct });
+    } else if (next.length >= params.wordleAttempts) {
+      setDone(true);
+      onFail();
+    }
   };
 
   return (
     <IceMiniShell variant="auth">
-      <IceMiniHint>Подсказка: «{target.hint}»</IceMiniHint>
+      <IceMiniHint>
+        CORP AUTH · подсказка: <strong>{target.hint}</strong>
+      </IceMiniHint>
       <div className="ice-mini__auth-gate mono-text">
         <IceMiniTag tone="warn">AUTH_GATE</IceMiniTag>
-        <span>passwd len={params.wordLength} · attempts {attemptsLeft}</span>
+        <span>len={params.wordLength} · attempts {attemptsLeft}</span>
+      </div>
+      <div className="ice-mini__wordle-legend mono-text">
+        <span className="ice-mini__wordle-cell ice-mini__wordle-cell--exact">A</span> на месте
+        <span className="ice-mini__wordle-cell ice-mini__wordle-cell--present">B</span> есть, не там
+        <span className="ice-mini__wordle-cell ice-mini__wordle-cell--absent">C</span> нет
       </div>
       <div className="ice-mini__wordle">
         {guesses.map((row, ri) => (
@@ -963,7 +990,7 @@ export const AuthBypassGame: React.FC<Props> = ({ params, onWin, onFail }) => {
             ))}
           </div>
         ))}
-        {guesses.length < params.wordleAttempts && (
+        {!done && guesses.length < params.wordleAttempts && (
           <div className="ice-mini__wordle-row ice-mini__wordle-row--edit">
             {Array.from({ length: params.wordLength }, (_, i) => (
               <span key={i} className="ice-mini__wordle-cell ice-mini__wordle-cell--edit">
@@ -973,18 +1000,27 @@ export const AuthBypassGame: React.FC<Props> = ({ params, onWin, onFail }) => {
           </div>
         )}
       </div>
-      <input
-        className="ice-mini__wordle-input"
-        value={input}
-        maxLength={params.wordLength}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && submit()}
-        placeholder="root@ice:~# введите пароль…"
-        autoComplete="off"
-      />
-      <button type="button" className="ice-mini__action ice-mini__action--auth" disabled={input.length !== params.wordLength} onClick={submit}>
-        AUTH TRY
-      </button>
+      <div className="ice-mini__auth-form">
+        <input
+          className="ice-mini__wordle-input"
+          value={input}
+          maxLength={params.wordLength}
+          disabled={done}
+          onChange={(e) => setInput(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ''))}
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          placeholder={`латиница · ${params.wordLength} символов`}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        <button
+          type="button"
+          className="ice-mini__action ice-mini__action--auth"
+          disabled={done || input.length !== params.wordLength}
+          onClick={submit}
+        >
+          AUTH TRY
+        </button>
+      </div>
     </IceMiniShell>
   );
 };

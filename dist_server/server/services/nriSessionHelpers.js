@@ -1,6 +1,7 @@
 /** Общие хелперы NRI-сессии (serialize, resolve, host check). */
 import { isAdminUsername } from './auth.js';
 import { dossierFromSheet } from '../../shared/nri-domain/achievements.js';
+import { sanitizeFieldDossiers } from '../../shared/nri-domain/fieldDossiers.js';
 import { serializeAchievementState } from './nriAchievementService.js';
 export function mergePlayerSheetFromPreset(presetSheet, displayName, clientSheet) {
     if (!presetSheet || typeof presetSheet !== 'object')
@@ -13,7 +14,7 @@ export function mergePlayerSheetFromPreset(presetSheet, displayName, clientSheet
         if (typeof cn === 'string' && cn.trim())
             characterName = cn.trim().slice(0, 40);
     }
-    return { ...base, characterName };
+    return { ...base, characterName, sheetFinalized: true };
 }
 export async function resolveNriSession(prisma, code) {
     return prisma.nriSession.findUnique({
@@ -41,6 +42,7 @@ export function serializeNriPlayer(p) {
         portraitUrl: p.portraitUrl ?? null,
         presetId: p.presetId ?? null,
         privateNotes: p.privateNotes ?? '',
+        fieldDossiers: sanitizeFieldDossiers(p.fieldDossiers),
         achievements: serializeAchievementState(p.achievementState),
         dossier: dossierFromSheet(p.sheet),
     };

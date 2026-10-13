@@ -7,9 +7,11 @@ type Props = {
   profile: NriPlayerProfile;
   onClose: () => void;
   title?: string;
+  /** Киберпсихоз / кибер-эффекты — только при просмотре мастером. */
+  gmView?: boolean;
 };
 
-export const NriCharacterSheet: React.FC<Props> = ({ profile, onClose, title }) => {
+export const NriCharacterSheet: React.FC<Props> = ({ profile, onClose, title, gmView = false }) => {
   return (
     <div className="nri-modal-overlay" onClick={onClose}>
       <div className="nri-modal nri-modal--sheet nri-modal--c2185" onClick={(e) => e.stopPropagation()}>
@@ -20,7 +22,7 @@ export const NriCharacterSheet: React.FC<Props> = ({ profile, onClose, title }) 
           </button>
         </div>
         <div className="nri-modal__sheet-scroll">
-          <NriCharacterSheetContent profile={profile} />
+          <NriCharacterSheetContent profile={profile} gmView={gmView} />
         </div>
       </div>
     </div>

@@ -7,7 +7,8 @@ import {
   type NriNpc,
   type NriRosterPlayer,
 } from '../logic/nriApi';
-import { listMasterGrantCatalog } from '../logic/nriItemCatalog';
+import { listMasterGrantCatalog, type CatalogItem } from '../logic/nriItemCatalog';
+import { formatSignedMod } from '../logic/nriSheetCombat';
 import { NriCatalogItemPreview } from './NriSelectionPreview';
 
 type Props = {
@@ -16,6 +17,19 @@ type Props = {
   roster: NriRosterPlayer[];
   currentUserId?: string;
 };
+
+function catalogGlanceChips(c: CatalogItem): { k: string; v: string }[] {
+  const chips: { k: string; v: string }[] = [];
+  if (c.priceWonlongs != null) chips.push({ k: '₩', v: String(c.priceWonlongs) });
+  if (c.c2185Mods) {
+    for (const [k, v] of Object.entries(c.c2185Mods)) {
+      if (typeof v === 'number') chips.push({ k, v: formatSignedMod(v) });
+    }
+  }
+  if (typeof c.acBonus === 'number' && c.acBonus !== 0) chips.push({ k: 'AC', v: `+${c.acBonus}` });
+  if (c.tags?.length) chips.push({ k: 'TAG', v: c.tags[0]! });
+  return chips;
+}
 
 export const NriMasterInventoryPanel: React.FC<Props> = ({
   inviteCode,
@@ -88,7 +102,7 @@ export const NriMasterInventoryPanel: React.FC<Props> = ({
         <div>
           <h3 className="mono-text">Инвентарь мастера</h3>
           <p className="mono-text opacity-60">
-            Сюжетные предметы (тег «мастер»). Обычный каталог их не показывает.
+            Сюжетные предметы (тег «мастер»). Чипы — всегда, blurb — в превью.
           </p>
         </div>
       </header>
@@ -109,19 +123,38 @@ export const NriMasterInventoryPanel: React.FC<Props> = ({
                 placeholder="Поиск сюжетных…"
               />
             </label>
-            <select
-              className="nri-inventory__catalog-select"
-              value={catalogPick}
-              onChange={(e) => setCatalogPick(e.target.value)}
-            >
-              {filtered.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <NriCatalogItemPreview catalogId={catalogPick} />
           </div>
+
+          <div className="nri-inventory__catalog-grid" role="listbox" aria-label="Сюжетный каталог">
+            {filtered.map((c) => {
+              const chips = catalogGlanceChips(c);
+              const selected = catalogPick === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  className={`nri-inventory__catalog-card ${selected ? 'is-selected' : ''}`}
+                  onClick={() => setCatalogPick(c.id)}
+                  title={c.blurb}
+                >
+                  <span className="nri-inventory__catalog-card-name">{c.name}</span>
+                  <div className="nri-cyber__chip-row">
+                    {chips.slice(0, 4).map((row, i) => (
+                      <span key={`${row.k}-${i}`} className="nri-cyber__chip">
+                        <span className="nri-cyber__chip-k">{row.k}</span>
+                        <span className="nri-cyber__chip-v">{row.v}</span>
+                      </span>
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+            {filtered.length === 0 && <p className="mono-text opacity-50">Ничего не найдено.</p>}
+          </div>
+
+          <NriCatalogItemPreview catalogId={catalogPick} />
 
           <div className="nri-inventory__grant-row">
             <label className="mono-text">

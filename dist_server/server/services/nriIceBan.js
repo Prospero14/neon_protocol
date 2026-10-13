@@ -1,15 +1,11 @@
-/** Сервер: ICE hardware ban. */
-export const ICE_FAIL_STREAK_LIMIT = 3;
+/** Сервер: ICE fail streak + hardware ban / deck clearance. */
+import { ICE_COUNTERHACK_THRESHOLD, inventoryHasDeck, readCounterHack, startCounterHack, } from '../../shared/nri-domain/iceCounterHack.js';
+export const ICE_FAIL_STREAK_LIMIT = ICE_COUNTERHACK_THRESHOLD;
 export const ICE_LEFT_DECK_CATALOG_ID = 'g_left_deck';
 function sheetObj(sheet) {
     if (sheet && typeof sheet === 'object')
         return { ...sheet };
     return {};
-}
-function parseInventory(raw) {
-    if (!Array.isArray(raw))
-        return [];
-    return raw.filter((x) => x && typeof x === 'object');
 }
 function parseAugSheet(raw) {
     if (!raw || typeof raw !== 'object')
@@ -44,7 +40,7 @@ export function writeIceBan(sheet, ban) {
     return { ...o, iceBan: ban };
 }
 export function hasLeftDeck(inventory) {
-    return parseInventory(inventory).some((i) => i.catalogId === ICE_LEFT_DECK_CATALOG_ID);
+    return inventoryHasDeck(inventory);
 }
 export function detectIceClearance(sheet, inventory) {
     const ban = readIceBan(sheet);
@@ -68,37 +64,52 @@ export function detectIceClearance(sheet, inventory) {
 export function clearIceBan(sheet) {
     return writeIceBan(sheet, { consecutiveFails: 0, hardwareBanned: false });
 }
-export function applyIceRunResult(sheet, won) {
-    const aug = parseAugSheet(sheet);
+/**
+ * Победа — сброс fails.
+ * Провал — +1 fail; при достижении порога стартует counter-hack (бан железа — после проигрыша взлома).
+ */
+export function applyIceRunResult(sheet, won, meta) {
     const prev = readIceBan(sheet);
     if (won) {
-        const ban = { consecutiveFails: 0, hardwareBanned: false };
-        return { sheet: writeIceBan(sheet, ban), ban };
+        const ban = {
+            consecutiveFails: 0,
+            hardwareBanned: prev.hardwareBanned,
+            bannedAt: prev.bannedAt,
+            neuralSigAtBan: prev.neuralSigAtBan,
+        };
+        return { sheet: writeIceBan(sheet, ban), ban, counterHackStarted: false };
     }
     const nextFails = prev.consecutiveFails + 1;
-    if (nextFails >= ICE_FAIL_STREAK_LIMIT) {
-        const ban = {
-            consecutiveFails: nextFails,
-            hardwareBanned: true,
-            bannedAt: Date.now(),
-            neuralSigAtBan: neuralAugSignature(aug.augmentations),
-        };
-        return { sheet: writeIceBan(sheet, ban), ban };
+    const ban = { ...prev, consecutiveFails: nextFails, hardwareBanned: prev.hardwareBanned };
+    let nextSheet = writeIceBan(sheet, ban);
+    let counterHackStarted = false;
+    const existing = readCounterHack(nextSheet);
+    if (nextFails >= ICE_FAIL_STREAK_LIMIT &&
+        !prev.hardwareBanned &&
+        !(existing?.active)) {
+        nextSheet = startCounterHack(nextSheet, {
+            targetUserId: meta?.userId ?? '',
+            targetName: meta?.displayName ?? 'netrunner',
+        });
+        counterHackStarted = true;
     }
-    const ban = { ...prev, consecutiveFails: nextFails, hardwareBanned: false };
-    return { sheet: writeIceBan(sheet, ban), ban };
+    return { sheet: nextSheet, ban: readIceBan(nextSheet), counterHackStarted };
 }
 export function buildIcePlayStatus(sheet, inventory, tableAllBanned) {
     const ban = readIceBan(sheet);
     const clearance = detectIceClearance(sheet, inventory);
-    const canPlay = !ban.hardwareBanned || clearance.cleared;
+    const ch = readCounterHack(sheet);
+    const canPlay = (!ban.hardwareBanned || clearance.cleared) && !ch?.active;
     return {
         consecutiveFails: ban.consecutiveFails,
         hardwareBanned: ban.hardwareBanned,
         canPlay,
         clearanceVia: clearance.via,
         tableAllBanned,
-        failsUntilBan: Math.max(0, ICE_FAIL_STREAK_LIMIT - ban.consecutiveFails),
+        failsUntilBan: ban.hardwareBanned || ch?.active
+            ? 0
+            : Math.max(0, ICE_FAIL_STREAK_LIMIT - ban.consecutiveFails),
+        counterHackActive: !!ch?.active,
     };
 }
 export function maybeAutoClearIceBan(sheet, inventory) {
@@ -109,5 +120,14 @@ export function maybeAutoClearIceBan(sheet, inventory) {
     if (!clearance.cleared)
         return null;
     return clearIceBan(sheet);
+}
+export function applyHardwareBan(sheet) {
+    const aug = parseAugSheet(sheet);
+    return writeIceBan(sheet, {
+        consecutiveFails: readIceBan(sheet).consecutiveFails,
+        hardwareBanned: true,
+        bannedAt: Date.now(),
+        neuralSigAtBan: neuralAugSignature(aug.augmentations),
+    });
 }
 //# sourceMappingURL=nriIceBan.js.map

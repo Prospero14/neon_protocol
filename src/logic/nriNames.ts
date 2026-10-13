@@ -5,65 +5,66 @@ import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharact
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
 
+/** Имена сразу кириллицей — лист и чат на русском. */
 const FIRST_BY_ORIGIN: Record<NriOriginId, readonly string[]> = {
   neo_tokyo: [
-    'Yuki', 'Hiro', 'Kenji', 'Akira', 'Mei', 'Rin', 'Takeshi', 'Sora', 'Haruka', 'Daiki',
-    'Naomi', 'Kaito', 'Aiko', 'Ren', 'Mika', 'Shin', 'Hana', 'Ryota', 'Emi', 'Kazuki',
+    'Юки', 'Хиро', 'Кэндзи', 'Акира', 'Мэй', 'Рин', 'Такэси', 'Сора', 'Харука', 'Дайки',
+    'Наоми', 'Кайто', 'Айко', 'Рэн', 'Мика', 'Син', 'Хана', 'Рёта', 'Эми', 'Казуки',
   ],
   hong_kong: [
-    'Wei', 'Ling', 'Jun', 'Mei-Lin', 'Ho', 'Chow', 'Ying', 'Pak', 'Siu', 'Wai',
-    'Fen', 'Kwan', 'Lok', 'Hui', 'Yan', 'Cheung', 'Bao', 'Jie', 'Xiu', 'Ming',
+    'Вэй', 'Лин', 'Цзюнь', 'Мэй-Линь', 'Хо', 'Чоу', 'Ин', 'Пак', 'Сиу', 'Вай',
+    'Фэнь', 'Квань', 'Лок', 'Хой', 'Янь', 'Чён', 'Бао', 'Цзе', 'Сю', 'Мин',
   ],
   los_angeles: [
-    'Jake', 'Mia', 'Tyler', 'Zoe', 'Marcus', 'Riley', 'Dante', 'Skye', 'Cole', 'Nova',
-    'Ash', 'Blake', 'Jordan', 'Casey', 'Morgan', 'Quinn', 'Reed', 'Sage', 'Troy', 'Vera',
+    'Джейк', 'Миа', 'Тайлер', 'Зои', 'Маркус', 'Райли', 'Данте', 'Скай', 'Коул', 'Нова',
+    'Эш', 'Блейк', 'Джордан', 'Кейси', 'Морган', 'Квинн', 'Рид', 'Сейдж', 'Трой', 'Вера',
   ],
   london: [
-    'Oliver', 'Poppy', 'Finn', 'Esme', 'Alfie', 'Cleo', 'Rupert', 'Ivy', 'Dex', 'Tamsin',
-    'Gareth', 'Nell', 'Hugh', 'Sienna', 'Rory', 'Bea', 'Colin', 'Freya', 'Nigel', 'Lottie',
+    'Оливер', 'Поппи', 'Финн', 'Эсме', 'Алфи', 'Клео', 'Руперт', 'Айви', 'Декс', 'Тэмсин',
+    'Гарет', 'Нелл', 'Хью', 'Сиенна', 'Рори', 'Биа', 'Колин', 'Фрейя', 'Найджел', 'Лотти',
   ],
   moscow: [
-    'Dmitri', 'Katya', 'Ivan', 'Nadia', 'Sergei', 'Anya', 'Pavel', 'Olga', 'Viktor', 'Masha',
-    'Alexei', 'Irina', 'Nikolai', 'Svetlana', 'Boris', 'Lena', 'Grigori', 'Zoya', 'Roman', 'Daria',
+    'Дмитрий', 'Катя', 'Иван', 'Надя', 'Сергей', 'Аня', 'Павел', 'Ольга', 'Виктор', 'Маша',
+    'Алексей', 'Ирина', 'Николай', 'Светлана', 'Борис', 'Лена', 'Григорий', 'Зоя', 'Роман', 'Дарья',
   ],
   sao_paulo: [
-    'Lucas', 'Beatriz', 'Rafael', 'Camila', 'Thiago', 'Juliana', 'Bruno', 'Larissa', 'Diego', 'Fernanda',
-    'Gustavo', 'Mariana', 'Felipe', 'Aline', 'Rodrigo', 'Patricia', 'Andre', 'Carla', 'Henrique', 'Renata',
+    'Лукас', 'Беатрис', 'Рафаэл', 'Камила', 'Тиаго', 'Жулиана', 'Бруно', 'Лариса', 'Диего', 'Фернанда',
+    'Густаво', 'Мариана', 'Фелипе', 'Алине', 'Родриго', 'Патрисия', 'Андре', 'Карла', 'Энрике', 'Рената',
   ],
   offworld: [
-    'Unit-7', 'Echo', 'Relay', 'Pilot', 'Ash', 'Null', 'Vector', 'Cipher', 'Orbit', 'Delta',
-    'Proxy', 'Signal', 'Frame', 'Index', 'Pulse', 'Node', 'Scope', 'Drift', 'Latch', 'Phase',
+    'Юнит-7', 'Эхо', 'Релей', 'Нулл', 'Эш', 'Вектор', 'Шифр', 'Орбит', 'Дельта', 'Прокси',
+    'Сигнал', 'Фрейм', 'Индекс', 'Пульс', 'Нода', 'Скоп', 'Дрифт', 'Лэтч', 'Фаза', 'Глиф',
   ],
 };
 
 const LAST_BY_ORIGIN: Record<NriOriginId, readonly string[]> = {
   neo_tokyo: [
-    'Sato', 'Tanaka', 'Hayashi', 'Nakamura', 'Yamamoto', 'Kobayashi', 'Suzuki', 'Watanabe', 'Ito', 'Kato',
-    'Shimizu', 'Mori', 'Aoki', 'Fujita', 'Okada', 'Matsui', 'Ishida', 'Hasegawa', 'Goto', 'Maeda',
+    'Сато', 'Танака', 'Хаяси', 'Накамура', 'Ямамото', 'Кобаяси', 'Судзуки', 'Ватанабэ', 'Ито', 'Като',
+    'Симидзу', 'Мори', 'Аоки', 'Фудзита', 'Окада', 'Мацуи', 'Исида', 'Хасэгава', 'Гото', 'Маэда',
   ],
   hong_kong: [
-    'Chan', 'Wong', 'Lee', 'Lau', 'Ng', 'Cheung', 'Leung', 'Ho', 'Cheng', 'Tam',
-    'Yip', 'Kwok', 'Tsang', 'Lam', 'Chow', 'Fong', 'Poon', 'Mak', 'Yuen', 'Tang',
+    'Чань', 'Вонг', 'Ли', 'Лау', 'Нг', 'Чён', 'Лён', 'Хо', 'Чэн', 'Там',
+    'Ип', 'Квок', 'Цан', 'Лам', 'Чоу', 'Фонг', 'Пун', 'Мак', 'Юнь', 'Тан',
   ],
   los_angeles: [
-    'Vega', 'Stone', 'Reed', 'Cross', 'Mercer', 'Hayes', 'Brooks', 'Voss', 'Cruz', 'Palmer',
-    'Wright', 'Diaz', 'Shaw', 'Cole', 'Ross', 'Blake', 'Ford', 'Grant', 'Holt', 'Pierce',
+    'Вега', 'Стоун', 'Рид', 'Кросс', 'Мерсер', 'Хейс', 'Брукс', 'Восс', 'Круз', 'Палмер',
+    'Райт', 'Диаз', 'Шоу', 'Коул', 'Росс', 'Блейк', 'Форд', 'Грант', 'Холт', 'Пирс',
   ],
   london: [
-    'Ashford', 'Wright', 'Clarke', 'Mercer', 'Bennett', 'Fletcher', 'Hawkins', 'Porter', 'Sinclair', 'Rowe',
-    'Chapman', 'Barton', 'Greaves', 'Holland', 'Kerr', 'Langley', 'Monroe', 'Nash', 'Pritchard', 'Quinn',
+    'Эшфорд', 'Райт', 'Кларк', 'Мерсер', 'Беннетт', 'Флетчер', 'Хокинс', 'Портер', 'Синклер', 'Роу',
+    'Чапман', 'Бартон', 'Гривз', 'Холланд', 'Керр', 'Лэнгли', 'Монро', 'Нэш', 'Притчард', 'Квинн',
   ],
   moscow: [
-    'Volkov', 'Orlov', 'Petrov', 'Sokolov', 'Kuznetsov', 'Morozov', 'Vasiliev', 'Fedorov', 'Lebedev', 'Popov',
-    'Novikov', 'Egorov', 'Pavlov', 'Romanov', 'Belov', 'Gusev', 'Kiselev', 'Makarov', 'Zaitsev', 'Borisov',
+    'Волков', 'Орлов', 'Петров', 'Соколов', 'Кузнецов', 'Морозов', 'Васильев', 'Фёдоров', 'Лебедев', 'Попов',
+    'Новиков', 'Егоров', 'Павлов', 'Романов', 'Белов', 'Гусев', 'Киселёв', 'Макаров', 'Зайцев', 'Борисов',
   ],
   sao_paulo: [
-    'Silva', 'Santos', 'Oliveira', 'Souza', 'Lima', 'Costa', 'Ferreira', 'Almeida', 'Pereira', 'Ribeiro',
-    'Carvalho', 'Gomes', 'Martins', 'Araujo', 'Barbosa', 'Rocha', 'Dias', 'Nunes', 'Melo', 'Cardoso',
+    'Силва', 'Сантос', 'Оливейра', 'Соуза', 'Лима', 'Коста', 'Феррейра', 'Алмейда', 'Перейра', 'Рибейру',
+    'Карвалью', 'Гомес', 'Мартинс', 'Араужу', 'Барбоза', 'Роша', 'Диас', 'Нунес', 'Мелу', 'Кардозу',
   ],
   offworld: [
-    'Relay', 'Dock-9', 'Habitat-C', 'Orbit-III', 'Sector-12', 'Bay-4', 'Grid-7', 'Node-A', 'Ring-2', 'Port-5',
-    'Luna-6', 'Mars-1', 'Void-8', 'Hub-3', 'Arc-0', 'Spoke-11', 'Deck-7', 'Crew-9', 'Lab-2', 'Cargo-6',
+    'Релей', 'Док-9', 'Хабитат-С', 'Орбит-III', 'Сектор-12', 'Отсек-4', 'Грид-7', 'Нода-А', 'Кольцо-2', 'Порт-5',
+    'Луна-6', 'Марс-1', 'Войд-8', 'Хаб-3', 'Арк-0', 'Спица-11', 'Палуба-7', 'Экипаж-9', 'Лаб-2', 'Карго-6',
   ],
 };
 
@@ -146,12 +147,12 @@ const NICKNAME_BY_ARCHETYPE: Partial<Record<NriNpcArchetypeId, readonly string[]
 };
 
 const CULT_REFERENCE_BY_ACTIVITY: Partial<Record<NriActivityId, readonly string[]>> = {
-  tech: ['Мотоко', 'Лейн', 'Гайвер', 'Кубрик', 'Киану', 'Нейромант', 'Case', 'Zero Cool'],
-  street: ['Спайк', 'Вулф', 'Такеши', 'Рэмбо', 'Бельмондо', 'Соло', 'V', 'Джокер'],
-  military: ['Рипли', 'Рэмбо', 'Терминатор', 'Снейк', 'Курт Рассел', 'Dutch', 'Soap'],
+  tech: ['Мотоко', 'Лейн', 'Гайвер', 'Кубрик', 'Киану', 'Нейромант', 'Кейс', 'Зиро Кул'],
+  street: ['Спайк', 'Вулф', 'Такэси', 'Рэмбо', 'Бельмондо', 'Соло', 'Ви', 'Джокер'],
+  military: ['Рипли', 'Рэмбо', 'Терминатор', 'Снейк', 'Курт Рассел', 'Датч', 'Соуп'],
   media: ['Нуар', 'Кэмерон', 'Кусто', 'Тарантино', 'Моне', 'Холст', 'Праймтайм'],
   criminal: ['Кайзер', 'Донни', 'Нео-Нуар', 'Гудфелла', 'Скала', 'Тихий', 'Крючок'],
-  corp: ['Тайлер', 'Патрик', 'Арасака', 'Милitech', 'Синий Лед', 'Бейдж-99'],
+  corp: ['Тайлер', 'Патрик', 'Арасака', 'Милитех', 'Синий Лёд', 'Бейдж-99'],
   medical: ['Док', 'Хаус', 'Триаж', 'Скальпель', 'Рана'],
   nomad: ['Макс', 'Фуриоза', 'Дорожный', 'Караван'],
 };
@@ -186,7 +187,7 @@ function rollCompoundNickname(): string {
   return `${pick(COMPOUND_NOUN)} ${String(Math.floor(Math.random() * 90) + 10)}`;
 }
 
-/** Полное имя с учётом происхождения. */
+/** Полное имя с учётом происхождения (кириллица). */
 export function rollCharacterName(originId: NriOriginId = 'neo_tokyo'): string {
   const first = pick(FIRST_BY_ORIGIN[originId] ?? FIRST_BY_ORIGIN.neo_tokyo);
   const last = pick(LAST_BY_ORIGIN[originId] ?? LAST_BY_ORIGIN.neo_tokyo);

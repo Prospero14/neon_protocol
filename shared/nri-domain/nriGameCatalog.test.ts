@@ -16,9 +16,33 @@ describe('NRI_GAME_CATALOG', () => {
     expect([...NRI_ICE_GAME_IDS].sort()).toEqual(catalogIds);
   });
 
-  it('does not include removed zero_day_chain', () => {
+  it('does not include removed zero_day_chain or swapped duplicates', () => {
     expect(NRI_GAME_CATALOG.some((g) => g.id === 'zero_day_chain')).toBe(false);
     expect(NRI_ICE_GAME_IDS.includes('zero_day_chain' as never)).toBe(false);
+    for (const gone of ['mesh_jack', 'buffer_flood', 'hash_crack', 'packet_sniff', 'signal_lock']) {
+      expect(NRI_GAME_CATALOG.some((g) => g.id === gone)).toBe(false);
+    }
+    for (const id of [
+      'dead_sector',
+      'opcode_forge',
+      'keyspace_prune',
+      'handshake_drill',
+      'noise_floor',
+      'cipher_rings',
+      'bit_sweep',
+    ]) {
+      expect(NRI_GAME_CATALOG.some((g) => g.id === id)).toBe(true);
+    }
+  });
+
+  it('every game has win/fail guides and diffHints', () => {
+    for (const g of NRI_GAME_CATALOG) {
+      expect(g.guide.win.length).toBeGreaterThan(8);
+      expect(g.guide.fail.length).toBeGreaterThan(8);
+      for (const d of ['easy', 'medium', 'hard'] as const) {
+        expect(g.diffHints[d].length).toBeGreaterThan(4);
+      }
+    }
   });
 
   it('assertUniqueIceCatalog throws on duplicate id', () => {

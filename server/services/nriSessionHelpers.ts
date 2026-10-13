@@ -4,6 +4,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { JwtAuth } from './auth.js';
 import { isAdminUsername } from './auth.js';
 import { dossierFromSheet } from '../../shared/nri-domain/achievements.js';
+import { sanitizeFieldDossiers } from '../../shared/nri-domain/fieldDossiers.js';
 import { serializeAchievementState } from './nriAchievementService.js';
 
 export function mergePlayerSheetFromPreset(
@@ -19,7 +20,7 @@ export function mergePlayerSheetFromPreset(
     const cn = (clientSheet as { characterName?: unknown }).characterName;
     if (typeof cn === 'string' && cn.trim()) characterName = cn.trim().slice(0, 40);
   }
-  return { ...base, characterName };
+  return { ...base, characterName, sheetFinalized: true };
 }
 
 export async function resolveNriSession(prisma: PrismaClient, code: string) {
@@ -52,6 +53,7 @@ export function serializeNriPlayer(p: {
   portraitUrl?: string | null;
   presetId?: string | null;
   privateNotes?: string;
+  fieldDossiers?: unknown;
   achievementState?: unknown;
 }) {
   return {
@@ -62,6 +64,7 @@ export function serializeNriPlayer(p: {
     portraitUrl: p.portraitUrl ?? null,
     presetId: p.presetId ?? null,
     privateNotes: p.privateNotes ?? '',
+    fieldDossiers: sanitizeFieldDossiers(p.fieldDossiers),
     achievements: serializeAchievementState(p.achievementState),
     dossier: dossierFromSheet(p.sheet),
   };

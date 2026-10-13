@@ -206,11 +206,15 @@ export const NriCyberPanel: React.FC<Props> = ({
     }
     setErr(null);
     const who = grantTarget.label;
-    setOkMsg(
-      install
-        ? `«${grantProduct.name}» установлен: ${who}.`
-        : `«${grantProduct.name}» в инвентаре: ${who}.`
-    );
+    if (install && res.installNote) {
+      setOkMsg(`«${grantProduct.name}» в инвентаре у ${who} (не установлен: ${res.installNote}).`);
+    } else {
+      setOkMsg(
+        install && res.installed
+          ? `«${grantProduct.name}» установлен: ${who}.`
+          : `«${grantProduct.name}» в инвентаре: ${who}.`
+      );
+    }
     if (
       grantTarget.kind === 'player' &&
       currentUserId &&
@@ -304,7 +308,7 @@ export const NriCyberPanel: React.FC<Props> = ({
   };
 
   return (
-    <div className="nri-cyber">
+    <div className="nri-cyber nri-deck-module">
       <header className="nri-chars__head nri-cyber__head">
         <h3 className="mono-text">Киберимпланты</h3>
         <p className="mono-text opacity-70 nri-cyber__head-sub">
@@ -435,13 +439,13 @@ export const NriCyberPanel: React.FC<Props> = ({
                         {open && (
                           <div className="nri-cyber__part-study">
                             <p className="nri-cyber__part-blurb mono-text">{p.blurb}</p>
-                            {p.features.length > 0 && (
+                            {(p.features?.length ?? 0) > 0 && (
                               <p className="nri-cyber__part-fx mono-text opacity-70">{p.features.join(' · ')}</p>
                             )}
-                            {p.effects && p.effects.length > 0 && (
+                            {(p.effects?.length ?? 0) > 0 && (
                               <p className="nri-cyber__part-fx nri-cyber__part-fx--hooks mono-text">
                                 Hooks:{' '}
-                                {p.effects
+                                {(p.effects ?? [])
                                   .map((id) => CYBER_EFFECT_META[id]?.label ?? id)
                                   .join(' · ')}
                               </p>

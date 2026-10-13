@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NRI Deck OS — 4 формы (примеры)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --page:#07080c; --ink:#e8ecea; --muted:#7a8582; --a:#3dffa8; --hot:#ff2a6d; --warn:#e8b84a; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px 18px 64px;
+      font-family: Rajdhani, system-ui, sans-serif;
+      background: var(--page); color: var(--ink);
+    }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .lead { max-width: 760px; margin: 0 0 22px; color: var(--muted); line-height: 1.45; }
+    .lead strong { color: var(--a); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 22px;
+    }
+    .card { display: flex; flex-direction: column; gap: 8px; }
+    .card__num {
+      font: 700 0.7rem/1 "JetBrains Mono", monospace;
+      letter-spacing: 0.12em; color: var(--a);
+    }
+    .card__name {
+      font-size: 1.05rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .card__hook {
+      margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.4; min-height: 2.6em;
+    }
+    .card__hook em { color: #c8d4cf; font-style: normal; }
+
+    /* shared mini lobby shell */
+    .mock {
+      height: 300px;
+      padding: 0;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #050508;
+      color: #e6ebe8;
+      font-family: Rajdhani, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+    .m-tabs { display: flex; gap: 0; }
+    .m-tab {
+      font: 600 0.62rem/1 Rajdhani, sans-serif;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 8px 10px; color: #6e7a78; cursor: default;
+    }
+    .m-tab.on { color: #3dffa8; }
+    .m-stage { flex: 1; min-height: 0; padding: 10px; }
+    .m-stage h4 { margin: 0 0 4px; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .m-stage p { margin: 0; font: 400 0.55rem/1.4 "JetBrains Mono", monospace; color: #6e7a78; }
+    .m-cta {
+      margin-top: 10px; display: inline-block;
+      font: 700 0.62rem/1 Rajdhani, sans-serif;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      padding: 8px 12px; border: 1px solid #3dffa8; color: #3dffa8; background: transparent;
+    }
+    .chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .chip {
+      font: 600 0.48rem/1 "JetBrains Mono", monospace;
+      letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 3px 6px; border: 1px solid rgba(61,255,168,0.35); color: #a8b4b0;
+    }
+    .chip.host { color: #3dffa8; }
+    .chip.hot { color: #ff2a6d; border-color: rgba(255,42,109,0.5); }
+
+    /* —— 1 Terminal —— */
+    .t1 { background: #0b0e12; border: 1px solid #2a3338; border-radius: 6px 6px 2px 2px; }
+    .t1 .tb {
+      display: flex; align-items: center; gap: 8px;
+      height: 28px; padding: 0 10px;
+      background: #161b22; border-bottom: 1px solid #2a3338;
+      font: 600 0.58rem/1 "JetBrains Mono", monospace; color: #9aa8a4;
+    }
+    .t1 .dots { display: flex; gap: 5px; }
+    .t1 .dots i { width: 8px; height: 8px; border-radius: 50%; display: block; background: #3a4448; }
+    .t1 .dots i:nth-child(1) { background: #ff5f57; }
+    .t1 .dots i:nth-child(2) { background: #febc2e; }
+    .t1 .dots i:nth-child(3) { background: #28c840; }
+    .t1 .menubar {
+      display: flex; gap: 2px; padding: 0 4px;
+      background: #10151a; border-bottom: 1px solid #243038;
+    }
+    .t1 .m-tab { border-radius: 0; }
+    .t1 .m-tab.on {
+      background: #0b0e12; color: #e6ebe8;
+      border: 1px solid #2a3338; border-bottom-color: #0b0e12; margin-bottom: -1px;
+    }
+    .t1 .status {
+      margin-top: auto; padding: 4px 8px;
+      background: #161b22; border-top: 1px solid #2a3338;
+      font: 500 0.5rem/1 "JetBrains Mono", monospace; color: #6e7a78;
+      display: flex; justify-content: space-between;
+    }
+    .t1 .m-stage { font-family: "JetBrains Mono", monospace; }
+    .t1 .m-cta { border-radius: 2px; clip-path: none; }
+
+    /* —— 2 Physical deck —— */
+    .t2 {
+      background: linear-gradient(160deg, #1a1e22 0%, #0c0e10 55%, #08090b 100%);
+      border: 4px solid #2c3236;
+      border-radius: 14px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.08),
+        inset 0 -8px 16px rgba(0,0,0,0.45),
+        0 12px 28px rgba(0,0,0,0.55);
+      padding: 10px;
+      gap: 6px;
+    }
+    .t2 .bezel {
+      flex: 1; min-height: 0; display: flex; flex-direction: column;
+      background: #050708; border: 2px solid #111518; border-radius: 4px;
+      overflow: hidden;
+    }
+    .t2 .ports {
+      display: flex; gap: 4px; padding: 6px 4px 2px;
+    }
+    .t2 .port {
+      flex: 1; text-align: center;
+      font: 700 0.52rem/1 Rajdhani, sans-serif;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 10px 4px; color: #5a6662;
+      background: #0e1214; border: 1px solid #1c2428;
+      border-radius: 3px 3px 0 0;
+      box-shadow: inset 0 -2px 0 #1c2428;
+    }
+    .t2 .port.on {
+      color: #050508; background: #3dffa8; border-color: #3dffa8;
+      box-shadow: 0 0 10px rgba(61,255,168,0.25);
+    }
+    .t2 .screw {
+      position: absolute; width: 7px; height: 7px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #6a7278, #2a3034);
+      border: 1px solid #111;
+    }
+    .t2 .screw.tl { top: 6px; left: 6px; }
+    .t2 .screw.tr { top: 6px; right: 6px; }
+    .t2 .screw.bl { bottom: 6px; left: 6px; }
+    .t2 .screw.br { bottom: 6px; right: 6px; }
+    .t2 .led {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #3dffa8; box-shadow: 0 0 8px #3dffa8; margin-left: auto;
+    }
+
+    /* —— 3 Manga page —— */
+    .t3 {
+      background: #0a0a0a;
+      border: 3px solid #000;
+      padding: 8px;
+      gap: 6px;
+      background-image:
+        linear-gradient(#0a0a0a, #0a0a0a),
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 3px);
+    }
+    .t3 .gutter-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px; }
+    .t3 .panel {
+      background: #111418;
+      border: 3px solid #000;
+      padding: 8px;
+      min-height: 0;
+    }
+    .t3 .panel.wide { grid-column: 1 / -1; }
+    .t3 .caption {
+      display: inline-block;
+      background: #000; color: #fff;
+      font: 700 0.55rem/1 "JetBrains Mono", monospace;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 8px; margin-bottom: 6px;
+    }
+    .t3 .m-tabs {
+      gap: 0; border-bottom: 3px solid #000; background: #0a0a0a;
+    }
+    .t3 .m-tab { border-right: 2px solid #000; }
+    .t3 .m-tab.on {
+      background: #3dffa8; color: #000; font-weight: 700;
+    }
+    .t3 .m-stage {
+      border: 3px solid #000; background: #111418; flex: 1;
+    }
+    .t3 .m-cta {
+      background: #000; color: #fff; border-color: #000;
+    }
+
+    /* —— 4 Schematic —— */
+    .t4 {
+      background:
+        linear-gradient(rgba(61,255,168,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61,255,168,0.04) 1px, transparent 1px),
+        #07100c;
+      background-size: 16px 16px, 16px 16px, auto;
+      border: 1px solid rgba(61,255,168,0.35);
+    }
+    .t4 .crop {
+      position: absolute; width: 12px; height: 12px;
+      border: 1.5px solid #3dffa8; opacity: 0.7;
+    }
+    .t4 .crop.tl { top: 4px; left: 4px; border-right: 0; border-bottom: 0; }
+    .t4 .crop.tr { top: 4px; right: 4px; border-left: 0; border-bottom: 0; }
+    .t4 .crop.bl { bottom: 4px; left: 4px; border-right: 0; border-top: 0; }
+    .t4 .crop.br { bottom: 4px; right: 4px; border-left: 0; border-top: 0; }
+    .t4 .inner {
+      margin: 14px; flex: 1; min-height: 0;
+      display: flex; flex-direction: column; gap: 6px;
+      border: 1px solid rgba(61,255,168,0.28);
+      padding: 8px;
+    }
+    .t4 .label {
+      font: 600 0.5rem/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.14em; text-transform: uppercase; color: #3dffa8;
+    }
+    .t4 .title {
+      margin: 0; font: 700 0.95rem/1 Rajdhani, sans-serif;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      border-bottom: 1px solid rgba(61,255,168,0.25); padding-bottom: 4px;
+    }
+    .t4 .m-tabs { border: 1px solid rgba(61,255,168,0.22); }
+    .t4 .m-tab.on {
+      color: #07100c; background: #3dffa8;
+    }
+    .t4 .m-stage {
+      border: 1px dashed rgba(61,255,168,0.4);
+      background: rgba(0,0,0,0.25);
+    }
+    .t4 .dim {
+      position: absolute; right: 18px; top: 50%;
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      font: 500 0.45rem/1 "IBM Plex Mono", monospace;
+      color: rgba(61,255,168,0.55); letter-spacing: 0.12em;
+    }
+  </style>
+</head>
+<body>
+  <h1>4 формы оболочки — примеры</h1>
+  <p class="lead">
+    Одна и та же сцена лобби (кикер · состав · каналы · stage).
+    Смотри <strong>геометрию и раскладку</strong>, не палитру.
+    Напиши номер (1–4).
+  </p>
+
+  <div class="grid">
+    <article class="card">
+      <div class="card__num">01</div>
+      <div class="card__name">Terminal window</div>
+      <p class="card__hook">Стол = <em>окно ОС</em>: titlebar, traffic lights, menubar-каналы, status bar внизу. Прямые углы, привычная иерархия.</p>
+      <div class="mock t1">
+        <div class="tb">
+          <span class="dots"><i></i><i></i><i></i></span>
+          neon_protocol — ICEBREAKERS — deck
+        </div>
+        <div class="menubar">
+          <span class="m-tab">Chat</span>
+          <span class="m-tab on">ICE</span>
+          <span class="m-tab">Map</span>
+          <span class="m-tab">People</span>
+          <span class="m-tab">Wallet</span>
+        </div>
+        <div style="padding:6px 8px">
+          <div class="chips">
+            <span class="chip host">★ HOST</span>
+            <span class="chip">Саня</span>
+            <span class="chip hot">@SPAM</span>
+          </div>
+        </div>
+        <div class="m-stage">
+          <h4>~/ice/arcade</h4>
+          <p>$ nri run --table ICEBREAKERS<br/>15 mini-games · ready</p>
+          <button class="m-cta" type="button">▶ execute</button>
+        </div>
+        <div class="status"><span>utf-8</span><span>live · 3 peers</span></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card__num">02</div>
+      <div class="card__name">Physical deck</div>
+      <p class="card__hook">Стол = <em>железный дек</em>: bezel, винты, LED, каналы как физические порты/кнопки на корпусе.</p>
+      <div class="mock t2">
+        <span class="screw tl"></span><span class="screw tr"></span>
+        <span class="screw bl"></span><span class="screw br"></span>
+        <div style="display:flex;align-items:center;gap:6px;padding:0 4px 2px;font:600 0.55rem/1 JetBrains Mono,monospace;color:#8a9692;letter-spacing:0.1em;text-transform:uppercase">
+          NRI-DECK · UNIT 04 <span class="led"></span>
+        </div>
+        <div class="ports">
+          <span class="port">Chat</span>
+          <span class="port on">ICE</span>
+          <span class="port">Map</span>
+          <span class="port">People</span>
+        </div>
+        <div class="bezel">
+          <div style="padding:6px 8px;border-bottom:1px solid #1a2226">
+            <div class="chips">
+              <span class="chip host">★ HOST</span>
+              <span class="chip">Саня</span>
+              <span class="chip hot">@SPAM</span>
+            </div>
+          </div>
+          <div class="m-stage">
+            <h4>ICE · arcade bay</h4>
+            <p>Panel locked · dump risk low</p>
+            <button class="m-cta" type="button">▶ Jack in</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card__num">03</div>
+      <div class="card__name">Manga page</div>
+      <p class="card__hook">Стол = <em>страница</em>: толстые gutters, caption-stamp, панели разного веса. Без скосов на кнопках — только рамки и ритм.</p>
+      <div class="mock t3">
+        <div class="gutter-row" style="flex:0 0 auto">
+          <div class="panel">
+            <span class="caption">Ch. Deck // НРИ</span>
+            <div style="font:700 0.85rem/1 Rajdhani,sans-serif;letter-spacing:0.06em;text-transform:uppercase">ICEBREAKERS</div>
+            <p style="margin:4px 0 0;font:400 0.5rem/1.3 JetBrains Mono,monospace;color:#6e7a78">host · код NRI-2U5R</p>
+          </div>
+          <div class="panel">
+            <div class="chips">
+              <span class="chip host">★ HOST</span>
+              <span class="chip">Саня</span>
+              <span class="chip hot">@SPAM</span>
+            </div>
+          </div>
+        </div>
+        <div class="m-tabs">
+          <span class="m-tab">Чат</span>
+          <span class="m-tab on">ICE</span>
+          <span class="m-tab">Карта</span>
+          <span class="m-tab">Люди</span>
+        </div>
+        <div class="m-stage">
+          <h4>Аркада стола</h4>
+          <p>15 мини-игр · рейтинг</p>
+          <button class="m-cta" type="button">▶ Играть</button>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card__num">04</div>
+      <div class="card__name">Schematic / blueprint</div>
+      <p class="card__hook">Стол = <em>чертёж</em>: сетка, crop marks, dashed stage, размерные подписи. Клинический GiTS / Blame! scale.</p>
+      <div class="mock t4">
+        <span class="crop tl"></span><span class="crop tr"></span>
+        <span class="crop bl"></span><span class="crop br"></span>
+        <span class="dim">H · MODULE STAGE</span>
+        <div class="inner">
+          <div class="label">DWG / NRI-DECK / REV.E</div>
+          <h3 class="title">ICEBREAKERS</h3>
+          <div class="chips">
+            <span class="chip host">★ HOST</span>
+            <span class="chip">Саня</span>
+            <span class="chip hot">@SPAM</span>
+          </div>
+          <div class="m-tabs">
+            <span class="m-tab">Chat</span>
+            <span class="m-tab on">ICE</span>
+            <span class="m-tab">Map</span>
+            <span class="m-tab">People</span>
+          </div>
+          <div class="m-stage">
+            <h4>Bay · ICE arcade</h4>
+            <p>spec 014 · form candidate 04</p>
+            <button class="m-cta" type="button">▶ Run</button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

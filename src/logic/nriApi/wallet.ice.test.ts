@@ -108,7 +108,7 @@ describe('nriSubmitIceScore', () => {
       vi.fn().mockResolvedValue(mockFetchResponse({ ok: true, newAchievements: [] }, true, 201)),
     );
     const r = await nriSubmitIceScore('tok', 'NRI-X', {
-      gameId: 'hash_crack',
+      gameId: 'keyspace_prune',
       difficulty: 'easy',
       score: 100,
       exfilPct: 100,

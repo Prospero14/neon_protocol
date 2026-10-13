@@ -1,5 +1,6 @@
 import { CONDITION_LABELS } from './conditionDefs.js';
 import { applyConditionStack, conditionFromDef, pruneExpiredConditions } from './conditionLogic.js';
+import { computePsychosis, syncPsychosisFlags } from './psychosisLogic.js';
 import type { ConditionId, ConsumableSheet, ConsumeEffectSpec } from './types.js';
 
 export function applyConsumeEffects(
@@ -10,11 +11,20 @@ export function applyConsumeEffects(
   const applied: string[] = [];
   const next: ConsumableSheet = { ...sheet };
   let conditions = pruneExpiredConditions([...(sheet.activeConditions ?? [])]);
+  const beforePs = computePsychosis(sheet).total;
+
+  for (const id of spec.removeConditions ?? []) {
+    const had = conditions.some((c) => c.id === id);
+    if (!had) continue;
+    conditions = conditions.filter((c) => c.id !== id);
+    applied.push(`снят: ${CONDITION_LABELS[id] ?? id}`);
+  }
 
   for (const id of spec.conditions ?? []) {
     const cond = conditionFromDef(id as ConditionId, {
       source: sourceName,
       rounds: spec.conditionRounds,
+      minutes: spec.conditionMinutes,
     });
     conditions = applyConditionStack(conditions, cond);
     applied.push(CONDITION_LABELS[id] ?? cond.label);
@@ -30,10 +40,18 @@ export function applyConsumeEffects(
     applied.push(`−${spec.hpDamage} HP`);
   }
   if (spec.bloodToxDelta) {
-    next.bloodToxCurrent = (next.bloodToxCurrent ?? 0) + spec.bloodToxDelta;
-    applied.push(`Blood Tox +${spec.bloodToxDelta}`);
+    next.bloodToxCurrent = Math.max(0, (next.bloodToxCurrent ?? 0) + spec.bloodToxDelta);
+    const sign = spec.bloodToxDelta > 0 ? '+' : '';
+    applied.push(`Blood Tox ${sign}${spec.bloodToxDelta}`);
   }
 
   next.activeConditions = conditions;
-  return { sheet: next, applied };
+  const withPsychosis = syncPsychosisFlags(next) as ConsumableSheet;
+  const afterPs = computePsychosis(withPsychosis).total;
+  if (withPsychosis.psychosisPending && !sheet.psychosisPending) {
+    applied.push('киберпсихоз: порог эпизода');
+  } else if (afterPs < beforePs) {
+    applied.push(`психоз ${beforePs}→${afterPs}`);
+  }
+  return { sheet: withPsychosis, applied };
 }

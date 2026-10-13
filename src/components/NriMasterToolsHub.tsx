@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dices, MapPin, Network, Package, Skull, UserCircle, Users, AlertTriangle } from 'lucide-react';
+import { Dices, MapPin, Network, Package, Skull, UserCircle, Users, AlertTriangle, Brain } from 'lucide-react';
 import type { NriRosterPlayer } from '../logic/nriApi';
 import { NriDicePanel } from './NriDicePanel';
 import { NriTacticalMapPanel } from './NriTacticalMapPanel';
@@ -9,12 +9,14 @@ import { NriNpcsPanel } from './NriNpcsPanel';
 import { NriCombatantsPanel } from './NriCombatantsPanel';
 import { NriFactionRelationsPanel } from './NriFactionRelationsPanel';
 import { NriMasterInventoryPanel } from './NriMasterInventoryPanel';
+import { NriMasterPsychosisPanel } from './NriMasterPsychosisPanel';
 import type { VaultRecipient } from './NriVaultTab';
 
 export type MasterToolsSection =
   | 'tactical'
   | 'dice'
   | 'status'
+  | 'psychosis'
   | 'gen_players'
   | 'gen_npcs'
   | 'gen_combatants'
@@ -35,6 +37,7 @@ const SECTIONS: { id: MasterToolsSection; label: string; icon: React.ReactNode; 
   { id: 'tactical', label: 'Схема боя', icon: <MapPin size={13} />, group: 'стол' },
   { id: 'dice', label: 'Кубики', icon: <Dices size={13} />, group: 'стол' },
   { id: 'status', label: 'Статусы', icon: <AlertTriangle size={13} />, group: 'стол' },
+  { id: 'psychosis', label: 'Психоз', icon: <Brain size={13} />, group: 'стол' },
   { id: 'faction_relations', label: 'Фракции', icon: <Network size={13} />, group: 'стол' },
   { id: 'master_inventory', label: 'Инвентарь мастера', icon: <Package size={13} />, group: 'стол' },
   { id: 'gen_players', label: 'Игроки', icon: <UserCircle size={13} />, group: 'ген' },
@@ -54,7 +57,7 @@ export const NriMasterToolsHub: React.FC<Props> = ({
   const [section, setSection] = useState<MasterToolsSection>('tactical');
 
   return (
-    <div className="nri-master-tools">
+    <div className="nri-master-tools nri-deck-module">
       <nav className="nri-people-subtabs nri-master-tools__nav" aria-label="Инструменты мастера">
         {SECTIONS.map((s) => (
           <button
@@ -98,6 +101,9 @@ export const NriMasterToolsHub: React.FC<Props> = ({
             recipients={recipients}
             currentUserId={currentUserId}
           />
+        )}
+        {section === 'psychosis' && (
+          <NriMasterPsychosisPanel inviteCode={inviteCode} authToken={authToken} roomId={roomId} />
         )}
         {section === 'faction_relations' && (
           <NriFactionRelationsPanel inviteCode={inviteCode} authToken={authToken} />

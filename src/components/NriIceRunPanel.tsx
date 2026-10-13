@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, ChevronRight, Play, Skull } from 'lucide-react';
 import { IcebreakerRouter } from './games/IcebreakerRouter';
 import { readNeonAuthToken } from '../logic/authTokenStorage';
@@ -10,10 +11,14 @@ import {
   type NriIceLeaderboardEntry,
 } from '../logic/nriApi';
 import { NRI_GAME_CATALOG, type IceDifficulty } from '../logic/nriGameCatalog';
-import { arcadeIceWinScore } from '../../shared/nri-domain/iceLeaderboard';
+import { arcadeIceScore } from '../../shared/nri-domain/iceLeaderboard';
+import { inventoryHasDeck } from '../../shared/nri-domain/iceCounterHack';
+import { nriFetchPlayer } from '../logic/nriApi';
 
 type Props = {
   inviteCode: string;
+  /** Мастер может играть без деки в инвентаре. */
+  isHost?: boolean;
   onOpenInventory?: () => void;
   onNewAchievements?: (unlocks: import('../logic/nriApi').NriAchievementUnlock[]) => void;
 };
@@ -42,13 +47,20 @@ function IceGameLeaderboard({ rows, gameId }: { rows: NriIceLeaderboardEntry[]; 
   );
 }
 
-export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, onNewAchievements }) => {
+export const NriIceRunPanel: React.FC<Props> = ({
+  inviteCode,
+  isHost = false,
+  onOpenInventory,
+  onNewAchievements,
+}) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [boards, setBoards] = useState<Record<string, NriIceLeaderboardEntry[]>>({});
   const [expandedId, setExpandedId] = useState<string>('gibson_ice');
   const [pickDifficulty, setPickDifficulty] = useState<Record<string, IceDifficulty>>({});
   const [activeGame, setActiveGame] = useState<{ gameId: string; difficulty: IceDifficulty } | null>(null);
+  const [hasDeck, setHasDeck] = useState(true);
+  const canPlayIce = isHost || hasDeck;
 
   const refreshBoards = useCallback(async () => {
     if (!authToken) return;
@@ -56,9 +68,20 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
     setBoards(data);
   }, [authToken, inviteCode]);
 
+  const refreshDeck = useCallback(async () => {
+    if (!authToken) return;
+    if (isHost) {
+      setHasDeck(true);
+      return;
+    }
+    const p = await nriFetchPlayer(authToken, inviteCode);
+    setHasDeck(inventoryHasDeck(p?.inventory));
+  }, [authToken, inviteCode, isHost]);
+
   useEffect(() => {
     refreshBoards();
-  }, [inviteCode, refreshBoards]);
+    refreshDeck();
+  }, [inviteCode, refreshBoards, refreshDeck]);
 
   const difficultyFor = (gameId: string): IceDifficulty => pickDifficulty[gameId] ?? 'medium';
 
@@ -66,16 +89,19 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
     gameId: string,
     difficulty: IceDifficulty,
     won: boolean,
-    gibson?: { score: number; exfilPct: number; tracePct: number }
+    gibson?: { score: number; exfilPct: number; tracePct: number },
+    qualityPct?: number,
   ) => {
     if (!authToken) return;
-    const score = gibson?.score ?? (won ? arcadeIceWinScore(difficulty) : 0);
+    const score =
+      gibson?.score ??
+      arcadeIceScore(difficulty, won, qualityPct ?? (won ? 55 : 0));
     const result = await nriSubmitIceScore(authToken, inviteCode, {
       gameId,
       difficulty,
       score,
       exfilPct: gibson?.exfilPct ?? (won ? 100 : 0),
-      tracePct: gibson?.tracePct ?? (won ? 0 : 100),
+      tracePct: gibson?.tracePct ?? (won ? Math.max(0, 100 - (qualityPct ?? 55)) : 100),
       won,
     });
     if (result.ok && result.newAchievements?.length) {
@@ -90,15 +116,25 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
     tracePct: number;
     won: boolean;
   }) => {
-    if (!activeGame) return;
-    await submitArcadeScore(activeGame.gameId, activeGame.difficulty, result.won, {
+    if (!activeGame || !authToken) return;
+    const { gameId, difficulty } = activeGame;
+    setActiveGame(null);
+    const iceRes = await nriReportIceResult(authToken, inviteCode, result.won);
+    if (iceRes.ok && iceRes.newAchievements?.length) {
+      onNewAchievements?.(iceRes.newAchievements);
+    }
+    await submitArcadeScore(gameId, difficulty, result.won, {
       score: result.score,
       exfilPct: result.exfilPct,
       tracePct: result.tracePct,
     });
+    await refreshDeck();
   };
 
-  const handleMiniComplete = async (won: boolean) => {
+  const handleMiniComplete = async (
+    won: boolean,
+    meta?: { qualityPct?: number; tracePct?: number },
+  ) => {
     if (!activeGame || !authToken) return;
     const { gameId, difficulty } = activeGame;
     // Сразу размонтировать мини-игру — иначе таймеры Firewall/TRACE шлют второй onComplete.
@@ -107,28 +143,12 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
     if (iceRes.ok && iceRes.newAchievements?.length) {
       onNewAchievements?.(iceRes.newAchievements);
     }
-    await submitArcadeScore(gameId, difficulty, won);
+    await submitArcadeScore(gameId, difficulty, won, undefined, meta?.qualityPct);
+    await refreshDeck();
   };
 
-  if (activeGame) {
-    return (
-      <div className="nri-ice-run-panel nri-ice-run-panel--play">
-        <IcebreakerRouter
-          gameId={activeGame.gameId}
-          difficulty={activeGame.difficulty}
-          nriInviteCode={inviteCode}
-          tableArcadeMode
-          onOpenInventory={onOpenInventory}
-          onRunComplete={activeGame.gameId === 'gibson_ice' ? handleGibsonComplete : undefined}
-          onComplete={handleMiniComplete}
-          onBack={() => setActiveGame(null)}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="nri-ice-run-panel">
+    <div className="nri-ice-run-panel nri-deck-module">
       <header className="nri-ice-hub__head">
         <Skull size={20} />
         <div>
@@ -136,6 +156,11 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
           <p className="mono-text opacity-60">
             {NRI_GAME_CATALOG.length} мини-игр · рейтинг только участников этого стола
           </p>
+          {!canPlayIce && (
+            <p className="mono-text nri-ice-hub__deck-warn">
+              Нет кибердеки в инвентаре — ICE недоступен. Купи/получи деку или попроси передать.
+            </p>
+          )}
         </div>
       </header>
 
@@ -175,6 +200,16 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
                       <dd>{game.guide.fail}</dd>
                     </div>
                   </dl>
+                  <p className="mono-text nri-ice-game-card__diff-hint opacity-70">
+                    {game.difficulties[diff].label}: {game.diffHints[diff]}
+                  </p>
+                  <ul className="nri-ice-game-card__diff-list mono-text">
+                    {DIFFICULTIES.map((d) => (
+                      <li key={d} className={d === diff ? 'is-active' : ''}>
+                        <strong>{game.difficulties[d].label}</strong> — {game.diffHints[d]}
+                      </li>
+                    ))}
+                  </ul>
 
                   <div className="nri-ice-game-card__play">
                     <label className="mono-text">
@@ -198,7 +233,12 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
                     <button
                       type="button"
                       className="nri-ice-game-card__start"
-                      onClick={() => setActiveGame({ gameId: game.id, difficulty: diff })}
+                      disabled={!canPlayIce}
+                      title={!canPlayIce ? 'Нужна кибердека в инвентаре' : undefined}
+                      onClick={() => {
+                        if (!canPlayIce) return;
+                        setActiveGame({ gameId: game.id, difficulty: diff });
+                      }}
                     >
                       <Play size={14} /> Играть
                     </button>
@@ -214,6 +254,27 @@ export const NriIceRunPanel: React.FC<Props> = ({ inviteCode, onOpenInventory, o
           );
         })}
       </ul>
+
+      {activeGame &&
+        createPortal(
+          <div className="nri-ice-play-overlay" role="dialog" aria-modal>
+            <div className="nri-ice-play-modal">
+              <IcebreakerRouter
+                gameId={activeGame.gameId}
+                difficulty={activeGame.difficulty}
+                nriInviteCode={inviteCode}
+                tableArcadeMode
+                onOpenInventory={onOpenInventory}
+                onRunComplete={
+                  activeGame.gameId === 'gibson_ice' ? handleGibsonComplete : undefined
+                }
+                onComplete={handleMiniComplete}
+                onBack={() => setActiveGame(null)}
+              />
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

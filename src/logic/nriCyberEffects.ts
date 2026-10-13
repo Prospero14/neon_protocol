@@ -105,7 +105,7 @@ export const CYBER_EFFECT_META: Record<
   scent_mask: {
     label: 'Глушение запаха',
     category: 'story',
-    blurb: 'Собаки и нюх-дроны. Scent-flare / химический маркер срывает маску.',
+    blurb: 'Собаки и нюх-дроны теряют след. Химмаркер срывает маску.',
   },
   pain_editor: {
     label: 'Редактор боли',
@@ -218,9 +218,9 @@ export const CYBER_EFFECT_META: Record<
     blurb: 'Рядом с тобой / на КПП: face-scrambler и дешёвый badge-spoof не проходят.',
   },
   scent_flare: {
-    label: 'Химмаркер / scent-flare',
+    label: 'Химмаркер',
     category: 'counter',
-    blurb: 'Срывает scent-mask: след снова читается собаками и дронами.',
+    blurb: 'Не стирает след: срывает глушение запаха — след снова читается.',
   },
   pulse_shield: {
     label: 'Pulse-shield',

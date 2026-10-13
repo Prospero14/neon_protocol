@@ -4,30 +4,47 @@ export const NRI_ICE_GAME_IDS = [
     'port_sweep',
     'vuln_scan',
     'trace_rush',
-    'buffer_flood',
-    'hash_crack',
-    'packet_sniff',
+    'opcode_forge',
+    'keyspace_prune',
+    'handshake_drill',
     'auth_bypass',
     'log_wipe',
-    'mesh_jack',
+    'dead_sector',
     'proxy_dodge',
-    'signal_lock',
+    'noise_floor',
     'circuit_splice',
     'likeness_vault',
     'node_capture',
+    'cipher_rings',
+    'bit_sweep',
 ];
 export const DEFAULT_ICE_GAME_ID = 'gibson_ice';
 export function isNriIceGameId(id) {
     return NRI_ICE_GAME_IDS.includes(id);
 }
-/** Очки аркады за победу (не Gibson — там bits за exfil). */
+/**
+ * База очков за победу по тиру.
+ * Hard заметно дороже easy, чтобы фарм лёгкого не перекрывал рекорды.
+ */
 export const ICE_ARCADE_WIN_SCORE = {
-    easy: 100,
-    medium: 250,
-    hard: 500,
+    easy: 120,
+    medium: 320,
+    hard: 700,
 };
 export function arcadeIceWinScore(difficulty) {
     return ICE_ARCADE_WIN_SCORE[difficulty];
+}
+/**
+ * Очки аркады с учётом качества забега (реиграбельность рейтинга).
+ * qualityPct 0..100 → score от base до ~2×base.
+ * Поражение → 0.
+ */
+export function arcadeIceScore(difficulty, won, qualityPct = 55) {
+    if (!won)
+        return 0;
+    const base = ICE_ARCADE_WIN_SCORE[difficulty];
+    const q = Math.max(0, Math.min(100, qualityPct));
+    return Math.round(base + base * (q / 100));
 }
 /** Лучший результат каждого игрока по игре, по убыванию score. */
 export function buildIceLeaderboardForGame(rows, gameId) {

@@ -3,19 +3,22 @@ import { rollCharacterName, rollNickname, formatCharacterDisplayName } from './n
 import { generateRichBackstory, getBackstoryPoolSize } from './nriBackstories';
 
 describe('nriNames', () => {
-  it('generates Tokyo-flavored names', () => {
+  it('generates Tokyo-flavored names in Cyrillic', () => {
     const name = rollCharacterName('neo_tokyo');
     expect(name.split(' ')).toHaveLength(2);
-    expect(name.length).toBeGreaterThan(3);
+    expect(name).toMatch(/[А-ЯЁа-яё]/);
+    expect(name).not.toMatch(/[A-Za-z]{3,}/);
   });
 
-  it('generates Moscow-flavored names', () => {
+  it('generates Moscow-flavored names in Cyrillic', () => {
     const name = rollCharacterName('moscow');
     expect(name).toMatch(/\S+\s+\S+/);
+    expect(name).toMatch(/[А-ЯЁа-яё]/);
+    expect(name).not.toMatch(/[A-Za-z]{3,}/);
   });
 
   it('formats display name with nickname', () => {
-    expect(formatCharacterDisplayName('Ivan Volkov', 'Калибр')).toBe('Ivan Volkov «Калибр»');
+    expect(formatCharacterDisplayName('Иван Волков', 'Калибр')).toBe('Иван Волков «Калибр»');
   });
 
   it('rollNickname returns non-empty for military', () => {
@@ -23,7 +26,7 @@ describe('nriNames', () => {
   });
 
   it('rollNickname prefers class-flavored callsigns', () => {
-    const samples = Array.from({ length: 24 }, () =>
+    const samples = Array.from({ length: 80 }, () =>
       rollNickname({ activityId: 'corp', classId: 'detective' })
     );
     expect(samples.some((s) => /Шпиль|Лупа|Досье|Следак/i.test(s))).toBe(true);
@@ -44,7 +47,7 @@ describe('nriBackstories', () => {
 
   it('generates coherent backstory', () => {
     const text = generateRichBackstory({
-      name: 'Test User',
+      name: 'Иван Тестов',
       nickname: 'Тень',
       originId: 'moscow',
       activityId: 'military',
@@ -53,7 +56,7 @@ describe('nriBackstories', () => {
       career: 'Ветеран корп-армии',
     });
     expect(text.length).toBeGreaterThan(40);
-    expect(text).toMatch(/Тест|Тень|Enforcer|наёмник|Москва|Ветеран/i);
+    expect(text).toMatch(/Иван|Тестов|Тень|наёмник|Москва|Ветеран/i);
   });
 
   it('rolls career when career omitted (no generic fallback phrase)', () => {

@@ -11,6 +11,7 @@ import {
   tickConditionRounds as tickConditionRoundsOnSheet,
   type SheetCondition,
 } from './nriConditions';
+import { markPsychosisPendingIfNeeded } from './nriPsychosis';
 import type { NriInventoryItem } from './nriInventory';
 import { parseNriSheet, type NriSheetData } from './nriNpcGenerator';
 
@@ -68,7 +69,8 @@ export function applyMasterCondition(
   if (!sheet) return null;
   const cond = conditionFromDef(conditionId, opts);
   const conditions = applyConditionStack(pruneExpiredConditions([...(sheet.activeConditions ?? [])]), cond);
-  return { sheet: { ...sheet, activeConditions: conditions }, condition: cond };
+  const next = markPsychosisPendingIfNeeded({ ...sheet, activeConditions: conditions });
+  return { sheet: next, condition: cond };
 }
 
 export function removeMasterCondition(sheetRaw: unknown, conditionId: ConditionId): NriSheetData | null {

@@ -14,11 +14,14 @@ import { catalogToServerInventoryItem, getServerCatalogItem } from './nriItemCat
 import { touchNriMember } from './nriMemberDb.js';
 import { parseRequestBody } from '../../shared/api-schemas/parseBody.js';
 import {
+  nriFieldDossiersPutSchema,
   nriItemGrantSchema,
   nriPlayerNotesSchema,
   nriPlayerPatchSchema,
   nriPlayerSaveSchema,
 } from '../../shared/api-schemas/nri.js';
+import { sanitizeFieldDossiers } from '../../shared/nri-domain/fieldDossiers.js';
+import { repairNriPlayerJsonColumns } from './nriSchemaBootstrap.js';
 import {
   achievementEventsFromItemUse,
   achievementEventsFromSheetChange,
@@ -104,6 +107,35 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
     }
   });
 
+  app.put('/neon_v1/services/nri/:code/player/field-dossiers', async (req, res) => {
+    const auth = jwtAuth(req);
+    if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
+    const code = String(req.params.code ?? '').trim().toUpperCase();
+    const parsed = parseRequestBody(nriFieldDossiersPutSchema, req.body);
+    if (!parsed.ok) return sendApiError(res, 400, 'NRI_FIELD_DOSSIERS_BAD', parsed.message);
+    try {
+      const session = await resolveSession(code);
+      if (!session || session.status !== 'open') {
+        return sendApiError(res, 404, 'NRI_NOT_FOUND', 'Стол не найден или закрыт.');
+      }
+      const player = await prisma.nriPlayer.findUnique({
+        where: { sessionId_userId: { sessionId: session.id, userId: auth.userId } },
+      });
+      if (!player) {
+        return sendApiError(res, 404, 'NRI_PLAYER_NOT_FOUND', 'Сначала создайте персонажа.');
+      }
+      const dossiers = sanitizeFieldDossiers(parsed.data.dossiers);
+      const updated = await prisma.nriPlayer.update({
+        where: { id: player.id },
+        data: { fieldDossiers: dossiers },
+      });
+      res.json({ ok: true, fieldDossiers: sanitizeFieldDossiers(updated.fieldDossiers) });
+    } catch (error) {
+      console.error('nri/player field-dossiers:', error);
+      return sendApiError(res, 500, 'NRI_FIELD_DOSSIERS_SAVE_FAILED', 'Не удалось сохранить досье.');
+    }
+  });
+
   app.get('/neon_v1/services/nri/:code/player', async (req, res) => {
     const auth = jwtAuth(req);
     if (!auth) return sendApiError(res, 401, 'NRI_NO_TOKEN', 'Нет токена авторизации.');
@@ -137,6 +169,7 @@ export function mountNriPlayerRoutes(app: Express, ctx: NriRouteContext): void {
       if (!isHost && !platformAdmin) {
         return sendApiError(res, 403, 'NRI_ROSTER_FORBIDDEN', 'Чарники доступны только мастеру.');
       }
+      await repairNriPlayerJsonColumns(prisma);
       const players = await prisma.nriPlayer.findMany({
         where: { sessionId: session.id },
         include: { user: { select: { username: true } } },

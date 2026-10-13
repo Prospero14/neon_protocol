@@ -9,10 +9,18 @@ type Props = {
   fileId: string;
   fileTitle?: string;
   fileProtected?: boolean;
+  /** Без кибердеки ICE-взлом файла недоступен. */
+  hasDeck?: boolean;
   onClose: () => void;
 };
 
-export const NriFilePopup: React.FC<Props> = ({ fileId, fileTitle, fileProtected, onClose }) => {
+export const NriFilePopup: React.FC<Props> = ({
+  fileId,
+  fileTitle,
+  fileProtected,
+  hasDeck = true,
+  onClose,
+}) => {
   const { token } = useAuth();
   const authToken = readNeonAuthToken() ?? token;
   const [file, setFile] = useState<NriVaultFile | null>(null);
@@ -49,7 +57,13 @@ export const NriFilePopup: React.FC<Props> = ({ fileId, fileTitle, fileProtected
     });
   }, [authToken, fileId]);
 
-  const startIce = () => setIceMode(true);
+  const startIce = () => {
+    if (!hasDeck) {
+      setErr('Нужна кибердека в инвентаре');
+      return;
+    }
+    setIceMode(true);
+  };
 
   const onIceDone = async (won: boolean) => {
     setIceMode(false);
@@ -121,9 +135,21 @@ export const NriFilePopup: React.FC<Props> = ({ fileId, fileTitle, fileProtected
               </p>
             )}
             {showIce && (
-              <button type="button" className="nri-modal__submit" onClick={startIce}>
-                Запустить ICE
-              </button>
+              <>
+                {!hasDeck && (
+                  <p className="mono-text opacity-70">
+                    Нет кибердеки — передай/купи деку, чтобы запустить ICE.
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="nri-modal__submit"
+                  disabled={!hasDeck}
+                  onClick={startIce}
+                >
+                  Запустить ICE
+                </button>
+              </>
             )}
             {showCodeStep && rewardPassword && (
               <div className="nri-file-popup__reward mono-text">

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NRI Deck OS — 20 метафор стола (не generic neon)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&family=Special+Elite&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root { --page:#06060a; --ink:#ececf4; --muted:#8b8ba3; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 22px 16px 56px;
+      font-family: Rajdhani, system-ui, sans-serif;
+      background: var(--page); color: var(--ink);
+    }
+    h1 { margin: 0 0 6px; font-size: 1.45rem; letter-spacing: 0.08em; text-transform: uppercase; }
+    .lead { max-width: 820px; margin: 0 0 8px; color: var(--muted); font-size: 0.95rem; line-height: 1.45; }
+    .lead strong { color: #ffb8d4; }
+    .note {
+      max-width: 820px; margin: 0 0 20px; padding: 10px 12px;
+      border-left: 3px solid #00f0ff; background: rgba(0,240,255,0.06);
+      font-size: 0.85rem; color: #b8c4d4; line-height: 1.4;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: #0c0c14;
+      padding: 10px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .card__top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .card__num { font: 600 0.7rem/1 "JetBrains Mono", monospace; color: #00f0ff; letter-spacing: 0.08em; }
+    .card__name { font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.88rem; }
+    .card__hook {
+      margin: 0; font-size: 0.78rem; color: #a8a8c0; line-height: 1.35; min-height: 3.2em;
+    }
+    .card__hook em { color: #ff9ec8; font-style: normal; }
+    .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tag {
+      font: 600 0.58rem/1 "JetBrains Mono", monospace;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 6px; border: 1px solid rgba(255,255,255,0.12); color: #9aa0b8;
+    }
+
+    /* shared mini-lobby */
+    .mock {
+      --bg: #0a0a0f; --panel: #14141e; --ink: #e8e8f2; --dim: #7a7a96;
+      --a: #00f0ff; --hot: #ff0080; --cut: 7px; --font: Rajdhani, sans-serif; --mono: "JetBrains Mono", monospace;
+      height: 236px; padding: 10px; display: flex; flex-direction: column; gap: 5px;
+      overflow: hidden; position: relative;
+      background: var(--bg); color: var(--ink); border: 1px solid color-mix(in srgb, var(--a) 40%, transparent);
+      font-family: var(--font);
+    }
+    .m-k { font: 600 0.52rem/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--a); }
+    .m-t { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .m-s { margin: 0; font: 400 0.52rem/1.3 var(--mono); color: var(--dim); }
+    .m-row { display: flex; justify-content: space-between; gap: 8px; }
+    .m-btn {
+      border: 1px solid color-mix(in srgb, var(--a) 50%, transparent); background: transparent; color: var(--a);
+      font: 700 0.55rem/1 var(--font); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 8px;
+      clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+    }
+    .m-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+    .m-chip {
+      font: 600 0.48rem/1 var(--mono); letter-spacing: 0.05em; text-transform: uppercase;
+      padding: 3px 6px; border: 1px solid color-mix(in srgb, var(--a) 35%, transparent);
+    }
+    .m-chip.host { color: var(--a); }
+    .m-chip.hot { color: var(--hot); border-color: color-mix(in srgb, var(--hot) 55%, transparent); }
+    .m-tabs { display: flex; gap: 1px; border-bottom: 1px solid color-mix(in srgb, var(--a) 28%, transparent); }
+    .m-tab { font: 600 0.58rem/1 var(--font); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 7px; color: var(--dim); border-bottom: 2px solid transparent; }
+    .m-tab.on { color: var(--a); border-bottom-color: var(--hot); }
+    .m-stage {
+      flex: 1; min-height: 0; border: 1px solid color-mix(in srgb, var(--a) 30%, transparent);
+      background: var(--panel); padding: 8px; display: flex; flex-direction: column; gap: 5px;
+    }
+    .m-stage h4 { margin: 0; font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase; }
+    .m-stage p { margin: 0; font: 400 0.52rem/1.35 var(--mono); color: var(--dim); }
+    .m-cta {
+      align-self: flex-start; margin-top: auto; border: 1px solid var(--hot);
+      background: color-mix(in srgb, var(--hot) 20%, transparent); color: #fff;
+      font: 700 0.58rem/1 var(--font); letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 10px;
+      clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
+    }
+
+    /* —— Fiction-driven themes —— */
+    .t01 { --bg:#05060a; --panel:#0e121c; --a:#39e0ff; --hot:#ff2d6f; }
+    .t01 .m-k::before { content: "▸ JACK_IN "; }
+    .t01 .m-stage { box-shadow: inset 0 0 0 1px rgba(57,224,255,0.15), inset 0 -18px 40px rgba(255,45,111,0.08); }
+    .t01 .trace { height: 3px; background: linear-gradient(90deg, var(--a), var(--hot)); width: 42%; margin-top: 2px; }
+
+    .t02 { --bg:#1a120c; --panel:#241810; --a:#f0a060; --hot:#e05040; --font: Special Elite, cursive; --mono: Special Elite, cursive; --cut: 0; }
+    .t02 .m-stage { background: repeating-linear-gradient(0deg, #2a1c12, #2a1c12 14px, #261910 14px, #261910 15px); border-style: dashed; }
+    .t02 .m-btn, .t02 .m-cta { clip-path: none; border-radius: 2px; box-shadow: 2px 2px 0 #000; }
+
+    .t03 { --bg:#10140e; --panel:#181e14; --a:#c6d26a; --hot:#e08830; --font: "IBM Plex Mono", monospace; --mono: "IBM Plex Mono", monospace; --cut: 0; }
+    .t03 .m-stage { border-width: 2px; border-color: #3a4030; }
+    .t03 .m-cta { background: #3a3018; color: var(--a); border-color: var(--a); }
+
+    .t04 { --bg:#f4f6f8; --panel:#fff; --a:#c01030; --hot:#c01030; --ink:#1a1a22; --dim:#667; --cut: 0; }
+    .t04 { border-color: #c01030 !important; }
+    .t04 .m-btn { background: #c01030; color: #fff; border-color: #c01030; clip-path: none; border-radius: 4px; }
+    .t04 .m-stage { border-color: #d0d4d8; box-shadow: 0 1px 0 #fff inset; }
+
+    .t05 { --bg:#0a0a0c; --panel:rgba(20,20,24,0.7); --a:#d4b56a; --hot:#d4b56a; --cut: 0; }
+    .t05 .m-stage { backdrop-filter: blur(6px); border-color: rgba(212,181,106,0.35); background: linear-gradient(135deg, rgba(212,181,106,0.08), transparent 40%), rgba(12,12,16,0.75); }
+    .t05 .m-t { font-weight: 500; letter-spacing: 0.2em; font-size: 0.85rem; }
+
+    .t06 { --bg:#12100e; --panel:#1c1814; --a:#ff7a3d; --hot:#ff3d1a; --cut: 4px; }
+    .t06 .m-stage { background: #1c1814; border-image: none; box-shadow: inset 0 0 0 2px #2a2218, 3px 3px 0 #000; }
+    .t06 .tape { position: absolute; top: 8px; right: 28px; width: 36px; height: 10px; background: rgba(255,220,80,0.35); transform: rotate(12deg); font-size: 0; }
+
+    .t07 { --bg:#080810; --panel:#101018; --a:#00e5ff; --hot:#ff1744; }
+    .t07.warn { --a:#ffb800; --hot:#ff1744; border-color: #ffb800 !important; box-shadow: 0 0 20px rgba(255,184,0,0.25); }
+    .t07 .banner { font: 700 0.55rem/1 var(--mono); letter-spacing: 0.14em; color: #ffb800; text-align: center; background: rgba(255,184,0,0.12); padding: 3px; }
+
+    .t08 { --bg:#1a1612; --panel:#f3e6c8; --a:#8b1e2d; --hot:#8b1e2d; --ink:#2a2018; --dim:#6a5848; --font: Special Elite, cursive; --mono: Special Elite, cursive; --cut: 0; }
+    .t08 .m-stage { background: #f3e6c8; border: 1px solid #c4a882; box-shadow: inset 0 0 20px rgba(80,40,20,0.08); }
+    .t08 .m-chip { background: #fff8e8; border-color: #c4a882; color: #5a4030; }
+    .t08 .pin { width: 6px; height: 6px; border-radius: 50%; background: #c03030; display: inline-block; margin-right: 4px; }
+
+    .t09 { --bg:#0c100c; --panel:#101810; --a:#3dff8a; --hot:#d4ff00; --mono: "Share Tech Mono", monospace; --font: "Share Tech Mono", monospace; --cut: 0; }
+    .t09 .m-stage { border-style: double; border-width: 3px; }
+    .t09 .m-cta { clip-path: none; border-radius: 0; font-family: var(--mono); }
+
+    .t10 { --bg:#0e0c14; --panel:#16121e; --a:#b8a0ff; --hot:#ff60a8; --cut: 0; }
+    .t10 .m-stage { border: 2px dashed color-mix(in srgb, var(--a) 45%, transparent); background: repeating-linear-gradient(135deg, #16121e, #16121e 8px, #14101c 8px, #14101c 16px); }
+    .t10 .seal { font: 700 0.5rem/1 var(--mono); color: var(--hot); border: 1px solid var(--hot); padding: 2px 5px; align-self: flex-start; transform: rotate(-3deg); }
+
+    .t11 { --bg:#070a10; --panel:#0a1018; --a:#5ad0ff; --hot:#ff7a40; }
+    .t11 .m-stage { padding: 0; overflow: hidden; background:
+      linear-gradient(rgba(90,208,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(90,208,255,0.07) 1px, transparent 1px), #0a1018;
+      background-size: 12px 12px, 12px 12px; }
+    .t11 .map-chrome { padding: 6px 8px; border-bottom: 1px solid rgba(90,208,255,0.25); background: rgba(0,0,0,0.35); }
+
+    .t12 { --bg:#0a080c; --panel:#120e14; --a:#ff4d8d; --hot:#ff4d8d; }
+    .t12 { animation: none; }
+    .t12 .m-stage { box-shadow: inset 0 0 40px rgba(255,77,141,0.12); }
+    .t12 .static {
+      pointer-events: none; position: absolute; inset: 0; opacity: 0.12;
+      background: repeating-linear-gradient(0deg, transparent, transparent 1px, #000 1px, #000 2px);
+    }
+
+    .t13 { --bg:#050508; --panel:#0c0c12; --a:#7cf0ff; --hot:#ff66cc; }
+    .t13 .holo {
+      border: 1px solid rgba(124,240,255,0.4); background: rgba(20,30,50,0.55);
+      box-shadow: 0 0 16px rgba(124,240,255,0.2), inset 0 0 20px rgba(255,102,204,0.08);
+      padding: 6px; font: 600 0.55rem/1.3 var(--mono); color: #c8f8ff;
+    }
+
+    .t14 { --bg:#120e08; --panel:#1a140c; --a:#ff9900; --hot:#ff3300; --cut: 0; }
+    .t14 .ad {
+      background: linear-gradient(90deg, #ff9900, #ff3300); color: #000;
+      font: 800 0.55rem/1 var(--font); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 6px;
+    }
+    .t14 .m-stage { border-color: #ff9900; }
+
+    .t15 { --bg:#0a0e12; --panel:#f0f2f4; --a:#1a4a6a; --hot:#1a4a6a; --ink:#1a2430; --dim:#5a6a7a; --font: "IBM Plex Mono", monospace; --mono: "IBM Plex Mono", monospace; --cut: 0; }
+    .t15 .m-stage { background: #f0f2f4; border: 1px solid #90a0b0; box-shadow: inset 0 0 0 1px #fff; }
+    .t15 .m-chip { background: #e4e8ec; border-color: #90a0b0; color: #1a4a6a; }
+
+    .t16 { --bg:#141210; --panel:#1c1a16; --a:#e8d4a8; --hot:#c45c2a; --cut: 0; }
+    .t16 .tray { display: flex; gap: 4px; }
+    .t16 .die { width: 16px; height: 16px; border: 1px solid var(--a); background: #0c0a08; font: 700 0.5rem/16px var(--mono); text-align: center; color: var(--a); }
+    .t16 .m-stage { border-style: groove; border-width: 3px; border-color: #3a3428; }
+
+    .t17 { --bg:#07070c; --panel:#101018; --a:#00f0ff; --hot:#ff0080; }
+    .t17 .m-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; }
+    .t17 .pane { padding: 6px; border: 1px solid color-mix(in srgb, var(--a) 30%, transparent); }
+    .t17 .pane.gm { border-color: var(--hot); background: rgba(255,0,128,0.06); }
+    .t17 .pane.pl { border-color: var(--a); background: rgba(0,240,255,0.05); }
+
+    .t18 { --bg:#0a0c10; --panel:#12161c; --a:#6ec8ff; --hot:#ff8a60; }
+    .t18.player { --cut: 10px; }
+    .t18 .badge { font: 700 0.48rem/1 var(--mono); letter-spacing: 0.1em; color: var(--hot); }
+
+    .t19 { --bg:#08080e; --panel:#101018; --a:#9ad4ff; --hot:#ff5a8a; }
+    .t19 .packet {
+      border: 1px solid color-mix(in srgb, var(--a) 40%, transparent);
+      padding: 6px; font: 600 0.52rem/1.3 var(--mono); color: var(--dim);
+      background: repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(154,212,255,0.06) 3px, rgba(154,212,255,0.06) 4px);
+    }
+    .t19 .packet b { color: var(--a); }
+
+    .t20 { --bg:#100c14; --panel:#1a1420; --a:#ff4da6; --hot:#7c5cff; --cut: 0; }
+    .t20 .wrist {
+      display: inline-block; padding: 4px 10px; background: var(--a); color: #100c14;
+      font: 800 0.65rem/1 var(--font); letter-spacing: 0.08em; transform: rotate(-2deg);
+      box-shadow: 0 0 0 3px #100c14, 0 0 0 5px var(--a);
+    }
+    .t20 .m-stage { border-style: solid; border-width: 2px; border-color: var(--hot); }
+
+    .pick {
+      margin-top: 26px; padding: 14px; border: 1px dashed rgba(255,0,128,0.4); max-width: 760px;
+    }
+    .pick h2 { margin: 0 0 8px; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .pick p { margin: 0 0 6px; color: var(--muted); font-size: 0.88rem; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h1>Deck OS · 20 метафор Neon Protocol</h1>
+  <p class="lead">
+    Канон оболочки: <strong>Dead Channel Ink</strong> — литература + комикс
+    (Gibson dead-channel sky · Akira/manga panels · GiTS clinical · Transmet hazard),
+    не candy neon HUD. Карточки ниже — вторичные diegetic метафоры стола.
+  </p>
+  <p class="note">
+    Locked в 014: ink void · cold phosphor · comic gutters · crop marks · glow ≈ 0.
+    Moodboard — варианты модулей (дек / ICE / мастер·поле), не смена палитры.
+  </p>
+
+  <div class="grid">
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">01</span><span class="card__name">Jack-In Deck</span></div>
+      <p class="card__hook">Стол = <em>личный дек</em>. Каналы — подсети. TRACE-полоска под кикером. ICE «Играть» = dump risk.</p>
+      <div class="tags"><span class="tag">нетраннер</span><span class="tag">014 Deck</span></div>
+      <div class="mock t01" data-v="jack"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">02</span><span class="card__name">Afterlife Booth</span></div>
+      <p class="card__hook">UI как <em>планшет в кабинке фиксера</em>: бумажная фактура, Special Elite, липкие чипы игроков.</p>
+      <div class="tags"><span class="tag">ролёвка</span><span class="tag">бар</span></div>
+      <div class="mock t02" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">03</span><span class="card__name">Militech Dispatch</span></div>
+      <p class="card__hook">Оболочка <em>мастера</em>: olive console, IBM Plex, схема боя / статусы как диспетчерская.</p>
+      <div class="tags"><span class="tag">мастер</span><span class="tag">military</span></div>
+      <div class="mock t03" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">04</span><span class="card__name">Trauma Team PDA</span></div>
+      <p class="card__hook"><em>Полевой UI игрока</em>: светлый клинический PDA, красный акцент, «срочно» для психоза/урона.</p>
+      <div class="tags"><span class="tag">игрок</span><span class="tag">field</span></div>
+      <div class="mock t04" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">05</span><span class="card__name">Arasaka Glass</span></div>
+      <p class="card__hook">Корп-терминал: тонкое золото, стекло, пустота. Деньги / файлы / лор — как доступ к mainframe.</p>
+      <div class="tags"><span class="tag">corp</span><span class="tag">vault</span></div>
+      <div class="mock t05" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">06</span><span class="card__name">Street Fixed Deck</span></div>
+      <p class="card__hook">Сваренный дек с рынка: скотч, ржавая сталь, «криво но работает». Для уличных столов.</p>
+      <div class="tags"><span class="tag">scav</span><span class="tag">Rustwire</span></div>
+      <div class="mock t06" data-v="tape"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">07</span><span class="card__name">ICE Atmosphere</span></div>
+      <p class="card__hook">Глобальные режимы <em>OK / WARN / CRITICAL</em> (как Diegetic atmosphere). Стол «красится» под угрозу.</p>
+      <div class="tags"><span class="tag">ICE</span><span class="tag">live mood</span></div>
+      <div class="mock t07 warn" data-v="ice"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">08</span><span class="card__name">Field Corkboard</span></div>
+      <p class="card__hook">Люди / досье = <em>пробковая доска</em>: бумага, булавки, красная нить. Не список админки.</p>
+      <div class="tags"><span class="tag">досье</span><span class="tag">013</span></div>
+      <div class="mock t08" data-v="cork"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">09</span><span class="card__name">Wonlong Terminal</span></div>
+      <p class="card__hook">Кошелёк как <em>банкомат/кассы Afterlife</em>: phosphor green, double border, чековые строки.</p>
+      <div class="tags"><span class="tag">₩</span><span class="tag">wallet</span></div>
+      <div class="mock t09" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">10</span><span class="card__name">Vault Evidence</span></div>
+      <p class="card__hook">Файлы = <em>вещдоки в пакете</em>: dashed seal, штамп SEALED, диагональная штриховка.</p>
+      <div class="tags"><span class="tag">файлы</span><span class="tag">vault</span></div>
+      <div class="mock t10" data-v="vault"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">11</span><span class="card__name">Carbon Blueprint</span></div>
+      <p class="card__hook">Карта Carbon 2185 как <em>чертёж мегаполиса</em>: сетка, chrome тонкий, сценарий/районы.</p>
+      <div class="tags"><span class="tag">карта</span><span class="tag">005</span></div>
+      <div class="mock t11" data-v="map"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">12</span><span class="card__name">Psychosis Static</span></div>
+      <p class="card__hook">Meta-UI: чем выше chrome tox — тем сильнее scanline/шум. Оболочка <em>болеет вместе с ПК</em>.</p>
+      <div class="tags"><span class="tag">012</span><span class="tag">meta</span></div>
+      <div class="mock t12" data-v="psy"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">13</span><span class="card__name">Live Holo Call</span></div>
+      <p class="card__hook">Живой диалог НПС задаёт язык хрома: голографическая карточка поверх stage.</p>
+      <div class="tags"><span class="tag">чат</span><span class="tag">NPC</span></div>
+      <div class="mock t13" data-v="holo"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">14</span><span class="card__name">Spam Relay Skin</span></div>
+      <p class="card__hook">Ирония: когда SPAM_RELAY on — chrome становится <em>рекламным баннером</em> (можно выключить антиспамом).</p>
+      <div class="tags"><span class="tag">чат</span><span class="tag">spam</span></div>
+      <div class="mock t14" data-v="spam"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">15</span><span class="card__name">Scenario Blueprint Desk</span></div>
+      <p class="card__hook">Сценарий/лор на <em>инженерном столе</em>: светлая калька, синие линии, пометки мастера.</p>
+      <div class="tags"><span class="tag">сцен</span><span class="tag">лор</span></div>
+      <div class="mock t15" data-v="std"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">16</span><span class="card__name">Table Tokens Rail</span></div>
+      <p class="card__hook">TTRPG-скевоморф: лоток кубиков, карта как «карта на столе», каналы = зоны стола.</p>
+      <div class="tags"><span class="tag">НРИ</span><span class="tag">dice</span></div>
+      <div class="mock t16" data-v="dice"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">17</span><span class="card__name">Dual Monitor Ops</span></div>
+      <p class="card__hook">Буквально 014: <em>мастер denser | поле cleaner</em> — два монитора в одной рамке stage.</p>
+      <div class="tags"><span class="tag">master/field</span><span class="tag">014</span></div>
+      <div class="mock t17" data-v="split"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">18</span><span class="card__name">Handheld Slate</span></div>
+      <p class="card__hook">Игрок на телефоне: больше cut, badge FIELD-PDA, меньше chrome — тот же стол, другой корпус.</p>
+      <div class="tags"><span class="tag">mobile</span><span class="tag">013 PDA</span></div>
+      <div class="mock t18 player" data-v="hand"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">19</span><span class="card__name">Encrypted Packet</span></div>
+      <p class="card__hook">Каждый модуль — <em>запечатанный пакет</em> до «вскрытия». ICE/vault/досье в одном языке.</p>
+      <div class="tags"><span class="tag">ICE</span><span class="tag">security</span></div>
+      <div class="mock t19" data-v="packet"></div>
+    </article>
+
+    <article class="card">
+      <div class="card__top"><span class="card__num">20</span><span class="card__name">Session Wristband</span></div>
+      <p class="card__hook">Инвайт <em>NRI-XXXX</em> как клубный браслет. Шапка лобби = пропуск на стол, не admin title.</p>
+      <div class="tags"><span class="tag">lobby</span><span class="tag">invite</span></div>
+      <div class="mock t20" data-v="wrist"></div>
+    </article>
+
+  </div>
+
+  <section class="pick">
+    <h2>Locked · Dead Channel Ink</h2>
+    <p>База уже в <code>--nri-*</code>: Gibson cold phosphor · manga gutters · crop marks · hazard amber.</p>
+    <p>Доп. модули по желанию: <strong>01</strong> jack-in · <strong>07</strong> ICE atmosphere · <strong>08</strong> cork досье · <strong>17</strong> мастер/поле split.</p>
+  </section>
+
+  <script>
+    function fill(el, kind) {
+      const head = `
+        <div class="m-row">
+          <div>
+            <div class="m-k">NEON_PROTOCOL // DECK</div>
+            <h3 class="m-t">ICEBREAKERS</h3>
+            <p class="m-s">Мастер · код NRI-2U5R</p>
+          </div>
+          <button class="m-btn" type="button">Правила</button>
+        </div>
+        <div class="m-chips">
+          <span class="m-chip host">★ TEST</span>
+          <span class="m-chip">Саня</span>
+          <span class="m-chip hot">@SPAM</span>
+        </div>
+        <div class="m-tabs">
+          <span class="m-tab">Чат</span><span class="m-tab on">Ice</span>
+          <span class="m-tab">Карта</span><span class="m-tab">Люди</span>
+        </div>`;
+
+      const bodies = {
+        jack: `${head}<div class="trace"></div><div class="m-stage"><h4>Subnet · ICE arcade</h4><p>TRACE 42% · dump shock risk</p><button class="m-cta" type="button">Jack into run</button></div>`,
+        std: `${head}<div class="m-stage"><h4>ICE · аркада стола</h4><p>15 мини-игр · рейтинг стола</p><button class="m-cta" type="button">▶ Играть</button></div>`,
+        tape: `<span class="tape"></span>${head}<div class="m-stage"><h4>Барахолка · дек</h4><p>Панель на скотче · всё ещё держит</p><button class="m-cta" type="button">▶ Играть</button></div>`,
+        ice: `${head}<div class="banner">⚠ ICE DETECTED · SIGNAL DEGRADED</div><div class="m-stage"><h4>Firewall breach</h4><p>Atmosphere: WARN → CRITICAL</p><button class="m-cta" type="button">Break ICE</button></div>`,
+        cork: `${head}<div class="m-stage"><h4><span class="pin"></span>Полевые досье</h4><p>Имя · фракция · приметы · булавка</p><button class="m-cta" type="button">+ Карточка</button></div>`,
+        vault: `${head}<div class="m-stage"><span class="seal">SEALED</span><h4>Файлохранилище</h4><p>Evidence bag · ICE lock optional</p><button class="m-cta" type="button">Вскрыть</button></div>`,
+        map: `${head}<div class="m-stage"><div class="map-chrome"><h4>Carbon 2185 · blueprint</h4><p>Сетка районов · клик = вход</p></div><p style="padding:6px;margin:0;font:400 0.5rem/1.3 var(--mono);color:var(--dim)">чертеж / density / traffic</p></div>`,
+        psy: `<div class="static"></div>${head}<div class="m-stage"><h4>Chrome tox rising</h4><p>Scanline ∝ psychosis · звонок мастера</p><button class="m-cta" type="button">Открыть чат</button></div>`,
+        holo: `${head}<div class="m-stage"><div class="holo">НПС · LIVE DIALOG<br/>«Ты слышишь помехи…»</div><button class="m-cta" type="button">Далее</button></div>`,
+        spam: `${head}<div class="ad">★ РЕКЛАМА · WONLONGS 50% OFF ★</div><div class="m-stage"><h4>Канал заспамлен</h4><p>Антиспам из кошелька · или терпи</p><button class="m-cta" type="button">Заткнуть бота</button></div>`,
+        dice: `${head}<div class="m-stage"><div class="tray"><span class="die">d</span><span class="die">20</span><span class="die">+</span><span class="die">3</span></div><h4>Схема боя · кубики</h4><p>Токены на макете стола</p><button class="m-cta" type="button">Бросок</button></div>`,
+        split: `${head}<div class="m-stage"><div class="pane gm"><h4>Мастер</h4><p>Плотнее · ген · схема</p></div><div class="pane pl"><h4>Поле</h4><p>Чище · PDA · чат</p></div></div>`,
+        hand: `${head}<div class="m-stage"><span class="badge">FIELD-PDA</span><h4>Мой чарник</h4><p>Handheld density · safe-area</p><button class="m-cta" type="button">Открыть лист</button></div>`,
+        packet: `${head}<div class="m-stage"><div class="packet"><b>PKT://ICE/GIBSON</b><br/>ENC=AES · wait decrypt</div><button class="m-cta" type="button">Decrypt</button></div>`,
+        wrist: `${head}<div class="m-stage"><span class="wrist">NRI-2U5R</span><h4>Пропуск на стол</h4><p>Браслет сессии · не admin header</p><button class="m-cta" type="button">Войти в зал</button></div>`,
+      };
+      el.innerHTML = bodies[kind] || bodies.std;
+    }
+    document.querySelectorAll('.mock').forEach((el) => fill(el, el.getAttribute('data-v') || 'std'));
+  </script>
+</body>
+</html>

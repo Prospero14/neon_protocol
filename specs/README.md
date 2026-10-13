@@ -27,6 +27,12 @@
 | 008 | [external-content](./008-external-content/) | Внешний контент (Necrons WH40K) |
 | 009 | [nri-roleplay-pack](./009-nri-roleplay-pack/) | Сырьё ролевки NRI: сценарий, квесты, нейминги (пока inbox) |
 | 010 | [nri-ui-comfort](./010-nri-ui-comfort/) | Разгрузка текста: чипы, progressive disclosure, game-like scan |
+| 011 | [nri-combat-aftermath](./011-nri-combat-aftermath/) | Перенос HP/статусов/расходников после боя |
+| 012 | [nri-cyberpsychosis](./012-nri-cyberpsychosis/) | Метрики киберпсихоза, звонок мастера, шрамы |
+| 013 | [nri-player-field-dossiers](./013-nri-player-field-dossiers/) | Вкладка «Персонажи» у игрока + ручные досье |
+| 014 | [nri-deck-ui](./014-nri-deck-ui/) | Deck OS: оболочка стола, киберпанк HUD, mobile-first |
+| 015 | [nri-ice-arcade-rewrite](./015-nri-ice-arcade-rewrite/) | ICE аркада: уникальные механики, win/fail, score/replay |
+| 016 | [nri-ice-counterhack](./016-nri-ice-counterhack/) | Встречный взлом после фейлов, деки, QRF-штампы |
 
 ## Связанное вне specs
 

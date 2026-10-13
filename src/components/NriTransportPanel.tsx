@@ -76,25 +76,33 @@ export const NriTransportPanel: React.FC<Props> = ({ inviteCode, isHost, roster 
   };
 
   return (
-    <div className="nri-transport">
-      <h3 className="mono-text">Транспорт стола</h3>
-      <p className="mono-text opacity-70">
-        Carbon 2185: Body, Speed, места, груз. Водитель — навык {NRI_VEHICLE_CATALOG[0]?.skill ?? 'Vehicles (Land)'}.
-        Все игроки видят выданный транспорт и характеристики водителя.
-      </p>
+    <div className="nri-transport nri-deck-module">
+      <header className="nri-deck-sheet__head-block">
+        <h3 className="nri-deck-sheet__title">Транспорт стола</h3>
+        <p className="mono-text opacity-70 nri-deck-module__hint">
+          Body, Speed, места, груз. Водитель — навык {NRI_VEHICLE_CATALOG[0]?.skill ?? 'Vehicles (Land)'}.
+        </p>
+      </header>
 
       {isHost && (
         <div className="nri-transport__form">
-          <select value={catalogId} onChange={(e) => setCatalogId(e.target.value as NriVehicleCatalogId)}>
-            {NRI_VEHICLE_CATALOG.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-              </option>
-            ))}
-          </select>
-          <NriVehicleCatalogPreview catalogId={catalogId} />
-          <button type="button" className="nri-modal__submit" disabled={busy} onClick={addVehicle}>
-            Добавить на стол
+          <label className="nri-transport__pick mono-text">
+            <span className="nri-transport__pick-label">Модель</span>
+            <select
+              className="nri-transport__select"
+              value={catalogId}
+              onChange={(e) => setCatalogId(e.target.value as NriVehicleCatalogId)}
+            >
+              {NRI_VEHICLE_CATALOG.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <NriVehicleCatalogPreview catalogId={catalogId} compact />
+          <button type="button" className="nri-transport__add" disabled={busy} onClick={addVehicle}>
+            + на стол
           </button>
         </div>
       )}
@@ -128,6 +136,7 @@ export const NriTransportPanel: React.FC<Props> = ({ inviteCode, isHost, roster 
                 <label className="nri-transport__assign mono-text">
                   <span>Водитель</span>
                   <select
+                    className="nri-transport__select"
                     value={v.assignedUserId ?? ''}
                     disabled={busy}
                     onChange={(e) => assign(v.id, e.target.value)}
@@ -155,7 +164,7 @@ export const NriTransportPanel: React.FC<Props> = ({ inviteCode, isHost, roster 
                   </span>
                   <span className="nri-transport__owner-stats">
                     {C2185_ABILITIES.map((ab) => (
-                      <span key={ab}>
+                      <span key={ab} className="nri-transport__stat-chip">
                         {ab} {ownerSheet.abilities[ab]}
                       </span>
                     ))}

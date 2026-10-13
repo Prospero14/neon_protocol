@@ -1,6 +1,7 @@
 /** Установка киберимплантов на лист персонажа (Augmentations + Blood Tox). */
 
 import { markPendingHoloTattooAfterInstall } from '../../shared/nri-domain/tattoos';
+import { syncPsychosisFlags } from '../../shared/nri-domain/psychosisLogic';
 
 import type { NriInventoryItem } from './nriInventory';
 import { bloodToxLimitFromCon, parseKbAcBonus, type CyberSlot } from './nriCyberware';
@@ -29,7 +30,7 @@ const FUNCTIONAL_SLOTS: CyberSlot[] = ['arm', 'leg', 'head', 'torso', 'internal'
 export function parseAugmentedSheet(raw: unknown): AugmentedSheet | null {
   const base = parseNriSheet(raw);
   if (!base) return null;
-  const o = raw as AugmentedSheet;
+  const o = base as AugmentedSheet;
   return {
     ...base,
     bloodToxCurrent: typeof o.bloodToxCurrent === 'number' ? o.bloodToxCurrent : undefined,
@@ -159,7 +160,7 @@ export function tryInstallCyberItem(
     bloodToxCurrent: nextBt,
     bloodToxLimit: limit,
   };
-  const newSheet = markPendingHoloTattooAfterInstall(installedSheet, item);
+  const newSheet = syncPsychosisFlags(markPendingHoloTattooAfterInstall(installedSheet, item));
 
   return { ok: true, sheet: newSheet, inventory: newInventory };
 }
@@ -184,11 +185,11 @@ export function tryUninstallCyberItem(sheetRaw: unknown, inventoryRaw: unknown, 
   });
 
   const newAug = installed.filter((a) => a.itemId !== itemId);
-  const newSheet: AugmentedSheet = {
+  const newSheet = syncPsychosisFlags({
     ...sheet,
     augmentations: newAug,
     bloodToxCurrent: newAug.reduce((s, a) => s + a.bloodTox, 0),
-  };
+  }) as AugmentedSheet;
 
   return { ok: true, sheet: newSheet, inventory };
 }

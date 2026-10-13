@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { MapPin, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
+import { MapPin, Move, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
 import type { NriClassId } from '../logic/nriClasses';
 import { getNriClass } from '../logic/nriClasses';
 import { sendNriChatMessage } from '../logic/nriChatDispatch';
@@ -31,7 +31,7 @@ type Props = {
   onVaultCreated?: () => void;
 };
 
-type PlaceMode = 'select' | 'enemy' | 'wall' | 'cover';
+type PlaceMode = 'select' | 'move' | 'erase' | 'enemy' | 'wall' | 'cover';
 
 function defaultPlayerPositions(n: number): { x: number; y: number }[] {
   const baseY = 72;
@@ -57,6 +57,7 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
   const [enemyName, setEnemyName] = useState('Враг');
   const [combatants, setCombatants] = useState<NriCombatant[]>([]);
   const [pickedCombatantId, setPickedCombatantId] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -68,6 +69,7 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
 
   const svgMarkup = useMemo(() => buildTacticalSvg(state), [state]);
   const boardSvg = useMemo(() => buildTacticalSvg(state, { includeTokens: false }), [state]);
+  const enemies = useMemo(() => tokens.filter((t) => t.kind === 'enemy'), [tokens]);
 
   const syncPlayers = useCallback(() => {
     const positions = defaultPlayerPositions(roster.length);
@@ -85,15 +87,19 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
   }, [roster]);
 
   useEffect(() => {
-    nriFetchCombatants(authToken, nriCode).then((list) => {
-      if (list) setCombatants(list);
-    });
-    const t = setInterval(() => {
+    const load = () => {
       nriFetchCombatants(authToken, nriCode).then((list) => {
         if (list) setCombatants(list);
       });
-    }, 12_000);
-    return () => clearInterval(t);
+    };
+    load();
+    const onChanged = () => load();
+    window.addEventListener('neon:combatants-changed', onChanged);
+    const t = setInterval(load, 12_000);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('neon:combatants-changed', onChanged);
+    };
   }, [authToken, nriCode]);
 
   useEffect(() => {
@@ -111,8 +117,14 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
     return { x, y };
   };
 
+  const removeToken = (id: string) => {
+    setTokens((prev) => prev.filter((t) => t.id !== id));
+    if (selectedId === id) setSelectedId(null);
+  };
+
   const onBoardPointerDown = (e: React.PointerEvent) => {
     if (dragId) return;
+    if (placeMode === 'move' || placeMode === 'erase' || placeMode === 'select') return;
     const { x, y } = pctFromEvent(e);
     if (placeMode === 'enemy') {
       const combatant = pickedCombatantId
@@ -121,7 +133,7 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
       setTokens((prev) => [
         ...prev,
         {
-          id: combatant ? `cb_${combatant.id}` : newTokenId('en'),
+          id: combatant ? `cb_${combatant.id}_${Date.now().toString(36).slice(-4)}` : newTokenId('en'),
           kind: 'enemy',
           label: combatant?.name ?? (enemyName.trim() || 'Враг'),
           classId: (combatant?.classId as TacticalToken['classId']) ?? undefined,
@@ -149,8 +161,20 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
 
   const onTokenPointerDown = (id: string, e: React.PointerEvent) => {
     e.stopPropagation();
-    setDragId(id);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const tok = tokens.find((t) => t.id === id);
+    if (placeMode === 'erase') {
+      if (tok?.kind === 'enemy') {
+        removeToken(id);
+        setNotice(`Удалён: ${tok.label}`);
+      }
+      return;
+    }
+    setSelectedId(id);
+    if (placeMode === 'move' || placeMode === 'select' || placeMode === 'enemy') {
+      setDragId(id);
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      if (placeMode === 'enemy') setPlaceMode('move');
+    }
   };
 
   const onBoardPointerMove = (e: React.PointerEvent) => {
@@ -160,8 +184,6 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
   };
 
   const onBoardPointerUp = () => setDragId(null);
-
-  const removeToken = (id: string) => setTokens((prev) => prev.filter((t) => t.id !== id));
 
   const sendScheme = async (target: { kind: 'table' } | { kind: 'dm'; userId: string }) => {
     setBusy(true);
@@ -226,6 +248,22 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
         >
           <Plus size={14} /> Враг
         </button>
+        <button
+          type="button"
+          className={`nri-tactical__tool ${placeMode === 'move' ? 'active' : ''}`}
+          onClick={() => setPlaceMode(placeMode === 'move' ? 'select' : 'move')}
+          title="Перетащить фишку"
+        >
+          <Move size={14} /> Двигать
+        </button>
+        <button
+          type="button"
+          className={`nri-tactical__tool nri-tactical__tool--danger ${placeMode === 'erase' ? 'active' : ''}`}
+          onClick={() => setPlaceMode(placeMode === 'erase' ? 'select' : 'erase')}
+          title="Клик по врагу — удалить"
+        >
+          <Trash2 size={14} /> Удалить
+        </button>
         <label className="nri-tactical__field nri-tactical__field--combatant">
           Боевик
           <select
@@ -281,7 +319,7 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
 
       <div
         ref={boardRef}
-        className="nri-tactical__board"
+        className={`nri-tactical__board${placeMode === 'erase' ? ' nri-tactical__board--erase' : ''}${placeMode === 'move' ? ' nri-tactical__board--move' : ''}`}
         style={{ aspectRatio: `${TACTICAL_BOARD_W} / ${TACTICAL_BOARD_H}` }}
         onPointerDown={onBoardPointerDown}
         onPointerMove={onBoardPointerMove}
@@ -295,11 +333,11 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
         {tokens.map((tok) => {
           const cls = tok.classId ? CLASS_TOKEN_COLORS[tok.classId] : null;
           const isEnemy = tok.kind === 'enemy';
+          const selected = selectedId === tok.id;
           return (
-            <button
+            <div
               key={tok.id}
-              type="button"
-              className={`nri-tactical__token ${isEnemy ? 'nri-tactical__token--enemy' : 'nri-tactical__token--player'}`}
+              className={`nri-tactical__token ${isEnemy ? 'nri-tactical__token--enemy' : 'nri-tactical__token--player'}${selected ? ' is-selected' : ''}`}
               style={{
                 left: `${tok.x}%`,
                 top: `${tok.y}%`,
@@ -307,33 +345,87 @@ export const NriTacticalMapPanel: React.FC<Props> = ({
                 ['--tok-stroke' as string]: isEnemy ? '#ff5555' : cls?.stroke ?? '#aaa',
               }}
               onPointerDown={(e) => onTokenPointerDown(tok.id, e)}
-              title={tok.classId ? getNriClass(tok.classId)?.name : undefined}
+              title={tok.classId ? getNriClass(tok.classId)?.name : tok.label}
+              role="button"
+              tabIndex={0}
             >
-              <span className="nri-tactical__token-glyph">
-                {isEnemy ? '×' : cls?.glyph ?? '?'}
+              <span className="nri-tactical__token-face">
+                <span className="nri-tactical__token-glyph">
+                  {isEnemy ? '×' : cls?.glyph ?? '?'}
+                </span>
               </span>
               <span className="nri-tactical__token-label">{tok.label}</span>
-              <span
-                className="nri-tactical__token-remove"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeToken(tok.id);
-                }}
-              >
-                <Trash2 size={10} />
-              </span>
-            </button>
+              {isEnemy && (
+                <button
+                  type="button"
+                  className="nri-tactical__token-remove"
+                  aria-label={`Удалить ${tok.label}`}
+                  title="Удалить врага"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeToken(tok.id);
+                    setNotice(`Удалён: ${tok.label}`);
+                  }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
 
       <p className="mono-text nri-tactical__mode-hint">
-        {placeMode === 'select' && 'Режим: перетаскивание фишек. Враг/стена/укрытие — клик по полю.'}
-        {placeMode === 'enemy' && 'Клик по полю — поставить врага.'}
+        {placeMode === 'select' && 'Режим: перетаскивание. «Двигать» / «Удалить» — явные режимы.'}
+        {placeMode === 'move' && 'Тяните фишку на новое место.'}
+        {placeMode === 'erase' && 'Клик по врагу — удалить. Или крестик на фишке.'}
+        {placeMode === 'enemy' && 'Клик по полю — поставить врага. Потяните уже стоящего, чтобы подвинуть.'}
         {placeMode === 'wall' && 'Клик — прямоугольная стена.'}
         {placeMode === 'cover' && 'Клик — круглое укрытие.'}
       </p>
+
+      {enemies.length > 0 && (
+        <ul className="nri-tactical__enemy-list mono-text" aria-label="Враги на схеме">
+          {enemies.map((en) => (
+            <li key={en.id}>
+              <button
+                type="button"
+                className={selectedId === en.id ? 'is-selected' : ''}
+                onClick={() => {
+                  setSelectedId(en.id);
+                  setPlaceMode('move');
+                }}
+              >
+                {en.label}
+              </button>
+              <button
+                type="button"
+                className="nri-tactical__enemy-list-move"
+                title="Двигать"
+                onClick={() => {
+                  setSelectedId(en.id);
+                  setPlaceMode('move');
+                  setNotice(`Тяните «${en.label}» на схеме`);
+                }}
+              >
+                <Move size={12} />
+              </button>
+              <button
+                type="button"
+                className="nri-tactical__enemy-list-del"
+                title="Удалить"
+                onClick={() => {
+                  removeToken(en.id);
+                  setNotice(`Удалён: ${en.label}`);
+                }}
+              >
+                <Trash2 size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <NriChatSendBar
         recipients={recipients}

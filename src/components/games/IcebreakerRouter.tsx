@@ -1,17 +1,12 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import GibsonIceHack from './GibsonIceHack';
 import {
   AuthBypassGame,
   BreachMatrixGame,
-  DaemonUploadGame,
-  HashCrackGame,
-  MeshJackGame,
   LogWipeGame,
-  PacketSniffGame,
   PortSequenceGame,
   ProxyDodgeGame,
   ScanPickGame,
-  SignalLockGame,
 } from './IceMiniGames';
 import {
   CircuitSpliceGame,
@@ -19,17 +14,29 @@ import {
   NodeCaptureGame,
 } from './IceArcadeExtra';
 import {
+  BitSweepGame,
+  CipherRingsGame,
+  DeadSectorGame,
+  HandshakeDrillGame,
+  KeyspacePruneGame,
+  NoiseFloorGame,
+  OpcodeForgeGame,
+  type IceWinMeta,
+} from './IceRewriteGames';
+import { IceResultModal } from './IceResultModal';
+import {
   getIceGame,
   resolveIceParams,
   type IceDifficulty,
 } from '../../logic/nriGameCatalog';
 
+export type IceCompleteMeta = IceWinMeta;
+
 type Props = {
   gameId: string;
   difficulty: IceDifficulty;
-  onComplete: (won: boolean) => void;
+  onComplete: (won: boolean, meta?: IceCompleteMeta) => void;
   onBack?: () => void;
-  /** Аркада стола: Gibson — ban + рейтинг через onRunComplete. */
   nriInviteCode?: string;
   tableArcadeMode?: boolean;
   onOpenInventory?: () => void;
@@ -48,19 +55,24 @@ export const IcebreakerRouter: React.FC<Props> = ({
 }) => {
   const game = getIceGame(gameId);
   const params = resolveIceParams(gameId, difficulty);
+  const [result, setResult] = useState<{ won: boolean; meta?: IceCompleteMeta } | null>(null);
 
-  // Иначе async submit / таймеры после win/fail шлют повторный onComplete и ломают провал.
   const settledRef = useRef(false);
   const fail = useCallback(() => {
     if (settledRef.current) return;
     settledRef.current = true;
-    onComplete(false);
-  }, [onComplete]);
-  const win = useCallback(() => {
+    setResult({ won: false });
+  }, []);
+  const win = useCallback((meta?: IceCompleteMeta) => {
     if (settledRef.current) return;
     settledRef.current = true;
-    onComplete(true);
-  }, [onComplete]);
+    setResult({ won: true, meta });
+  }, []);
+
+  const confirmResult = useCallback(() => {
+    if (!result) return;
+    onComplete(result.won, result.meta);
+  }, [onComplete, result]);
 
   if (!game || !params) {
     return (
@@ -105,7 +117,7 @@ export const IcebreakerRouter: React.FC<Props> = ({
   }
 
   return (
-    <div className="icebreaker-wrap">
+    <div className={`icebreaker-wrap ${result ? 'icebreaker-wrap--settled' : ''}`}>
       <div className="icebreaker-wrap__frame" aria-hidden>
         <div className="icebreaker-wrap__scanlines" />
       </div>
@@ -117,26 +129,54 @@ export const IcebreakerRouter: React.FC<Props> = ({
         <p className="mono-text opacity-70">{game.blurb}</p>
         <span className="mono-text icebreaker-wrap__diff">
           DIFF :: {game.difficulties[difficulty].label.toUpperCase()}
+          {' · '}
+          {game.diffHints[difficulty]}
         </span>
+        <dl className="icebreaker-wrap__winfail mono-text">
+          <div>
+            <dt>WIN</dt>
+            <dd>{game.guide.win}</dd>
+          </div>
+          <div>
+            <dt>FAIL</dt>
+            <dd>{game.guide.fail}</dd>
+          </div>
+        </dl>
       </header>
-      {game.engine === 'sequence' && <PortSequenceGame {...p} />}
-      {game.engine === 'scan' && <ScanPickGame {...p} />}
-      {game.engine === 'breach' && <BreachMatrixGame {...p} />}
-      {game.engine === 'daemon' && <DaemonUploadGame {...p} />}
-      {game.engine === 'mesh' && <MeshJackGame {...p} />}
-      {game.engine === 'dodge' && <ProxyDodgeGame {...p} />}
-      {game.engine === 'logwipe' && <LogWipeGame {...p} />}
-      {game.engine === 'wordle' && <AuthBypassGame {...p} />}
-      {game.engine === 'sniff' && <PacketSniffGame {...p} />}
-      {game.engine === 'hash' && <HashCrackGame {...p} />}
-      {game.engine === 'signallock' && <SignalLockGame {...p} />}
-      {game.engine === 'circuit' && <CircuitSpliceGame {...p} />}
-      {game.engine === 'likeness' && <LikenessVaultGame {...p} />}
-      {game.engine === 'capture' && <NodeCaptureGame {...p} />}
-      {onBack && (
+      <div className="icebreaker-wrap__play" aria-hidden={!!result}>
+        {game.engine === 'sequence' && <PortSequenceGame {...p} />}
+        {game.engine === 'scan' && <ScanPickGame {...p} />}
+        {game.engine === 'breach' && <BreachMatrixGame {...p} />}
+        {game.engine === 'stack' && <OpcodeForgeGame {...p} />}
+        {game.engine === 'constraint' && <KeyspacePruneGame {...p} />}
+        {game.engine === 'handshake' && <HandshakeDrillGame {...p} />}
+        {game.engine === 'dodge' && <ProxyDodgeGame {...p} />}
+        {game.engine === 'logwipe' && <LogWipeGame {...p} />}
+        {game.engine === 'wordle' && <AuthBypassGame {...p} />}
+        {game.engine === 'toggle' && <DeadSectorGame {...p} />}
+        {game.engine === 'balance' && <NoiseFloorGame {...p} />}
+        {game.engine === 'circuit' && <CircuitSpliceGame {...p} />}
+        {game.engine === 'likeness' && <LikenessVaultGame {...p} />}
+        {game.engine === 'capture' && <NodeCaptureGame {...p} />}
+        {game.engine === 'rings' && <CipherRingsGame {...p} />}
+        {game.engine === 'mines' && <BitSweepGame {...p} />}
+      </div>
+      {onBack && !result && (
         <button type="button" className="icebreaker-wrap__back" onClick={onBack}>
           ← Отмена
         </button>
+      )}
+      {result && (
+        <IceResultModal
+          won={result.won}
+          gameId={game.id}
+          title={game.title}
+          winText={game.guide.win}
+          failText={game.guide.fail}
+          difficultyLabel={game.difficulties[difficulty].label}
+          qualityPct={result.meta?.qualityPct}
+          onConfirm={confirmResult}
+        />
       )}
     </div>
   );

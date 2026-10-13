@@ -1,12 +1,14 @@
-/** Генерация описания одежды в духе киберпанка: происхождение × деятельность × архетип × класс. */
+/**
+ * Одежда для C2185 / NRI.
+ * Best practice: силуэт (1) + функциональный слой (1) + story detail (1).
+ * Без прачечного списка аксессуаров; пунктуация — законченные фразы.
+ */
 
 import type { NriClassId } from './nriClasses';
 import type { NriActivityId, NriNpcArchetypeId, NriOriginId } from './nriCharacterGen';
 import { careerSectorHint, type CareerSector } from './nriCareers';
-
-function pick<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
-}
+import type { CharacterFlavorInput, FlavorChrome } from './nriCharacterFlavor';
+import { asSentence, joinSentences, pickOne } from './nriProse';
 
 const ORIGIN_OUTER: Record<NriOriginId, string[]> = {
   neo_tokyo: [
@@ -76,7 +78,7 @@ const ACTIVITY_LAYER: Record<NriActivityId, string[]> = {
     'Перчатки без пальцев: быстрый доступ к кредит-чипам',
     'Кроссовки с тихой подошвой и грязью из последнего переулка',
     'Шарф-бафф, закрывающий нижнюю половину лица от камер',
-    'Пояс с пустыми кобурами — оружие спрятано elsewhere',
+    'Пояс с пустыми кобурами — оружие спрятано глубже',
   ],
   corp: [
     'Под пиджаком — рубашка с вшитым NFC и отключённым трекером',
@@ -203,62 +205,93 @@ const CLASS_FLAIR: Record<NriClassId, string[]> = {
   fixer: ['Ворот рубашки расстёгнут — свой человек', 'Безлоготипные очки Ray-Ban 2077'],
 };
 
-const UNIVERSAL_FINISH: string[] = [
-  'На всём — следы неона и кофеина.',
-  'Пахнет озоном и дешёвым парфюмом.',
-  'Один карман пришит заново — после обыска.',
-  'Нитки светятся в УФ — метка клуба.',
-  'Молния заедает, но держится изолентой.',
-  'На подоле — полоса грязи от маглев-платформы.',
-  'Воротник потёрт там, где касается импланта.',
-  'На плече — выцветший шеврон чужой корпорации.',
+const STORY_DETAILS: string[] = [
+  'на всём — следы неона и кофеина',
+  'пахнет озоном и дешёвым парфюмом',
+  'один карман пришит заново — после обыска',
+  'нитки светятся в УФ: метка клуба',
+  'молния заедает, но держится изолентой',
+  'на подоле — полоса грязи от маглев-платформы',
+  'воротник потёрт там, где касается импланта',
+  'на плече — выцветший шеврон чужой корпорации',
 ];
 
-const TEMPLATES: string[] = [
-  '{outer}. {layer} {accent}. {classFlair}',
-  '{outer}; под ним — {layer}. {finish}',
-  '{layer} Поверх — {outer}. {accent} {classFlair}',
-  'Силуэт {activityTone}: {outer}, {layer}. {finish}',
-  '{careerTone}: {outer}. {sectorLayer} {accent}',
-  '{outer} — как у {careerTone}. {layer} {finish}',
-];
-
-const ACTIVITY_TONE: Record<NriActivityId, string> = {
-  street: 'выживальщика',
-  corp: 'корпората',
-  military: 'силовика',
-  medical: 'медика',
-  criminal: 'теневика',
-  tech: 'техника',
-  media: 'репортёра',
-  nomad: 'кочевника',
+const CHROME_CLOTHING: Record<string, string[]> = {
+  neural: [
+    'воротник всегда поднят — прячет джеки',
+    'на шее потёртость от кабеля интерфейса',
+    'капюшон с медной нитью — Faraday-lite под нейролинк',
+  ],
+  arm: [
+    'рукав обрезан или на молнии — доступ к хромированной руке',
+    'перчатка только на живой руке; хром остаётся голым',
+    'манжета растянута там, где сервопривод',
+  ],
+  leg: [
+    'штанина усилена по шву — шасси бьёт ткань',
+    'ботинок на хромированной ноге выше и тяжелее',
+  ],
+  head: [
+    'кепка/повязка закрывает оптику от бликов камер',
+    'очки поверх имплант-линз — двойная маскировка',
+  ],
+  torso: [
+    'куртка не застёгивается до конца — мешает нагрудный модуль',
+    'бронежилет скроен вокруг встроенной пластины',
+  ],
+  default: [
+    'одежда подогнана под хром, а не наоборот',
+    'швы разошлись там, где металл трёт кожу',
+  ],
 };
 
-const SECTOR_TONE: Record<CareerSector, string> = {
-  corp: 'корпоративного специалиста',
-  private: 'контрактника',
-  state: 'госслужащего',
-  street: 'районного выживальщика',
-  underground: 'теневого игрока',
-};
+function chromeClothingDetail(chrome: FlavorChrome[]): string | null {
+  if (!chrome.length) return null;
+  const slot = (chrome[0]!.slot ?? 'default').toLowerCase();
+  const key =
+    (['neural', 'arm', 'leg', 'head', 'torso'] as const).find((k) => slot.includes(k)) ?? 'default';
+  return pickOne(CHROME_CLOTHING[key]!, CHROME_CLOTHING.default![0]!);
+}
 
-export function generateRichClothing(params: {
+export function generateRichClothing(params: CharacterFlavorInput | {
   originId: NriOriginId;
   activityId: NriActivityId;
   archetypeId?: NriNpcArchetypeId;
   classId: NriClassId;
   career?: string;
+  chrome?: FlavorChrome[];
+  weapons?: string[];
 }): string {
   const arch = params.archetypeId ?? 'civilian';
   const sector = params.career ? careerSectorHint(params.career) : null;
-  const tpl = pick(TEMPLATES);
-  return tpl
-    .replace(/\{outer\}/g, pick(ORIGIN_OUTER[params.originId]))
-    .replace(/\{layer\}/g, pick(ACTIVITY_LAYER[params.activityId]))
-    .replace(/\{sectorLayer\}/g, pick(SECTOR_LAYER[sector ?? 'private']))
-    .replace(/\{accent\}/g, pick(ARCHETYPE_ACCENT[arch]))
-    .replace(/\{classFlair\}/g, pick(CLASS_FLAIR[params.classId]))
-    .replace(/\{finish\}/g, pick(UNIVERSAL_FINISH))
-    .replace(/\{activityTone\}/g, ACTIVITY_TONE[params.activityId])
-    .replace(/\{careerTone\}/g, sector ? SECTOR_TONE[sector] : ACTIVITY_TONE[params.activityId]);
+  const chrome = 'chrome' in params ? params.chrome ?? [] : [];
+  const weapons = 'weapons' in params ? params.weapons ?? [] : [];
+
+  const outer = pickOne(ORIGIN_OUTER[params.originId], 'Потрётая куртка без опознавательных знаков');
+
+  const layerPool =
+    sector && Math.random() < 0.45
+      ? SECTOR_LAYER[sector]
+      : ACTIVITY_LAYER[params.activityId];
+  const layer = pickOne(layerPool, 'Под курткой — практичный слой без лишнего шума');
+
+  const chromeDetail = chromeClothingDetail(chrome);
+  let detail: string;
+  if (chromeDetail && Math.random() < 0.7) {
+    detail = chromeDetail;
+  } else if (weapons.length && Math.random() < 0.35) {
+    detail = `посадка куртки выдаёт скрытый «${weapons[0]}»`;
+  } else if (Math.random() < 0.4) {
+    detail = pickOne(ARCHETYPE_ACCENT[arch], 'выглядит как тысяча других в метро');
+  } else if (Math.random() < 0.7) {
+    detail = pickOne(CLASS_FLAIR[params.classId], 'силуэт читается с первого взгляда');
+  } else {
+    detail = pickOne(STORY_DETAILS, 'на всём — следы города');
+  }
+
+  if (Math.random() < 0.55) {
+    const head = `${asSentence(outer).replace(/\.$/, '')}; под ним — ${layer.replace(/^[а-яё]/u, (c) => c.toLocaleLowerCase('ru-RU'))}`;
+    return joinSentences(head, detail);
+  }
+  return joinSentences(outer, layer, detail);
 }

@@ -101,6 +101,7 @@ async function ensureNriLoreDbColumnsRaw(prisma) {
     await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "achievementState" JSON;`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "fieldDossiers" JSON NOT NULL DEFAULT '[]';`);
     await addSqliteColumn(prisma, `ALTER TABLE "NriPlayer" ADD COLUMN "privateNotes" TEXT NOT NULL DEFAULT '';`);
+    await addSqliteColumn(prisma, `ALTER TABLE "NriSession" ADD COLUMN "masterProps" TEXT;`);
 }
 /**
  * Пустой TEXT вместо JSON (`""`) ломает Prisma findMany: Unexpected end of JSON input.

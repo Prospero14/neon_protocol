@@ -113,7 +113,13 @@ export async function chatSendMessage(
   token: string,
   roomId: string,
   text: string,
-  opts?: { asNpcId?: string; dmTargetUserId?: string; nriCode?: string }
+  opts?: {
+    asNpcId?: string;
+    dmTargetUserId?: string;
+    nriCode?: string;
+    audience?: 'table' | 'host_and_roller';
+    payload?: Record<string, unknown>;
+  }
 ): Promise<ChatMessage | null> {
   const out = await chatSafeFetch(`/neon_v1/services/chat/rooms/${roomId}/messages`, {
     method: 'POST',
@@ -123,6 +129,8 @@ export async function chatSendMessage(
       asNpcId: opts?.asNpcId,
       dmTargetUserId: opts?.dmTargetUserId,
       nriCode: opts?.nriCode,
+      audience: opts?.audience,
+      payload: opts?.payload,
     }),
   });
   if (!out || !out.res.ok) return null;

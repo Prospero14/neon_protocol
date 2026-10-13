@@ -12,6 +12,7 @@ import { mountNriCyberRoutes } from './nriCyberRoutes.js';
 import { mountNriSessionLobbyRoutes } from './nriSessionLobbyRoutes.js';
 import { mountNriVehicleRoutes } from './nriVehicleRoutes.js';
 import { mountNriScenarioRoutes } from './nriScenarioRoutes.js';
+import { mountNriMasterPropsRoutes } from './nriMasterPropsRoutes.js';
 import { parseNriJsonField, requireNriHost, resolveNriSession } from './nriSessionHelpers.js';
 /** Точка монтирования всех маршрутов столов НРИ. */
 export function mountNriService(app, deps) {
@@ -43,6 +44,7 @@ export function mountNriService(app, deps) {
     mountNriCyberRoutes(app, nriCtx);
     mountNriVehicleRoutes(app, nriCtx);
     mountNriScenarioRoutes(app, nriCtx);
+    mountNriMasterPropsRoutes(app, nriCtx);
     mountNriCombatantRoutes(app, {
         prisma,
         jwtAuth,

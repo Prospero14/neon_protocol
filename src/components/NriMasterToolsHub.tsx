@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dices, MapPin, Network, Package, Skull, UserCircle, Users, AlertTriangle, Brain } from 'lucide-react';
+import { Dices, MapPin, Network, Package, ShoppingBasket, Skull, UserCircle, Users, AlertTriangle, Brain } from 'lucide-react';
 import type { NriRosterPlayer } from '../logic/nriApi';
 import { NriDicePanel } from './NriDicePanel';
 import { NriTacticalMapPanel } from './NriTacticalMapPanel';
@@ -10,6 +10,7 @@ import { NriCombatantsPanel } from './NriCombatantsPanel';
 import { NriFactionRelationsPanel } from './NriFactionRelationsPanel';
 import { NriMasterInventoryPanel } from './NriMasterInventoryPanel';
 import { NriMasterPsychosisPanel } from './NriMasterPsychosisPanel';
+import { NriMasterPropsPanel } from './NriMasterPropsPanel';
 import type { VaultRecipient } from './NriVaultTab';
 
 export type MasterToolsSection =
@@ -21,7 +22,8 @@ export type MasterToolsSection =
   | 'gen_npcs'
   | 'gen_combatants'
   | 'faction_relations'
-  | 'master_inventory';
+  | 'master_inventory'
+  | 'master_props';
 
 type Props = {
   inviteCode: string;
@@ -40,6 +42,7 @@ const SECTIONS: { id: MasterToolsSection; label: string; icon: React.ReactNode; 
   { id: 'psychosis', label: 'Психоз', icon: <Brain size={13} />, group: 'стол' },
   { id: 'faction_relations', label: 'Фракции', icon: <Network size={13} />, group: 'стол' },
   { id: 'master_inventory', label: 'Инвентарь мастера', icon: <Package size={13} />, group: 'стол' },
+  { id: 'master_props', label: 'Пропы / корзина', icon: <ShoppingBasket size={13} />, group: 'стол' },
   { id: 'gen_players', label: 'Игроки', icon: <UserCircle size={13} />, group: 'ген' },
   { id: 'gen_npcs', label: 'НПС', icon: <Users size={13} />, group: 'ген' },
   { id: 'gen_combatants', label: 'Боевики', icon: <Skull size={13} />, group: 'ген' },
@@ -115,6 +118,9 @@ export const NriMasterToolsHub: React.FC<Props> = ({
             roster={roster}
             currentUserId={currentUserId}
           />
+        )}
+        {section === 'master_props' && (
+          <NriMasterPropsPanel inviteCode={inviteCode} authToken={authToken} roster={roster} />
         )}
         {section === 'gen_players' && (
           <div className="nri-people-gen__block">

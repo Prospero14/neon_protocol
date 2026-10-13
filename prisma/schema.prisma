@@ -62,6 +62,8 @@ model NriSession {
   playerPositions NriPlayerPosition[]
   hostAlerts    NriHostAlert[]
   factionRelations NriFactionRelationState?
+  /** Корзина «для игры» + lock-теги мастера (JSON MasterPropsState). */
+  masterProps   Json?
 }
 
 /** Матрица отношений фракций — включается мастером в инструментах. */

@@ -287,7 +287,7 @@
   {
     "id": "g_lockpick",
     "name": "Набор отмычек",
-    "blurb": "Отмычки и bypass-инструменты.",
+    "blurb": "Отмычки: +2 к Mechanics / lockpick / Sleight of Hand при проверке взлома.",
     "category": "gear",
     "slot": "accessory",
     "c2185Mods": {
@@ -295,7 +295,8 @@
     },
     "priceWonlongs": 90,
     "tags": [
-      "взлом"
+      "взлом",
+      "lockpick"
     ]
   },
   {

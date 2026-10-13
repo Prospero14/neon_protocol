@@ -4395,6 +4395,99 @@
 }
 
 /* —— ICE mini-games (аркада стола) —— */
+.nri-chat-roll {
+  position: relative;
+  display: inline-flex;
+}
+
+.nri-chat-roll__menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: min(280px, 78vw);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(0, 255, 200, 0.25);
+  background: rgba(6, 12, 18, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.nri-chat-roll__menu label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.68rem;
+}
+
+.nri-chat-roll__menu select,
+.nri-chat-roll__menu input[type='number'] {
+  font: inherit;
+}
+
+.nri-chat-roll__check {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.nri-chat-roll__preview {
+  margin: 0;
+  font-size: 0.62rem;
+  word-break: break-word;
+}
+
+.nri-master-props__head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.nri-master-props__head h3 {
+  margin: 0;
+}
+
+.nri-master-props__section {
+  margin-top: 8px;
+}
+
+.nri-master-props__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 10px;
+}
+
+.nri-master-props__row label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.7rem;
+}
+
+.nri-master-props__list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.nri-master-props__list li {
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.nri-master-props__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
 .nri-ice-hub__deck-warn {
   margin: 6px 0 0;
   color: #f8a;

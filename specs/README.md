@@ -33,6 +33,7 @@
 | 014 | [nri-deck-ui](./014-nri-deck-ui/) | Deck OS: оболочка стола, киберпанк HUD, mobile-first |
 | 015 | [nri-ice-arcade-rewrite](./015-nri-ice-arcade-rewrite/) | ICE аркада: уникальные механики, win/fail, score/replay |
 | 016 | [nri-ice-counterhack](./016-nri-ice-counterhack/) | Встречный взлом после фейлов, деки, QRF-штампы |
+| 017 | [nri-master-props](./017-nri-master-props/) | Корзина «для игры», lock-теги, чат-роллер C2185 |
 
 ## Связанное вне specs
 

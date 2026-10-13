@@ -38,6 +38,7 @@ import { LoreCardPopup } from '../LoreCardPopup';
 import { parseItemTransferPayload, nriItemStatsLine } from '../../logic/nriItemDisplay';
 import { SPAM_BOT_LABEL, SPAM_BOT_USERNAME, spamMessageVariant } from '../../logic/spamBotMeta';
 import { NriFilePopup } from '../NriFilePopup';
+import { NriChatRollMenu } from '../NriChatRollMenu';
 import { inventoryHasDeck } from '../../../shared/nri-domain/iceCounterHack';
 import { NriDmItemTransfer } from '../NriDmItemTransfer';
 import { NriHostAlertsStrip } from '../NriHostAlertsStrip';
@@ -1078,6 +1079,17 @@ export const NeonChatPanel: React.FC<Props> = ({
         >
           <FileText size={18} />
         </button>
+      )}
+      {nriInviteCode && fixedRoomId && authToken && (nriProfile || isTableHost) && (
+        <NriChatRollMenu
+          authToken={authToken}
+          roomId={fixedRoomId}
+          nriCode={nriInviteCode}
+          sheet={nriProfile?.sheet ?? {}}
+          inventory={nriProfile?.inventory ?? []}
+          classId={nriProfile?.classId}
+          displayName={nriProfile?.displayName ?? (isTableHost ? 'Мастер' : undefined)}
+        />
       )}
       <button
         type="button"

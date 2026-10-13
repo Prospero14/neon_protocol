@@ -274,7 +274,22 @@ export function mountChatService(app, deps) {
                 });
                 messages = batch.reverse();
             }
-            res.json({ messages: messages.map(serializeMessage) });
+            let hostUserId = null;
+            if (room.kind === 'nri' && room.slug) {
+                const sess = await prisma.nriSession.findUnique({
+                    where: { inviteCode: room.slug },
+                    select: { hostUserId: true },
+                });
+                hostUserId = sess?.hostUserId ?? null;
+            }
+            const isAdmin = isAdminUsername(me.username);
+            const visible = messages.filter((m) => {
+                const p = parsePayload(m.payload);
+                if (p?.audience !== 'host_and_roller')
+                    return true;
+                return m.userId === auth.userId || auth.userId === hostUserId || isAdmin;
+            });
+            res.json({ messages: visible.map(serializeMessage) });
         }
         catch (error) {
             console.error('chat/messages get:', error);
@@ -286,7 +301,7 @@ export function mountChatService(app, deps) {
         if (!auth)
             return sendApiError(res, 401, 'CHAT_NO_TOKEN', 'Нет токена авторизации.');
         const roomId = req.params.roomId;
-        const { text, asNpcId, dmTargetUserId, nriCode } = req.body;
+        const { text, asNpcId, dmTargetUserId, nriCode, payload: bodyPayload, audience } = req.body;
         if (typeof text !== 'string' || !text.trim()) {
             return sendApiError(res, 400, 'CHAT_TEXT_REQUIRED', 'Укажите текст сообщения.');
         }
@@ -377,6 +392,20 @@ export function mountChatService(app, deps) {
                     imageUrl: portraitUrl ?? null,
                     npcArchetype,
                 });
+            }
+            else if (bodyPayload && typeof bodyPayload === 'object') {
+                const aud = audience === 'host_and_roller' || bodyPayload.audience === 'host_and_roller'
+                    ? 'host_and_roller'
+                    : bodyPayload.audience === 'table'
+                        ? 'table'
+                        : undefined;
+                payloadStr = JSON.stringify({
+                    ...bodyPayload,
+                    ...(aud ? { audience: aud } : {}),
+                });
+            }
+            else if (audience === 'host_and_roller' || audience === 'table') {
+                payloadStr = JSON.stringify({ type: 'nri_roll', audience });
             }
             const msg = await prisma.chatMessage.create({
                 data: {
